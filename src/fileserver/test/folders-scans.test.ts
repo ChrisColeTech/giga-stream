@@ -69,9 +69,9 @@ test("the test lane chooses a folder by name and the answer never carries a path
   assert.ok(pick(chooser.body, "data.token") !== undefined);
   assert.ok(!String(chooser.body).includes(folderRoot));
   // A token is single use: a body of `{ token }` against the picker lane is unusable.
-  assert.equal(pick(await send(t.app, "POST", "/api/fs/dialog", { token: "x" }), "error.code"), "fs.invalid_selection");
-  assert.equal(pick(await send(t.app, "POST", "/api/fs/dialog", { name: "gone" }), "error.code"), "fs.invalid_selection");
-  assert.equal(pick(await send(t.app, "POST", "/api/fs/dialog", { name: "../outside" }), "error.code"), "fs.invalid_selection");
+  assert.equal(pick((await send(t.app, "POST", "/api/fs/dialog", { token: "x" })).body, "error.code"), "fs.invalid_selection");
+  assert.equal(pick((await send(t.app, "POST", "/api/fs/dialog", { name: "gone" })).body, "error.code"), "fs.invalid_selection");
+  assert.equal(pick((await send(t.app, "POST", "/api/fs/dialog", { name: "../outside" })).body, "error.code"), "fs.invalid_selection");
   await t.dispose();
 });
 
@@ -116,10 +116,10 @@ test("a second scan while one is still queued or running is refused with job.run
   const attached = await send(t.app, "POST", `/api/collections/${pick(makeCollection.body, "data.id")}/folders`, { token });
   const folderId = String(pick(attached.body, "data.id"));
   // The attach itself queued the scan, so a rescan right away collides with it.
-  assert.equal(pick(await send(t.app, "POST", `/api/folders/${folderId}/rescan`), "error.code"), "job.running");
+  assert.equal(pick((await send(t.app, "POST", `/api/folders/${folderId}/rescan`)).body, "error.code"), "job.running");
   await awaitScansSettled(t);
   // After settling, the stream route answers 409 job.not_running and a rescan queues again.
-  assert.equal(pick(await send(t.app, "GET", `/api/folders/${folderId}/scan`), "error.code"), "job.not_running");
+  assert.equal(pick((await send(t.app, "GET", `/api/folders/${folderId}/scan`)).body, "error.code"), "job.not_running");
   assert.equal((await send(t.app, "POST", `/api/folders/${folderId}/rescan`)).status, 202);
   await awaitScansSettled(t);
   await t.dispose();
@@ -132,7 +132,7 @@ test("PUT with a new token moves the folder and its name follows the new locatio
   const ids = await attach(t, "FirstLane", "Races");
   await awaitScansSettled(t);
   const moved = await send(t.app, "PUT", `/api/folders/${ids.folderId}`, {
-    token: pick(await send(t.app, "POST", "/api/fs/dialog", { name: "SecondLane" }), "data.token"),
+    token: pick((await send(t.app, "POST", "/api/fs/dialog", { name: "SecondLane" })).body, "data.token"),
   });
   assert.equal(pick(moved.body, "data.name"), "SecondLane");
   await awaitScansSettled(t);
@@ -149,7 +149,7 @@ test("detaching removes the folder and its rows, leaving the collection alone", 
   await awaitScansSettled(t);
   const gone = await send(t.app, "DELETE", `/api/folders/${ids.folderId}`);
   assert.deepEqual(pick(gone.body, "data.removed"), ids.folderId);
-  assert.deepEqual(pick(await send(t.app, "GET", `/api/collections/${ids.collectionId}`), "data.folders"), []);
+  assert.deepEqual(pick((await send(t.app, "GET", `/api/collections/${ids.collectionId}`)).body, "data.folders"), []);
   assert.equal((await send(t.app, "GET", `/api/folders/${ids.folderId}/scan`)).status, 404);
   await t.dispose();
 });

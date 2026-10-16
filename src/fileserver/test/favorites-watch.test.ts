@@ -68,12 +68,12 @@ test("an episode is its own entry; removal and clearing answer without touching 
   await send(t.app, "PUT", "/api/favorites/title/tt200");
   const removed = await send(t.app, "DELETE", `/api/watch/${watchId}`);
   assert.deepEqual(pick(removed.body, "data.removed"), watchId);
-  assert.equal(pick(await send(t.app, "DELETE", `/api/watch/${watchId}`), "error.code"), "watch.not_found");
+  assert.equal(pick((await send(t.app, "DELETE", `/api/watch/${watchId}`)).body, "error.code"), "watch.not_found");
   const cleared = await send(t.app, "DELETE", "/api/watch");
   assert.deepEqual(pick(cleared.body, "data.cleared"), 1);
   const favorite = await send(t.app, "PUT", "/api/favorites/title/tt200");
   assert.deepEqual(pick(favorite.body, "data.favorite"), true);
-  assert.deepEqual(pick(await send(t.app, "DELETE", "/api/watch"), "data.cleared"), 0);
+  assert.deepEqual(pick((await send(t.app, "DELETE", "/api/watch")).body, "data.cleared"), 0);
   await t.dispose();
 });
 

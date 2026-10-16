@@ -145,7 +145,7 @@ test("HEAD answers the head of a 206; unknown ids and files gone from disk are 4
   assert.equal(head.body, "");
   assert.equal(String(head.headers["content-length"]), "3");
 
-  assert.equal(pick(await send(t.app, "GET", "/api/media/local/no-such-id/info"), "error.code"), "media.not_found");
+  assert.equal(pick((await send(t.app, "GET", "/api/media/local/no-such-id/info")).body, "error.code"), "media.not_found");
   rewrite(t.dataDir, ref.id, (db, folder) => {
     mkdirSync(path.join(folder, "a-directory.mkv"));
     db.prepare("UPDATE local_files SET path = 'a-directory.mkv' WHERE id = ?").run(ref.id);

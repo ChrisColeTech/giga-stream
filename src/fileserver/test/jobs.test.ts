@@ -65,8 +65,8 @@ test("a settled job is dismissable and an unknown one is 404 job.not_found", asy
   await settled(t, jobId);
   const gone = await send(t.app, "DELETE", `/api/jobs/${jobId}`);
   assert.deepEqual(pick(gone.body, "data.removed"), jobId);
-  assert.equal(pick(await send(t.app, "DELETE", `/api/jobs/${jobId}`), "error.code"), "job.not_found");
-  assert.equal(pick(await send(t.app, "POST", "/api/jobs/ghost/cancel"), "error.code"), "job.not_found");
+  assert.equal(pick((await send(t.app, "DELETE", `/api/jobs/${jobId}`)).body, "error.code"), "job.not_found");
+  assert.equal(pick((await send(t.app, "POST", "/api/jobs/ghost/cancel")).body, "error.code"), "job.not_found");
   await t.dispose();
 });
 

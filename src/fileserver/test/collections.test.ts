@@ -26,7 +26,7 @@ test("a name that is empty, too long, or a duplicate ignoring case is refused", 
   const t = await makeApp();
   await send(t.app, "POST", "/api/collections", { name: "Movies" });
   assert.equal((await send(t.app, "POST", "/api/collections", { name: "movies" })).status, 422);
-  assert.equal(pick(await send(t.app, "POST", "/api/collections", { name: "movies" }), "error.code"), "collection.invalid");
+  assert.equal(pick((await send(t.app, "POST", "/api/collections", { name: "movies" })).body, "error.code"), "collection.invalid");
   assert.equal((await send(t.app, "POST", "/api/collections", { name: "   " })).status, 422);
   assert.equal((await send(t.app, "POST", "/api/collections", { name: "x".repeat(81) })).status, 422);
   await t.dispose();
@@ -45,11 +45,11 @@ test("manual members come and go and count, with the shape of docs/03 section 3.
 
   // Adding one that is already there is no change.
   await send(t.app, "PUT", `/api/collections/${collectionId}/items`, { kind: "title", id: "tt1234567" });
-  assert.equal(pick(await send(t.app, "GET", "/api/state"), "data.collections.0.itemCount"), 1);
+  assert.equal(pick((await send(t.app, "GET", "/api/state")).body, "data.collections.0.itemCount"), 1);
 
   const memberships = await send(t.app, "GET", "/api/items/title/tt1234567/collections");
   assert.deepEqual(pick(memberships.body, "data.collectionIds"), [collectionId]);
-  assert.deepEqual(pick(await send(t.app, "GET", "/api/items/local/unknown/collections"), "data.collectionIds"), []);
+  assert.deepEqual(pick((await send(t.app, "GET", "/api/items/local/unknown/collections")).body, "data.collectionIds"), []);
 
   const removed = await send(t.app, "DELETE", `/api/collections/${collectionId}/items/title/tt1234567`);
   assert.equal(pick(removed.body, "data.itemCount"), 0);
@@ -59,7 +59,7 @@ test("manual members come and go and count, with the shape of docs/03 section 3.
 test("an unknown collection is 404 collection.not_found, everywhere", async () => {
   const t = await makeApp();
   const ghost = "/api/collections/no-such-id";
-  assert.equal(pick(await send(t.app, "GET", ghost), "error.code"), "collection.not_found");
+  assert.equal(pick((await send(t.app, "GET", ghost)).body, "error.code"), "collection.not_found");
   assert.equal((await send(t.app, "PATCH", ghost, { name: "x" })).status, 404);
   assert.equal((await send(t.app, "PUT", `${ghost}/items`, { kind: "title", id: "y" })).status, 404);
   assert.equal((await send(t.app, "DELETE", ghost)).status, 404);
@@ -74,6 +74,6 @@ test("a delete removes the collection, and the state answer stops listing it", a
   const answer = await send(t.app, "DELETE", `/api/collections/${id}`);
   assert.deepEqual(pick(answer.body, "data.removed"), id);
   assert.deepEqual(await send(t.app, "GET", `/api/collections/${id}`).then((one) => one.status), 404);
-  assert.deepEqual(pick(await send(t.app, "GET", "/api/state"), "data.collections"), []);
+  assert.deepEqual(pick((await send(t.app, "GET", "/api/state")).body, "data.collections"), []);
   await t.dispose();
 });
