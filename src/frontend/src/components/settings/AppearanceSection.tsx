@@ -5,6 +5,7 @@ import { Row } from "@/components/ui/Row";
 import { Swatches } from "@/components/ui/Swatches";
 import { useAppStore } from "@/store/app-store";
 import type { MotionPreference, ThemeMode } from "@/types/shell";
+import { ZoomStepper } from "./ZoomStepper";
 
 const THEMES = [
   { value: "dark", label: "Dark" },
@@ -18,7 +19,7 @@ const MOTIONS = [
   { value: "on", label: "On" },
 ] as const satisfies ReadonlyArray<{ value: MotionPreference; label: string }>;
 
-/** Appearance: the Theme and Reduce motion pills and the Accent swatches. Each changes the shell at once. */
+/** Appearance: the Theme and Reduce motion pills, the Accent swatches and the UI zoom stepper. Each changes the shell at once. */
 export function AppearanceSection() {
   const theme = useAppStore((state) => state.theme);
   const setTheme = useAppStore((state) => state.setTheme);
@@ -26,6 +27,8 @@ export function AppearanceSection() {
   const setAccent = useAppStore((state) => state.setAccent);
   const motion = useAppStore((state) => state.motion);
   const setMotion = useAppStore((state) => state.setMotion);
+  const uiZoom = useAppStore((state) => state.uiZoom);
+  const setZoom = useAppStore((state) => state.setZoom);
 
   return (
     <Group id="settings.appearance" title="Appearance" icon={Eye} tip="Theme, motion and the accent colour." last>
@@ -46,6 +49,9 @@ export function AppearanceSection() {
         tip="The highlight colour for selection, focus, progress and the one main button on each screen."
       >
         <Swatches value={accent} onChange={setAccent} />
+      </Row>
+      <Row label="UI zoom" tip="Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.">
+        <ZoomStepper value={uiZoom} onChange={setZoom} />
       </Row>
     </Group>
   );
