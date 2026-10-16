@@ -116,6 +116,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
 | Icons | lucide-react |
+| Context menus | @radix-ui/react-dropdown-menu, pinned at 2.1.24: the one context menu and its one-level `Collections ▸` submenu; menus only, never dialogs (the family standard, Giga Images' `docs/frontend/00`) |
 | Quality | oxlint, TypeScript, an executable architecture checker |
 
 Changing a locked dependency requires updating this document first.

@@ -1,0 +1,116 @@
+import { create } from "zustand";
+import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
+import type { Box } from "@/types/child-window";
+import type { CollectionRow } from "@/types/collection";
+import type { ItemRef } from "@/types/library";
+import type { OverlayId, PopupAnchor } from "@/types/overlays";
+import type { Accent, MotionPreference, PaneKey, PaneSide, Surface, ThemeMode } from "@/types/shell";
+
+/** The statusbar's ONE notice line: an outcome or a refusal, as a sentence. */
+export interface Notice {
+  readonly sentence: string;
+  readonly tone: "info" | "warn" | "error";
+  /** Bumped per notice so an identical sentence still re-announces. */
+  readonly serial: number;
+}
+
+/** The one store (`01` section 6). Serializable shell state only: no nodes, refs, promises or timers.
+ *  Nothing here reads or writes browser storage; persistence arrives with the fileserver's settings rows. */
+export interface AppState {
+  surface: Surface;
+  /** Committed visibility per pane. A pane a surface does not have is never in this record. */
+  open: Partial<Record<PaneKey, boolean>>;
+  /** Committed size per pane, in pixels. */
+  sizes: Partial<Record<PaneKey, number>>;
+  /** Bumped by every open change so the tween engine travels only for toggles, never for a drag. */
+  openVersion: number;
+  eventsOpen: boolean;
+  /** The one open flow (a work frame or a popup), or none. Opening a flow replaces the open one. */
+  overlay: OverlayId | null;
+  /** What the open popup hangs from; a work frame ignores it. */
+  overlayAnchor: PopupAnchor;
+  /** The item an open popup is about (Title Info, Add to collection); null for a work frame. */
+  overlayItem: ItemRef | null;
+  /** UI zoom (`03` section 3.2, `06` section 6.2): 0.5 to 3, applied to the whole interface. */
+  uiZoom: number;
+  /** Where each child window last was and how large, for the run: a window opened again is placed there. */
+  childBounds: Readonly<Record<string, Box>>;
+  notice: Notice | null;
+  /** Every collection, as the library service reports them. Empty until that service is wired. */
+  collections: readonly CollectionRow[];
+  /** Folded form groups by id; absent means open. Fold state is shell state, kept across openings. */
+  folded: Readonly<Record<string, boolean>>;
+  theme: ThemeMode;
+  accent: Accent;
+  motion: MotionPreference;
+
+  setSurface: (surface: Surface) => void;
+  togglePane: (side: PaneSide) => void;
+  commitSizes: (patch: Partial<Record<PaneKey, number>>) => void;
+  toggleEvents: () => void;
+  openOverlay: (id: OverlayId, anchor?: PopupAnchor, item?: ItemRef | null) => void;
+  closeOverlay: () => void;
+  setZoom: (uiZoom: number) => void;
+  rememberChild: (key: string, box: Box) => void;
+  toggleFold: (id: string) => void;
+  say: (sentence: string, tone?: Notice["tone"]) => void;
+  setTheme: (theme: ThemeMode) => void;
+  setAccent: (accent: Accent) => void;
+  setMotion: (motion: MotionPreference) => void;
+}
+
+function initialPanes(): Pick<AppState, "open" | "sizes"> {
+  const open: Partial<Record<PaneKey, boolean>> = {};
+  const sizes: Partial<Record<PaneKey, number>> = {};
+  for (const surface of SURFACE_ORDER) {
+    for (const side of SIDES) {
+      const limits = limitsOf(surface, side);
+      if (limits === null) continue;
+      open[paneKey(surface, side)] = true;
+      sizes[paneKey(surface, side)] = limits.preferred;
+    }
+  }
+  return { open, sizes };
+}
+
+export const useAppStore = create<AppState>()((set, get) => ({
+  surface: DEFAULT_SURFACE,
+  ...initialPanes(),
+  openVersion: 0,
+  eventsOpen: false,
+  overlay: null,
+  overlayAnchor: null,
+  overlayItem: null,
+  uiZoom: 1,
+  childBounds: {},
+  notice: null,
+  collections: [],
+  folded: {},
+  theme: "dark",
+  accent: "amber",
+  motion: "system",
+
+  setSurface: (surface) => set({ surface }),
+
+  togglePane: (side) => {
+    const { surface, open, openVersion } = get();
+    /* A surface without this pane has a disabled toggle; ignore the press. */
+    if (SURFACES[surface].panes[side] === null) return;
+    const key = paneKey(surface, side);
+    set({ open: { ...open, [key]: !(open[key] ?? true) }, openVersion: openVersion + 1 });
+  },
+
+  /* Called once on drag end, never per pointer move. A size change is not an open change. */
+  commitSizes: (patch) => set({ sizes: { ...get().sizes, ...patch } }),
+
+  toggleEvents: () => set({ eventsOpen: !get().eventsOpen }),
+  openOverlay: (id, anchor = null, item = null) => set({ overlay: id, overlayAnchor: anchor, overlayItem: item }),
+  closeOverlay: () => set({ overlay: null, overlayAnchor: null, overlayItem: null }),
+  setZoom: (uiZoom) => set({ uiZoom: Math.min(3, Math.max(0.5, uiZoom)) }),
+  rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
+  toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
+  say: (sentence, tone = "info") => set({ notice: { sentence, tone, serial: (get().notice?.serial ?? 0) + 1 } }),
+  setTheme: (theme) => set({ theme }),
+  setAccent: (accent) => set({ accent }),
+  setMotion: (motion) => set({ motion }),
+}));

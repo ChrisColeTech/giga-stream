@@ -8,8 +8,9 @@ rules are in `01`; this document is about process.
 
 - **The owner** decides what the product is and how it looks. The owner's words are the authority;
   a rule from an earlier session or document never outranks something the owner said.
-- **The coordinator** is the session working with the owner. It writes the docs, does all visual
-  work itself, briefs workers, lands their work, runs every check, and reports to the owner.
+- **The coordinator** is the session working with the owner. It writes the docs, briefs workers, lands
+  their work, runs every check, reviews every visual result in the browser, and reports to the owner. It
+  builds visual work itself unless the owner directs a split under section 6.1.
 - **A worker** is a subagent given one brief. It writes and compiles code in its own worktree, and
   stops.
 
@@ -70,9 +71,13 @@ rules are in `01`; this document is about process.
 
 - **One worker per real sub-project** (the admin backend, the fileserver), and only when the pieces are
   independent and large enough to be worth a brief. Never split one piece, and never one set of docs,
-  across several workers.
-- **Never delegate:** docs and contracts (one voice, the coordinator's), visual work, anything another
-  piece waits on that the coordinator can finish directly, and any check that needs a running service.
+  across several workers, unless the owner directs otherwise under the next point.
+- **The owner may direct a finer split for a named plan**, for example one worker per surface of the
+  interface. The plan's document records the split, the owner of every path, and the landing order. The
+  coordinator still lands every branch, runs every check and reviews every visual result (section 6.5).
+- **Never delegate:** docs and contracts (one voice, the coordinator's), visual work unless the owner has
+  directed it under the point above, anything another piece waits on that the coordinator can finish
+  directly, and any check that needs a running service.
 
 ### 6.2 The brief
 
@@ -81,7 +86,8 @@ Six parts, in order, self-contained (the worker has seen none of the conversatio
 1. **Where:** the worktree path, branch and base commit; the folders it may change.
 2. **Rules:** this protocol, `01`, and anything wave-specific, quoted where short.
 3. **Role:** what it does and does not do (6.3).
-4. **Read first:** the exact doc sections and source files, in order.
+4. **Read first:** `AGENTS.md`, then the exact doc sections and source files, in order. Every worker reads
+   `AGENTS.md` and the doc sections its brief names before it writes a line.
 5. **Scope:** the deliverable file by file; what is out of scope; whose files are off limits.
 6. **Report:** the format in 6.4.
 
@@ -91,7 +97,8 @@ Six parts, in order, self-contained (the worker has seen none of the conversatio
 - makes its code compile clean: `npm ci` in the programs it touches, their `typecheck`, the lint where
   there is one, and `node scripts/check-rules.mjs`, with every error fixed;
 - writes the tests the work needs but **does not run the suite**, start a program, open a browser or
-  take a screenshot;
+  take a screenshot. A visual worker builds the controls its brief names, in the states its doc section
+  gives, and the coordinator looks at the rendered result at landing (section 6.5, step 3);
 - edits with the editor tools only and never writes files with a script;
 - commits on its own branch and never pushes, merges or rebases;
 - never edits a document;
@@ -116,5 +123,8 @@ written, stated as written and not run; every gap it filled and how; anything le
 5. A worker that broke a rule is told, and the breach is recorded in the landing commit message.
 6. The coordinator records what landed and what was verified, and tells the owner.
 
-Worktrees live under `D:\Projects\.giga-worktrees\`, one per worker, cut from the coordinator's current
-commit, and are removed when their branch has landed.
+Worktrees live under `D:\Projects\.giga-worktrees\`, one per worker, and are removed when their branch has
+landed. A worktree is cut from a commit, so before any worker is briefed the coordinator commits the
+baseline it will cut from: the work-in-progress the plan depends on, on a named baseline branch, with its
+own paths only. Uncommitted work is not in a worktree. Each worker runs `npm ci` in its own worktree, never
+in a tree whose app is running.

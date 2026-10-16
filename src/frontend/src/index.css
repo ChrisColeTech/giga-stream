@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@import "./styles/fonts.css";
+
+/* ============ tokens ============
+ *
+ * Tailwind v4 is CSS-first: the complete token set lives here under @theme and there is no tailwind.config.ts.
+ * This is also the ONLY place hex values may appear: retheming means editing tokens, never components.
+ *
+ * Ported unchanged from Giga Images (the family shell reference). The values below are the dark theme. Light and
+ * the four alternate accent families override the same variables from a data attribute on <html>, so a theme
+ * switch is a variable change and nothing re-renders to achieve it.
+ */
+@theme {
+  /* neutral near-black ramp */
+  --color-bg: #111113;
+  --color-panel: #18181b;
+  --color-surface: #0a0a0b;
+  --color-border: #2a2a2f;
+  --color-hair: #202024;
+
+  --color-text: #f2f2f3;
+  --color-muted: #c2c2c8;
+  --color-faint: #a3a3ac;
+  --color-dim: #8b8b94;
+
+  /* accent: amber (default); [data-accent] swaps the family */
+  --color-accent: #ffb224;
+  --color-accent-strong: #ffc95e;
+  --color-accent-ink: #1f1300; /* text ON the accent fill, never white */
+  --color-accent-text: color-mix(in srgb, var(--color-accent) 70%, white);
+  --color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --color-accent-edge: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  --color-aurora: color-mix(in srgb, var(--color-accent) 6%, transparent);
+
+  /* job-state ramp: 8px dots and status text ONLY */
+  --color-st-queued: #85858e;
+  --color-st-loading: #fbbf24;
+  --color-st-generating: #38bdf8;
+  --color-st-done: #34d399;
+  --color-st-failed: #fb7185;
+  --color-danger: #e5484d;
+
+  --color-hov: rgba(242, 242, 243, 0.05);
+  --color-scrim: rgba(0, 0, 0, 0.55);
+
+  --color-ctl: #202023;
+  --color-ctl-hov: #28282c;
+  --color-ctl-edge: #35353b;
+  /* Top-lit gradient stop. A control is lit from above, so its fill runs from this down to --color-ctl. */
+  --color-ctl-hi: color-mix(in srgb, var(--color-ctl-hov) 70%, var(--color-ctl));
+
+  /* Swatch display colours. Each chip always shows its own family, independent of the active accent. */
+  --color-sw-amber: #ffb224;
+  --color-sw-violet: #a78bfa;
+  --color-sw-blue: #4cc2ff;
+  --color-sw-green: #34d399;
+  --color-sw-rose: #fb7185;
+
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Control heights are a fixed three-step scale, not free-form spacing. */
+  --spacing-ctl-sm: 24px;
+  --spacing-ctl-md: 28px;
+  --spacing-ctl-lg: 32px;
+
+  --radius-ctl: 4px;
+  --radius-card: 8px;
+  --radius-dock: 8px;
+
+  --shadow-stroke-hi: inset 0 1px 0 rgba(242, 242, 243, 0.05);
+  /* Soft 1px drop under a raised control; removed on press so the control visibly flattens. */
+  --shadow-ctl: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-ctl-accent: 0 1px 3px color-mix(in srgb, var(--color-accent) 28%, transparent);
+  --shadow-menu: 0 8px 16px rgba(0, 0, 0, 0.28), 0 1px 4px rgba(0, 0, 0, 0.18);
+
+  --ease-in: cubic-bezier(0, 0, 0, 1);
+  --ease-p2p: cubic-bezier(0.55, 0.55, 0, 1);
+
+  /* Motion durations are the whole vocabulary: every duration-* in the app resolves to one of these four. */
+  --duration-fade: 140ms;
+  --duration-fast: 140ms;
+  --duration-move: 200ms;
+  --duration-page: 280ms;
+
+  /* Animation vocabulary. keyframes.css defines these and nothing else, and none of them is a spinner. */
+  --animate-surface-in: surface-in var(--duration-move) var(--ease-in);
+  --animate-overlay-in: surface-in var(--duration-page) var(--ease-in);
+  --animate-pulse-busy: pulse-busy 1.6s ease-in-out infinite;
+  --animate-skel-shimmer: skel-shimmer 1.3s ease-in-out infinite;
+  --animate-menu-in: menu-in var(--duration-fade) var(--ease-in);
+}
+
+@import "./styles/themes.css";
+@import "./styles/base.css";
+@import "./styles/workspace.css";
+@import "./styles/keyframes.css";
+
+/* LAST: a kill-switch has to win the cascade. */
+@import "./styles/motion-reduce.css";

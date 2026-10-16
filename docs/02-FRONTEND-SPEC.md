@@ -59,10 +59,10 @@ absorb the remaining space and never collapse.
 | Library: collections (left) | width | 248 | 288 | 420 |
 | Library: body (centre) | width | 520 | flex | - |
 | Library: filters (right) | width | 260 | 300 | 420 |
-| Player: browser (left) | width | 240 | 288 | 420 |
+| Player: browser (left) | width | 190 | 236 | 380 |
 | Player: stage (centre) | width | 520 | flex | - |
-| Player: inspector (right) | width | 288 | 344 | 480 |
-| Player: related (bottom) | height | 148 | 188 | 280 |
+| Player: inspector (right) | width | 220 | 280 | 420 |
+| Player: related (bottom) | height | 60 | 140 | 280 |
 
 Allotment owns the sashes and the sizes. Collapsing commits the new visibility at once, then a short
 tween paints the travel by writing each frame into Allotment, so the pane visibly slides out and the
@@ -177,7 +177,7 @@ contents are in `06`.
 ## 5. Windows and popups
 
 Settings opens as a modal work window drawn inside the app, from the statusbar or `Ctrl+,`; Collections
-opens the same way from the Library rail's `Manage collections` button. A work window has a header with
+opens the same way from the Library rail's `Manage collections` button, and Title information opens the same way from a card's Info. A work window has a header with
 its title and an `X` that closes it, a scrim over everything below the titlebar, and a form of groups and
 rows. It is movable by its header and resizable by its edges, opens centred at its content's size (never
 more than 80% of the window, never below 658 x 412), and returns focus to its opener when it closes.

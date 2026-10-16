@@ -52,10 +52,10 @@ answer the interface could not read.
 | Library collections (left) | width | 248 | 288 | 420 | yes |
 | Library body (centre) | width | 520 | flex | - | no |
 | Library filters (right) | width | 260 | 300 | 420 | yes |
-| Player browser (left) | width | 240 | 288 | 420 | yes |
+| Player browser (left) | width | 190 | 236 | 380 | yes |
 | Player stage (centre) | width | 520 | flex | - | no |
-| Player inspector (right) | width | 288 | 344 | 480 | yes |
-| Player related (bottom) | height | 148 | 188 | 280 | yes |
+| Player inspector (right) | width | 220 | 280 | 420 | yes |
+| Player related (bottom) | height | 60 | 140 | 280 | yes |
 | Events drawer | height | 160 | 160 | 160 | yes |
 
 - Allotment owns the sashes, pointer capture and the committed sizes; the sash is a 1px line.
@@ -280,13 +280,13 @@ virtualized when the result is large.
 | Progress | a bar on the bottom edge of the poster for a title being watched |
 | Watched | a check derived from the watch state |
 | Play | an explicit button: a movie or local file plays; a series opens the episode browser |
-| Info | an explicit button: opens the Title information popup without stopping playback |
+| Info | an explicit button: opens the Title information work window without stopping playback |
 | Title | two lines at most |
 | Year | one subdued line |
 
 - A plain press selects; `Enter` on a selected card opens Info. Play and Info are reachable on keyboard
   focus and never exist only on hover.
-- Context menu: Play or Open, Info, Favorite or Unfavorite, Add to collection.
+- Context menu: Play or Open, Info, Favorite or Unfavorite, and `Collections ▸`: a submenu listing every collection with a check mark for its membership. A click toggles membership inline, with no dialog (family standard, Giga Images' `docs/frontend/00`, "Context menu actions").
 - Arrow keys move the selection across the cards and scroll it into view.
 
 **List view**
@@ -330,10 +330,10 @@ Two collapsible sections; each setting stacks its label over a 36px control.
 - A filter change keeps the previous cards while the next result loads; superseded requests are abandoned.
 - There is no tile-size slider.
 
-### 4.4 Title information (a wide popup)
+### 4.4 Title information (a work window)
 
-Opened by a card's Info, anchored to the opener and clamped inside the work area with an 8px margin. Class
-Wide (602px), policy Live: nonmodal, applied at once, no transaction footer.
+Opened by a card's Info as a modal work window (`02` section 5): drawn inside the main window over a scrim, centred at its content's size, moved by its header, resized by its edges, closed by its `X` or `Escape`, and focus returns to the Info button.
+Favourite and Collections apply at once, so there is no footer and nothing to cancel.
 
 | Region | Content |
 |---|---|
@@ -342,21 +342,19 @@ Wide (602px), policy Live: nonmodal, applied at once, no transaction footer.
 | Identity | title, year, kind, quality, rating, genres |
 | Information | the full plot, cast chips, the runtime or the season and episode counts |
 | Watch | progress, watched state or last episode, when there is one |
-| Action strip | **Favorite**, **Add to collection**, flexible space, **Play** (**Open in Player** for a series) |
+| Action strip | **Favorite**, **Collections**, flexible space, **Play** (**Open in Player** for a series) |
 
 - The body is a readable two-column layout (the poster beside the information) and stacks on a narrow work
   area. Only the body scrolls; the header and the action strip stay fixed.
-- Favorite and Add to collection apply immediately. Outside press, `Escape` or `X` dismisses and keeps
+- Favorite applies immediately, and so does a collection toggled from **Collections**. `Escape` or `X` closes it and keeps
   what was applied. Focus returns to the opener only if it still exists and no newer target owns focus.
 - It holds no video, filmstrip, episode browser, source picker or transport. Only **Play** hands off to
   Player; current Live or Player playback and Library's panes stay usable.
 
-### 4.5 Add to collection (a compact popup)
+### 4.5 Add to collection (the `Collections ▸` menu, not a popup)
 
-Opened from a card, the Title information popup or the Player's Watch block. Class Compact (242px), policy
-Live: a search field over the list of collections, each row with a check if the item is already in it.
-Selecting a row adds the item at once and the popup stays open for more; outside press or `Escape` dismisses.
-With no collection yet, the list is skeleton rows and **Manage collections** is the way to create one.
+It is not a popup and has no flow of its own. It is the `Collections ▸` submenu of §4.2, summoned from a card's menu, from Title information's **Collections** button, or from the Player's Watch block, and it is the app's one context menu (§9). Its rows are the collections, each with a check for membership. A click toggles membership at once, inline, with no dialog.
+With no collection yet, the submenu's one row says so, disabled with its reason, and **Manage collections** in the Library rail is the way to create one.
 
 ---
 
@@ -446,7 +444,7 @@ the open tab's kind.
 |---|---|
 | **Overview** | a poster at the pane's width, ratio 2:3; title, year, kind and quality; the plot with its line wrapping; rating and the top genres |
 | **Details** | genres, cast chips, runtime or the season count, the selected season and episode for a series, a local file's duration, dimensions and codec; revision facts in a tooltip, not as noise |
-| **Watch** | progress and watched state; last watched; a **Favorite** toggle; the collections the item is in, from the item's membership; **Add to collection** (a compact popup); **Remove from History** when a watch entry exists |
+| **Watch** | progress and watched state; last watched; a **Favorite** toggle; the collections the item is in, from the item's membership; **Collections** (the `Collections ▸` menu of §4.5); **Remove from History** when a watch entry exists |
 
 There is no Clear History here: it belongs to Library.
 
@@ -481,7 +479,7 @@ A failed load leaves the tab open with a failed stage and **Retry**; it does not
 
 ### 6.1 The frame
 
-Settings and Collections are modal work windows drawn inside the app: a frameless panel with its own border,
+Settings, Collections and Title information are modal work windows drawn inside the app: a frameless panel with its own border,
 a header holding its title and an `X` named `Close <title>` (never a commit action), eight resize grips, a
 scrim over everything below the titlebar (the titlebar slice stays a drag strip), and a body of a 150px icon
 rail and a workspace of groups and rows (one column, at most 760px). It opens centred at its content's size,
@@ -543,7 +541,7 @@ Global keys yield to text fields, selects, menus, popups and IME composition.
 
 ## 9. Building blocks
 
-`Button`, `IconButton`, `Segmented`, `PillChoice`, `SelectField`, `TextField`, `Swatches`, `StatusDot`,
+`ContextMenu` (the one context menu, summoned by `openMenu`, with one level of submenu), `Button`, `IconButton`, `Segmented`, `PillChoice`, `SelectField`, `TextField`, `Swatches`, `StatusDot`,
 `Disclosure`, `FoldBody`, `RailSection` (a collapsible rail group), `RailRow` (a rail's label and control),
 `Group` and `Row` (a window's form), `Tip` (the one tooltip), `Strip`, `DataTable`, `Rail`, `Workspace`. Each
 exists once; a surface uses these and does not build its own.

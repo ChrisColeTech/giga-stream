@@ -28,8 +28,8 @@ inside each surface is `06`'s.
 | Live · Library · Player | the surface stack | titlebar switch · `Ctrl+1` / `Ctrl+2` / `Ctrl+3` | switching to another |
 | Settings | work window | statusbar **Settings** · `Ctrl+,` | its `X` · `Escape` · the statusbar button again |
 | Collections | work window | Library rail footer **Manage collections** | its `X` · `Escape` |
-| Title information | wide popup | a card's **Info** | outside press · `Escape` · its `X` |
-| Add to collection | compact popup | a card, the popup or the inspector | selecting a row · outside press · `Escape` |
+| Title information | work window | a card's **Info** | `Escape` · its `X` |
+| Add to collection | `Collections ▸` submenu of the one context menu | a card's menu, Title information's Collections button, the Player's Watch block | a click toggles membership · outside press · `Escape` |
 | Events | drawer | statusbar **Events** | statusbar **Events** · `Escape` · its `X` |
 | Choose a folder | native dialog | **Attach folder** in Collections | the OS dialog |
 
