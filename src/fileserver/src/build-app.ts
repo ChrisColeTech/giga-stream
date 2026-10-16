@@ -11,11 +11,13 @@ import { registerFsDialogRoutes } from "./routes/fs-dialog.js";
 import { registerHealth } from "./routes/health.js";
 import { registerImagesRoutes } from "./routes/images.js";
 import { registerJobsRoutes } from "./routes/jobs.js";
+import { registerLibraryRoutes } from "./routes/library.js";
 import { registerLocalMediaRoutes } from "./routes/local-media.js";
 import { registerPocResults } from "./routes/poc-results.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerShellStateRoutes } from "./routes/shell-state.js";
 import { registerStateRoute } from "./routes/state.js";
+import { registerTitlesRoutes } from "./routes/titles.js";
 import { registerWatchRoutes } from "./routes/watch.js";
 import { createAppServices, type ServiceOptions } from "./services/app-services.js";
 import { createPocResultsService } from "./services/poc-results-service.js";
@@ -84,6 +86,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   registerImagesRoutes(app, services);
   registerFavoritesRoutes(app, services);
   registerWatchRoutes(app, services);
+  registerLibraryRoutes(app, services);
+  registerTitlesRoutes(app, services);
 
   return app;
 }

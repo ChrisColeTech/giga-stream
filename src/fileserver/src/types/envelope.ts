@@ -29,6 +29,8 @@ export type AppErrorCode =
   | "route.not_found"
   | "request.invalid"
   | "settings.invalid"
+  | "library.invalid"
+  | "title.not_found"
   | "backend.invalid_url"
   | "backend.tls_required"
   | "backend.unreachable"

@@ -7,11 +7,13 @@ import { createChannelStateRepository } from "../store/channel-state-repository.
 import { createCollectionRepository } from "../store/collection-repository.js";
 import { createFavoritesRepository } from "../store/favorites-repository.js";
 import { createJobRepository } from "../store/job-repository.js";
+import { createLibraryRepository } from "../store/library-repository.js";
 import { createLocalFileRepository } from "../store/local-file-repository.js";
 import { createSettingsRepository } from "../store/settings-repository.js";
 import { createShellStateRepository } from "../store/shell-state-repository.js";
 import { createWatchRepository } from "../store/watch-repository.js";
 import { createAdminClient } from "./admin-client.js";
+import { createAdminTitles } from "./admin-titles.js";
 import {
   createCollectionService,
   type CollectionService,
@@ -19,6 +21,9 @@ import {
 import { createFsDialogService, type FsDialogService } from "./fs-dialog-service.js";
 import { createImageCacheService, rewriteImageUrl, type ImageCacheService } from "./image-cache-service.js";
 import { createJobService, type JobService } from "./job-service.js";
+import { createLibraryItems } from "./library-items.js";
+import { createLibraryLists } from "./library-lists.js";
+import { createLibraryService } from "./library-service.js";
 import { createLiveChannelsService, type LiveChannelsService } from "./live-channels-service.js";
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
 import { createPosterFetchService, type PosterFetchService } from "./poster-fetch.js";
@@ -26,6 +31,8 @@ import { createScanService, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
 import { createStreamProbe } from "./stream-probe.js";
+import { createTitleSession } from "./title-session.js";
+import { createTitlesService } from "./titles-service.js";
 import { createFavoritesService, createWatchService, type FavoritesService, type WatchService } from "./watch-service.js";
 
 export interface ServiceOptions {
@@ -60,18 +67,29 @@ export function createAppServices(options: ServiceOptions) {
     now: options.now,
   });
   images.prune();
+  const adminUrl = () => settings.get().adminUrl;
+  // The one image-rewrite every passed-on address goes through (03 section 3.11): the cache
+  // remembers the source so a later miss can fetch it; a source that fails the backend's address
+  // rule stays as it is (docs/03 sections 3.11 and 7.3).
+  const rewrite = (source: string): string => {
+    images.rememberSource(source);
+    return rewriteImageUrl(source) ?? source;
+  };
+  const admin = createAdminClient({ fetch: options.adminFetch });
   const live: LiveChannelsService = createLiveChannelsService({
-    admin: createAdminClient({ fetch: options.adminFetch }),
+    admin,
     probe: createStreamProbe({ fetch: options.probeFetch }),
-    adminUrl: () => settings.get().adminUrl,
+    adminUrl,
     ttlMs: options.liveViewTtlMs,
     now: options.now,
-    // The cache remembers the source so a later miss can fetch it; a source that fails the
-    // backend's address rule stays as it is (docs/03 sections 3.11 and 7.3).
-    rewriteImageUrl: (source) => {
-      images.rememberSource(source);
-      return rewriteImageUrl(source) ?? source;
-    },
+    rewriteImageUrl: rewrite,
+  });
+  const titlesAdmin = createAdminTitles({ fetch: options.adminFetch });
+  const titleSession = createTitleSession({
+    admin: titlesAdmin,
+    adminUrl,
+    health: () => admin.health(adminUrl()),
+    now: options.now,
   });
   const collectionsRepo = createCollectionRepository(database);
   const filesRepo = createLocalFileRepository(database);
@@ -106,6 +124,31 @@ export function createAppServices(options: ServiceOptions) {
   const media: LocalMediaService = createLocalMediaService({ files: filesRepo, collections: collectionsRepo });
   const favorites: FavoritesService = createFavoritesService(favoritesRepo, options.now);
   const watches: WatchService = createWatchService({ watches: watchRepo, now: options.now });
+  const libraryRepo = createLibraryRepository(database);
+  const libraryItems = createLibraryItems({
+    favorites: favoritesRepo,
+    newestEntry: (kind, itemId) => libraryRepo.newestWatchEntry(kind, itemId),
+    genreView: (kind) => titleSession.genreView(kind),
+    rewriteImageUrl: rewrite,
+  });
+  const titles = createTitlesService({
+    admin: titlesAdmin,
+    adminUrl,
+    session: titleSession,
+    items: libraryItems,
+    rewriteImageUrl: rewrite,
+  });
+  const libraryLists = createLibraryLists({ repo: libraryRepo, items: libraryItems, titles });
+  const library = createLibraryService({
+    admin: titlesAdmin,
+    adminUrl,
+    session: titleSession,
+    items: libraryItems,
+    repo: libraryRepo,
+    collections: collectionsRepo,
+    lists: libraryLists,
+    now: options.now,
+  });
 
   return {
     database,
@@ -132,6 +175,8 @@ export function createAppServices(options: ServiceOptions) {
     media,
     favorites,
     watches,
+    titles,
+    library,
     async close(): Promise<void> {
       await jobs.close();
       database.close();

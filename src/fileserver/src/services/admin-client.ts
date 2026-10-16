@@ -8,7 +8,7 @@ export const CHANNELS_TIMEOUT_MS = 20_000;
 export const MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
 
 export interface AdminFailure {
-  code: Extract<AppErrorCode, "backend.unreachable" | "backend.bad_response">;
+  code: Extract<AppErrorCode, "backend.unreachable" | "backend.bad_response" | "title.not_found">;
   message: string;
   /** The HTTP status for a route that surfaces this failure. */
   status: number;
@@ -40,12 +40,12 @@ export interface AdminClient {
   channels(baseUrl: string, signal?: AbortSignal): Promise<AdminResult<PublishedChannels>>;
 }
 
-const unreachable: AdminFailure = {
+export const unreachable: AdminFailure = {
   code: "backend.unreachable",
   message: "The admin backend did not answer.",
   status: 503,
 };
-const badResponse: AdminFailure = {
+export const badResponse: AdminFailure = {
   code: "backend.bad_response",
   message: "The admin backend sent an answer this app cannot use.",
   status: 502,
@@ -87,9 +87,64 @@ async function readCapped(response: Response, limit: number): Promise<string | n
 }
 
 /**
- * The only caller of the admin backend (`01` section 7). It sends no cookie and no credential,
- * follows no redirect, bounds every call by a timeout and the body by a size cap, and decodes with
- * Zod. It holds no connection open (docs/03 section 5.1): every call is one request.
+ * One completed GET of the admin backend, shared by every read (`01` section 7): bounded by a
+ * timeout and the body by a size cap, no cookie, no redirect. A transport failure, an oversize or
+ * non-JSON body answers its failure; any HTTP status answers its parsed JSON so the caller can map
+ * its own refusals (the title routes' `404 title.not_found`, docs/03 sections 3.6 and 7.4).
+ */
+export async function fetchAdminJson(
+  doFetch: typeof fetch,
+  url: string,
+  timeoutMs: number,
+  signal: AbortSignal | undefined,
+): Promise<{ ok: true; status: number; json: unknown } | { ok: false; failure: AdminFailure }> {
+  const bound = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
+  let text: string | null;
+  let status: number;
+  try {
+    const response = await doFetch(url, {
+      method: "GET",
+      headers: { accept: "application/json" },
+      credentials: "omit",
+      redirect: "error",
+      signal: bound,
+    });
+    status = response.status;
+    text = await readCapped(response, MAX_RESPONSE_BYTES);
+  } catch {
+    return { ok: false, failure: unreachable };
+  }
+  if (text === null) return { ok: false, failure: badResponse };
+  try {
+    return { ok: true, status, json: JSON.parse(text) };
+  } catch {
+    return { ok: false, failure: badResponse };
+  }
+}
+
+/** The data of a success envelope decoded against a schema; anything else is a bad response. */
+export function decodeData<S extends z.ZodTypeAny>(schema: S, json: unknown): AdminResult<z.infer<S>> {
+  const envelope = DataEnvelope.safeParse(json);
+  const data = envelope.success ? schema.safeParse(envelope.data.data) : null;
+  return data?.success ? { ok: true, value: data.data } : { ok: false, failure: badResponse };
+}
+
+/** A completed answer outside 2xx, through the one failure vocabulary. */
+export function refusalOf(status: number): AdminFailure {
+  return status >= 500 ? unreachable : badResponse;
+}
+
+/** The dotted code of a completed answer's error envelope, when the backend sent a readable one. */
+export function errorCodeOf(json: unknown): string | undefined {
+  const parsed = z
+    .object({ ok: z.literal(false), error: z.object({ code: z.string(), message: z.string().optional() }) })
+    .safeParse(json);
+  return parsed.success ? parsed.data.error.code : undefined;
+}
+
+/**
+ * The channels and health half of the admin client (`01` section 7). It holds no connection open
+ * (docs/03 section 5.1): every call is one request.
  */
 export function createAdminClient(options: { fetch?: typeof fetch } = {}): AdminClient {
   const doFetch = options.fetch ?? globalThis.fetch;
@@ -100,34 +155,10 @@ export function createAdminClient(options: { fetch?: typeof fetch } = {}): Admin
     timeoutMs: number,
     signal: AbortSignal | undefined,
   ): Promise<AdminResult<z.infer<S>>> {
-    const bound = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
-    let text: string | null;
-    try {
-      const response = await doFetch(url, {
-        method: "GET",
-        headers: { accept: "application/json" },
-        credentials: "omit",
-        redirect: "error",
-        signal: bound,
-      });
-      if (!response.ok) {
-        await response.body?.cancel();
-        return { ok: false, failure: response.status >= 500 ? unreachable : badResponse };
-      }
-      text = await readCapped(response, MAX_RESPONSE_BYTES);
-    } catch {
-      return { ok: false, failure: unreachable };
-    }
-    if (text === null) return { ok: false, failure: badResponse };
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      return { ok: false, failure: badResponse };
-    }
-    const envelope = DataEnvelope.safeParse(json);
-    const data = envelope.success ? schema.safeParse(envelope.data.data) : null;
-    return data?.success ? { ok: true, value: data.data } : { ok: false, failure: badResponse };
+    const answer = await fetchAdminJson(doFetch, url, timeoutMs, signal);
+    if (!answer.ok) return { ok: false, failure: answer.failure };
+    if (answer.status < 200 || answer.status >= 300) return { ok: false, failure: refusalOf(answer.status) };
+    return decodeData(schema, answer.json);
   }
 
   return {
