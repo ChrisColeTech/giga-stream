@@ -4,11 +4,19 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { config } from "./config.js";
 import { registerErrorHandling } from "./lib/error-handler.js";
 import { registerChannelsRoutes } from "./routes/channels.js";
+import { registerCollectionsRoutes } from "./routes/collections.js";
+import { registerFavoritesRoutes } from "./routes/favorites.js";
+import { registerFoldersRoutes } from "./routes/folders.js";
+import { registerFsDialogRoutes } from "./routes/fs-dialog.js";
 import { registerHealth } from "./routes/health.js";
+import { registerImagesRoutes } from "./routes/images.js";
+import { registerJobsRoutes } from "./routes/jobs.js";
+import { registerLocalMediaRoutes } from "./routes/local-media.js";
 import { registerPocResults } from "./routes/poc-results.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerShellStateRoutes } from "./routes/shell-state.js";
 import { registerStateRoute } from "./routes/state.js";
+import { registerWatchRoutes } from "./routes/watch.js";
 import { createAppServices, type ServiceOptions } from "./services/app-services.js";
 import { createPocResultsService } from "./services/poc-results-service.js";
 
@@ -45,10 +53,13 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     now: overrides.now ?? Date.now,
     ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),
     ...(overrides.probeFetch !== undefined && { probeFetch: overrides.probeFetch }),
+    ...(overrides.imageFetch !== undefined && { imageFetch: overrides.imageFetch }),
+    ...(overrides.openFolderPicker !== undefined && { openFolderPicker: overrides.openFolderPicker }),
+    testFolderRoot: overrides.testFolderRoot ?? config.testFolderRoot,
   });
 
   app.addHook("onClose", async () => {
-    services.close();
+    await services.close();
   });
 
   await app.register(fastifyStatic, {
@@ -65,6 +76,14 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   registerChannelsRoutes(app, services);
   registerStateRoute(app, services);
   registerPocResults(app, createPocResultsService(config.pocResultsDir));
+  registerCollectionsRoutes(app, services);
+  registerFoldersRoutes(app, services);
+  registerFsDialogRoutes(app, services);
+  registerJobsRoutes(app, services);
+  registerLocalMediaRoutes(app, services);
+  registerImagesRoutes(app, services);
+  registerFavoritesRoutes(app, services);
+  registerWatchRoutes(app, services);
 
   return app;
 }

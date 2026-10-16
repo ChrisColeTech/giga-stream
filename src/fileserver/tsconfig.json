@@ -14,6 +14,9 @@
     "declaration": false,
     "sourceMap": true
   },
+  // The shared media library is imported from `src/shared/media/dist` (built by `src/build-shared.ts`
+  // with esbuild and declaration-only tsc): its `.d.ts` sit outside `rootDir` the way any dependency's
+  // types do, so nothing from the library enters the emit and `dist/` keeps the wave-1 layout.
   // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck and build,
   // and the window loads a preload that does not exist (the Giga Images lesson). NodeNext emits it as
   // dist/app/preload.cjs, the name src/app/main.ts asks for.

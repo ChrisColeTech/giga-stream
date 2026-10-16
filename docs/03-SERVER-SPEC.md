@@ -13,10 +13,10 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 3.2-3.3 Settings, shell state | A | **done** (`settings.test.ts`, `shell-state.test.ts`: defaults, whole-request refusal, restart persistence) |
 | 3.4 Channels pass-through | A | **done** (`channels.test.ts` against the real backend: fill, q/category, categories over the whole view, last channel) |
 | 3.5-3.6 Library query, titles pass-through | A | **not started** (phase 7) |
-| 3.7-3.10 Collections, folders, jobs, local media | A | **not started** (phase 6) |
-| 3.11 Image cache | A | **not started** (phase 7) |
-| 3.12-3.13 Favorites, watch history | A | **not started** (phase 8) |
-| 4-6 State and updates, live view, storage | A | **done** (`state.test.ts`, `live-view.test.ts`: the state answer, the TTL, clear-on-failure, refill on the next request - all against the real backend as a child process; migrations `001`/`002` ported unchanged, `003` new) |
+| 3.7-3.10 Collections, folders, jobs, local media | A | **done** (`collections/folders-scans/jobs/media.test.ts`: names, tokens, the NDJSON scan stream, one scan per folder, 202 cancelling, interrupted at start, 206/416 ranges with ETag and If-Range - against the real backend as a child process) |
+| 3.11 Image cache | A | **done** (`image-cache.test.ts`: hash ids, the 10 s/10 MiB/image-only fetch, 404 on failure, six-month prune, stills by poster-fetch; channel logos rewrite through the cache) |
+| 3.12-3.13 Favorites, watch history | A | **done** (`favorites-watch.test.ts`: idempotent favorites; seq-ordered watch writes, sticky watched at 95 percent, episode identity, remove one, clear all) |
+| 4-6 State and updates, live view, storage | A | **done** (`state.test.ts` now carries live collections and jobs; the live view keeps its TTL and clear-on-failure; migrations `001`/`002` ported unchanged, `003` new) |
 | 7.1 Health | B | **done** |
 | 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; the `tvgId`/`source` fields land with 7.2c) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |

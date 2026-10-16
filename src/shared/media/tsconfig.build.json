@@ -1,0 +1,18 @@
+{
+  // Declaration-only companion of the typecheck config: `allowImportingTsExtensions` is legal with
+  // `emitDeclarationOnly`, so the library's own `.ts` import specifiers typecheck and every `.d.ts`
+  // lands in `dist` beside the `.js` that the fileserver's `src/build-shared.ts` emits with esbuild
+  // (the one emitter that rewrites those specifiers). Run by the fileserver's build-shared script.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": false,
+    "allowJs": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "typeRoots": ["../../fileserver/node_modules/@types"]
+  },
+  "include": ["src"]
+}

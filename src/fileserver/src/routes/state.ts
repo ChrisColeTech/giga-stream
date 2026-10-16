@@ -6,8 +6,7 @@ import { APP_RUNTIME, APP_VERSION } from "../constants/deployment.js";
 
 /**
  * `GET /api/state` (docs/03 section 4): the complete picture in one answer. Collections and jobs are
- * the later phases' tables, read here so the route's shape is complete from the start; until those
- * waves land they answer empty.
+ * read fresh; the channels part describes the last read of the backend.
  */
 export function registerStateRoute(app: FastifyInstance, services: AppServices): void {
   app.get("/api/state", async () => {
@@ -24,8 +23,8 @@ export function registerStateRoute(app: FastifyInstance, services: AppServices):
       backend,
       channels,
       ...(lastChannelId !== undefined && { lastChannelId }),
-      collections: [],
-      jobs: [],
+      collections: services.collections.list(),
+      jobs: services.jobs.listRecent(),
     });
   });
 }
