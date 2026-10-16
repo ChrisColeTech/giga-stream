@@ -12,7 +12,7 @@ import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository } from "../store/collection-repository.js";
 import type { LibraryRepository } from "../store/library-repository.js";
 import type { ContinuePage, LibraryItem, LibraryPage } from "../types/library.js";
-import type { AdminTitles, BackendTitle, TitleKind, TitleSort } from "./admin-titles.js";
+import type { AdminTitles, BackendTitle, TitleKind } from "./admin-titles.js";
 import type { LibraryItems } from "./library-items.js";
 import type { ListPage, LibraryLists } from "./library-lists.js";
 import type { TitleSession } from "./title-session.js";
@@ -66,7 +66,7 @@ export function createLibraryService(deps: {
         ? await admin.titleSearch(adminUrl(), query.q, kind, page)
         : await admin.titles(adminUrl(), {
             kind,
-            sort: query.sort as TitleSort,
+            sort: query.sort,
             page,
             ...(genreId !== undefined && { genre: genreId }),
             ...(query.year !== undefined && { year: query.year }),
