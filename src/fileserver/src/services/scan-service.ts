@@ -29,7 +29,11 @@ export interface ScanService {
   runner: JobRunner;
   /** `true` while a scan for the folder is queued or running — a queued one is still going. */
   scanning: (folderId: string) => boolean;
-  /** A late NDJSON reader, or undefined -> the route answers `409 job.not_running` (3.8). */
+  /**
+   * A late NDJSON reader for a folder that exists — a missing one is `404 collection.not_found`,
+   * exactly like every other folder route (03 sections 3.7 and 3.8) — or `undefined` when no scan
+   * is running for it, which the route answers `409 job.not_running` (3.8).
+   */
   readStream: (folderId: string) => ScanStream | undefined;
   /** Folder removal cancels the folder's scan; a settled job is left alone. */
   cancel: (folderId: string) => void;
@@ -98,6 +102,9 @@ export function createScanService(deps: {
     },
 
     readStream(folderId) {
+      // Existence first (03 sections 3.7 and 3.8): a folder that is not there is 404 on every
+      // folder route, and `job.not_running` describes a folder that exists but is not scanning.
+      if (folders.findFolder(folderId) === null) throw notFound();
       const run = running.get(folderId);
       if (run === undefined) return undefined;
       const snapshot = run.events.slice();
