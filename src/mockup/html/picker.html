@@ -1,0 +1,24 @@
+<div class="picker-row">
+  <label>Provider</label>
+  <select id="providerSelect"></select>
+</div>
+<div class="picker-row">
+  <label>Kind</label>
+  <select id="kindSelect">
+    <option value="movie">Movie</option>
+    <option value="episode">Episode</option>
+  </select>
+</div>
+<div class="picker-row">
+  <label>TMDB ID</label>
+  <input id="tmdbInput" value="603">
+</div>
+<div class="picker-row" data-kind="episode">
+  <label>Season</label>
+  <input id="seasonInput" value="1">
+</div>
+<div class="picker-row" data-kind="episode">
+  <label>Episode</label>
+  <input id="episodeInput" value="1">
+</div>
+<button id="loadBtn">Load</button>

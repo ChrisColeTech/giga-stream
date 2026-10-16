@@ -1,0 +1,36 @@
+# Node
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+release/
+
+# Secrets, never committed
+docs/tmdb_apiKey.txt
+.secrets/
+.env
+.env.*
+!.env.example
+
+# Local run data (the backend's own SQLite; created by npm run dev)
+src/backend/data/
+
+# The owner's own reference captures, kept local
+docs/reference/
+
+# Bundled helpers built locally (docs/09: scripts/ffmpeg/build-ffmpeg.sh -> tools/ffmpeg/bin)
+tools/
+
+# Streaming test server output (docs/10)
+/.live-server/
+
+# Provider proof-of-concept run results and screenshots (docs/14)
+src/mockup/results/
+
+# Logs, editor, OS
+*.log
+.vscode/
+.DS_Store
+Thumbs.db

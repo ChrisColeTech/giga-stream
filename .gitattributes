@@ -1,0 +1,7 @@
+# Windows shells parse these byte-for-byte; pin the endings so any checkout runs.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Shell scripts stay LF even on Windows checkouts (the FFmpeg build runs under MSYS2).
+*.sh    text eol=lf

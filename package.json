@@ -1,0 +1,14 @@
+{
+  "name": "giga-stream",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Giga Stream: the interface (src/frontend), the fileserver and Electron host (src/fileserver) and the admin backend (src/backend). See docs/00.",
+  "engines": { "node": ">=24.11" },
+  "scripts": {
+    "live:dev": "node scripts/live-server/live-server.mjs",
+    "live:loop": "node scripts/live-server/live-server.mjs --mode loop --port 8097",
+    "test:live-server": "node --test scripts/live-server/test/*.test.mjs",
+    "electron:dev": "npm run dev --prefix src/fileserver",
+    "electron": "npm run start:app --prefix src/fileserver"
+  }
+}

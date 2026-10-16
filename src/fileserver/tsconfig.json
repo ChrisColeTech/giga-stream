@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck and build,
+  // and the window loads a preload that does not exist (the Giga Images lesson). NodeNext emits it as
+  // dist/app/preload.cjs, the name src/app/main.ts asks for.
+  "include": ["src/**/*.ts", "src/**/*.cts"]
+}

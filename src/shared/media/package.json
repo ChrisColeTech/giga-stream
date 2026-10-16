@@ -1,0 +1,23 @@
+{
+  "name": "@giga-stream/media",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Shared media library (docs/01 section 4.2): finds and runs the bundled FFmpeg and ffprobe, reads a video file's facts, and scans a folder for video files as a stream of events. Not a program; imported by the fileserver, the streaming test server and the fixture tools, each module by its own path. Plain TypeScript Node runs directly.",
+  "engines": { "node": ">=24.11" },
+  "exports": {
+    "./ffmpeg/*": "./src/ffmpeg/*.ts",
+    "./probe/*": "./src/probe/*.ts",
+    "./scan/*": "./src/scan/*.ts",
+    "./types/*": "./src/types/*.ts",
+    "./constants/*": "./src/constants/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

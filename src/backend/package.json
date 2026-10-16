@@ -1,0 +1,30 @@
+{
+  "name": "giga-stream-backend",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Giga Stream admin backend (docs/03 Part B): channels and admin accounts on its own node:sqlite database, JWT sign-in with rotating refresh tokens, an audit log, public channel reads, changes that are live as soon as saved, a read-only socket that announces each change, and TLS or a trusted proxy off loopback. Titles through TMDB arrive in phase 7 of docs/08.",
+  "engines": {
+    "node": ">=24.11"
+  },
+  "scripts": {
+    "dev": "tsx --env-file-if-exists=.env src/server.ts",
+    "start": "node --env-file-if-exists=.env dist/server.js",
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/store/migrations','dist/store/migrations',{recursive:true})\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.1",
+    "@fastify/websocket": "^11.0.0",
+    "fastify": "^5.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "ws": "^8.18.0"
+  }
+}

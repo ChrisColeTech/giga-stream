@@ -1,0 +1,21 @@
+{
+  // Type-check only: Node runs these files as they are (type stripping), so nothing is emitted.
+  // `erasableSyntaxOnly` refuses the syntax Node cannot strip (enum, namespace, parameter properties).
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    // The tests use the fixture script (scripts/fixtures/make-fixtures.mjs) to make the real files.
+    "allowJs": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "test"]
+}
