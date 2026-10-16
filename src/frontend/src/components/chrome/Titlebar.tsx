@@ -16,11 +16,14 @@ const TITLEBAR =
   "pr-[calc(100%-env(titlebar-area-width,100%)+8px)] [-webkit-app-region:drag] " +
   "[&_button]:[-webkit-app-region:no-drag]";
 
-const TOGGLES: Array<{ side: PaneSide; label: string; Icon: typeof PanelLeft }> = [
-  { side: "left", label: "left pane", Icon: PanelLeft },
-  { side: "bottom", label: "bottom pane", Icon: PanelBottom },
-  { side: "right", label: "right pane", Icon: PanelRight },
-];
+const TOGGLES: Readonly<Record<PaneSide, { label: string; Icon: typeof PanelLeft }>> = {
+  left: { label: "left pane", Icon: PanelLeft },
+  bottom: { label: "bottom pane", Icon: PanelBottom },
+  right: { label: "right pane", Icon: PanelRight },
+};
+
+/* A disabled button takes no pointer events (the shared IconButton), so its reason hangs on the wrapper, which does. */
+const SLEEPING_REASON = "Close the open window to change the panes.";
 
 export function Titlebar() {
   const surface = useSurface();
@@ -36,22 +39,25 @@ export function Titlebar() {
   };
 
   const toggle = (side: PaneSide) => {
-    const { label, Icon } = TOGGLES.find((entry) => entry.side === side)!;
+    const { label, Icon } = TOGGLES[side];
     /* A surface without this pane keeps the control, disabled, never hidden, so the chrome does not shuffle from page
        to page. */
     const supported = SURFACES[surface].panes[side] !== null;
     const lit = supported && open[side] && !settingsOpen;
+    const reason = supported ? (settingsOpen ? SLEEPING_REASON : undefined) : `${SURFACES[surface].label} has no ${label}.`;
     return (
-      <IconButton
-        title={`Toggle ${label}`}
-        aria-label={`Toggle ${label}`}
-        aria-pressed={lit}
-        on={lit}
-        disabled={!supported || settingsOpen}
-        onClick={() => togglePane(side)}
-      >
-        <Icon className="size-3.75" />
-      </IconButton>
+      <span className="inline-flex" title={reason}>
+        <IconButton
+          title={reason ?? `Toggle ${label}`}
+          aria-label={`Toggle ${label}`}
+          aria-pressed={lit}
+          on={lit}
+          disabled={reason !== undefined}
+          onClick={() => togglePane(side)}
+        >
+          <Icon className="size-3.75" />
+        </IconButton>
+      </span>
     );
   };
 

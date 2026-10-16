@@ -6,16 +6,34 @@ import type { Surface } from "@/types/shell";
 /** Ctrl+1, Ctrl+2, Ctrl+3 switch to Live, Library and Player (`02` section 6). */
 const SURFACE_KEYS: Readonly<Record<string, Surface>> = { "1": "live", "2": "library", "3": "player" };
 
-/** The shell's keys (`02` section 6). Escape closes the events drawer when no flow is open. An open work window or popup
+/** Ctrl+0 resets the interface zoom to 100% (`06` section 8; 1 is 100% in the store). */
+const ZOOM_RESET = 1;
+
+/** The first candidate that passes `shown`, or undefined. A hidden surface has no boxes, so the one on screen answers. */
+export function firstShown<T>(candidates: readonly T[], shown: (node: T) => boolean): T | undefined {
+  return candidates.find(shown);
+}
+
+/** Focuses the active surface's search: the first `[data-search]` that is laid out. Reports whether it found one. */
+function focusActiveSearch(): boolean {
+  const fields = Array.from(document.querySelectorAll<HTMLElement>("[data-search]"));
+  const field = firstShown(fields, (node) => node.getClientRects().length > 0);
+  if (field === undefined) return false;
+  field.focus();
+  return true;
+}
+
+/** The shell's keys (`02` section 6). Escape closes the events drawer when no flow is open; an open work window or popup
  *  owns Escape itself (`useChildWindowKeys`, `usePopupFrame`) and calls `preventDefault`, so one press never cascades
- *  through two layers. Global keys yield to text fields, and the surface keys also yield to any open flow. */
+ *  through two layers. A text field owns every key it takes, Escape included, and an IME composition owns all of them.
+ *  The shortcuts yield to an open work window as well: its own keys own the screen beneath it. */
 export function useShellKeyboard(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || event.isComposing) return;
       const state = useAppStore.getState();
       const target = event.target instanceof Element ? event.target : null;
-      const typing = target !== null && isTextField(target);
+      if (target !== null && isTextField(target)) return;
 
       if (event.key === "Escape") {
         if (state.overlay !== null || !state.eventsOpen) return;
@@ -24,7 +42,7 @@ export function useShellKeyboard(): void {
         return;
       }
 
-      if (typing || !event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (!event.ctrlKey || event.altKey || event.shiftKey || state.overlay !== null) return;
 
       if (event.key === ",") {
         state.openOverlay("settings");
@@ -32,8 +50,20 @@ export function useShellKeyboard(): void {
         return;
       }
 
+      if (event.key === "0") {
+        state.setZoom(ZOOM_RESET);
+        state.say("Zoom reset to 100%.");
+        event.preventDefault();
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        if (focusActiveSearch()) event.preventDefault();
+        return;
+      }
+
       const surface = SURFACE_KEYS[event.key];
-      if (surface === undefined || state.overlay !== null) return;
+      if (surface === undefined) return;
       state.setSurface(surface);
       event.preventDefault();
     };

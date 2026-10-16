@@ -36,7 +36,12 @@ export function Statusbar() {
         <span className="font-mono tabular-nums">{PREVIEW_CONNECTION}</span>
       </span>
       {notice !== null && (
-        <span key={notice.serial} role="status" className={cn("min-w-0 truncate", TONE[notice.tone])}>
+        <span
+          key={notice.serial}
+          role="status"
+          title={notice.sentence}
+          className={cn("min-w-0 truncate", TONE[notice.tone])}
+        >
           {notice.sentence}
         </span>
       )}
