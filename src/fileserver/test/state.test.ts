@@ -18,8 +18,22 @@ test("the state answer is the complete picture in one request (docs/03 section 4
   assert.equal(pick(state.body, "data.backend.connected"), true, "the read itself filled the live view");
   assert.ok(Number(pick(state.body, "data.backend.revision")) >= 4);
   assert.equal(pick(state.body, "data.channels.items.length"), 4);
-  assert.deepEqual(pick(state.body, "data.collections"), [], "collections are phase 6, empty until then");
-  assert.deepEqual(pick(state.body, "data.jobs"), [], "jobs are phase 6, empty until then");
+  assert.deepEqual(pick(state.body, "data.collections"), [], "nothing was made yet");
+  assert.deepEqual(pick(state.body, "data.jobs"), [], "no work ran yet");
+  await t.dispose();
+});
+
+test("a collection and its settled jobs show up fresh in the state answer", async () => {
+  const t = await makeApp();
+  const made = await send(t.app, "POST", "/api/collections", { name: "State lane" });
+  assert.equal(made.status, 201);
+  const state = await send(t.app, "GET", "/api/state");
+  const collections = pick(state.body, "data.collections") as Array<{ name: string; itemCount: number }>;
+  assert.deepEqual(
+    collections.map((one) => [one.name, one.itemCount]),
+    [["State lane", 0]],
+  );
+  assert.deepEqual(pick(state.body, "data.jobs"), []);
   await t.dispose();
 });
 
