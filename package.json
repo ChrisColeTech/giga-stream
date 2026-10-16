@@ -3,13 +3,20 @@
   "private": true,
   "version": "0.1.0",
   "description": "Giga Stream: the interface (src/frontend), the fileserver and Electron host (src/fileserver) and the admin backend (src/backend). See docs/00.",
-  "engines": { "node": ">=24.11" },
+  "engines": {
+    "node": ">=24.11"
+  },
   "scripts": {
+    "kill-ports": "npx --yes kill-port 8090 3001 8097",
+    "dev": "npm run kill-ports && concurrently --names backend,fileserver,live-server --prefix-colors cyan,yellow,green \"npm run dev --prefix src/backend\" \"npm run dev:gateway --prefix src/fileserver\" \"npm run live:dev\"",
     "fixtures": "node scripts/fixtures/make-fixtures.mjs",
     "live:dev": "npm run fixtures && npm run dev:test-channels --prefix src/live-server",
     "live:start": "npm start --prefix src/live-server",
     "test:live-server": "npm test --prefix src/live-server",
     "electron:dev": "npm run dev --prefix src/fileserver",
     "electron": "npm run start:app --prefix src/fileserver"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
   }
 }
