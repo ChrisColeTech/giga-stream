@@ -34,13 +34,13 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 
 | Element | Behaviour |
 |---|---|
-| **Connection** | A status dot and a lowercase mono word: `connecting`, `ready`, `reconnecting`. The sentence behind it is its tooltip |
-| **Notice line** | One polite live region. Each sentence replaces the last. Tones are info, warn and error. It carries every outcome, refusal and unreadable-frame report |
+| **Connection** | A status dot and a lowercase mono word: `connecting` while the first state read is in flight, `ready` after a request succeeded, `reconnecting` after one failed - the outcome of the last request (`03` section 4), not a live link. The sentence behind it is its tooltip |
+| **Notice line** | One polite live region. Each sentence replaces the last. Tones are info, warn and error. It carries every outcome, refusal and unreadable-answer report |
 | **Events** | An icon and the label "Events". Toggles the drawer; lit while it is open |
 | **Settings** | An icon and the label "Settings". Toggles the Settings window; lit while it is open |
 
-Messages from the fileserver also land on the notice line: its own `notice` frames and any frame the
-interface could not read.
+The fileserver's answers also land on the notice line: a refusal's sentence, and any part of an
+answer the interface could not read.
 
 ### 1.3 Panes and sashes
 
@@ -147,6 +147,11 @@ A `<video>` fills the stage, the picture fitted whole inside it by default, with
 |---|---|
 | `Channels` and the total | readout |
 | **Refresh** icon (`Refresh channels`) | calls `POST /api/channels/refresh`; the whole list, every stream's status and the dots update from the answer; the notice line says `Channels refreshed.` or why not |
+
+**When the dots move.** A stream's status and its dot are facts of the last read. They refresh when
+the list is read — when Live opens, when **Refresh channels** is pressed, or when another action
+re-reads the list — and they do not change on their own in between (`03` section 5.1). A channel that
+goes offline mid-session keeps its `live` dot until the next read.
 
 **Search and category**
 

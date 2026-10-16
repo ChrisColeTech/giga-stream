@@ -2,7 +2,7 @@
 
 **Status: governing interface specification.** It defines the window, the three surfaces, state,
 and how the interface talks to the fileserver. The rules every file follows are in `01`; the
-fileserver's routes and frames are in `03`.
+fileserver's routes and answers are in `03`.
 
 ## 1. The window
 
@@ -86,27 +86,27 @@ The store performs no I/O and holds no promise, timer, DOM node or media element
 
 - `services/api.ts` is the only `fetch`: relative URLs, the envelope decoded and validated, aborts
   supported, a refusal turned into an error carrying the server's code and sentence.
-- `services/events.ts` is the only WebSocket: it dials `/ws`, validates each frame, reports a frame of
-  a known type it cannot read, ignores a frame of an unknown type, and reconnects with exponential
-  backoff (250 ms doubling, capped at 10 s, jittered).
+- There is no WebSocket and no `services/events.ts`. A long-running route (a folder scan, `03`
+  section 3.8) answers as a streamed NDJSON body; `services/api.ts` is the one place that reads it,
+  one line at a time, and a body that ends without a `done` line is one error.
 - Resource modules (`channels`, `shell-state`) hold one call each.
 
 ### 2.3 Hydration
 
 1. The interface mounts invisible; the panes need their boxes measured.
-2. The first `hello` frame arrives. It carries the saved shell, the settings, the backend's state and
-   the channel list. Its parts are validated separately: a channel list that cannot be read becomes
-   "no list" and one notice, and never costs the saved shell.
+2. The state read (`GET /api/state`, `03` section 4) arrives. It carries the saved shell, the
+   settings, the backend's state and the channel list. Its parts are validated separately: a channel
+   list that cannot be read becomes "no list" and one notice, and never costs the saved shell.
 3. The saved shell is applied once: the active surface, pane visibility and sizes (a size is clamped to
    its pane's limits). The events drawer is never restored.
 4. The panes snap to the restored state without a tween, then the interface becomes visible two
    animation frames later, once the panes have settled.
-5. If no hello arrives within 1.5 seconds the interface is shown with its defaults. Nothing is written
-   back until the saved shell has been restored, so the defaults can never replace what was saved; the
-   hello still restores the saved shell whenever it arrives.
+5. If the state read does not answer within 1.5 seconds the interface is shown with its defaults.
+   Nothing is written back until the saved shell has been restored, so the defaults can never replace
+   what was saved; the answer still restores the saved shell whenever it arrives.
 6. Later changes to the surface, pane visibility or pane sizes are written back with
    `PATCH /api/shell-state`, 400 ms after the last change.
-7. A reconnect's hello does not re-apply the saved shell; it would undo what changed since.
+7. A later state read never re-applies the saved shell; it would undo what changed since.
 
 The interface never reads or writes browser storage.
 
@@ -205,6 +205,6 @@ instant.
 
 - Loading and empty regions are skeletons in the shape of their content, never text.
 - A recoverable failure keeps the last good content and says one sentence in the statusbar.
-- A frame the interface cannot read is one statusbar notice.
+- A part of an answer the interface cannot read is one statusbar notice.
 - With the backend unreachable, the channel and title regions are skeletons and the player stays;
   local data and the shell stay usable.

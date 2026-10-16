@@ -1,6 +1,6 @@
 # 03 - Server Specification
 
-**Status: governing contract for the two servers, rewritten 2026-10-16.** Every route, frame and field
+**Status: governing contract for the two servers, rewritten 2026-10-16.** Every route, answer and field
 that crosses a program boundary is named here; adding one means changing this document first. Who owns
 what is in `01`; what the interface does with it is in `02` and `06`. Which phase builds each part is `08`.
 
@@ -16,7 +16,7 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 3.7-3.10 Collections, folders, jobs, local media | A | **not started** (phase 6) |
 | 3.11 Image cache | A | **not started** (phase 7) |
 | 3.12-3.13 Favorites, watch history | A | **not started** (phase 8) |
-| 4-6 Socket, live view, storage | A | **not started** (phases 2-8) |
+| 4-6 State and updates, live view, storage | A | **not started** (phases 2-8) |
 | 7.1 Health | B | **done** |
 | 7.2 Channels | B | **done** (tests: `channels.test.ts`, `seed-and-store.test.ts`) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
@@ -101,7 +101,7 @@ type ItemRef = { kind: "title"; id: string } | { kind: "local"; id: string };
 
 `GET /api/settings` returns every setting with its default filled in. `PATCH /api/settings` takes any of
 them; each row is validated on its own, and an invalid or unknown row refuses the whole request
-(`422 settings.invalid`, naming the row). It returns the committed settings and emits `settings.changed`.
+(`422 settings.invalid`, naming the row). It returns the committed settings.
 A stored value that no longer validates reads as its default; an unknown stored key is ignored.
 
 | Key | Values | Default |
@@ -133,7 +133,7 @@ Pane ids: `live.settings`, `live.channels`, `library.rail`, `library.filters`, `
 `player.inspector`, `player.related`. This is the shape the archive stored, kept so an existing saved
 layout still loads. `GET /api/shell-state` returns it. `PATCH /api/shell-state` takes any part of it; the
 two maps merge by pane id. An unknown pane id or a size that is not a positive finite number refuses the
-whole request (`422 settings.invalid`). It returns the committed state and emits `shell.changed`. Sizes
+whole request (`422 settings.invalid`). It returns the committed state. Sizes
 are stored as sent; the interface clamps them to the limits in `02` section 1.3 when it applies them.
 
 ### 3.4 Channels
@@ -161,10 +161,11 @@ interface ChannelList {
 | Route | Behaviour |
 |---|---|
 | `GET /api/channels` | query `q` (case-insensitive, over name and number) and `category`; the matching channels from the live view as a `ChannelList` (categories always counted over the whole view). An empty view answers an empty list, not an error |
-| `POST /api/channels/refresh` | reads the channels from the backend again, probes every stream, replaces the live view, emits `channels.changed` and answers the whole `ChannelList`. `503 backend.unreachable` if the backend does not answer; `502 backend.bad_response` if its answer cannot be read |
-| `PATCH /api/channels/last` | body `{ channelId }`; remembers the channel Live opens on next time and emits `channels.changed`. `404 channel.not_found` if it is not in the live view |
+| `POST /api/channels/refresh` | reads the channels from the backend again, probes every stream, replaces the live view and answers the whole `ChannelList`. `503 backend.unreachable` if the backend does not answer; `502 backend.bad_response` if its answer cannot be read |
+| `PATCH /api/channels/last` | body `{ channelId }`; remembers the channel Live opens on next time and answers the committed id. `404 channel.not_found` if it is not in the live view |
 
-The last channel is reported (in the hello and `channels.changed`) only while it is in the live view.
+The last channel is reported (in the state answer) only while it is in the live view. The view and
+its dots are refreshed when they are read - on demand or by a refresh - never on a timer (section 5.1).
 
 ### 3.5 The library query
 
@@ -277,8 +278,8 @@ genre, then year. A title with no `streamUrl` keeps Play disabled, with the reas
 
 - **With providers**, the fileserver reads active providers live from the backend (section 7.2b) when
   a title or episode is requested, and attaches the provider data to the answer. The client then plays
-  through the provider's embedded player. The fileserver caches provider data and invalidates it on
-  `providers.changed` socket events from the backend.
+  through the provider's embedded player. The fileserver holds the providers in its in-memory view
+  like channels: read on demand, kept for the request, never stored.
 
 ### 3.7 Collections
 
@@ -305,7 +306,8 @@ interface Collection {
 | `GET /api/items/:kind/:itemId/collections` | the ids of the collections an item is in (manual or through a folder) |
 
 A name is 1 to 80 characters after trimming *(default)* and unique, ignoring case (`422 collection.invalid`). An
-unknown id is `404 collection.not_found`. Every change emits `collections.changed`.
+unknown id is `404 collection.not_found`. Every write answers with the collection and its folders
+as they now stand.
 
 ### 3.8 Folders and scans
 
@@ -324,6 +326,7 @@ interface Folder {
 |---|---|
 | `POST /api/fs/dialog` | opens the native folder picker (Electron only) and answers `{ token, name }`. A browser answers `409 fs.desktop_required`; a cancelled picker `409 fs.cancelled` |
 | `POST /api/collections/:collectionId/folders` | `{ token }`; attaches the chosen folder and queues its scan; answers `201` with the `Folder` |
+| `GET /api/folders/:folderId/scan` | the folder's running scan as a **streamed NDJSON body**: one `ScanEvent` per line (`found`, `probed`, `progress`, `done`, `cancelled` — the shared library's shapes, `src/shared/media/src/types/scan.ts`), ending when the scan ends. `409 job.not_running` when no scan is running for it. A client that goes away does not stop the scan; the job runs on (3.9) |
 | `PUT /api/folders/:folderId` | `{ token }`; replaces the folder's location and rescans it |
 | `POST /api/folders/:folderId/rescan` | queues a scan; `409 job.running` if one is already running for it |
 | `DELETE /api/folders/:folderId` | detaches it and removes its file records; files on disk are never touched |
@@ -338,6 +341,12 @@ Each new or changed file gets a **media probe** (ffprobe: duration, width, heigh
 container; a file ffprobe cannot read is kept and marked unplayable with the reason) and then a **still**
 (one frame with ffmpeg's `thumbnail` filter, kept in the image cache). Scans, probes and stills run as jobs
 (3.9), one scan per folder at a time. Files are only ever read.
+
+The scan itself is the shared library's async generator (`scanFolder`, `src/shared/media`): it yields a
+`found` event for each file as the walk discovers it, then a `probed` and a `progress` event for each file
+whose facts come back, then `done` — and the scan route (`GET /api/folders/:folderId/scan`) streams those
+events line by line, NDJSON, as the generator yields them. That is how progress reaches the interface with
+no socket and no polling: one request, one streamed answer, in the shape the generator already produces.
 
 ### 3.9 Jobs
 
@@ -387,14 +396,12 @@ id is `404 image.not_found`.
   `image/*` answer only) and keeps it under `DATA_DIR/images`; later requests are served from disk. A source that
   fails answers `404 image.not_found`, and the interface shows the fallback.
 - A local file's still is written there by its `poster-fetch` job.
-- A backend `titles.synced` frame (`7.6b`) carries the synced titles' image sources; the fileserver
-  warms the cache for them ahead of the first request, so a synced title's poster is already on disk.
 - Images older than six months are deleted at start (`11` section 6).
 
 ### 3.12 Favorites
 
 `PUT /api/favorites/:kind/:itemId` adds a favorite; `DELETE` the same address removes it. Both are
-idempotent, answer `{ ref, favorite }` and emit `library.changed`.
+idempotent, answer `{ ref, favorite }`.
 
 ### 3.13 Watch history
 
@@ -412,19 +419,19 @@ interface WatchWrite {
 
 | Route | Behaviour |
 |---|---|
-| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }` and emits `library.changed` |
+| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }` |
 | `DELETE /api/watch/:watchId` | removes one entry (Remove from History) |
 | `DELETE /api/watch` | clears all history; favorites, collections and files are untouched |
 
 Channels never create watch entries. `entry` is `{ watchId, item, season?, episode?, positionMs, durationMs?,
 state, updatedAt }`; an unknown `watchId` is `404 watch.not_found`.
 
-## 4. The socket - `/ws`
+## 4. State and updates
 
-The first frame is always the hello, a complete picture:
+There is no socket. `GET /api/state` answers the complete picture in one request:
 
 ```ts
-interface Hello {
+interface State {
   version: string;
   host: { runtime: "electron" | "browser" };   // the folder picker exists only in "electron"
   settings: Settings;
@@ -445,47 +452,45 @@ interface BackendState {
 }
 ```
 
-Every later frame is `{ seq, type, data }`, `seq` rising by one per frame. There is no replay: a reconnect
-gets a fresh hello. The interface sends only `ping`.
-
-| Type | Data | When |
-|---|---|---|
-| `pong` | `{ at }` | after a `ping` |
-| `settings.changed` | `Settings` | after a settings write |
-| `shell.changed` | `ShellState` | after a shell-state write |
-| `backend.changed` | `BackendState` | when the connection, revision or error changes |
-| `channels.changed` | `{ channels: ChannelList, lastChannelId? }` | after every read, probe round, clear and last-channel write |
-| `collections.changed` | `{ collections: Collection[] }` | after a collection, member or folder change, and when a scan starts or ends |
-| `library.changed` | `{ what: "favorites" \| "watch" \| "files" }` | after a favorite, watch or file change; the interface asks again |
-| `job.changed` | `Job` | on every state change, and on progress at most twice a second per job *(default)* |
-| `job.removed` | `{ id }` | after a job is removed |
-| `notice` | `{ tone: "info" \| "warn" \| "error", sentence }` | an outcome or refusal for the statusbar |
-
-Frames report what happened; they never ask the interface to do anything.
+- **Writes answer.** Every write route returns what changed (the settings, the shell state, the
+  collection, the job), so the interface learns the consequence of its own action from the answer
+  itself. Nothing is echoed on a second channel, because there is no second channel.
+- **Reads happen on interaction.** The interface asks for state when it mounts, when it switches
+  surface, after its own actions, and when the person presses Refresh. Nothing re-reads on an
+  interval (`01` section 4.4).
+- **Long work streams.** A folder scan answers as one streamed NDJSON body reporting progress as it
+  happens (3.8); every other route answers whole.
+- **Connection is a fact of the last read.** `backend.connected` and `backend.readAt` describe the
+  last request, not a live link: the fileserver holds no connection open to the backend (5.1) and
+  learns its reachability by asking. The statusbar's word follows the last request's outcome.
+- The parts of the answer are validated separately by the interface (`02` section 2.3): a channel
+  list that cannot be read becomes "no list" and one notice, and never costs the saved shell.
 
 ## 5. The live view
 
 ### 5.1 Reading the backend
 
 The fileserver keeps the backend's channels in memory, the **live view**. It is never written to disk.
-Titles are not listed in advance; they are asked for page by page (sections 3.5 and 3.6).
+Titles are not listed in advance; they are asked for page by page (sections 3.5 and 3.6). The fileserver
+holds no connection open to the backend — it reads on demand:
 
-- It holds one socket open to the backend (section 7.8). On connect, it reads
-  `GET {adminUrl}/api/channels`; on a `channels.changed` frame from the backend it reads them again,
-  unless the view already holds that revision.
-- `POST /api/channels/refresh` reads the channels again regardless.
-- If the backend socket drops, the fileserver reconnects with backoff (250 ms doubling to 10 s, jittered).
-- **Loss.** If the backend stays unreachable for 10 seconds (`LIVE_VIEW_GRACE_MS`), the live view is
-  cleared and `channels.changed` is emitted. While the backend is unreachable, the channel list is empty,
-  the library query reports `titlesAvailable: false` and the title routes answer `503`. When the backend
-  comes back, the view is read again and `backend.changed` tells the interface to ask for titles again.
+- On a channels or state read: if the view is empty, or older than `LIVE_VIEW_TTL_MS` *(default 30 s)*,
+  it reads `GET {adminUrl}/api/channels` and replaces the view. The revision in the backend's answer
+  says whether the list moved; a read can also compare it and skip the fetch when the view already holds
+  that revision.
+- `POST /api/channels/refresh` reads the channels again regardless of the TTL.
+- **Loss.** A read that fails clears the live view, sets `backend.error` and answers as section 3.4 says
+  (`503 backend.unreachable`, `502 backend.bad_response`). While the backend is unreachable the channel
+  list is empty, the library query reports `titlesAvailable: false` and the title routes answer `503`.
+  The next successful read refills the view. Nothing watches for the backend's return; the next request
+  is what finds it.
 - An answer the fileserver cannot read sets `backend.error` (`backend.bad_response`) and leaves the view
   as it was.
 
 ### 5.2 The probe
 
-After every channel read, each channel's `streamUrl` is probed, and `channels.changed` is emitted when the
-round finishes. One probe is one `GET` of the address: 4 second timeout, redirects followed, at most 64 KiB
+After every channel read, each channel's `streamUrl` is probed, and the read's answer carries the
+round's statuses. One probe is one `GET` of the address: 4 second timeout, redirects followed, at most 64 KiB
 of the body read. A `2xx` answer whose body begins `#EXTM3U` is `live`; anything else (another status, a
 timeout, a network error, another body) is `offline`; never probed is `unknown`. At most 6 probes run at
 once, and an address shared by several channels is probed once. A re-read keeps a channel's last status
@@ -690,13 +695,10 @@ nobody "adds a title" — the store only ever mirrors TMDB.
   when set, the backend runs the trending and popular warm-up for both kinds on that interval after
   start-up and every interval after. A scheduled run is audited with the actor `system`; a manual run
   with the admin's account.
-- **Events.** A finished sync emits `titles.synced` on `/ws` with `{ titles, stale, ms, triggered }`
-  so the fileserver can refresh title regions. The revision counter and `channels.changed` are
-  untouched: titles are not channel data. The frame also lists the synced titles' image source
-  addresses, and the fileserver warms its own image cache (`3.11`) by fetching them **from the image
-  hosts itself** — no image byte ever travels through the backend, which never stores or serves media
-  (`01` section 7). The interface keeps one origin: titles through the fileserver's pass-through
-  (`3.5`, `3.6`), images through the fileserver's cache.
+- **Events.** A finished sync emits `titles.synced` on `/ws` with `{ titles, stale, ms, triggered }` for
+  any listening client (the backend's socket stays public and read-only, `7.8`). The revision counter and
+  `channels.changed` are untouched: titles are not channel data. The fileserver no longer listens: it
+  reads titles on demand (`3.5`, `3.6`) and warms its image cache lazily on first request (`3.11`).
 - **Audit.** Every start, finish and failure is an audit entry (`7.13`), with the scope, kind, page
   counts and the outcome sentence; never a token. This scheduler is the system's only background
   timer (`01` section 4.4).
@@ -725,7 +727,7 @@ and gets `pong`. There is no replay: a reconnect gets a fresh hello.
 ### 7.9 Storage
 
 Forward-only, numbered migrations, as the fileserver's (section 6). Tables: `channels`, the `revision`
-counter, `admin_accounts`, `refresh_tokens` (hashes only), `audit_log`, and the TMDB cache. It holds no
+counter, `admin_accounts`, `refresh_tokens` (hashes only), `audit_log`, and the title store (`7.6b`). It holds no
 Giga Stream user data, no local paths and no media.
 
 ### 7.10 Running over the network

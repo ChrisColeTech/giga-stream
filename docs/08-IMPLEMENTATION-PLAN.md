@@ -78,7 +78,7 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 
 ### Phase 2 - Fileserver: Live
 
-`03` sections 3.1-3.4, 4 (settings, shell, backend and channel frames), 5 (channels) and 6 (the store
+`03` sections 3.1-3.4, 4 (state and updates), 5 (the live view, read on demand) and 6 (the store
 and migrations).
 
 | Feature | Delivers | Checked by |
@@ -86,7 +86,8 @@ and migrations).
 | Store | `node:sqlite`; migrations `001`, `002` (unchanged) and `003` (backend address into settings) | a copy of a schema-2 database opens and migrates |
 | Settings | `GET`/`PATCH /api/settings`, including `adminUrl` | tests; settings survive a restart |
 | Shell state | `GET`/`PATCH /api/shell-state` | tests; the layout survives a restart |
-| Live view | reading the backend's channels, reconnecting, the 10 s grace | a real run: fills, clears when the backend stops, refills when it returns; changing `adminUrl` switches backends |
+| State | `GET /api/state` — the complete picture in one answer (`03` section 4) | tests; the answer's parts validate separately |
+| Live view | on-demand channel reads with the TTL and revision check, probe rounds after each read, the clear-on-failure and refill-on-next-read behaviour | a real run: fills, clears when the backend stops, refills when the next request finds it again; changing `adminUrl` switches backends |
 | Probe | one `GET` per stream, 4 s, 64 KiB, at most 6 at once | a real run against the test server: every channel `live` |
 | Channel routes | `GET /api/channels`, `POST /api/channels/refresh`, `PATCH /api/channels/last` | tests; a real run |
 | Socket | `/ws`: hello and the frames of `03` section 4 | tests; a real run |
@@ -102,8 +103,8 @@ Phases 1 and 2 can run in parallel, one worker each (section 3).
 |---|---|---|
 | Window | titlebar (brand, Live / Library / Player switch, pane toggles, window controls), statusbar (connection, notice, Events, Settings) | compared with a fresh screenshot of Giga Images' shell |
 | Panes | Allotment panes for all three surfaces, collapse with the tween, sizes within the `02` section 1.3 limits | collapse and restore in the browser and Electron |
-| State | the one store, `services/api.ts`, `services/events.ts` with reconnect | the statusbar shows `connecting`, `ready`, `reconnecting` as the fileserver stops and starts |
-| Hydration | restore the saved tab and layout from the hello, reveal after it settles, never write before restoring | the app reopens on the saved tab and layout with no flash |
+| State | the one store, `services/api.ts` (REST answers and the scan's streamed NDJSON body), the state read on mount | the statusbar shows `connecting`, `ready`, `reconnecting` as requests fail and succeed again |
+| Hydration | restore the saved tab and layout from `GET /api/state`, reveal after it settles, never write before restoring | the app reopens on the saved tab and layout with no flash |
 | Building blocks | the `06` section 9 components, each once | used by every later phase |
 | Surface keys | `Ctrl+1/2/3` | they switch surfaces |
 
@@ -146,6 +147,7 @@ The Library row (Default view, Collections, Open History) is wired in phase 8, w
 | Folders | attach to a collection, replace, rescan, remove | a real run against a temporary folder of test videos |
 | Jobs | the `jobs` table: queued, running, cancelling, done, failed, cancelled, interrupted; cancel; dismiss; restart marks unfinished jobs interrupted | tests; a scan cancelled mid-way; a restart during a scan |
 | Scan | find video files in an attached folder, record them in `local_files` | the test folder's files are listed |
+| Scan progress | `GET /api/folders/:folderId/scan` streams the scan's `ScanEvent`s as NDJSON, line by line, as the shared library's generator yields them (`03` section 3.8) | a scan's events arrive while it runs; a client going away does not stop the scan |
 | Media probe | ffprobe each file for duration, size, dimensions and codecs; mark unplayable files | values match the test files |
 | Stills | one still per local file with ffmpeg, kept in the image cache | each test file has a still |
 | Local media | `GET`/`HEAD` by opaque id with byte ranges | a test file plays and seeks in the browser |

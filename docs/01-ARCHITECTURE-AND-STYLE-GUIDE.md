@@ -8,7 +8,7 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
 
 ```text
  Interface (src/frontend)
-   same-origin REST + one /ws, to the fileserver only
+   same-origin REST, to the fileserver only
    (it never calls the admin backend, TMDB or OMDb)
         |
         v
@@ -18,11 +18,11 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
    image cache: the only backend-derived bytes on its disk
    passes the backend's channels, titles and providers through
    in memory, never to its database
-        |                                  ^
-        | live reads: /api/library,        | /ws frames: channels.changed,
-        | /api/titles*, /api/channels      | providers.changed, titles.synced
-        | (never stored)                   | (invalidate views; warm the image cache)
-        v                                  |
+        |
+        | live reads on demand: /api/library, /api/titles*,
+        | /api/channels, /api/providers (never stored; the revision
+        | in an answer says whether the view moved)
+        v
  Admin backend (src/backend)  :8091 loopback, TLS off loopback (03 section 7.10)
    owns: channels, providers, admin accounts, the title store,
    the audit log, the revision counter
@@ -34,8 +34,8 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
    detail, seasons, related,   (11 section 7)
    trending/popular (sync + fill-through, 03 section 7.6b)
 
- Poster and still bytes: image.tmdb.org -> FILESERVER only (image cache),
- never through the backend (which serves no media byte, section 7).
+ Poster and still bytes: image.tmdb.org -> FILESERVER only (its image cache,
+ fetched lazily on first request), never through the backend (section 7).
  Player in the interface --loads the stream address--> stream origin
  (in development: the streaming test server, scripts/live-server);
  provider titles play in the provider's embedded player in the stage (14).
@@ -69,11 +69,12 @@ The application server for the interface, and the Electron host in desktop mode.
 - delivery of the built interface;
 - everything local: `node:sqlite` with settings, shell state (layout), collections, favorites,
   watch history, local files and jobs; folder scans and Range media routes for local files;
-- one in-memory live view of the backend's channels, titles and providers, passed through as the
-  backend publishes them, never written to disk;
-- the image cache: images from the backend, on disk under the data folder, the only thing kept from
-  the backend;
-- one renderer WebSocket, and one connection to the backend's socket;
+- one in-memory live view of the backend's channels, titles and providers, read from the backend
+  on demand, never written to disk;
+- the image cache: images from the backend, on disk under the data folder, fetched lazily on first
+  request, the only thing kept from the backend;
+- one transport: REST answers. A long-running operation (a folder scan) answers as one streamed
+  NDJSON body that reports progress as it happens; there is no WebSocket and no push channel;
 - Electron lifecycle, preload, safe navigation and native folder selection.
 
 It holds no provider code and does not know what a provider is. It resolves nothing, relays nothing
@@ -101,7 +102,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | Motion | framer-motion |
 | UI state | One Zustand store, narrow selectors |
 | Validation | Zod at every HTTP, WebSocket, backend-published and persisted-value boundary |
-| Servers | Fastify 5 with `@fastify/websocket` |
+| Servers | Fastify 5 (the admin backend adds `@fastify/websocket` for its read-only socket) |
 | Local data | `node:sqlite` (fileserver) and `node:sqlite` (backend), separate databases |
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
@@ -136,11 +137,11 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 
 ### 4.1 One of each
 
-- One interface request layer (`services/api.ts`) and one interface WebSocket (`services/events.ts`).
+- One interface request layer (`services/api.ts`); there is no interface WebSocket.
 - One Zustand store.
 - One fileserver Fastify instance; one backend Fastify instance per backend process.
 - One owner of each SQLite database.
-- One renderer event sequence, minted by the fileserver.
+- One scan-progress stream shape: the shared library's `ScanEvent`, NDJSON (`03` section 3.8).
 - One owner of each surface's pane geometry.
 - One browser-player controller per active stage.
 - One mapping from dotted error codes to user sentences.
@@ -148,7 +149,7 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 ### 4.2 Import boundaries
 
 - The interface never imports fileserver or backend source; the fileserver never imports backend
-  source; the backend imports neither. They talk over HTTP and WebSocket.
+  source; the backend imports neither. They talk over HTTP.
 - **A shared library is not a program.** Code more than one program or tool needs lives once, in
   `src/shared/<domain>/` (for example `src/shared/media`: finding and running the bundled FFmpeg,
   reading a file's facts with ffprobe, and finding the video files in a folder). Any program, the
@@ -171,13 +172,19 @@ spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only r
 - Components, pages, hooks and the store never call `fetch` or construct a `WebSocket`.
 - Application URLs are relative. A backend URL never appears in interface source, except as the
   Settings draft that is sent to the fileserver.
-- REST performs every mutation. WebSocket frames report consequences; they do not mutate.
-- No polling, long polling, SSE or per-feature sockets. The system's single exception is the admin
-  backend's catalog-sync scheduler (`03` section 7.6b): an internal timer, armed by
-  `TMDB_SYNC_SCHEDULE`, that pulls **title metadata** into the title store. Images are never part of
-  it: image bytes are fetched and served by the fileserver's image cache (`03` section 3.11) straight
-  from the image hosts — the backend never stores or serves a media byte (section 7). Nothing else
-  keeps a background timer or poll loop, and the interface never polls for anything.
+- REST performs every mutation; each answer reports the consequence of the write, so the interface
+  learns what changed from the call it just made, not from a second channel.
+- There is no WebSocket anywhere in the system. The interface reads state when it needs it — mount,
+  a surface switch, after its own actions, a Refresh — and never on an interval: no polling, no
+  long polling, no SSE subscriptions, no request loops or timers, in any program or tool.
+- One exception for streamed answers: a long-running operation (a folder scan, `03` section 3.8)
+  answers with a single streamed NDJSON body that reports progress as the work happens — one
+  request, one answer, not polling.
+- The system's single timer exception is the admin backend's catalog-sync scheduler (`03` section
+  7.6b): an internal timer, armed by `TMDB_SYNC_SCHEDULE`, that pulls **title metadata** into the
+  title store. Images are never part of it: image bytes are fetched and served by the fileserver's
+  image cache (`03` section 3.11) lazily on first request — the backend never stores or serves a
+  media byte (section 7).
 - No browser storage: nothing the user chose lives in `localStorage`, `sessionStorage` or IndexedDB.
   Saved state is a fileserver row.
 
@@ -201,7 +208,7 @@ spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only r
 - **Hooks** connect React's lifecycle to services and the store. One hook, one concern.
 - **The store** holds transient UI state and the projections the surfaces share. It performs no I/O
   and holds no promise, timer, DOM node or media element. Components select the narrowest slice.
-- **Services** own REST, the socket, decoding and retries, and return typed domain results.
+- **Services** own REST, decoding, retries and the streamed scan body, and return typed domain results.
 - **`lib`** is pure: no React, Zustand, services, store or device APIs.
 
 ## 7. Server rules
@@ -210,11 +217,14 @@ spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only r
 
 - Repositories own SQL, services compose repositories, routes call services.
 - Migrations are forward-only, numbered and transactional; a newer schema is refused.
-- Backend data is read live, held in memory, and never written to the database. When the connection to
-  the backend is confirmed lost, the in-memory view is cleared and local data stays usable.
+- Backend data is read live on demand, held in memory, and never written to the database. A failed
+  read clears the in-memory view and sets the backend error; local data stays usable, and the next
+  successful read refills the view.
 - Local paths never enter a URL or a DTO. Local files always play through Range routes; `file:` is
   forbidden.
 - Jobs that outlive a request are persisted, cancellable and marked `interrupted` after a restart.
+- A scan is answered as one streamed NDJSON body (section 4.4); a client going away never stops the
+  job it started.
 - Navigation guards cover `will-navigate`, redirects, frames and new windows. The preload exposes
   named capabilities only; generic `invoke`, raw IPC and Node objects are banned.
 
@@ -222,20 +232,20 @@ spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only r
 
 - Reads are public; every change needs a signed-in admin's JWT and writes an audit entry (`03` sections
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
-- Socket frames carry the revision only; the reader reads again.
+- The backend's socket, where a client still wants one, carries the revision only; the reader reads again.
 - No route accepts, uploads or serves video, local files or media bytes.
 
 ## 8. Contract grammar
 
 - JSON fields are `camelCase`; REST resources are plural kebab-case nouns.
-- WebSocket types and error codes are dotted, domain-first lowercase words.
+- Error codes are dotted, domain-first lowercase words.
 - IDs are opaque strings. Times are Unix milliseconds; media positions are integer milliseconds.
 - An absent optional value is omitted unless `null` has its own documented meaning.
 - Success and failure use one envelope: `{ ok: true, data }` or `{ ok: false, error: { code, message } }`.
 - Refusal messages are plain sentences fit for a status line or tooltip.
 - Internal failures are logged with a correlation id; a client never receives a stack trace.
-- A frame the interface cannot read is reported, not dropped silently; a frame of a type the interface
-  does not know is ignored, since a newer server may know more.
+- A part of an answer the interface cannot read is reported, not dropped silently; an answer part of
+  a kind the interface does not know is ignored, since a newer server may know more.
 - The parts of a snapshot are validated separately, so a mismatch in one part never costs the rest.
 
 ## 9. Interface grammar
@@ -281,7 +291,7 @@ focus returns to its opener only if it still exists.
 - The default test run is fast (seconds). Heavy suites are opt-in and run once at the end.
 - Checks start the programs on free ports with temporary data folders. They never touch the owner's
   data, saved layout or running app, and they never start a program the owner has not asked for. Page
-  level fakes (a socket hello, a fetch) live in a harness outside the repository.
+  level fakes (the state read, a fetch) live in a harness outside the repository.
 - Test seams: tests inject the clock, scheduler and fetch; nothing sleeps.
 - The gate runs every typecheck, the lint, the rule checker and every program's tests, and must pass
   before work is called done. Its result is reported as it ran.
