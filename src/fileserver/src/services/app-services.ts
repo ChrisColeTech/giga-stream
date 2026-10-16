@@ -1,7 +1,8 @@
 import os from "node:os";
 import path from "node:path";
 
-import { openDatabase, type Database } from "../store/database.js";
+import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
+import { openDatabase, pingDatabase, type Database } from "../store/database.js";
 import { createChannelStateRepository } from "../store/channel-state-repository.js";
 import { createSettingsRepository } from "../store/settings-repository.js";
 import { createShellStateRepository } from "../store/shell-state-repository.js";
@@ -42,6 +43,17 @@ export function createAppServices(options: ServiceOptions) {
 
   return {
     database,
+    /** `GET /healthz` (docs/03 section 3.1): the database answers, and the fileserver's view of the backend. */
+    health() {
+      pingDatabase(database);
+      const backend = live.backend();
+      return {
+        role: APP_ROLE,
+        version: APP_VERSION,
+        backend: backend.connected ? ("up" as const) : ("down" as const),
+        ...(backend.readAt !== undefined && { readAt: backend.readAt }),
+      };
+    },
     settings: settings as SettingsService,
     shell: shell as ShellStateService,
     channelState,

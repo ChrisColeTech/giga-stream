@@ -88,7 +88,7 @@ export function createTitleRepository(db: DatabaseSync) {
       if (row === undefined) return undefined;
       const parsed = ListRow.parse(row);
       return {
-        ids: (JSON.parse(parsed.ids) as unknown as unknown[]).map(Number),
+        ids: z.array(z.unknown()).parse(JSON.parse(parsed.ids)).map(Number),
         totalPages: parsed.total_pages,
         totalResults: parsed.total_results,
         fetchedAt: parsed.fetched_at,

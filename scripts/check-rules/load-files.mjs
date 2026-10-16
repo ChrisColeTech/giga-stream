@@ -4,7 +4,9 @@ import path from "node:path";
 import { stripNoise } from "./strip-noise.mjs";
 
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".cts", ".mjs"]);
-const SKIPPED_DIRS = new Set(["node_modules", "dist", "out", "release", "public", ".git"]);
+// `data` is every program's runtime folder (databases, the live server's HLS segment cache, whose
+// transport streams end in .ts); it is never source, and reading it exhausted the heap once.
+const SKIPPED_DIRS = new Set(["node_modules", "dist", "out", "release", "public", ".git", "data"]);
 
 /** The programs, the shared libraries and the tools; a file belongs to the first root that contains it. */
 const PROGRAM_ROOTS = [
