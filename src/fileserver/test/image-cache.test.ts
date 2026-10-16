@@ -166,14 +166,17 @@ test("the live view answers each channel's logo through the image cache", async 
 
     // A channel's logo answers as a /api/images/<id> address; a source that fails the address
     // rule is left as it is (docs/03 section 3.11), and the state answer carries the same view.
+    // The live view orders by number then name (03 section 3.4), so each row is found by its id.
     const channels = JSON.parse((await app.inject({ method: "GET", url: "/api/channels" })).body);
-    assert.equal(channels.data.items[0].logoUrl, `/api/images/${imageIdOf(good)}`);
-    assert.equal(channels.data.items[1].logoUrl, refused);
+    const channelOf = (items: Array<{ id: string; logoUrl?: string }>, id: string) =>
+      items.find((one) => one.id === id);
+    assert.equal(channelOf(channels.data.items, "c1")?.logoUrl, `/api/images/${imageIdOf(good)}`);
+    assert.equal(channelOf(channels.data.items, "c2")?.logoUrl, refused);
     const state = JSON.parse((await app.inject({ method: "GET", url: "/api/state" })).body);
-    assert.equal(state.data.channels.items[0].logoUrl, `/api/images/${imageIdOf(good)}`);
+    assert.equal(channelOf(state.data.channels.items, "c1")?.logoUrl, `/api/images/${imageIdOf(good)}`);
 
     // The first logo request fetches from the remembered source and serves it; nothing is stored.
-    const logo = await app.inject({ method: "GET", url: channels.data.items[0].logoUrl });
+    const logo = await app.inject({ method: "GET", url: channelOf(channels.data.items, "c1")?.logoUrl });
     assert.equal(logo.statusCode, 200);
     assert.equal(logo.headers["content-type"], "image/png");
     assert.deepEqual(fetched, [good]);

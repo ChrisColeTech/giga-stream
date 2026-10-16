@@ -56,10 +56,11 @@ test("manual members come and go and count, with the shape of docs/03 section 3.
   await t.dispose();
 });
 
-test("an unknown collection is 404 collection.not_found, everywhere", async () => {
+test("an unknown collection is 404 collection.not_found on every write route", async () => {
   const t = await makeApp();
   const ghost = "/api/collections/no-such-id";
-  assert.equal(pick((await send(t.app, "GET", ghost)).body, "error.code"), "collection.not_found");
+  // Section 3.7 defines no read-one route: its read is the list, so the unknown-id rule is the writes'.
+  assert.equal(pick((await send(t.app, "PATCH", ghost, { name: "x" })).body, "error.code"), "collection.not_found");
   assert.equal((await send(t.app, "PATCH", ghost, { name: "x" })).status, 404);
   assert.equal((await send(t.app, "PUT", `${ghost}/items`, { kind: "title", id: "y" })).status, 404);
   assert.equal((await send(t.app, "DELETE", ghost)).status, 404);
@@ -73,7 +74,9 @@ test("a delete removes the collection, and the state answer stops listing it", a
   const id = pick(makeCollection.body, "data.id") as string;
   const answer = await send(t.app, "DELETE", `/api/collections/${id}`);
   assert.deepEqual(pick(answer.body, "data.removed"), id);
-  assert.deepEqual(await send(t.app, "GET", `/api/collections/${id}`).then((one) => one.status), 404);
+  // Section 3.7's read is the list: the removed collection is not in it anymore.
+  const listed = await send(t.app, "GET", "/api/collections");
+  assert.ok(!(pick(listed.body, "data") as Array<{ id: string }>).some((one) => one.id === id));
   assert.deepEqual(pick((await send(t.app, "GET", "/api/state")).body, "data.collections"), []);
   await t.dispose();
 });

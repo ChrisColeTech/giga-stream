@@ -28,7 +28,6 @@ function readKind(kind: string): ItemRef["kind"] {
 export interface CollectionService {
   create: (name: unknown) => Collection;
   list: () => Collection[];
-  getOne: (collectionId: string) => Collection;
   rename: (collectionId: string, name: unknown) => Collection;
   /** Removes it and its folders' records; disk is never touched; answers what the route tells (3.7). */
   remove: (collectionId: string) => { removed: string };
@@ -96,7 +95,6 @@ export function createCollectionService(deps: {
     },
 
     list: () => collections.listCollections().map((row) => collectionOf(row.id)),
-    getOne: (collectionId) => collectionOf(collectionId),
 
     rename(collectionId, name) {
       collectionOf(collectionId);

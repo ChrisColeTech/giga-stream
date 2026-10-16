@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { Answer, FileserverApp } from "./app-fixture.js";
+import type { FileserverApp } from "./app-fixture.js";
 
 // `TEST_FOLDER_ROOT` is read when the app's config module loads, so it must be set before the
 // fixture's import; this file's own process runs one copy of that env (the Node runner isolates files).
@@ -34,17 +34,27 @@ async function awaitScansSettled(t: FileserverApp): Promise<void> {
   assert.fail("scans never settled");
 }
 
-/** Streams the folder's scan; queues a fresh one when none is running yet, then reads to the end. */
-async function readScanStream(t: FileserverApp, folderId: string): Promise<Answer> {
+/** Streams the folder's scan as the raw NDJSON body (one body, many JSON lines, so never parsed
+ * whole); queues a fresh one when none is running yet, then reads to the end. */
+async function readScanStream(t: FileserverApp, folderId: string): Promise<string> {
   for (let attempt = 0; attempt < 30; attempt++) {
-    const stream = await send(t.app, "GET", `/api/folders/${folderId}/scan`);
-    if (stream.status === 200) return stream;
-    if (pick(stream.body, "error.code") === "job.not_running") {
+    const answer = await t.app.inject({ method: "GET", url: `/api/folders/${folderId}/scan` });
+    if (answer.statusCode === 200) return String(answer.body);
+    const refusal = JSON.parse(String(answer.body)) as { error?: { code?: string } };
+    if (refusal.error?.code === "job.not_running") {
       await send(t.app, "POST", `/api/folders/${folderId}/rescan`);
     }
     await new Promise((resolve) => setImmediate(resolve));
   }
   assert.fail("no scan ever ran for the streaming route");
+}
+
+/** Section 3.7 defines no read-one route: the list is the read, so the collection is found by id. */
+async function collectionOf(t: FileserverApp, collectionId: string): Promise<Record<string, unknown>> {
+  const list = await send(t.app, "GET", "/api/collections");
+  const found = (pick(list.body, "data") as Array<{ id: string }>).find((one) => one.id === collectionId);
+  assert.ok(found !== undefined);
+  return found as Record<string, unknown>;
 }
 
 /** Attaches one folder from the test root under a fresh collection and answers the two ids. */
@@ -79,14 +89,14 @@ test("attaching queues the scan: the folder answers `scanning` before and after 
   makeFolder("AttachLane", ["a.mp4", "b.mp4"]);
   const t = await makeApp();
   const ids = await attach(t, "AttachLane", "Races");
-  const folder = await send(t.app, "GET", `/api/collections/${ids.collectionId}`);
-  assert.equal(pick(folder.body, "data.folders.0.scanning"), true);
-  assert.equal(pick(folder.body, "data.scanning"), true);
+  const folder = await collectionOf(t, ids.collectionId);
+  assert.equal(pick(folder, "folders.0.scanning"), true);
+  assert.equal(pick(folder, "scanning"), true);
   await awaitScansSettled(t);
-  const settled = await send(t.app, "GET", `/api/collections/${ids.collectionId}`);
-  assert.equal(pick(settled.body, "data.folders.0.scanning"), false);
-  assert.equal(pick(settled.body, "data.itemCount"), 2);
-  assert.ok(pick(settled.body, "data.folders.0.lastScannedAt") !== undefined);
+  const settled = await collectionOf(t, ids.collectionId);
+  assert.equal(pick(settled, "folders.0.scanning"), false);
+  assert.equal(pick(settled, "itemCount"), 2);
+  assert.ok(pick(settled, "folders.0.lastScannedAt") !== undefined);
   await t.dispose();
 });
 
@@ -94,8 +104,8 @@ test("the scan streams NDJSON lines, `found` per file, and ends on `done`", asyn
   makeFolder("ScanLane", ["a.mp4", "b.mp4"]);
   const t = await makeApp();
   const ids = await attach(t, "ScanLane", "Races");
-  const stream = await readScanStream(t, ids.folderId);
-  const lines = String(stream.body)
+  const body = await readScanStream(t, ids.folderId);
+  const lines = body
     .split("\n")
     .filter((line) => line !== "")
     .map((line) => JSON.parse(line) as { type: string });
@@ -137,8 +147,8 @@ test("PUT with a new token moves the folder and its name follows the new locatio
   assert.equal(pick(moved.body, "data.name"), "SecondLane");
   await awaitScansSettled(t);
   // The old file row went with the move: one file under the folder, not two.
-  const folder = await send(t.app, "GET", `/api/collections/${ids.collectionId}`);
-  assert.equal(pick(folder.body, "data.itemCount"), 1);
+  const folder = await collectionOf(t, ids.collectionId);
+  assert.equal(pick(folder, "itemCount"), 1);
   await t.dispose();
 });
 
@@ -149,7 +159,8 @@ test("detaching removes the folder and its rows, leaving the collection alone", 
   await awaitScansSettled(t);
   const gone = await send(t.app, "DELETE", `/api/folders/${ids.folderId}`);
   assert.deepEqual(pick(gone.body, "data.removed"), ids.folderId);
-  assert.deepEqual(pick((await send(t.app, "GET", `/api/collections/${ids.collectionId}`)).body, "data.folders"), []);
+  const folder = await collectionOf(t, ids.collectionId);
+  assert.deepEqual(pick(folder, "folders"), []);
   assert.equal((await send(t.app, "GET", `/api/folders/${ids.folderId}/scan`)).status, 404);
   await t.dispose();
 });

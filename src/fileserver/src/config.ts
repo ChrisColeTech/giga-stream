@@ -40,6 +40,8 @@ export const config = {
   liveViewTtlMs: env.LIVE_VIEW_TTL_MS,
   /** Where the proof of concept's saved results go (gitignored). */
   pocResultsDir: path.resolve(env.WEB_DIST, "results"),
-  testFolderRoot: path.resolve(env.TEST_FOLDER_ROOT),
+  // Empty stays empty (path.resolve("") would answer the process working directory, a root that
+  // is never empty and so would leave the test lane always on); a set value becomes absolute.
+  testFolderRoot: env.TEST_FOLDER_ROOT !== "" ? path.resolve(env.TEST_FOLDER_ROOT) : "",
   version: "0.2.0",
 } as const;
