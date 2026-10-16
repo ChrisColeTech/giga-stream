@@ -69,7 +69,7 @@ function titlesSeam(overrides: Record<string, unknown> = {}): typeof fetch {
     const url = new URL(String(input instanceof Request ? input.url : input));
     const at = url.pathname;
     if (overrides[at] !== undefined) return json(overrides[at]);
-    if (at === "/healthz") return json({ role: "admin-backend", version: "t", revision: 1, tmdb: "configured" });
+    if (at === "/healthz") return json({ ok: true, data: { role: "admin-backend", version: "t", revision: 1, tmdb: "configured" } });
     if (at === "/api/providers") return json(PROVIDERS);
     if (at === "/api/titles/genres") return json(url.searchParams.get("kind") === "tv" ? TV_GENRES : GENRES);
     if (at === "/api/titles/movie-603") return json(MATRIX);
