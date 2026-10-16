@@ -4,18 +4,20 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022", "DOM"],
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "declaration": false,
-    "sourceMap": true
+    "sourceMap": false
   },
-  // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck and build,
-  // and the window loads a preload that does not exist (the Giga Images lesson). NodeNext emits it as
-  // dist/app/preload.cjs, the name src/app/main.ts asks for.
+  // Typecheck only: the program runs TypeScript directly (Node 24.11 no longer needs a build), and
+  // `src/shared/media` is imported by relative `.ts` paths — both need `allowImportingTsExtensions`,
+  // and with no `rootDir`/`outDir` those imports typecheck cleanly from src.
+  // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck
+  // (the Giga Images lesson).
   "include": ["src/**/*.ts", "src/**/*.cts"]
 }

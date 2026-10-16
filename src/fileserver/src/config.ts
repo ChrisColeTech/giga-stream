@@ -24,6 +24,8 @@ const EnvSchema = z.object({
   ALLOW_INSECURE_ADMIN: BooleanFlag,
   // How long the live view counts as fresh between on-demand reads (03 section 5.1).
   LIVE_VIEW_TTL_MS: z.coerce.number().int().min(0).max(60 * 60 * 1000).default(30_000),
+  // Test lane only: `POST /api/fs/dialog` then takes `{ name }` directly under this root (03 section 3.8).
+  TEST_FOLDER_ROOT: z.string().default(""),
 });
 
 const env = EnvSchema.parse(process.env);
@@ -38,5 +40,6 @@ export const config = {
   liveViewTtlMs: env.LIVE_VIEW_TTL_MS,
   /** Where the proof of concept's saved results go (gitignored). */
   pocResultsDir: path.resolve(env.WEB_DIST, "results"),
+  testFolderRoot: path.resolve(env.TEST_FOLDER_ROOT),
   version: "0.2.0",
 } as const;

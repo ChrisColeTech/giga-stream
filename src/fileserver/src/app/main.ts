@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { app, BrowserWindow, screen, session } from "electron";
+import { app, BrowserWindow, dialog, screen, session } from "electron";
 import type { FastifyInstance } from "fastify";
 
 import { buildApp } from "../build-app.js";
@@ -70,7 +70,14 @@ if (!app.requestSingleInstanceLock()) {
   app
     .whenReady()
     .then(async () => {
-      server = await buildApp();
+      server = await buildApp({
+        openFolderPicker: async () => {
+          if (mainWindow === null || mainWindow.isDestroyed()) return "cancelled" as const;
+          const answer = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"], title: "Choose a folder" });
+          const chosen = answer.filePaths.at(0);
+          return answer.canceled || chosen === undefined ? ("cancelled" as const) : { path: chosen };
+        },
+      });
       await server.listen({ host: "127.0.0.1", port: config.port });
       const url = `http://127.0.0.1:${config.port}/`;
       const filters = await enableAdBlocking(session.defaultSession, (blocked) => {
