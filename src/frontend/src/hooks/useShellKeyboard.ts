@@ -26,7 +26,7 @@ function focusActiveSearch(): boolean {
 /** The shell's keys (`02` section 6). Escape closes the events drawer when no flow is open; an open work window or popup
  *  owns Escape itself (`useChildWindowKeys`, `usePopupFrame`) and calls `preventDefault`, so one press never cascades
  *  through two layers. A text field owns every key it takes, Escape included, and an IME composition owns all of them.
- *  The shortcuts yield to an open work window as well: its own keys own the screen beneath it. */
+ *  The shortcuts yield to an open work window as well, except Ctrl+0, which works under one (its zoom row is in Settings). */
 export function useShellKeyboard(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -42,17 +42,21 @@ export function useShellKeyboard(): void {
         return;
       }
 
-      if (!event.ctrlKey || event.altKey || event.shiftKey || state.overlay !== null) return;
+      if (!event.ctrlKey || event.altKey || event.shiftKey) return;
 
-      if (event.key === ",") {
-        state.openOverlay("settings");
+      /* Ctrl+0 is the one shortcut that works under an open work window: the zoom row lives in Settings (06 section 6.2),
+       * so the key that resets it must reach there. Every other shortcut yields to the window. */
+      if (event.key === "0") {
+        state.setZoom(ZOOM_RESET);
+        state.say("Zoom reset to 100%.");
         event.preventDefault();
         return;
       }
 
-      if (event.key === "0") {
-        state.setZoom(ZOOM_RESET);
-        state.say("Zoom reset to 100%.");
+      if (state.overlay !== null) return;
+
+      if (event.key === ",") {
+        state.openOverlay("settings");
         event.preventDefault();
         return;
       }

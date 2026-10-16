@@ -31,7 +31,7 @@ export function Statusbar() {
   return (
     <footer className={BAR}>
       {/* THE DOT IS THE WORD: the sentence survives in the tooltip for the case that matters, the dot going grey. */}
-      <span className="inline-flex items-center gap-1.5" title="Phase 1 preview: the fileserver connection arrives in phase 2">
+      <span className="inline-flex items-center gap-1.5" title="The fileserver connection.">
         <StatusDot state={CONNECTION_DOT[PREVIEW_CONNECTION]} />
         <span className="font-mono tabular-nums">{PREVIEW_CONNECTION}</span>
       </span>
