@@ -9,14 +9,14 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | Section | Part | Status |
 |---|---|---|
 | 1-2 Programs, conventions | — | **done** (both servers boot; the envelope and error codes are in) |
-| 3.1 Health (fileserver) | A | **not started** (phase 2) |
-| 3.2-3.3 Settings, shell state | A | **not started** (phase 3) |
-| 3.4 Channels pass-through | A | **not started** (phase 2) |
+| 3.1 Health (fileserver) | A | **done** (`state.test.ts`: own state and the backend view) |
+| 3.2-3.3 Settings, shell state | A | **done** (`settings.test.ts`, `shell-state.test.ts`: defaults, whole-request refusal, restart persistence) |
+| 3.4 Channels pass-through | A | **done** (`channels.test.ts` against the real backend: fill, q/category, categories over the whole view, last channel) |
 | 3.5-3.6 Library query, titles pass-through | A | **not started** (phase 7) |
 | 3.7-3.10 Collections, folders, jobs, local media | A | **not started** (phase 6) |
 | 3.11 Image cache | A | **not started** (phase 7) |
 | 3.12-3.13 Favorites, watch history | A | **not started** (phase 8) |
-| 4-6 State and updates, live view, storage | A | **not started** (phases 2-8) |
+| 4-6 State and updates, live view, storage | A | **done** (`state.test.ts`, `live-view.test.ts`: the state answer, the TTL, clear-on-failure, refill on the next request - all against the real backend as a child process; migrations `001`/`002` ported unchanged, `003` new) |
 | 7.1 Health | B | **done** |
 | 7.2 Channels | B | **done** (tests: `channels.test.ts`, `seed-and-store.test.ts`) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
@@ -49,7 +49,7 @@ change without a design discussion.
 | Interface (Vite, development; proxies `/api` and `/ws` to the fileserver) | 5171 |
 | Fileserver | 8090 |
 | Admin backend | 8091 |
-| Streaming test server (`10`) | 8097 |
+| Live server (`10`) | 8097 |
 
 Both servers bind `127.0.0.1` unless `HOST` says otherwise.
 

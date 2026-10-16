@@ -26,12 +26,12 @@ test("the bundled tools are found in the repository; the override folder wins; a
 });
 
 test("probing a real fixture file gives its codecs, size, rate, channels and length", async () => {
-  const facts = await probeFile(path.join(fixtures, "live", "sports.mp4"));
+  const facts = await probeFile(path.join(fixtures, "live", "sports-1.mp4"));
   assert.equal(facts.playable, true);
   assert.match(facts.container ?? "", /mp4/);
   assert.deepEqual([facts.videoCodec, facts.audioCodec, facts.width, facts.height, facts.frameRate, facts.audioChannels],
     ["h264", "aac", 1920, 1080, 30, 2]);
-  assert.ok(Math.abs((facts.durationMs ?? 0) - 60_000) <= 100);
+  assert.ok(Math.abs((facts.durationMs ?? 0) - 40_000) <= 100);
 });
 
 test("probing a file that does not exist or is not video says it cannot be read", async () => {
@@ -51,7 +51,7 @@ test("a failing tool rejects with its exit code and stderr; aborting kills it", 
   await assert.rejects(runTool(ffmpeg, ["-hide_banner", "-i", "no-such-input.mp4"]), (error: unknown) =>
     error instanceof ToolError && error.exitCode !== 0 && /no-such-input/.test(error.stderr));
   const abort = new AbortController();
-  const running = runTool(ffmpeg, ["-hide_banner", "-re", "-i", path.join(fixtures, "live", "news.mp4"), "-f", "null", "-"], {
+  const running = runTool(ffmpeg, ["-hide_banner", "-re", "-i", path.join(fixtures, "live", "news-1.mp4"), "-f", "null", "-"], {
     signal: abort.signal,
   });
   setTimeout(() => abort.abort(new Error("stopped")), 300);

@@ -2,9 +2,14 @@ import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { config } from "./config.js";
-import { fail } from "./routes/envelope.js";
+import { registerErrorHandling } from "./lib/error-handler.js";
+import { registerChannelsRoutes } from "./routes/channels.js";
 import { registerHealth } from "./routes/health.js";
 import { registerPocResults } from "./routes/poc-results.js";
+import { registerSettingsRoutes } from "./routes/settings.js";
+import { registerShellStateRoutes } from "./routes/shell-state.js";
+import { registerStateRoute } from "./routes/state.js";
+import { createAppServices, type ServiceOptions } from "./services/app-services.js";
 import { createPocResultsService } from "./services/poc-results-service.js";
 
 /** The parts of the served folder a browser may load; the PoC's scripts and results are not among them. */
@@ -17,22 +22,49 @@ function isServed(pathName: string): boolean {
   return SERVED_TOP.has(parts[0] ?? "");
 }
 
-/** The one Fastify instance (docs/01 section 4.1): static files from WEB_DIST and the routes. */
-export async function buildApp(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: { level: "info" }, bodyLimit: 8 * 1024 * 1024 });
+export interface BuildOptions extends Partial<ServiceOptions> {
+  webDist?: string;
+  logger?: boolean;
+}
+
+/**
+ * The one Fastify instance (docs/01 section 4.1): static files from `WEB_DIST`, the routes, the one
+ * database and its services. `overrides` replace config values without touching `process.env`,
+ * which is how tests pass a temporary `DATA_DIR`, the clocks and the fetch seams.
+ */
+export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: overrides.logger ?? false,
+    bodyLimit: 8 * 1024 * 1024,
+  });
+
+  const services = createAppServices({
+    dataDir: overrides.dataDir ?? config.dataDir,
+    allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
+    liveViewTtlMs: overrides.liveViewTtlMs ?? config.liveViewTtlMs,
+    now: overrides.now ?? Date.now,
+    ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),
+    ...(overrides.probeFetch !== undefined && { probeFetch: overrides.probeFetch }),
+  });
+
+  app.addHook("onClose", async () => {
+    services.close();
+  });
 
   await app.register(fastifyStatic, {
-    root: config.webDist,
+    root: overrides.webDist ?? config.webDist,
     index: ["index.html"],
     cacheControl: false,
     allowedPath: (pathName) => isServed(pathName),
   });
 
-  registerHealth(app);
+  registerErrorHandling(app);
+  registerHealth(app, services);
+  registerSettingsRoutes(app, services);
+  registerShellStateRoutes(app, services);
+  registerChannelsRoutes(app, services);
+  registerStateRoute(app, services);
   registerPocResults(app, createPocResultsService(config.pocResultsDir));
-
-  app.setNotFoundHandler((_request, reply) =>
-    reply.code(404).send(fail("route.not_found", "There is nothing at that address.")));
 
   return app;
 }

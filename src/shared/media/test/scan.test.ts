@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "nod
 import os from "node:os";
 import path from "node:path";
 
+import { PROGRAMMES } from "../../../../scripts/fixtures/fixture-set.mjs";
 import { ensureFixtures } from "../../../../scripts/fixtures/make-fixtures.mjs";
 import { scanFolder, scanFolderToEnd } from "../src/scan/folder-scan.ts";
 import type { ScanEvent } from "../src/types/scan.ts";
@@ -20,31 +21,34 @@ async function collect(iterable: AsyncIterable<ScanEvent>): Promise<ScanEvent[]>
   return events;
 }
 
-test("scanning the fixture folder finds the four live files and probes them with ffprobe", async () => {
+// The set's video files in path order, with their lengths; the caption files beside them are not video.
+const VIDEOS = [...PROGRAMMES].sort((a, b) => a.file.localeCompare(b.file));
+const COUNT = VIDEOS.length;
+
+test("scanning the fixture folder finds every programme file and probes it with ffprobe", async () => {
   const done = await scanFolderToEnd(fixtures);
-  assert.deepEqual(done.files.map((f) => f.path), ["live/kids.mp4", "live/music.mp4", "live/news.mp4", "live/sports.mp4"]);
+  assert.deepEqual(done.files.map((f) => f.path), VIDEOS.map((spec) => spec.file));
   assert.equal(done.unplayable, 0);
-  for (const file of done.files) {
+  for (const [index, file] of done.files.entries()) {
     const { facts } = file;
     assert.ok(facts, file.path);
     assert.equal(facts.playable, true, file.path);
     assert.deepEqual([facts.videoCodec, facts.audioCodec, facts.width, facts.height, facts.frameRate, facts.audioChannels],
       ["h264", "aac", 1920, 1080, 30, 2], file.path);
-    assert.ok(Math.abs((facts.durationMs ?? 0) - 60_000) <= 100, `${file.path} is ${facts.durationMs} ms`);
+    const seconds = VIDEOS[index]?.seconds ?? 0;
+    assert.ok(Math.abs((facts.durationMs ?? 0) - seconds * 1000) <= 100, `${file.path} is ${facts.durationMs} ms`);
     assert.ok(file.sizeBytes > 100_000, file.path);
   }
 });
 
 test("a scan reports each file found, then each file probed, then done", async () => {
   const events = await collect(scanFolder(fixtures));
-  assert.deepEqual(events.map((e) => e.type), [
-    "found", "progress", "found", "progress", "found", "progress", "found", "progress",
-    "probed", "progress", "probed", "progress", "probed", "progress", "probed", "progress",
-    "done",
-  ]);
+  const pairs = (type: string) => Array.from({ length: COUNT }, () => [type, "progress"]).flat();
+  assert.deepEqual(events.map((e) => e.type), [...pairs("found"), ...pairs("probed"), "done"]);
   const progress = events.flatMap((e) => (e.type === "progress" ? [[e.found, e.probed, e.total]] : []));
   assert.deepEqual(progress, [
-    [1, 0, null], [2, 0, null], [3, 0, null], [4, 0, null], [4, 1, 4], [4, 2, 4], [4, 3, 4], [4, 4, 4],
+    ...Array.from({ length: COUNT }, (_, i) => [i + 1, 0, null]),
+    ...Array.from({ length: COUNT }, (_, i) => [COUNT, i + 1, COUNT]),
   ]);
 });
 
@@ -53,10 +57,10 @@ test("in a mixed folder only video files are found; a file that is not video is 
   try {
     mkdirSync(path.join(dir, "shows", "season 1"), { recursive: true });
     mkdirSync(path.join(dir, ".hidden"));
-    copyFileSync(path.join(fixtures, "live", "news.mp4"), path.join(dir, "shows", "season 1", "Episode 1.MP4"));
+    copyFileSync(path.join(fixtures, "live", "news-2.mp4"), path.join(dir, "shows", "season 1", "Episode 1.MP4"));
     writeFileSync(path.join(dir, "broken.mkv"), "this is not a video");
     writeFileSync(path.join(dir, "notes.txt"), "not a video either");
-    copyFileSync(path.join(fixtures, "live", "music.mp4"), path.join(dir, ".hidden", "skipped.mp4"));
+    copyFileSync(path.join(fixtures, "live", "music-1.mp4"), path.join(dir, ".hidden", "skipped.mp4"));
     const done = await scanFolderToEnd(dir);
     assert.deepEqual(done.files.map((f) => [f.path, f.facts?.playable, f.facts?.problem]), [
       ["broken.mkv", false, "The file could not be read as video."],
@@ -72,7 +76,7 @@ test("listing without probing gives the files and no facts", async () => {
   const events = await collect(scanFolder(fixtures, { probe: false }));
   const done = events.at(-1);
   assert.equal(done?.type, "done");
-  assert.equal(done?.type === "done" && done.files.length, 4);
+  assert.equal(done?.type === "done" && done.files.length, COUNT);
   assert.equal(done?.type === "done" && done.files.some((f) => f.facts), false);
 });
 
@@ -84,7 +88,7 @@ test("aborting after the first probe ends the scan with cancelled and probes no 
     if (event.type === "probed") abort.abort();
   }
   assert.equal(events.filter((e) => e.type === "probed").length, 1);
-  assert.deepEqual(events.at(-1), { type: "cancelled", found: 4, probed: 1 });
+  assert.deepEqual(events.at(-1), { type: "cancelled", found: COUNT, probed: 1 });
 });
 
 test("a folder that does not exist rejects before any event", async () => {
