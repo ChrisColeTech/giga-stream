@@ -110,7 +110,7 @@ written, stated as written and not run; every gap it filled and how; anything le
 2. It merges the branch, runs `npm ci` where a lockfile changed (never under a running app, 4), and runs
    the gate.
 3. It runs the real checks the worker could not: the programs started on free ports with temporary
-   data, driven over HTTP and the socket, restarted and re-read.
+   data, driven over HTTP (the fileserver has no socket, `03` section 4), restarted and re-read.
 4. A failure goes back to the **same** worker with the exact output. The coordinator does not quietly
    fix a worker's defect and report the work as clean.
 5. A worker that broke a rule is told, and the breach is recorded in the landing commit message.
