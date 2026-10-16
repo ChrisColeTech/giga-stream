@@ -30,6 +30,15 @@ export const LOCKOUT_MS = 15 * 60 * 1000;
 export const AUDIT_PAGE_DEFAULT = 50;
 export const AUDIT_PAGE_MAX = 200;
 
+// The playlist sync (docs/03 section 7.2c).
+export const PLAYLIST_FETCH_TIMEOUT_MS = 15_000;
+export const TVG_ID_MAX = 128;
+export const PLAYLIST_SYNC_EXAMPLES_MAX = 10;
+
+// The iptv-org logo index the sync enriches from (docs/03 section 7.2c, "Enrichment").
+export const LOGO_INDEX_TIMEOUT_MS = 15_000;
+export const LOGO_INDEX_MAX_BYTES = 8 * 1024 * 1024;
+
 // The socket (section 7.8): a client may send only `ping`, so frames are tiny.
 export const SOCKET_MAX_PAYLOAD_BYTES = 1024;
 export const SOCKET_QUEUE_LIMIT = 64;
