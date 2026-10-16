@@ -10,6 +10,8 @@ export interface BackendChannel {
   number?: string;
   logoUrl?: string;
   streamUrl: string;
+  tvgId?: string;          // the playlist's tvg-id; the playlist sync's update key (docs/03 section 7.2c)
+  source?: string;         // the playlist host that created the row; sync-owned rows only (section 7.2c)
   revision: number;
 }
 

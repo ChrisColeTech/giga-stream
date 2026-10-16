@@ -58,6 +58,8 @@ export function createChannelService(deps: {
         category: input.category,
         number: input.number ?? null,
         logoUrl: input.logoUrl ?? null,
+        tvgId: null, // a hand-created row is never owned by the playlist sync (docs/03 section 7.2c)
+        source: null,
         streamUrl: input.streamUrl,
         revision: 0,
       };
@@ -80,6 +82,8 @@ export function createChannelService(deps: {
         category: patch.category ?? current.category,
         number: patch.number ?? current.number ?? null,
         logoUrl: patch.logoUrl ?? current.logoUrl ?? null,
+        tvgId: current.tvgId ?? null,
+        source: current.source ?? null,
         streamUrl: patch.streamUrl ?? current.streamUrl,
         revision: current.revision,
       };
