@@ -3,20 +3,17 @@
 // Chrome (CHROME_PATH or a default install), the repository's `ws` dependency and network access to
 // the hls.js CDN.
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { test } from "node:test";
 
-import { startLiveServer } from "../live-server.mjs";
+import { DEFAULT_OUT_DIR, startLiveServer } from "../live-server.mjs";
 import { openChrome, waitFor } from "./chrome-session.mjs";
 
 const enabled = process.env.LIVE_SERVER_BROWSER === "1";
 const SEGMENT_MS = 2000;
 
-async function withPlayer(run) {
-  const outDir = await mkdtemp(path.join(os.tmpdir(), "live-server-out-"));
-  const live = await startLiveServer({ mode: "loop", port: 0, outDir, testPage: true });
+/** `clock` lets a test move the channels' wall clock; the encoded videos come from the shared cache. */
+async function withPlayer(run, { clock } = {}) {
+  const live = await startLiveServer({ mode: "loop", port: 0, outDir: DEFAULT_OUT_DIR, testPage: true, clock });
   const chrome = await openChrome();
   const snapshot = () => chrome.evaluate("window.snapshot ? window.snapshot() : null");
   const control = (channel, action, body = {}) =>
@@ -30,7 +27,6 @@ async function withPlayer(run) {
   } finally {
     await chrome.close();
     await live.stop();
-    await rm(outDir, { recursive: true, force: true });
   }
 }
 
@@ -80,6 +76,26 @@ test("a live channel plays in real time with audio, ABR and a bounded latency", 
   });
 });
 
+test("playback runs on across the switch to the playlist's next video", { skip: !enabled, timeout: 120000 }, async () => {
+  // Once started, jump the channels 12 s ahead (24 s in): news-1 (30 s, 15 segments) switches to news-2 at
+  // number 15, a few seconds ahead of where the player joins.
+  const shift = { ms: 0 };
+  await withPlayer(async ({ live, chrome, snapshot, play }) => {
+    shift.ms = 12_000;
+    const nowPlaying = async () =>
+      (await (await fetch(`${live.url}/channels.json`)).json()).channels.find((c) => c.id === "fx-news").nowPlaying;
+    assert.equal((await nowPlaying()).name, "live/news-1.mp4");
+    await play("fx-news");
+    const mediaStart = (await snapshot()).currentTime;
+    await waitFor(async () => (await nowPlaying()).name === "live/news-2.mp4", { timeoutMs: 30000, label: "switch to news-2" });
+    await waitFor(async () => (await snapshot()).currentTime >= mediaStart + 16, { timeoutMs: 40000, label: "16 s of media" });
+    const after = await snapshot();
+    assert.equal(after.state, "playing");
+    await waitFor(async () => (await snapshot()).frames > after.frames, { label: "frames still decoding after the switch" });
+    assert.equal(await chrome.evaluate("window.liveStats.errors.filter((e) => e.fatal).length"), 0);
+  }, { clock: () => Date.now() + shift.ms });
+});
+
 test("faults produce buffering or failed and clear recovers the same page", { skip: !enabled, timeout: 600000 }, async () => {
   await withPlayer(async (session) => {
     const { snapshot, control, play } = session;
@@ -115,10 +131,8 @@ test("faults produce buffering or failed and clear recovers the same page", { sk
 });
 
 test("stopping the server closes the port", { skip: !enabled }, async () => {
-  const outDir = await mkdtemp(path.join(os.tmpdir(), "live-server-out-"));
-  const live = await startLiveServer({ mode: "loop", port: 0, outDir });
+  const live = await startLiveServer({ mode: "loop", port: 0, outDir: DEFAULT_OUT_DIR });
   assert.equal((await fetch(`${live.url}/healthz`)).status, 200);
   await live.stop();
   await assert.rejects(fetch(`${live.url}/healthz`));
-  await rm(outDir, { recursive: true, force: true });
 });

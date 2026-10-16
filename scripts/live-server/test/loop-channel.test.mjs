@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { createLoopChannel } from "../loop-channel.mjs";
-import { fakeSource } from "./fake-source.mjs";
+import { fakeSchedule, fakeSource } from "./fake-source.mjs";
 
 const START = Date.UTC(2026, 9, 15, 12, 0, 0);
 const CHANNEL = { id: "fx-news" };
@@ -83,6 +83,22 @@ test("unknown renditions, names and shapes are not found", async () => {
   assert.equal(await text(channel, "360p", "other.bin"), null);
   assert.equal(await text(channel, "index.m3u8"), null);
   assert.equal(await text(channel, "a", "b", "c"), null);
+});
+
+test("a playlist channel plays its videos in order, says which is on, and loops back to the first", async () => {
+  const clock = { now: START };
+  const channel = createLoopChannel({ channel: CHANNEL, source: fakeSchedule(), clock: () => clock.now });
+  assert.deepEqual(channel.playlist(), [{ name: "live/a.mp4", durationMs: 6000 }, { name: "live/b.mp4", durationMs: 4000 }]);
+  // segments 0..2 are a's 0..2, 3..4 are b's 0..1, then a again
+  assert.deepEqual(
+    await Promise.all([0, 1, 2, 3, 4, 5].map((n) => text(channel, "720p", `seg0000${n}.ts`))),
+    ["720p:0", "720p:1", "720p:2", "720p:0", "720p:1", "720p:0"],
+  );
+  assert.deepEqual(channel.nowPlaying(), { index: 0, name: "live/a.mp4" }); // newest complete: 5
+  clock.now += 6000; // newest 8
+  assert.deepEqual(channel.nowPlaying(), { index: 1, name: "live/b.mp4" });
+  clock.now += 4000; // newest 10
+  assert.deepEqual(channel.nowPlaying(), { index: 0, name: "live/a.mp4" });
 });
 
 test("a loop channel is always live, has no encoder and stops without effect", async () => {

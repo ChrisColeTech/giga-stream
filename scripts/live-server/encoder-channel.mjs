@@ -4,6 +4,7 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { buildEncoderArgs, renditionNames } from "./encoder-args.mjs";
+import { writeEncoderInputs } from "./encoder-inputs.mjs";
 import { killProcessTree, isRunning } from "./process-tree.mjs";
 
 const SAFE_PART = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -14,13 +15,14 @@ const STOP_WAIT_MS = 5_000;
 const SEGMENT_NUMBER_STRIDE = 100_000;
 
 /**
- * Encode mode: supervises one real-time ffmpeg that loops the channel's fixture file into a live HLS
- * window in `<outDir>/<channelId>/`. States: starting | live | restarting | stopped | failed. An
- * unexpected exit restarts with exponential backoff; five quick failures in a row end in `failed`.
+ * Encode mode: supervises one real-time ffmpeg that loops the channel's playlist (`items`, in order) into
+ * a live HLS window in `<outDir>/<channelId>/`; its concat list and joined captions are written to
+ * `<outDir>/.inputs/<channelId>/`. States: starting | live | restarting | stopped | failed. An unexpected
+ * exit restarts with exponential backoff; five quick failures in a row end in `failed`.
  */
 export function createEncoderChannel({
   channel,
-  fixture,
+  items,
   outDir,
   ffmpegPath,
   spawn = nodeSpawn,
@@ -28,6 +30,7 @@ export function createEncoderChannel({
   setTimer = setTimeout,
   clearTimer = clearTimeout,
   now = Date.now,
+  writeInputs = writeEncoderInputs,
 }) {
   const dir = path.join(outDir, channel.id);
   let state = "stopped";
@@ -39,6 +42,8 @@ export function createEncoderChannel({
   let startedAt = 0;
   let log = "";
   let exited = Promise.resolve();
+  let inputs = null;
+  const cycleMs = items.reduce((total, item) => total + item.durationMs, 0);
 
   const note = (text) => {
     log = (log + text).slice(-LOG_LIMIT);
@@ -50,7 +55,7 @@ export function createEncoderChannel({
   }
 
   function launch() {
-    const args = buildEncoderArgs(channel, fixture, { startNumber: generation * SEGMENT_NUMBER_STRIDE });
+    const args = buildEncoderArgs(channel, inputs, { startNumber: generation * SEGMENT_NUMBER_STRIDE });
     state = "starting";
     startedAt = now();
     const proc = spawn(ffmpegPath, args, { cwd: dir, stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
@@ -103,6 +108,14 @@ export function createEncoderChannel({
     id: channel.id,
     mode: "encode",
     renditions: () => renditionNames(channel),
+    playlist: () => items.map(({ name, durationMs }) => ({ name, durationMs })),
+    /** The video ffmpeg is reading now: a run restarts the list, and -re reads at the videos' own pace. */
+    nowPlaying() {
+      if (state !== "live" && state !== "starting") return null;
+      let at = (now() - startedAt) % cycleMs;
+      const index = items.findIndex((item) => (at -= item.durationMs) < 0);
+      return { index, name: items[index].name };
+    },
     logTail: () => log,
     state() {
       if (state === "starting" && existsSync(path.join(dir, "master.m3u8"))) state = "live";
@@ -112,6 +125,7 @@ export function createEncoderChannel({
       stopping = false;
       failures = 0;
       generation = 0;
+      inputs = await writeInputs(channel, items, path.join(outDir, ".inputs", channel.id));
       await prepare();
       launch();
     },
@@ -139,6 +153,7 @@ export function createEncoderChannel({
       }
       state = "stopped";
       await rm(dir, { recursive: true, force: true });
+      await rm(path.join(outDir, ".inputs", channel.id), { recursive: true, force: true });
     },
   };
 }

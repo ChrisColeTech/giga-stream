@@ -14,8 +14,8 @@ const MEDIA = "index.m3u8";
 const KEPT_WINDOWS = 3;
 
 /**
- * Loop mode: no encoder. A channel is a sliding window computed from a wall clock over a cached
- * source (`loadLoopSource`'s shape: { masterText, renditions, readSegment }). The clock starts one
+ * Loop mode: no encoder. A channel is a sliding window computed from a wall clock over its cached
+ * schedule (`joinSchedule`'s shape: { masterText, renditions, items, readSegment }). The clock starts one
  * window "in the past" so the very first playlist is already full, like a stream that has been
  * running. `clock` returns epoch milliseconds and is injectable.
  */
@@ -53,10 +53,23 @@ export function createLoopChannel({
     return source.readSegment(id, index);
   }
 
+  /** The video the newest complete segment belongs to, by the first rendition's numbering. */
+  function nowPlaying() {
+    const items = source.items ?? [];
+    const [timeline] = source.renditions.values();
+    const { last } = windowAt({ elapsedMs: elapsed(), segmentMs, windowSize });
+    if (items.length === 0 || !timeline || last < 0) return null;
+    const segment = timeline.segments[sourceIndexOf(last, timeline.segments.length).index];
+    const index = segment.item ?? 0;
+    return { index, name: items[index].name };
+  }
+
   return {
     id: channel.id,
     mode: "loop",
     renditions: () => [...source.renditions.keys()],
+    playlist: () => (source.items ?? []).map(({ name, durationMs }) => ({ name, durationMs })),
+    nowPlaying,
     state: () => "live",
     logTail: () => "",
     async start() {},

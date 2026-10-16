@@ -11,7 +11,14 @@ const SEGMENT = Buffer.from("0123456789");
 
 /** An in-memory backend: no ffmpeg, no disk; `files` maps "a/b" to bytes and can change mid-test. */
 function fakeBackend(files) {
-  return { mode: "loop", state: () => "live", renditions: () => ["360p"], read: async (parts) => files.get(parts.join("/")) ?? null };
+  return {
+    mode: "loop",
+    state: () => "live",
+    renditions: () => ["360p"],
+    playlist: () => [{ name: "live/news-1.mp4", durationMs: 30000 }],
+    nowPlaying: () => ({ index: 0, name: "live/news-1.mp4" }),
+    read: async (parts) => files.get(parts.join("/")) ?? null,
+  };
 }
 
 async function startServer(t, extra = {}) {
@@ -60,6 +67,7 @@ test("healthz and channels.json describe the running channels", async (t) => {
     masterUrl: `http://127.0.0.1:${port}/live/fx-news/master.m3u8`,
     logoUrl: `http://127.0.0.1:${port}/logos/fx-news.png`,
     state: "live", fault: null, renditions: ["360p"],
+    playlist: [{ name: "live/news-1.mp4", durationMs: 30000 }], nowPlaying: { index: 0, name: "live/news-1.mp4" },
   });
 });
 

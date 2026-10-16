@@ -9,21 +9,20 @@ import { parseArgs } from "node:util";
 
 import { locateTool, REPO_ROOT } from "../../src/shared/media/src/ffmpeg/locate-tool.ts";
 import { loadCatalog, MODES, selectChannels } from "./channel-catalog.mjs";
-import { loadChannelFixtures } from "./channel-fixtures.mjs";
+import { loadChannelPlaylists } from "./channel-playlist.mjs";
 import { createEncoderChannel } from "./encoder-channel.mjs";
 import { createFaultState } from "./fault-state.mjs";
 import { createHttpServer } from "./http-server.mjs";
 import { createLoopChannel } from "./loop-channel.mjs";
-import { ensureLoopSource, loadLoopSource } from "./loop-source.mjs";
+import { loadSchedule } from "./loop-source.mjs";
 import { playerPage } from "./test-page.mjs";
 
 export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, ".live-server");
 export const DEFAULT_CLI_PORT = 8097;
 
-async function makeLoopBackend(channel, fixture, { outDir, ffmpegPath, clock }) {
-  const cacheDir = path.join(outDir, ".cache", channel.id);
-  await ensureLoopSource({ channel, fixture, cacheDir, ffmpegPath });
-  return createLoopChannel({ channel, source: await loadLoopSource(cacheDir), clock });
+async function makeLoopBackend(channel, items, { outDir, ffmpegPath, clock }) {
+  const cacheRoot = path.join(outDir, ".cache", "items");
+  return createLoopChannel({ channel, source: await loadSchedule({ channel, items, cacheRoot, ffmpegPath }), clock });
 }
 
 /**
@@ -38,8 +37,9 @@ export async function startLiveServer(options = {}) {
   if (mode !== undefined && !MODES.includes(mode)) throw new Error(`live-server: mode must be ${MODES.join(" or ")}`);
   const selected = selectChannels(loadCatalog(), ids);
   await mkdir(outDir, { recursive: true });
-  // Every channel streams a real file: find and load them all, through the shared scanner, before any starts.
-  const fixtures = await loadChannelFixtures(selected, { root: fixtureRoot, log });
+  // Every channel streams a playlist of real files: find and load them all, through the shared scanner,
+  // before any starts.
+  const playlists = await loadChannelPlaylists(selected, { root: fixtureRoot, log });
 
   const faults = createFaultState({ now: clock });
   const entries = new Map();
@@ -49,10 +49,10 @@ export async function startLiveServer(options = {}) {
     const backends = await Promise.all(
       selected.map(async (channel) => {
         const channelMode = mode ?? channel.mode;
-        const fixture = fixtures.get(channel.id);
+        const items = playlists.get(channel.id);
         return channelMode === "loop"
-          ? makeLoopBackend(channel, fixture, { outDir, ffmpegPath, clock })
-          : createEncoderChannel({ channel, fixture, outDir, ffmpegPath });
+          ? makeLoopBackend(channel, items, { outDir, ffmpegPath, clock })
+          : createEncoderChannel({ channel, items, outDir, ffmpegPath });
       }),
     );
     selected.forEach((channel, index) => entries.set(channel.id, { channel, backend: backends[index] }));

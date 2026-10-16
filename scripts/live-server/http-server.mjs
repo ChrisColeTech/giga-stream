@@ -11,7 +11,8 @@ const sleepFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * The live stream HTTP server (docs/10 section 3.1), `node:http` only. `channels` maps a channel id
- * to { channel, backend }; a backend is `{ mode, state(), renditions(), read(parts) }` and answers
+ * to { channel, backend }; a backend is `{ mode, state(), renditions(), playlist(), nowPlaying(), read(parts) }`
+ * and answers
  * the same way for encode mode (files on disk) and loop mode (computed). `faults` is a
  * fault-state. `testPage` is an HTML string served at /test/player.html when given.
  * Returns an http.Server that is not yet listening.
@@ -30,6 +31,8 @@ export function createHttpServer({ mode, channels, faults, sleep = sleepFor, tes
       state: backend.state(),
       fault: faults.describe(channel.id)?.fault ?? null,
       renditions: backend.renditions(),
+      playlist: backend.playlist(),
+      nowPlaying: backend.nowPlaying(),
     }));
     sendJson(req, res, 200, { channels: entries });
   }

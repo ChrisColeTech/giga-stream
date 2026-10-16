@@ -1,4 +1,5 @@
 /** Fixtures for the live server tests: a fake loop source and fake playlists (no ffmpeg, no disk). */
+import { joinSchedule } from "../loop-source.mjs";
 
 export const FAKE_MASTER = [
   "#EXTM3U",
@@ -27,6 +28,12 @@ export function fakeSource(count = 5) {
       return renditions.get(id)?.segments[index] ? Buffer.from(`${id}:${index}`) : null;
     },
   };
+}
+
+/** A two-video schedule (3 then 2 segments), joined the way the server joins real ones. */
+export function fakeSchedule() {
+  const items = [{ name: "live/a.mp4", durationMs: 6000 }, { name: "live/b.mp4", durationMs: 4000 }];
+  return joinSchedule([fakeSource(3), fakeSource(2)], items);
 }
 
 /** A three-segment media playlist starting at `sequence`, in the shape both modes serve. */

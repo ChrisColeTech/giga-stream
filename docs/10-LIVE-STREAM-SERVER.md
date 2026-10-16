@@ -1,10 +1,11 @@
 # 10 - Live Stream Server (development and test)
 
 **Status: 2026-10-16.** The channels stream **playlists of real video files**, made once with the bundled
-FFmpeg the way Giga Cut makes its test media (`D:\Projects\giga-cut\scripts\ui-cases\fixture.mjs`). Streaming
-one fixture file per channel, found and loaded through the shared folder scanner, is built and verified
-(its tests and the headless-Chrome playback tests pass); playlists (section 2, item 3) are being built.
-Encode mode has never been run.
+FFmpeg the way Giga Cut makes its test media (`D:\Projects\giga-cut\scripts\ui-cases\fixture.mjs`), found and
+loaded through the shared folder scanner. Built and verified in both modes: the real-fixture tests (loop
+mode's switch discontinuity in every rendition, encode mode publishing live segments from the concat list)
+and the headless-Chrome tests (including playback running on across a switch to the next video) pass.
+`folder` channels are built but no shipped channel uses one yet.
 
 A repository tool that publishes real, continuously running HLS live channels for development and
 tests, so the Live surface, the channel refresh and probe, hls.js, quality, audio, captions and the
@@ -47,6 +48,9 @@ fixture files):
      cached under the output folder; the channel's schedule is their segments in list order, served as a
      live sliding window computed from the wall clock (media sequence = elapsed time / segment duration),
      wrapping at the end of the list. Deterministic, cheap and fast to start; the default for tests.
+     Each video is cut to whole 2 s segments (the clock gives every segment exactly 2 s), and the AAC
+     encoder's last frame past the cut (a 21 ms segment) is dropped, so every rendition switches videos
+     at the same segment number.
    - In both, each switch to the next video is an `EXT-X-DISCONTINUITY` (the next file's timestamps start
      again), and captions follow each video when the channel is captioned.
    - `/channels.json` lists each channel's playlist (each video's name and length) and the video playing
@@ -120,8 +124,10 @@ scripts/live-server/
   logo-png.mjs           the generated channel logos
   process-tree.mjs       stopping ffmpeg children cleanly
   test-page.mjs          an optional player page for manual checks
+  encoder-inputs.mjs     encode mode's concat list and joined captions
   test/                  channel-catalog, encoder-args, fault-state, http-server, live-playlist,
-                         loop-channel; hls-playback (opt-in, headless Chrome + hls.js)
+                         loop-channel; fixture-channels (the real files, ffprobe and encoder);
+                         hls-playback (opt-in, headless Chrome + hls.js)
 ```
 
 It uses Node built-ins and the shared media library (`src/shared/media`) to find and run FFmpeg; the
@@ -132,7 +138,7 @@ Chrome check drives DevTools with Node's built-in `WebSocket`.
 | Route | Purpose |
 |---|---|
 | `GET /healthz` | Liveness, mode, channel count |
-| `GET /channels.json` | The running channels: id, name, number, category, mode, master URL, logo URL, state, fault, renditions |
+| `GET /channels.json` | The running channels: id, name, number, category, mode, master URL, logo URL, state, fault, renditions, `playlist` (each video's name and length), `nowPlaying` (`{ index, name }`) |
 | `GET|HEAD /live/:channelId/master.m3u8` | Multi-variant master |
 | `GET|HEAD /live/:channelId/:rendition/index.m3u8` | Media playlist (`no-store`) |
 | `GET|HEAD /live/:channelId/:rendition/:segment` | Segment bytes (Range, immutable cache) |
@@ -171,6 +177,40 @@ in the background from a shell, it exits at once unless stdin is held open (for 
 `tail -f /dev/null | node scripts/live-server/live-server.mjs --mode loop --port 8097`). It also stops on
 `SIGINT` and `SIGTERM`, and stopping it stops every ffmpeg it started.
 
+### 4.1 Adding and editing channels and videos
+
+`channels.json` is the whole configuration. There is no API for it and no reload: edit the file, then
+restart the server. A bad entry stops the start with an error naming the channel and the problem.
+
+```json
+{
+  "id": "home-videos",           // kebab-case, unique; the URL is /live/home-videos/master.m3u8
+  "name": "Home Videos",
+  "category": "Entertainment",   // News, Sports, Music, Kids, Movies, Entertainment
+  "number": 5,                   // unique
+  "folder": "D:/Videos/home",    // or "playlist": ["live/news-1.mp4", ...]; exactly one of the two
+  "captions": false,             // true: every video needs <name>.en.srt beside it
+  "mode": "loop",                // or "encode"
+  "variants": ["360p", "720p"]   // two or more of 360p, 720p, 1080p
+}
+```
+
+- **Your own videos: a `folder` channel.** Every playable video the scanner finds in the folder and its
+  subfolders plays, in path order (number the names to set the order). Add, remove or rename files, then
+  restart. A video needs an audio track and at least one segment (2 s); loop mode trims each to whole 2 s.
+  Encode mode needs every file of the list to share codecs, size and rate; loop mode re-encodes each, so
+  any mix works.
+- **The generated test videos: a `playlist` channel.** Entries are names from the fixture set (section
+  2.1), in play order. A new generated video is a new `PROGRAMMES` row in `scripts/fixtures/fixture-set.mjs`
+  with `FIXTURE_VERSION` bumped; the next start remakes the set. A playlist takes only fixture names; real
+  files go through `folder`.
+- **The cache.** Loop mode encodes each video once into `.live-server/.cache/items/<hash>/`, keyed by its
+  path, size, modified time, captions and the channel's variants; a changed file is encoded again on the
+  next start. The first start of a large folder waits for every encode. Stopping keeps the cache; old
+  entries are never pruned (delete the folder to reclaim the space).
+- **The app sees a new channel** only once the admin backend has it: its four seeded channels are fixed
+  (`03` section 7.7), so add any other through the backend's channel routes with this server's master URL.
+
 ## 5. Acceptance
 
 - The master lists at least two video levels and the audio group; captions on `fx-news`.
@@ -184,7 +224,7 @@ in the background from a shell, it exits at once unless stdin is held open (for 
   `EXT-X-DISCONTINUITY`), and keeps playing when the list loops; `/channels.json` names the one playing.
 - A channel given a `folder` plays every playable video the scanner finds there, in path order.
 - With the fixture cache emptied, the server makes the files and starts without help.
-- Stopping the server leaves no ffmpeg process and no output folder.
+- Stopping the server leaves no ffmpeg process and no encode-mode output; loop mode's encode cache stays.
 
 The pure tests run with `node --test scripts/live-server/test/*.test.mjs`. The browser check is opt-in
 (`LIVE_SERVER_BROWSER=1`) because it needs Chrome.

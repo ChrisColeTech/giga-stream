@@ -33,11 +33,24 @@ export function sourceIndexOf(number, count) {
   return { index: number % count, cycle: Math.floor(number / count) };
 }
 
+/** Whether a source segment begins a video (a schedule marks them; a lone source begins only at 0). */
+const beginsItem = (segment, index) => segment.itemStart ?? index === 0;
+
+/** How many of the virtual numbers 0 .. end-1 begin a video. */
+function itemStartsBefore(end, segments) {
+  const count = segments.length;
+  const starts = segments.map(beginsItem);
+  const perCycle = starts.filter(Boolean).length;
+  const tail = starts.slice(0, end % count).filter(Boolean).length;
+  return Math.floor(end / count) * perCycle + tail;
+}
+
 /**
- * A live media playlist computed from the wall clock over a looping source.
- * `segments` is the source's [{ uri, duration }]; `epochMs` is the wall time of virtual segment 0.
- * Program date-time advances by one segment length per number. A loop wrap carries
- * EXT-X-DISCONTINUITY and the playlist counts the wraps that left the window. Never ends.
+ * A live media playlist computed from the wall clock over a looping source or schedule.
+ * `segments` is the source's [{ uri, duration, itemStart? }]; `epochMs` is the wall time of virtual
+ * segment 0. Program date-time advances by one segment length per number. Every switch to a video (and
+ * the wrap back to the first) carries EXT-X-DISCONTINUITY, and the playlist counts the ones that left
+ * the window. Never ends.
  */
 export function renderMediaPlaylist({
   segments,
@@ -49,12 +62,14 @@ export function renderMediaPlaylist({
   const count = segments.length;
   const { first, last } = windowAt({ elapsedMs, segmentMs, windowSize });
   const target = Math.ceil(Math.max(...segments.map((segment) => segment.duration)));
-  const removedWraps = first >= 1 ? Math.floor((first - 1) / count) : 0;
+  // Number 0 begins the stream, so its start is no discontinuity; every later one is.
+  const removed = first >= 1 ? itemStartsBefore(first, segments) - 1 : 0;
   const lines = ["#EXTM3U", "#EXT-X-VERSION:3", `#EXT-X-TARGETDURATION:${target}`, `#EXT-X-MEDIA-SEQUENCE:${first}`];
-  if (removedWraps > 0) lines.push(`#EXT-X-DISCONTINUITY-SEQUENCE:${removedWraps}`);
+  if (removed > 0) lines.push(`#EXT-X-DISCONTINUITY-SEQUENCE:${removed}`);
   for (let number = first; number <= last; number += 1) {
-    const source = segments[sourceIndexOf(number, count).index];
-    if (number > 0 && number % count === 0) lines.push("#EXT-X-DISCONTINUITY");
+    const { index } = sourceIndexOf(number, count);
+    const source = segments[index];
+    if (number > 0 && beginsItem(source, index)) lines.push("#EXT-X-DISCONTINUITY");
     lines.push(`#EXT-X-PROGRAM-DATE-TIME:${new Date(epochMs + number * segmentMs).toISOString()}`);
     lines.push(`#EXTINF:${source.duration.toFixed(3)},`);
     lines.push(virtualSegmentName(number, extensionOf(source.uri)));

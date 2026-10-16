@@ -9,7 +9,7 @@ import {
   windowAt,
 } from "../live-playlist.mjs";
 import { parseSegments } from "../playlist-parse.mjs";
-import { FAKE_MASTER, fakeSource } from "./fake-source.mjs";
+import { FAKE_MASTER, fakeSchedule, fakeSource } from "./fake-source.mjs";
 
 const EPOCH = Date.UTC(2026, 9, 15, 12, 0, 0);
 const SEGMENTS = fakeSource(5).renditions.get("360p").segments;
@@ -72,6 +72,19 @@ test("wraps that left the window are counted in the discontinuity sequence", () 
   assert.equal(text.match(/#EXT-X-DISCONTINUITY\n/g).length, 1);
   const later = render(40000); // completed 20: window 14..19, wrap at 15 inside, wraps at 5 and 10 gone
   assert.match(later, /#EXT-X-DISCONTINUITY-SEQUENCE:2\n/);
+});
+
+test("in a playlist every switch to the next video carries a discontinuity, and the gone ones are counted", () => {
+  const segments = fakeSchedule().renditions.get("360p").segments; // a: 0..2, b: 3..4, cycle of 5
+  const at = (elapsedMs) => renderMediaPlaylist({ segments, elapsedMs, epochMs: EPOCH });
+  const early = at(18000); // window 3..8: b starts at 3, a at 5, b at 8
+  assert.equal(early.match(/#EXT-X-DISCONTINUITY\n/g).length, 3);
+  for (const n of [3, 5, 8]) assert.match(early, new RegExp(`#EXT-X-DISCONTINUITY\\n[^\\n]+\\n[^\\n]+\\nseg0000${n}\\.ts`));
+  assert.equal(early.includes("#EXT-X-DISCONTINUITY-SEQUENCE"), false);
+  // window 10..15: gone switches at 3, 5 and 8; inside at 10 (a), 13 (b) and 15 (a)
+  const later = at(32000);
+  assert.match(later, /#EXT-X-MEDIA-SEQUENCE:10\n#EXT-X-DISCONTINUITY-SEQUENCE:3\n/);
+  assert.equal(later.match(/#EXT-X-DISCONTINUITY\n/g).length, 3);
 });
 
 test("the source segments repeat in order across the loop", () => {

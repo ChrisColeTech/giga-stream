@@ -7,7 +7,7 @@ export const AUDIO_GROUP = "aud";
 export const SUBTITLE_GROUP = "sub";
 
 /** Bumped whenever the loop source's shape changes; the cache marker holds it. */
-export const RECIPE_VERSION = "3";
+export const RECIPE_VERSION = "4";
 
 /** The variants of a channel with their ladder entries, in the channel's own order. */
 export function variantsOf(channel) {
