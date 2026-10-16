@@ -18,28 +18,40 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "about", label: "About", icon: Info },
 ];
 
-/** One row a section lists before the piece behind it exists: what it is, what it does, and why it cannot be used yet. */
-export interface PendingRow {
+/** UI zoom: 0.5 to 3 in steps of one decimal (`03` section 3.2, `06` section 6.2). `Ctrl+0` resets it to 1 (the shell). */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 3;
+export const ZOOM_STEP = 0.1;
+export const ZOOM_AT_MIN = `The smallest zoom is ${ZOOM_MIN}.`;
+export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
+
+/** Why a row that reads the fileserver or the admin backend cannot be used in phase 1 (`21` section 1). */
+export const NEEDS_FILESERVER = "Available once the fileserver is connected.";
+
+/** Why the TMDB logo placeholder is disabled: the file is not in the repository yet (`11` section 6). */
+export const LOGO_MISSING = "The TMDB logo is not in the repository yet.";
+
+/** A fact the fileserver has not supplied yet, drawn in place of its value. */
+export const FACT_UNKNOWN = "—";
+
+/** The notice TMDB's terms require beside its logo (`11` section 6). */
+export const TMDB_NOTICE =
+  "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.";
+
+/** The subtitle select's off choice. Its value stands for the stored `null` (`03` section 3.2). */
+export const SUBTITLE_OFF = "off";
+
+export interface LanguageOption {
+  readonly value: string;
   readonly label: string;
-  readonly tip: string;
-  readonly reason: string;
 }
 
-/** The rows of every section but Appearance, each disabled with its refusal sentence until the piece it needs lands. */
-export const PENDING_ROWS: Readonly<Record<Exclude<SettingsSectionId, "appearance">, readonly PendingRow[]>> = {
-  playback: [
-    { label: "Autoplay", tip: "Start the next episode when one ends.", reason: "Playback settings arrive with the fileserver link." },
-    { label: "Subtitle language", tip: "The caption language chosen when a stream offers several.", reason: "Playback settings arrive with the fileserver link." },
-  ],
-  library: [
-    { label: "Default view", tip: "Show the library as a grid or a list.", reason: "The library arrives with the library service." },
-    { label: "Collections", tip: "Open the collections window.", reason: "The library arrives with the library service." },
-  ],
-  admin: [
-    { label: "Address", tip: "Where the admin backend is, as the fileserver reaches it.", reason: "The fileserver link is not wired yet." },
-  ],
-  about: [
-    { label: "Version", tip: "The version of this app.", reason: "The fileserver link is not wired yet." },
-    { label: "Data sources", tip: "Where titles and artwork come from, with the attribution their terms require.", reason: "The fileserver link is not wired yet." },
-  ],
-};
+/** The caption languages the select offers in phase 1: a short list of BCP-47 tags, with the off choice first. */
+export const SUBTITLE_LANGUAGES: readonly LanguageOption[] = [
+  { value: SUBTITLE_OFF, label: "Off" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "ja", label: "Japanese" },
+];
