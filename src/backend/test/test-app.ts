@@ -33,7 +33,7 @@ const sockets: WebSocket[] = [];
 
 /** A fresh app on a fresh temporary data folder, with the bootstrap owner: no shared state, no network. */
 export async function makeApp(
-  options: { seed?: boolean; loopback?: boolean; dataDir?: string; config?: Partial<Config> } = {},
+  options: { seed?: boolean; loopback?: boolean; dataDir?: string; config?: Partial<Config>; fetch?: typeof fetch } = {},
 ): Promise<TestApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-backend-test-"));
   const clock = testClock();
@@ -56,6 +56,7 @@ export async function makeApp(
       ...options.config,
     },
     clock.now,
+    options.fetch,
   );
   let disposed = false;
   const testApp: TestApp = {

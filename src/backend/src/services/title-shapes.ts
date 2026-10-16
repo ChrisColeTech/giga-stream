@@ -74,11 +74,11 @@ export const parseTitleId = (titleId: string): [Kind, number] => {
 export const titleIdOf = (kind: Kind, tmdbId: number): string => `${kind}-${tmdbId}`;
 
 /** The one sync schedule parser: "6h", "30m", "45s", "500ms"; empty or "off" means disabled. */
-export function parseSchedule(value: string): number | undefined {
+export function parseSchedule(value: string, field = "TMDB_SYNC_SCHEDULE"): number | undefined {
   const trimmed = value.trim().toLowerCase();
   if (trimmed === "" || trimmed === "off") return undefined;
   const match = /^(\d+)(ms|s|m|h)$/.exec(trimmed);
-  if (!match?.[1]) throw new AppError(ERRORS.requestInvalid, { field: "TMDB_SYNC_SCHEDULE" }, "That sync schedule is not valid.");
+  if (!match?.[1]) throw new AppError(ERRORS.requestInvalid, { field }, "That sync schedule is not valid.");
   const n = Number(match[1]);
   return match[2] === "h" ? n * 3_600_000 : match[2] === "m" ? n * 60_000 : match[2] === "s" ? n * 1_000 : n;
 }

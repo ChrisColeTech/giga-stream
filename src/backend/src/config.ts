@@ -8,6 +8,21 @@ const BooleanFlag = z
   .default("false")
   .transform((value) => value === "true");
 
+/** `PLAYLIST_URLS`: a comma-separated list of https playlist addresses (docs/03 section 7.2c). */
+const PlaylistUrls = z.string().default("").transform((value, ctx): string[] => {
+  const urls = value.split(",").map((item) => item.trim()).filter((item) => item !== "");
+  for (const url of urls) {
+    let https = false;
+    try {
+      https = new URL(url).protocol === "https:";
+    } catch {
+      https = false;
+    }
+    if (!https) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `PLAYLIST_URLS must be comma-separated https addresses: ${url}` });
+  }
+  return urls;
+});
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   // Tests use port 0.
@@ -36,6 +51,14 @@ const EnvSchema = z.object({
   OMDB_DAILY_LIMIT: z.coerce.number().int().min(1).max(100_000).default(1_000),
   SEED_TEST_CHANNELS: BooleanFlag,
   ALLOW_LOOPBACK_STREAMS: BooleanFlag,
+  // The playlist sync (docs/03 section 7.2c). With PLAYLIST_URLS unset the sync has nothing to do
+  // and the schedule stays unarmed.
+  PLAYLIST_URLS: PlaylistUrls,
+  // The playlist-sync interval, e.g. "6h" or "24h"; empty or "off" disables it.
+  PLAYLIST_SYNC_SCHEDULE: z.string().default(""),
+  PLAYLIST_SYNC_MAX_BYTES: z.coerce.number().int().min(1).default(8 * 1024 * 1024),
+  PLAYLIST_SYNC_MAX: z.coerce.number().int().min(1).default(5_000),
+  LOGO_INDEX_TTL_HOURS: z.coerce.number().positive().default(24),
 });
 
 const parsed = EnvSchema.parse(process.env);

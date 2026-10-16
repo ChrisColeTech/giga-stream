@@ -9,6 +9,7 @@ import { registerAuth } from "./api/auth.js";
 import { registerChannels } from "./api/channels.js";
 import { registerErrorHandling } from "./api/envelope.js";
 import { registerHealth } from "./api/health.js";
+import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
 import { registerSocket } from "./api/socket.js";
 import { registerTitles } from "./api/titles.js";
@@ -25,10 +26,15 @@ import { createStore } from "./store/store.js";
 /**
  * The admin backend's composition root: one Fastify instance per process (`01` section 4.1), one store,
  * one hub. `overrides` replace config values without touching `process.env`, which is how tests pass a
- * temporary `DATA_DIR`, a secret and the flags; `now` is the one clock. Every route begins `/api`;
- * `/healthz` and `/ws` are the only root exceptions.
+ * temporary `DATA_DIR`, a secret and the flags; `now` is the one clock, `fetchImpl` the one fetch (the
+ * test seam for the playlist sync's playlists and logo index). Every route begins `/api`; `/healthz`
+ * and `/ws` are the only root exceptions.
  */
-export async function buildApp(overrides: Partial<Config> = {}, now: () => number = Date.now): Promise<FastifyInstance> {
+export async function buildApp(
+  overrides: Partial<Config> = {},
+  now: () => number = Date.now,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FastifyInstance> {
   const settings: Config = { ...config, ...overrides };
   // Refused before any database file is created (docs/03 sections 7.7, 7.10, 7.12).
   const refusal = startRefusal(settings);
@@ -47,6 +53,12 @@ export async function buildApp(overrides: Partial<Config> = {}, now: () => numbe
       omdbBase: settings.OMDB_BASE,
       omdbDailyLimit: settings.OMDB_DAILY_LIMIT,
       now,
+      dataDir: settings.DATA_DIR,
+      playlistUrls: settings.PLAYLIST_URLS,
+      playlistSyncMaxBytes: settings.PLAYLIST_SYNC_MAX_BYTES,
+      playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
+      logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
+      fetchImpl,
     });
     const owner = await bootstrapOwner(
       services.accounts,
@@ -57,10 +69,17 @@ export async function buildApp(overrides: Partial<Config> = {}, now: () => numbe
     if (settings.SEED_TEST_CHANNELS) seedTestChannels(services.channels);
     services.purgeExpiredSessions();
 
-    // The catalog-sync schedule (docs/03 section 7.6b): the system's only timer (docs/01 section 4.4).
+    // The catalog-sync schedule (docs/03 section 7.6b): one of the system's two timers (docs/01 section 4.4).
     const scheduleMs = parseSchedule(settings.TMDB_SYNC_SCHEDULE);
     if (scheduleMs !== undefined && settings.TMDB_READ_TOKEN !== "") {
       services.titles.armSchedule(scheduleMs);
+    }
+
+    // The playlist-sync schedule (docs/03 section 7.2c): armed only when playlists and an interval
+    // are both set; with no playlists the sync has nothing to do and stays unarmed.
+    const playlistScheduleMs = parseSchedule(settings.PLAYLIST_SYNC_SCHEDULE, "PLAYLIST_SYNC_SCHEDULE");
+    if (playlistScheduleMs !== undefined && settings.PLAYLIST_URLS.length > 0) {
+      services.playlistSchedule.armSchedule(playlistScheduleMs);
     }
 
     const app = Fastify({
@@ -74,6 +93,7 @@ export async function buildApp(overrides: Partial<Config> = {}, now: () => numbe
     }
     app.addHook("onClose", async () => {
       services.titles.clearSchedule();
+      services.playlistSchedule.clearSchedule();
       services.hub.closeAll();
       store.close();
     });
@@ -91,6 +111,7 @@ export async function buildApp(overrides: Partial<Config> = {}, now: () => numbe
     registerChannels(app, services);
     registerProviders(app, services);
     registerTitles(app, services);
+    registerPlaylistSync(app, services);
     registerSocket(app, services);
     return app;
   } catch (error) {
