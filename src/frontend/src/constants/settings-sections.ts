@@ -25,11 +25,8 @@ export const ZOOM_STEP = 0.1;
 export const ZOOM_AT_MIN = `The smallest zoom is ${ZOOM_MIN}.`;
 export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
 
-/** Why a row that reads the fileserver or the admin backend cannot be used in phase 1 (`21` section 1). */
-export const NEEDS_FILESERVER = "Available once the fileserver is connected.";
-
-/** Why the TMDB logo placeholder is disabled: the file is not in the repository yet (`11` section 6). */
-export const LOGO_MISSING = "The TMDB logo is not in the repository yet.";
+/** Why a row that reads the fileserver or the admin backend cannot be used right now. */
+export const NEEDS_FILESERVER = "The fileserver is not connected.";
 
 /** A fact the fileserver has not supplied yet, drawn in place of its value. */
 export const FACT_UNKNOWN = "—";
