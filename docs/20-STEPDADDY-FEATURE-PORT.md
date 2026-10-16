@@ -366,7 +366,7 @@ product model is why they are refused.
 
 | # | Feature | What the user gets | Where it renders | Decision |
 |---|---|---|---|---|
-| 1 | **F1 Playlist sync** (import + scheduled refresh, enrichment folded in) | Live becomes real TV: hundreds of named channels with logos and categories, kept current by the schedule | The channels pane it fills (`06` §3.2) | **planned — the only port work**; contract `03` §7.2c |
+| 1 | **F1 Playlist sync** (import + scheduled refresh, enrichment folded in) | Live becomes real TV: hundreds of named channels with logos and categories, kept current by the schedule | The channels pane it fills (`06` §3.2) | **landed 2026-10-16** — the only port work; contract `03` §7.2c, built per section 9.1 and verified over HTTP against a live iptv-org playlist |
 | 2 | **F4 Watch history + favorites** | resume, History, Favorites — the core of Library and Player | fully specified: `06` §4, §5.3-5.4 | **planned as Giga Stream's own phase 8** (`03` §3.12/3.13) — not a port; StepDaddy is reference only |
 | 3 | **F2 EPG now/next** | what is on now and next while zapping | pending placement: Details strip rows or a channel popup | **deferred**; `tvgId` lands with F1 so the join stays cheap |
 | 4 | **F5 Trakt sync** | watch state mirrors to a Trakt account, silently | Settings window group + hooks on F4's writes | **dropped** — no Trakt account |

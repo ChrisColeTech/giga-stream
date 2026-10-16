@@ -18,9 +18,9 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 3.12-3.13 Favorites, watch history | A | **done** (`favorites-watch.test.ts`: idempotent favorites; seq-ordered watch writes, sticky watched at 95 percent, episode identity, remove one, clear all) |
 | 4-6 State and updates, live view, storage | A | **done** (`state.test.ts` now carries live collections and jobs; the live view keeps its TTL and clear-on-failure; migrations `001`/`002` ported unchanged, `003` new) |
 | 7.1 Health | B | **done** |
-| 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; the `tvgId`/`source` fields land with 7.2c) |
+| 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; `tvgId`/`source` landed with 7.2c) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
-| 7.2c Playlist sync | B | **not started** (contract written 2026-10-16, owner decision; `20` section 9.1) |
+| 7.2c Playlist sync | B | **done** (`playlist-sync.test.ts`: parse, dedupe, address-rule refusals, create/update/removed match paths, prune, dry run, single-flight, schedule, enrichment, one revision bump per run; landed 2026-10-16 and driven over HTTP against a live iptv-org playlist — boot run, dry run, update repair, prune, hand-row isolation, restart persistence) |
 | 7.3 Stream and image addresses | B | **done** (the address rule; part of every channel change) |
 | 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7) |
 | 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the provider embed fields per title wait on `14`'s results |
