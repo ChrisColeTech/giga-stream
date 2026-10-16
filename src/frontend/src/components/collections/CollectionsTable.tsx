@@ -3,21 +3,52 @@ import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
 import { Group } from "@/components/ui/Group";
 import type { CollectionRow } from "@/types/collection";
+import { ScanState } from "./ScanState";
 
-const COLUMNS: ReadonlyArray<Column<CollectionRow>> = [
-  { key: "name", label: "name", cell: (row) => row.name },
-  { key: "total", label: "items", align: "right", width: "84px", cell: (row) => row.total },
-  { key: "manual", label: "manual", align: "right", width: "84px", cell: (row) => row.manual },
-  { key: "folders", label: "folders", align: "right", width: "84px", cell: (row) => row.folders },
-  { key: "scan", label: "scan", width: "110px", cell: (row) => row.scan },
-];
+/* The name is the row's one control: a button that selects the collection. A row takes no click of its own, since the
+ * shared table does not carry one. */
+function collectionColumns(onSelect: (id: string) => void): ReadonlyArray<Column<CollectionRow>> {
+  return [
+    {
+      key: "name",
+      label: "name",
+      cell: (row) => (
+        <button
+          type="button"
+          onClick={() => onSelect(row.id)}
+          className={
+            "w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left font-sans text-[13px] " +
+            "text-text hover:text-accent-text"
+          }
+        >
+          {row.name}
+        </button>
+      ),
+    },
+    { key: "total", label: "items", align: "right", width: "84px", cell: (row) => row.total },
+    { key: "manual", label: "manual", align: "right", width: "84px", cell: (row) => row.manual },
+    { key: "folders", label: "folders", align: "right", width: "84px", cell: (row) => row.folders },
+    { key: "scan", label: "scan", width: "112px", cell: (row) => <ScanState scan={row.scan} /> },
+  ];
+}
 
-/** Every collection with its totals, manual and folder counts and aggregate scan state. The table is the empty state when
- *  there are none: a header and nothing else. */
-export function CollectionsTable({ rows }: { rows: readonly CollectionRow[] }) {
+export interface CollectionsTableProps {
+  readonly rows: readonly CollectionRow[];
+  readonly onSelect: (id: string) => void;
+}
+
+/** Every collection with its totals, manual and folder counts and aggregate scan state. The table is the empty state
+ *  when there are none: a header and nothing else. */
+export function CollectionsTable({ rows, onSelect }: CollectionsTableProps) {
   return (
-    <Group id="collections.list" title="Collections" icon={Library} tip="Every collection, with its totals and scan state." last>
-      <DataTable label="Collections" columns={COLUMNS} rows={rows} rowKey={(row) => row.id} />
+    <Group
+      id="collections.list"
+      title="Collections"
+      icon={Library}
+      tip="Every collection, with its totals and scan state."
+      last
+    >
+      <DataTable label="Collections" columns={collectionColumns(onSelect)} rows={rows} rowKey={(row) => row.id} />
     </Group>
   );
 }

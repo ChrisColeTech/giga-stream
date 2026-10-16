@@ -1,43 +1,60 @@
 import { Folder, Layers } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CollectionCreateGroup } from "@/components/collections/CollectionCreateGroup";
+import { CollectionDetail } from "@/components/collections/CollectionDetail";
 import { CollectionsTable } from "@/components/collections/CollectionsTable";
-import { Rail } from "@/components/ui/Rail";
-import type { RailEntry } from "@/components/ui/Rail";
+import { ScanningFolderIcon } from "@/components/collections/ScanningFolderIcon";
+import { RailRow } from "@/components/ui/RailRow";
 import { Workspace } from "@/components/ui/Workspace";
 import { workSpec } from "@/constants/child-window";
+import { COLLECTION_ROWS } from "@/fixtures/collections";
+import { RAIL_ALL, RAIL_LABEL } from "@/lib/collections-copy";
+import { alphabetical } from "@/lib/collections-order";
 import { useAppStore } from "@/store/app-store";
 import { ChildWindow } from "./ChildWindow";
 
 const SPEC = workSpec("collections", "Collections");
+const ALL = "all";
+const SORTED = alphabetical(COLLECTION_ROWS);
 
-/** Collections: a Work child window. The rail lists All and then every collection alphabetically; All holds the create
- *  group and the table of every collection, and selecting one opens that collection's own section. */
+/** Collections: a work window (`06` section 6.3). The rail lists All, then every collection alphabetically; All holds
+ *  the create group and the table, and a selected collection shows its own section. Phase 1 reads the fixtures only. */
 export function CollectionsWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
-  const collections = useAppStore((state) => state.collections);
-  const [selected, setSelected] = useState("all");
-
-  const entries = useMemo<ReadonlyArray<RailEntry<string>>>(
-    () => [
-      { id: "all", label: "All", icon: Layers },
-      ...[...collections]
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((collection) => ({ id: collection.id, label: collection.name, icon: Folder })),
-    ],
-    [collections],
-  );
+  const [selected, setSelected] = useState(ALL);
+  const chosen = SORTED.find((row) => row.id === selected);
 
   return (
     <ChildWindow spec={SPEC} onClose={closeOverlay}>
       <div className="flex min-h-0 min-w-0 flex-1 bg-bg">
-        <Rail label="Collections" entries={entries} selected={selected} onSelect={setSelected} />
-        <div role="tabpanel" aria-label={selected} className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <nav
+          aria-label={RAIL_LABEL}
+          className="flex w-[150px] flex-none flex-col gap-0.5 overflow-y-auto border-r border-hair bg-bg py-1.5"
+        >
+          <RailRow label={RAIL_ALL} icon={Layers} selected={chosen === undefined} onSelect={() => setSelected(ALL)} />
+          {SORTED.map((row) => (
+            <RailRow
+              key={row.id}
+              label={row.name}
+              icon={row.scan === "scanning" ? ScanningFolderIcon : Folder}
+              count={row.total}
+              selected={row.id === selected}
+              onSelect={() => setSelected(row.id)}
+            />
+          ))}
+        </nav>
+        <section aria-label={chosen?.name ?? RAIL_ALL} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Workspace>
-            <CollectionCreateGroup />
-            <CollectionsTable rows={collections} />
+            {chosen === undefined ? (
+              <>
+                <CollectionCreateGroup />
+                <CollectionsTable rows={SORTED} onSelect={setSelected} />
+              </>
+            ) : (
+              <CollectionDetail key={chosen.id} collection={chosen} />
+            )}
           </Workspace>
-        </div>
+        </section>
       </div>
     </ChildWindow>
   );
