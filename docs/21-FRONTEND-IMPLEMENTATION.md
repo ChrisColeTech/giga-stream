@@ -12,6 +12,11 @@ Phase 2 (wiring to the fileserver) is `22-FRONTEND-WIRING.md`. This document is 
 
 ## 1. Scope and rules
 
+**Three steps, in order.** *Phase 1* draws the look and makes local behaviour work against fixtures. *Phase 1a* makes
+every control that needs the fileserver **enabled** and wires it to a stub method in `src/services/`: the stub refuses
+with "The fileserver is not connected.", and the press reports that once on the notice line (`04` section 6). Nothing is
+disabled merely because it needs the fileserver. *Phase 2* replaces the stub bodies with real calls (`22`).
+
 - **Phase 1 only.** Nothing calls the fileserver. Data comes from typed fixtures in `src/fixtures/` (phase 1
   stand-ins, deleted in phase 2). No browser storage, no WebSocket, no polling, no timers that send requests.
 - **The family standard comes first.** Where a family app has solved a surface, its files are ported near-verbatim
@@ -295,12 +300,14 @@ Seven owners, one per surface. An owner edits only its listed paths. A path list
 |---|---|
 | Shell | `components/chrome/` (except `EventsDrawer.tsx`, `EventRow.tsx`), `hooks/useShellKeyboard.ts`, `hooks/useWorkspaceSplit.ts`, `hooks/usePaneTween.ts`, `styles/workspace.css` |
 | Live | `components/live/`, `pages/LivePage.tsx` |
-| Library | `components/library/` (except `CollectionsFooter.tsx`, which keeps its behaviour), `pages/LibraryPage.tsx` |
-| Player | `components/player/`, `pages/PlayerPage.tsx` |
+| Library | `components/library/` (except `CollectionsFooter.tsx`, which keeps its behaviour), `components/overlays/TitleInfoWindow.tsx`, `pages/LibraryPage.tsx` |
+| Player | `components/player/`, `pages/PlayerPage.tsx`, and the Player entry of `constants/surfaces.ts` only (the LoRA Studio geometry of section 9) |
 | Settings | `components/overlays/SettingsWindow.tsx`, `components/settings/`, `constants/settings-sections.ts` |
 | Collections | `components/overlays/CollectionsWindow.tsx`, `components/collections/` |
 | Events | `components/chrome/EventsDrawer.tsx`, `components/chrome/EventRow.tsx` |
 
+An owner may add pure helpers under `src/frontend/src/lib/`, named with its surface prefix (`live-`, `library-`,
+`player-`, `settings-`, `collections-`, `events-`), and never a shared name. Fixtures and every shared part are read-only.
 Each owner adds tests for its pure logic under `src/frontend/test/`, named for the surface (for example
 `test/live-channel-filter.test.ts`). The owner writes them and does not run them (`07` section 6.3).
 
@@ -449,8 +456,25 @@ Providers rows, and any popup for Add to collection) are gone, with a grep provi
 
 ## 9. Events and the provider embed (probe)
 
-Pending: a read-only probe of `D:\Projects\giga-stream-poc\src\mockup`, on how the mockup embeds a provider's player and
-logs its traffic. Its result is written here, and the Events row shape in `06` section 7 and `22` section 3.7 follows it.
+A read-only probe of `D:\Projects\giga-stream-poc\src\mockup` answered how the mockup embeds a provider's player and
+logs traffic. Its findings:
+
+- **The embed.** A sandboxed or unsandboxed iframe with a fixed `allow` list and `referrerPolicy` `origin`
+  (`js\embed.js:23-27`, `js\config.js:10-11`). The mockup sends nothing to the embed, and accepts every window message
+  without checking its origin (`js\messages.js:40-55`). A refused frame may still log as `ok`; this is untested.
+- **What the page can see.** In a browser, nothing inside a cross-origin iframe: no requests, statuses or timings. In
+  Electron, the repository reports only requests the ad blocker *blocks* (`src\fileserver\src\app\ad-blocker.ts`);
+  allowed requests are not reported, and `session.webRequest` is not used.
+- **What the interface can log truthfully.** Its own requests (the REST calls of `services/api.ts`, phase 2); the stream's
+  HLS events (fragment loads, level switches, errors) for channels and test titles; the embed's load outcome; and, in
+  Electron, the count and host of blocked requests.
+- **The mockup logs full URLs.** `js\embed.js:39` and `:101` log whole addresses, which breaks `06` section 7's rule of
+  no path, query or token. The drawer keeps host only.
+- **The POC is incomplete.** `data\providers.json`, `js\core\fetch.js` and the Electron host files the notes cite are
+  not in `giga-stream-poc\src\mockup`, so the providers' origins cannot be read from it.
+
+The Events drawer is network traffic, as the owner expects. The row shape and the questions it raises are in `22`
+section 3.7 and section 8.
 
 ## 10. Retired questions
 
