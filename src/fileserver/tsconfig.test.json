@@ -1,10 +1,10 @@
 {
-  // The tests live outside the source folder, so this one type-checks them and emits nothing
-  // (`npm run typecheck` runs both projects). No `rootDir`: the source imports `src/shared/media`
-  // by relative `.ts` paths, which are outside any fileserver root.
+  // The tests live outside `rootDir: src`, so the build config cannot include them without changing
+  // where dist/ lands. This one type-checks them and emits nothing; `npm run typecheck` runs both.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    "rootDir": ".",
     "types": ["node"]
   },
   "include": ["src", "test"]

@@ -43,6 +43,12 @@ const INTERRUPTED_ERROR = {
   message: "This job was interrupted when the app closed.",
 } as const;
 
+/** A kind with no registered runner settles the moment it would run, never stranded (03 section 3.9). */
+const NO_RUNNER_ERROR = {
+  code: "job.no_runner",
+  message: "This kind of work has no runner.",
+} as const;
+
 const notRunning = (job: Job): AppError | null =>
   job.state === "queued" || job.state === "running"
     ? null
@@ -65,7 +71,7 @@ export function createJobService(deps: { repository: JobRepository; now: () => n
     return job;
   };
 
-  function settle(jobId: string, outcome: "done" | "failed" | "cancelled", error?: AppError): void {
+  function settle(jobId: string, outcome: "done" | "failed" | "cancelled", error?: { code: string; message: string }): void {
     if (closed) return;
     repository.settle(jobId, {
       state: outcome,
@@ -80,7 +86,13 @@ export function createJobService(deps: { repository: JobRepository; now: () => n
   async function execute(jobId: string, kind: JobKind): Promise<void> {
     const controller = controllers.get(jobId);
     const runner = runners.get(kind);
-    if (!controller || runner === undefined) return;
+    if (!controller) return;
+    if (runner === undefined) {
+      // Without this the row would sit "running" forever: nothing runs, nothing settles, and a
+      // cancel would only abort a controller whose runner never comes (docs/03 section 3.9).
+      if (controller.signal.aborted) return settle(jobId, "cancelled");
+      return settle(jobId, "failed", NO_RUNNER_ERROR);
+    }
     const context = {
       jobId,
       kind,

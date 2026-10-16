@@ -4,7 +4,7 @@ import { z } from "zod";
 import { AppError } from "../lib/app-error.js";
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
-import type { ScanEvent } from "../../../shared/media/src/types/scan.ts";
+import type { ScanEvent } from "../../../shared/media/dist/types/scan.js";
 import type { AppServices } from "../services/app-services.js";
 
 const CollectionParams = z.object({ collectionId: z.string() });

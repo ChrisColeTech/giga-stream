@@ -56,8 +56,10 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     ...(overrides.imageFetch !== undefined && { imageFetch: overrides.imageFetch }),
     ...(overrides.openFolderPicker !== undefined && { openFolderPicker: overrides.openFolderPicker }),
     testFolderRoot: overrides.testFolderRoot ?? config.testFolderRoot,
-  });  app.addHook("onClose", async () => {
-    services.close();
+  });
+
+  app.addHook("onClose", async () => {
+    await services.close();
   });
 
   await app.register(fastifyStatic, {

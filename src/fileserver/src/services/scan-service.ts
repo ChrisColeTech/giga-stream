@@ -1,5 +1,5 @@
-import { scanFolder } from "../../../shared/media/src/scan/folder-scan.ts";
-import type { ScanEvent } from "../../../shared/media/src/types/scan.ts";
+import { scanFolder } from "../../../shared/media/dist/scan/folder-scan.js";
+import type { ScanEvent } from "../../../shared/media/dist/types/scan.js";
 import { SCAN_EVENT_BUFFER } from "../constants/media-files.js";
 import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository, FolderRow } from "../store/collection-repository.js";

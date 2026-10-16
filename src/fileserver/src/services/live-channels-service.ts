@@ -28,8 +28,14 @@ export function createLiveChannelsService(deps: {
   adminUrl: () => string;
   ttlMs: number;
   now: () => number;
+  /**
+   * Every image address the fileserver passes on is rewritten to the image cache (03 section 3.11):
+   * a channel's logo becomes `/api/images/<imageId>`. A source that fails the address rule is
+   * returned unchanged; the interface shows its fallback.
+   */
+  rewriteImageUrl: (source: string) => string;
 }) {
-  const { admin, probe, adminUrl, ttlMs, now } = deps;
+  const { admin, probe, adminUrl, ttlMs, now, rewriteImageUrl } = deps;
 
   let view: ChannelSummary[] = [];
   let revision = 0;
@@ -84,7 +90,14 @@ export function createLiveChannelsService(deps: {
       error = { code: answer.failure.code, message: answer.failure.message };
       return answer.failure;
     }
-    view = answer.value.items.map((channel) => summaryOf(channel, before));
+    // The logos go through the image cache before the view keeps them (03 section 3.11); the view
+    // itself is never stored anywhere (5.1).
+    view = answer.value.items.map((channel) =>
+      summaryOf(
+        channel.logoUrl === undefined ? channel : { ...channel, logoUrl: rewriteImageUrl(channel.logoUrl) },
+        before,
+      ),
+    );
     revision = answer.value.revision;
     readAt = now();
     error = undefined;

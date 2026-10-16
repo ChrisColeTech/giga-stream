@@ -17,7 +17,7 @@ import {
   type CollectionService,
 } from "./collection-service.js";
 import { createFsDialogService, type FsDialogService } from "./fs-dialog-service.js";
-import { createImageCacheService, type ImageCacheService } from "./image-cache-service.js";
+import { createImageCacheService, rewriteImageUrl, type ImageCacheService } from "./image-cache-service.js";
 import { createJobService, type JobService } from "./job-service.js";
 import { createLiveChannelsService, type LiveChannelsService } from "./live-channels-service.js";
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
@@ -54,12 +54,24 @@ export function createAppServices(options: ServiceOptions) {
   });
   const shell = createShellStateService({ repository: createShellStateRepository(database), now: options.now });
   const channelState = createChannelStateRepository(database);
+  const images: ImageCacheService = createImageCacheService({
+    dataDir: options.dataDir,
+    ...(options.imageFetch !== undefined && { fetch: options.imageFetch }),
+    now: options.now,
+  });
+  images.prune();
   const live: LiveChannelsService = createLiveChannelsService({
     admin: createAdminClient({ fetch: options.adminFetch }),
     probe: createStreamProbe({ fetch: options.probeFetch }),
     adminUrl: () => settings.get().adminUrl,
     ttlMs: options.liveViewTtlMs,
     now: options.now,
+    // The cache remembers the source so a later miss can fetch it; a source that fails the
+    // backend's address rule stays as it is (docs/03 sections 3.11 and 7.3).
+    rewriteImageUrl: (source) => {
+      images.rememberSource(source);
+      return rewriteImageUrl(source) ?? source;
+    },
   });
   const collectionsRepo = createCollectionRepository(database);
   const filesRepo = createLocalFileRepository(database);
@@ -68,12 +80,6 @@ export function createAppServices(options: ServiceOptions) {
   const watchRepo = createWatchRepository(database);
   const jobs: JobService = createJobService({ repository: jobRepo, now: options.now });
   jobs.atStart();
-  const images: ImageCacheService = createImageCacheService({
-    dataDir: options.dataDir,
-    ...(options.imageFetch !== undefined && { fetch: options.imageFetch }),
-    now: options.now,
-  });
-  images.prune();
   const posters: PosterFetchService = createPosterFetchService({
     images,
     files: filesRepo,

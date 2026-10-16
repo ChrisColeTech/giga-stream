@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 import { IMAGE_ID_LENGTH, STILL_SUFFIX } from "../constants/media-cache.js";
-import { locateTool } from "../../../shared/media/src/ffmpeg/locate-tool.ts";
-import { runTool } from "../../../shared/media/src/ffmpeg/run-tool.ts";
+import { locateTool } from "../../../shared/media/dist/ffmpeg/locate-tool.js";
+import { runTool } from "../../../shared/media/dist/ffmpeg/run-tool.js";
 import type { JobContext, JobRunner } from "./job-service.js";
 import type { LocalFileRepository } from "../store/local-file-repository.js";
 import type { CollectionRepository } from "../store/collection-repository.js";

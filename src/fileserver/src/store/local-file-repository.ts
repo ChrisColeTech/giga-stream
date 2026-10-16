@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { MediaFacts } from "../../../shared/media/src/types/media-facts.ts";
+import type { MediaFacts } from "../../../shared/media/dist/types/media-facts.js";
 import type { Database } from "./database.js";
 
 /** A local_files row as the fileserver keeps it: the facts of one found file, by opaque id. */

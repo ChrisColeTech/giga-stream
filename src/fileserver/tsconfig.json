@@ -4,20 +4,21 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2022", "DOM"],
-    "noEmit": true,
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": true
   },
-  // Typecheck only: the program runs TypeScript directly (Node 24.11 no longer needs a build), and
-  // `src/shared/media` is imported by relative `.ts` paths — both need `allowImportingTsExtensions`,
-  // and with no `rootDir`/`outDir` those imports typecheck cleanly from src.
-  // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck
-  // (the Giga Images lesson).
+  // The shared media library is imported from `src/shared/media/dist` (built by `src/build-shared.ts`
+  // with esbuild and declaration-only tsc): its `.d.ts` sit outside `rootDir` the way any dependency's
+  // types do, so nothing from the library enters the emit and `dist/` keeps the wave-1 layout.
+  // `.cts` is not matched by `*.ts`: without it src/app/preload.cts is skipped by typecheck and build,
+  // and the window loads a preload that does not exist (the Giga Images lesson). NodeNext emits it as
+  // dist/app/preload.cjs, the name src/app/main.ts asks for.
   "include": ["src/**/*.ts", "src/**/*.cts"]
 }

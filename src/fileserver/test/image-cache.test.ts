@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { buildApp } from "../src/build-app.js";
 import { imageIdOf, rewriteImageUrl, createImageCacheService, type ImageCacheService } from "../src/services/image-cache-service.js";
 import { AppError } from "../src/lib/app-error.js";
 import { errorEnvelope } from "../src/lib/envelope.js";
@@ -130,4 +131,54 @@ test("prune deletes images older than six months and never younger ones", async 
   assert.equal(images.has(oldId), false);
   assert.equal(images.has(freshId), true);
   rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("the live view answers each channel's logo through the image cache", async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-images-live-"));
+  const good = "https://img.example.test/news.png";
+  const refused = "http://far.example.test/logo.png";
+  const answer = {
+    ok: true,
+    data: {
+      items: [
+        { id: "c1", name: "News", category: "News", revision: 3, streamUrl: "http://127.0.0.1:9/one.m3u8", logoUrl: good },
+        { id: "c2", name: "Docs", category: "Fact", revision: 3, streamUrl: "http://127.0.0.1:9/two.m3u8", logoUrl: refused },
+      ],
+      revision: 9,
+    },
+  };
+  const adminFetch = (async () =>
+    new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+  const probeFetch = (async () => new Response("no", { status: 404 })) as typeof fetch;
+  const fetched: string[] = [];
+  const imageFetch = (async (input: string | URL | Request) => {
+    fetched.push(String(input instanceof Request ? input.url : input));
+    return new Response(new Uint8Array([7, 7]), { status: 200, headers: { "content-type": "image/png" } });
+  }) as typeof fetch;
+  const app = await buildApp({ dataDir, adminFetch, probeFetch, imageFetch, logger: false });
+  try {
+    await app.inject({
+      method: "PATCH",
+      url: "/api/settings",
+      payload: JSON.stringify({ adminUrl: "http://127.0.0.1:4747" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    // A channel's logo answers as a /api/images/<id> address; a source that fails the address
+    // rule is left as it is (docs/03 section 3.11), and the state answer carries the same view.
+    const channels = JSON.parse((await app.inject({ method: "GET", url: "/api/channels" })).body);
+    assert.equal(channels.data.items[0].logoUrl, `/api/images/${imageIdOf(good)}`);
+    assert.equal(channels.data.items[1].logoUrl, refused);
+    const state = JSON.parse((await app.inject({ method: "GET", url: "/api/state" })).body);
+    assert.equal(state.data.channels.items[0].logoUrl, `/api/images/${imageIdOf(good)}`);
+
+    // The first logo request fetches from the remembered source and serves it; nothing is stored.
+    const logo = await app.inject({ method: "GET", url: channels.data.items[0].logoUrl });
+    assert.equal(logo.statusCode, 200);
+    assert.equal(logo.headers["content-type"], "image/png");
+    assert.deepEqual(fetched, [good]);
+  } finally {
+    await app.close();
+    rmSync(dataDir, { recursive: true, force: true });
+  }
 });
