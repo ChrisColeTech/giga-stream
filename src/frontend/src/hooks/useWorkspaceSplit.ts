@@ -14,6 +14,31 @@ import { usePaneTween } from "./usePaneTween";
 type SideKey = Exclude<PaneSide, "bottom">;
 const SIDE_KEYS: readonly SideKey[] = ["left", "right"];
 
+/* The work width (CSS px) below which the right pane collapses (06 section 1.3). Named here, not in constants/, so the
+ * shell's own geometry stays in one file. */
+const WORK_WIDTH_FLOOR = 1000;
+
+/* The order side panes fall in as the work width shrinks: the right first, then the left. */
+const FALL_ORDER: readonly SideKey[] = ["right", "left"];
+
+/** The work width a side pane collapses below: the floor for the right; for the left, the line where the centre's
+ *  minimum and the left pane's minimum no longer fit side by side. The centre never collapses. */
+export function collapseLine(surface: Surface, side: SideKey): number {
+  if (side === "right") return WORK_WIDTH_FLOOR;
+  return SURFACES[surface].centerMin + (limitsOf(surface, "left")?.min ?? 0);
+}
+
+/** The side panes that fall when the work width goes from `previous` (null on the first measure) to `width`, right
+ *  first. A pane falls only when the width crosses its line downward: a pane the user reopens under its line stays
+ *  open until the window is widened past the line and narrowed again. */
+export function sidesFalling(surface: Surface, previous: number | null, width: number): SideKey[] {
+  return FALL_ORDER.filter((side) => {
+    if (limitsOf(surface, side) === null) return false;
+    const line = collapseLine(surface, side);
+    return width < line && (previous === null || previous >= line);
+  });
+}
+
 export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
   const config = SURFACES[surface];
   const row = useRef<AllotmentHandle | null>(null);
@@ -22,6 +47,8 @@ export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
   const rowDragging = useRef(false);
   const columnDragging = useRef(false);
   const repaint = useRef<() => void>(() => {});
+  const settle = useRef<() => void>(() => {});
+  const lastWidth = useRef<number | null>(null);
 
   const sides = SIDE_KEYS.filter((side) => limitsOf(surface, side) !== null);
   const hasBottom = limitsOf(surface, "bottom") !== null;
@@ -45,15 +72,35 @@ export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
     }
   };
 
+  /* A falling pane is closed through the store's toggle, which writes the ACTIVE surface only, so a hidden surface's
+   * panes wait until it is shown. A pane already closed is left alone, and the reason is said once on the notice line. */
+  const fall = (side: SideKey): void => {
+    const state = useAppStore.getState();
+    if (state.surface !== surface || !(state.open[keyOf(side)] ?? true)) return;
+    state.togglePane(side);
+    state.say(`The ${side} pane collapsed to fit the window.`);
+  };
+
+  /* Runs on every size change of the surface's box: judge the width, then paint the panes. */
+  settle.current = (): void => {
+    const width = box.current?.clientWidth ?? 0;
+    /* A hidden surface measures 0 and has no width to judge; its last width stays for when it is shown. */
+    if (width > 0) {
+      sidesFalling(surface, lastWidth.current, width).forEach(fall);
+      lastWidth.current = width;
+    }
+    repaint.current();
+  };
+
   /* THE FIRST LAYOUT IS PAINTED FROM THE STORE. Left alone, Allotment shares `defaultSizes` out by its own rule and a
    * pane can come up at its minimum instead of its preferred size. The observer is what lands it: Allotment measures
    * its container in its own ResizeObserver, which is registered first and so runs first, and a resize sent before
-   * that measurement is clamped to a zero-sized split and lost. The same observer repaints when a hidden surface is
-   * shown and its box gets a size. */
+   * that measurement is clamped to a zero-sized split and lost. The same observer repaints, and judges the width, when
+   * a hidden surface is shown and its box gets a size. */
   useLayoutEffect(() => repaint.current(), []);
   useEffect(() => {
-    const frame = requestAnimationFrame(() => repaint.current());
-    const observer = new ResizeObserver(() => repaint.current());
+    const frame = requestAnimationFrame(() => settle.current());
+    const observer = new ResizeObserver(() => settle.current());
     if (box.current) {
       observer.observe(box.current);
       const centre = box.current.querySelector(".pane-center");

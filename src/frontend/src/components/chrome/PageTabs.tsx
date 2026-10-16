@@ -27,11 +27,14 @@ const TAB =
   "data-active:font-semibold data-active:text-accent-text " +
   "data-active:shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)]";
 
+/* Disabled tabs take no pointer events, so the reason hangs on the track, which is what the pointer lands on. */
+const SLEEPING_REASON = "Close the open window to switch surfaces.";
+
 export function PageTabs({ surface, disabled = false }: PageTabsProps) {
   const setSurface = useAppStore((state) => state.setSurface);
 
   return (
-    <nav className={NAV} aria-label="Surfaces">
+    <nav className={NAV} aria-label="Surfaces" title={disabled ? SLEEPING_REASON : undefined}>
       {SURFACE_ORDER.map((id) => (
         <button
           key={id}
