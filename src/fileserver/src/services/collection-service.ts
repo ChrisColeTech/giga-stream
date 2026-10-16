@@ -165,12 +165,14 @@ export function createCollectionService(deps: {
 }
 
 async function dialogPath(dialog: FsDialogService, token: unknown): Promise<string> {
-  if (typeof token !== "string" || token === "") throw invalid();
+  if (typeof token !== "string" || token === "") {
+    throw new AppError("fs.invalid_selection", 422, "That selection cannot be used.");
+  }
   // The token's folder passed the existence check at selection; a moved one is refused now.
   try {
     return await dialog.redeem(token);
   } catch (error) {
-    throw error instanceof AppError ? error : invalid();
+    throw error instanceof AppError ? error : new AppError("fs.invalid_selection", 422, "That selection cannot be used.");
   }
 }
 

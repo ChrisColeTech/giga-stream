@@ -55,7 +55,7 @@ export function createPosterFetchService(deps: {
         throw new AppError("media.not_found", 404, "That file's folder is no longer attached.");
       }
       const id = stillIdOf(row.path);
-      if (images.has(id)) return;
+      // Changed files recapture: the id is stable, the frame is not.
       const target = path.join(images.dir, `${id}${STILL_SUFFIX}`);
       const fullPath = path.join(folder.path, row.path);
       await runTool(locateTool("ffmpeg"), [...STILL_ARGS, "-i", fullPath, "-vf", "thumbnail", "-frames:v", "1", target], {

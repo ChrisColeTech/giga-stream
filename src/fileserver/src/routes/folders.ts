@@ -9,7 +9,7 @@ import type { AppServices } from "../services/app-services.js";
 
 const CollectionParams = z.object({ collectionId: z.string() });
 const FolderParams = z.object({ folderId: z.string() });
-const TokenBody = z.object({ token: z.unknown() }).passthrough();
+const TokenBody = z.object({ token: z.unknown().optional() }).passthrough();
 
 const asLine = (event: ScanEvent): string => `${JSON.stringify(event)}\n`;
 
