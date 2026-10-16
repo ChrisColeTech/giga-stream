@@ -18,8 +18,9 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 3.12-3.13 Favorites, watch history | A | **not started** (phase 8) |
 | 4-6 State and updates, live view, storage | A | **done** (`state.test.ts`, `live-view.test.ts`: the state answer, the TTL, clear-on-failure, refill on the next request - all against the real backend as a child process; migrations `001`/`002` ported unchanged, `003` new) |
 | 7.1 Health | B | **done** |
-| 7.2 Channels | B | **done** (tests: `channels.test.ts`, `seed-and-store.test.ts`) |
+| 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; the `tvgId`/`source` fields land with 7.2c) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
+| 7.2c Playlist sync | B | **not started** (contract written 2026-10-16, owner decision; `20` section 9.1) |
 | 7.3 Stream and image addresses | B | **done** (the address rule; part of every channel change) |
 | 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7) |
 | 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the provider embed fields per title wait on `14`'s results |
@@ -62,7 +63,8 @@ picker).
 `JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`
 (the first owner, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
 `CORS_ORIGINS` (serving over the network, section 7.10), `TMDB_READ_TOKEN` (`11`), `TMDB_SYNC_SCHEDULE`
-(the catalog-sync interval, section 7.6b; default off), `OMDB_API_KEY` (detail enrichment, `11`
+(the catalog-sync interval, section 7.6b; default off), `PLAYLIST_URLS` and `PLAYLIST_SYNC_SCHEDULE`
+(the playlist sync, section 7.2c; both default off/absent), `OMDB_API_KEY` (detail enrichment, `11`
 section 7; absent means details stay TMDB-shaped), `MOVIE_STREAM_TEMPLATE` and
 `EPISODE_STREAM_TEMPLATE` (the stream address rule, section 7.5), `SEED_TEST_CHANNELS`, `ALLOW_LOOPBACK_STREAMS`.
 
@@ -565,6 +567,8 @@ interface BackendChannel {
   number?: string;
   logoUrl?: string;        // the logo's source; the fileserver's image cache fetches it
   streamUrl: string;       // the HLS address
+  tvgId?: string;          // the playlist's tvg-id; the playlist sync's update key (7.2c)
+  source?: string;         // the playlist host that created the row; sync-owned rows only (7.2c)
   revision: number;        // the revision at which this channel last changed
 }
 ```
@@ -608,6 +612,45 @@ An unknown id is `404 provider.not_found`; an invalid field is `422 provider.inv
 Each change emits `providers.changed` and writes an audit entry. Provider changes raise the backend
 revision by one, so the fileserver's provider cache is invalidated automatically by the existing socket
 change notification.
+
+### 7.2c The playlist sync
+
+The playlist sync turns configured M3U playlists into channels, and keeps them current. It is the only
+mechanism besides channel CRUD that writes channels, and it writes only rows it owns: a channel created
+by the sync carries `source` (the playlist URL's host); an operator's hand-created rows (`source` absent)
+are never updated or removed by it.
+
+- **Playlists.** `PLAYLIST_URLS` — a comma-separated list of `https` playlist addresses *(default:
+  unset; with it unset the sync has nothing to do and the schedule stays unarmed)*. `PLAYLIST_SYNC_SCHEDULE`
+  (default off) accepts an interval such as `6h` or `24h`; when set, the backend runs the sync on that
+  interval after start-up. A scheduled run is audited with the actor `system`.
+- **The run.** Each playlist is fetched once with a timeout and a size cap (`PLAYLIST_SYNC_MAX_BYTES`,
+  *(default 8 MiB)*; at most `PLAYLIST_SYNC_MAX` *(default 5000)* entries per playlist). Each
+  `#EXTINF` entry is parsed to `name`, `tvgId?`, `logoUrl?`, `groupTitle?`, `streamUrl` (the
+  `group-title` becomes the `category`). Every entry passes the address rule (7.3): an `http` address
+  is **skipped and counted, never imported broken**. Entries are matched to the store's sync-owned rows
+  (the same playlist host first, any other sync-owned row by `tvgId` then by exact `name`): a match
+  updates `streamUrl`, `logoUrl`, `category` and `number` when they changed; an unmatched entry creates
+  a row; a sync-owned row whose entry vanished from the playlist is counted as `removed` and, only with
+  `prune: true`, deleted. Duplicate entries (the same `name` and `streamUrl`) are deduped. The run is
+  single-flight: a second start is `409 playlist.busy`.
+- **Enrichment.** An entry with no `tvg-logo` may be given one at write time from the iptv-org logo
+  index (`logos.json`, `channels.json`), matched by `tvgId` first and normalized `name` second,
+  disk-cached under the data folder with a TTL (`LOGO_INDEX_TTL_HOURS`, *(default 24)*). An existing
+  `logoUrl` always wins; a miss imports the row with no logo. Enrichment happens at write time only,
+  never per read.
+- **Revision and events.** One run bumps the revision once and emits one `channels.changed` frame,
+  whatever it changed; channels are channel data (`7.6b` is the contrast).
+
+| Route | Who | Behaviour |
+|---|---|---|
+| `POST /api/playlist-sync` | owner, editor | body `{ dryRun?: boolean, prune?: boolean }`; a dry run writes nothing. Answers `202` with `{ created, updated, skipped, refused, removed, refusalExamples }` and the ids of the first *(default 10)* created rows |
+| `GET /api/playlist-sync` | owner, editor | `{ running, startedAt, lastRunAt, lastOutcome, counts, schedule, playlists }` |
+
+Every run — manual, dry or scheduled — is one audit entry, action `channel.imported`, with the counts and
+each playlist's **host** (never its query, which can carry credentials). A playlist that cannot be
+fetched fails the run with `503 playlist.unreachable`; a body that is not an M3U playlist is
+`422 playlist.invalid`.
 
 ### 7.3 Stream and image addresses
 
@@ -700,8 +743,8 @@ nobody "adds a title" — the store only ever mirrors TMDB.
   `channels.changed` are untouched: titles are not channel data. The fileserver no longer listens: it
   reads titles on demand (`3.5`, `3.6`) and warms its image cache lazily on first request (`3.11`).
 - **Audit.** Every start, finish and failure is an audit entry (`7.13`), with the scope, kind, page
-  counts and the outcome sentence; never a token. This scheduler is the system's only background
-  timer (`01` section 4.4).
+  counts and the outcome sentence; never a token. This scheduler and the playlist-sync scheduler
+  (`7.2c`) are the system's only background timers (`01` section 4.4).
 
 Migration `004-titles.sql` creates the store: `titles` (kind, tmdb_id, payload, popularity_score,
 popularity_read_at, fetched_at; primary key kind+tmdb_id) and `title_lists` (key, ids, fetched_at),
@@ -827,8 +870,8 @@ interface Session {
 
 An entry is `{ id, at, actorId?, actorEmail?, action, subject?, detail?, address? }`. Actions:
 `auth.login`, `auth.login_failed`, `auth.logout`, `auth.password_changed`, `account.created`,
-`account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`. A password,
-token or hash is never written to it.
+`account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`,
+`channel.imported`. A password, token or hash is never written to it.
 
 ## 8. Errors
 
@@ -836,6 +879,7 @@ token or hash is never written to it.
 route.not_found        request.invalid        internal.failure
 settings.invalid       library.invalid
 channel.not_found      channel.invalid        title.not_found
+playlist.invalid       playlist.busy
 collection.not_found   collection.invalid     watch.not_found
 fs.desktop_required    fs.cancelled           fs.invalid_selection
 job.not_found          job.not_running        job.not_settled        job.running
@@ -858,5 +902,5 @@ account.not_found      account.invalid        account.email_taken    account.las
 | 416 | `playback.range_invalid` |
 | 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection` |
 | 502 | `backend.bad_response` |
-| 503 | `backend.unreachable`, `tmdb.unavailable` |
+| 503 | `backend.unreachable`, `tmdb.unavailable`, `playlist.unreachable` |
 | 500 | `internal.failure` and the `store.*` codes |

@@ -191,11 +191,14 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
 - One exception for streamed answers: a long-running operation (a folder scan, `03` section 3.8)
   answers with a single streamed NDJSON body that reports progress as the work happens — one
   request, one answer, not polling.
-- The system's single timer exception is the admin backend's catalog-sync scheduler (`03` section
-  7.6b): an internal timer, armed by `TMDB_SYNC_SCHEDULE`, that pulls **title metadata** into the
-  title store. Images are never part of it: image bytes are fetched and served by the fileserver's
-  image cache (`03` section 3.11) lazily on first request — the backend never stores or serves a
-  media byte (section 7).
+- The system's timer exception covers the admin backend's two internal schedulers (`03` sections
+  7.6b and 7.2c): the catalog-sync scheduler, armed by `TMDB_SYNC_SCHEDULE`, which pulls **title
+  metadata** into the title store, and the playlist-sync scheduler, armed by
+  `PLAYLIST_SYNC_SCHEDULE`, which refreshes the sync-owned channels from the configured M3U
+  playlists (`03` section 7.2c). Both are audited with the actor `system`. Images are never part
+  of either: image bytes are fetched and served by the fileserver's image cache (`03` section
+  3.11) lazily on first request — the backend never stores or serves a media byte (section 7). No
+  other timer exists anywhere.
 - No browser storage: nothing the user chose lives in `localStorage`, `sessionStorage` or IndexedDB.
   Saved state is a fileserver row.
 
