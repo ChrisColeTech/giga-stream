@@ -27,7 +27,7 @@ The repository was restarted from empty on 2026-10-16. The earlier work is in
 - **Titles play through the providers' embedded players** (owner, 2026-10-16; `12` section 7). How is
   proved first by the provider proof of concept (phase P, `14`), against the real services. Its results
   are written into `03` and `06` before phases 7 and 9 build title playback.
-- **Until then**, the backend's address rule (`03` section 7.5) points titles at the streaming test server
+- **Until then**, the backend's address rule (`03` section 7.5) points titles at the live server's test channels
   (`10`), so the rest of the Player can be built and checked against a real stream.
 
 The TMDB calls Library needs were checked live on 2026-10-16 (`11` section 3). Tests use hand-written
@@ -42,8 +42,8 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 | Repository | `git init`, `.gitignore`, `.gitattributes`, `.nvmrc` (24.11.1), root `package.json`, `AGENTS.md` | the base commit |
 | FFmpeg | `tools/ffmpeg/bin` restored (`09`) | `scripts/ffmpeg/verify-ffmpeg.ps1` passes |
 | Shared media library | `src/shared/media` (`01` section 4.2): find and run the bundled FFmpeg and ffprobe, read a file's facts, find the video files in a folder | its tests pass; the live server and the fixture script use it |
-| Fixture files | `scripts/fixtures/make-fixtures.mjs` (`10` section 2.1): the four channel files and the news captions, cached per machine | a fresh cache is made and each file probes as H.264 + AAC, 60 s |
-| Streaming test server | `scripts/live-server` (`10`), changed to stream the fixture files | its tests pass, including the headless-Chrome playback tests; each channel shows its own file |
+| Fixture files | `scripts/fixtures/make-fixtures.mjs` (`10` section 2.1): three programmes per test channel and the news captions, cached per machine | a fresh cache is made and each file probes as H.264 + AAC at its listed length |
+| Live server | `src/live-server` (`10`): channels as playlists of real videos, live HLS in loop and encode mode, its own `node:sqlite` store, channel CRUD live without a restart, faults, the four seeded test channels | built 2026-10-16: its tests pass (CRUD, persistence, the switch between videos in every rendition, encode mode) and the headless-Chrome tests pass, including playback across a switch |
 | Rule checker and gate | `scripts/check-rules` to `01`; `scripts/check/gate.mjs` | the checker's tests pass; the gate prints `gate: PASS` |
 | Browser harness | `scripts/browser`: headless Chrome over DevTools, screenshots, page evaluation | it captures a screenshot of a running page (needed from phase 3) |
 

@@ -5,9 +5,10 @@
   "description": "Giga Stream: the interface (src/frontend), the fileserver and Electron host (src/fileserver) and the admin backend (src/backend). See docs/00.",
   "engines": { "node": ">=24.11" },
   "scripts": {
-    "live:dev": "node scripts/live-server/live-server.mjs",
-    "live:loop": "node scripts/live-server/live-server.mjs --mode loop --port 8097",
-    "test:live-server": "node --test scripts/live-server/test/*.test.mjs",
+    "fixtures": "node scripts/fixtures/make-fixtures.mjs",
+    "live:dev": "npm run fixtures && npm run dev:test-channels --prefix src/live-server",
+    "live:start": "npm start --prefix src/live-server",
+    "test:live-server": "npm test --prefix src/live-server",
     "electron:dev": "npm run dev --prefix src/fileserver",
     "electron": "npm run start:app --prefix src/fileserver"
   }

@@ -15,7 +15,7 @@ touches before changing behaviour or structure:
 | `07` | the working protocol: roles, editing, running things, verification, delegation |
 | `08` | the build phases and how each is accepted |
 | `09` | the FFmpeg build |
-| `10` | the streaming test server |
+| `10` | the live server: channels of real videos as live HLS, its store and CRUD routes |
 | `11` | TMDB: the decisions and the API as observed |
 | `12` | the provider API reference (verified live 2026-10-16) |
 | `13` | the go-live plan |
@@ -27,13 +27,14 @@ person's changes.
 ## Layout
 
 - `src/frontend` the React interface (Vite, port 5171). `src/fileserver` the application server and
-  Electron host (port 8090). `src/backend` the optional admin backend (port 8091). `src/mockup` the
+  Electron host (port 8090). `src/backend` the optional admin backend (port 8091). `src/live-server` the
+  live server (port 8097, `docs/10`): channels of real videos as live HLS, on its own SQLite. `src/mockup` the
   provider playback proof of concept (`docs/14`): plain HTML, CSS and JS, never packaged.
 - `src/shared/<domain>` libraries any program or tool may import (`docs/01` section 4.2); not programs.
   `src/shared/media` finds and runs the bundled FFmpeg and scans folders for video files.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
-- `scripts/live-server` the streaming test server (port 8097, `docs/10`); it streams those fixture files. `scripts/ffmpeg` the FFmpeg
-  build and verifier (`docs/09`); the binaries are in `tools/ffmpeg/bin` (gitignored).
+- `scripts/ffmpeg` the FFmpeg build and verifier (`docs/09`); the binaries are in `tools/ffmpeg/bin`
+  (gitignored).
 - The programs never import each other's source; they talk over HTTP and WebSocket.
 
 ## Commands

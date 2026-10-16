@@ -7,8 +7,12 @@ const ROOT_ALLOWED = new Set(["/healthz", "/ws"]);
 
 const SQL = /\b(SELECT\s[\s\S]{1,200}?\sFROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|CREATE\s+(TABLE|INDEX)|ALTER\s+TABLE)\b/;
 
+/** The live server's stream addresses, which players load directly (`01` section 4.3): only in its media file. */
+const STREAM_ROUTE_FILE = "src/live-server/src/api/media.ts";
+const STREAM_ROUTE = /^\/(live|logos)\/|^\/test\/player\.html$/;
+
 function inRouteFolder(rel) {
-  return /^src\/fileserver\/src\/routes\//.test(rel) || /^src\/backend\/src\/api\//.test(rel);
+  return /^src\/fileserver\/src\/routes\//.test(rel) || /^src\/(backend|live-server)\/src\/api\//.test(rel);
 }
 
 export const transportAndRoutes = {
@@ -36,7 +40,8 @@ export const transportAndRoutes = {
       if (inRouteFolder(file.rel) && !file.isTest) {
         for (const m of file.code.matchAll(ROUTE_LITERAL)) {
           const url = m[2];
-          if (!url.startsWith("/api/") && !ROOT_ALLOWED.has(url)) {
+          const streamRoute = file.rel === STREAM_ROUTE_FILE && STREAM_ROUTE.test(url);
+          if (!url.startsWith("/api/") && !ROOT_ALLOWED.has(url) && !streamRoute) {
             push(m.index, file.code, `route ${url} must begin /api (only /healthz and /ws are root-level)`);
           }
         }

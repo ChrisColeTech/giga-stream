@@ -21,8 +21,11 @@ import {
   captionsFileOf,
 } from "./fixture-set.mjs";
 
-/** The cache folder for this version: `<temp>/giga-stream-fixtures-v<N>`. */
-export const fixtureDir = (root = os.tmpdir()) => path.join(root, `giga-stream-fixtures-v${FIXTURE_VERSION}`);
+/**
+ * The cache folder: `<temp>/giga-stream-fixtures`, the live server's default FIXTURE_DIR. Its marker holds the
+ * set's signature (with FIXTURE_VERSION), so a changed set is remade in place.
+ */
+export const fixtureDir = (root = os.tmpdir()) => path.join(root, "giga-stream-fixtures");
 
 const MARKER = "fixtures.json";
 

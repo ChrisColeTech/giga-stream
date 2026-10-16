@@ -37,7 +37,7 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
  Poster and still bytes: image.tmdb.org -> FILESERVER only (its image cache,
  fetched lazily on first request), never through the backend (section 7).
  Player in the interface --loads the stream address--> stream origin
- (in development: the streaming test server, scripts/live-server);
+ (in development: the live server's test channels, src/live-server, 10);
  provider titles play in the provider's embedded player in the stage (14).
 ```
 
@@ -88,7 +88,16 @@ program that calls TMDB, and it gives each title its stream address from a rule 
 Providers, when they come (`13`), live here and nowhere else. It never stores user-local paths,
 watch history or collections, and never serves local files or video bytes.
 
-### 1.4 Not in the system
+### 1.4 Live server - `src/live-server`
+
+A stream origin (`10`), port 8097, on its own `node:sqlite` database (`~/.giga-stream-live`): channels of
+real video files, each a looping playlist, served as live HLS around the clock, managed through its own
+CRUD routes. In development its seeded test channels are what the backend's test channels point at; it
+can as well run your own videos. The interface's player loads its stream addresses like any published
+stream address; no program imports it or calls its API. Changes are accepted from its own computer only.
+Node runs its TypeScript directly, like the shared libraries; it is not packaged with the app.
+
+### 1.5 Not in the system
 
 No CLI, Rust runtime, Python sidecar, inference worker or second renderer architecture.
 
@@ -103,7 +112,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | UI state | One Zustand store, narrow selectors |
 | Validation | Zod at every HTTP, WebSocket, backend-published and persisted-value boundary |
 | Servers | Fastify 5 (the admin backend adds `@fastify/websocket` for its read-only socket) |
-| Local data | `node:sqlite` (fileserver) and `node:sqlite` (backend), separate databases |
+| Local data | `node:sqlite` (fileserver, backend and live server), separate databases |
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
 | Icons | lucide-react |
@@ -119,12 +128,12 @@ giga-stream/
 |-- scripts/
 |   |-- check-rules.mjs         the executable copy of this guide's rules
 |   |-- check/                  the gate
-|   |-- fixtures/               makes the test video files (`10` section 2.1)
-|   `-- live-server/            the streaming test server (development and tests)
+|   `-- fixtures/               makes the test video files (`10` section 2.1)
 |-- src/
 |   |-- frontend/src/           components, hooks, lib, pages, services, store, styles, types, constants
 |   |-- fileserver/src/         app, routes, services, store, types
 |   |-- backend/src/            api, services, store, events, types, constants
+|   |-- live-server/src/        api, services, store, stream, types, constants (`10`)
 |   |-- shared/                 libraries any program or tool may import (section 4.2); not programs
 |   `-- mockup/                 the provider playback proof of concept (`14`): plain HTML, CSS, JS; not a
 |                               program, never packaged, and outside the rules below
@@ -152,8 +161,8 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
   source; the backend imports neither. They talk over HTTP.
 - **A shared library is not a program.** Code more than one program or tool needs lives once, in
   `src/shared/<domain>/` (for example `src/shared/media`: finding and running the bundled FFmpeg,
-  reading a file's facts with ffprobe, and finding the video files in a folder). Any program, the
-  streaming test server and the fixture tools may import it; it never imports a program, and it holds
+  reading a file's facts with ffprobe, and finding the video files in a folder). Any program and the
+  fixture tools may import it; it never imports a program, and it holds
   no state of its own (no database, server or socket). It follows every rule of this guide. It is
   written in TypeScript using only syntax Node can strip (no `enum`, `namespace` or parameter
   properties), so the `.mjs` tools run it directly and the programs compile it with their own code.
@@ -165,7 +174,9 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 
 Every route does exactly: parse and validate input, make one service or repository call, map the
 result to the standard envelope. A route never opens files, queries SQLite, creates sockets or
-spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only root exceptions.
+spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only root exceptions, besides
+the live server's stream addresses (`/live/...`, `/logos/...` and its test page, all in its
+`api/media.ts`), which players load directly and which answer bytes, not the envelope.
 
 ### 4.4 Interface transport boundary
 

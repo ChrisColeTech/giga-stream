@@ -16,6 +16,8 @@ docs/tmdb_apiKey.txt
 
 # Local run data (the backend's own SQLite; created by npm run dev)
 src/backend/data/
+# The live server's test-channel data and encode cache (npm run live:dev)
+src/live-server/data/
 
 # The owner's own reference captures, kept local
 docs/reference/
@@ -23,8 +25,6 @@ docs/reference/
 # Bundled helpers built locally (docs/09: scripts/ffmpeg/build-ffmpeg.sh -> tools/ffmpeg/bin)
 tools/
 
-# Streaming test server output (docs/10)
-/.live-server/
 
 # Provider proof-of-concept run results and screenshots (docs/14)
 src/mockup/results/

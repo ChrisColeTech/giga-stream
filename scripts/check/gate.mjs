@@ -25,6 +25,7 @@ const STEP_TIMEOUT_MS = 180_000;
 const STEPS = [
   { name: "typecheck shared/media", cwd: "src/shared/media", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck backend", cwd: "src/backend", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck live-server", cwd: "src/live-server", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck fileserver", cwd: "src/fileserver", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "typecheck"] },
   { name: "lint frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "lint"] },
@@ -36,7 +37,7 @@ const STEPS = [
   },
   { name: "test checker", cwd: ".", cmd: "node", args: ["--test", "scripts/check-rules/test/*.test.mjs"] },
   { name: "test shared/media", cwd: "src/shared/media", cmd: "npm", args: ["test"] },
-  { name: "test live server", cwd: ".", cmd: "node", args: ["--test", "scripts/live-server/test/*.test.mjs"] },
+  { name: "test live-server", cwd: "src/live-server", cmd: "npm", args: ["test"] },
   { name: "test backend", cwd: "src/backend", cmd: "npm", args: ["test"] },
   { name: "test fileserver", cwd: "src/fileserver", cmd: "npm", args: ["test"] },
   { name: "test frontend", cwd: "src/frontend", cmd: "npm", args: ["test"] },
