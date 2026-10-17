@@ -30,8 +30,8 @@ acceptance), `Done` (visually accepted on the real stack).
 | 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below | Done | `5749213`, `6432525` (no stripping, reverted `a0f4460`, `553d1cf`), `9045a8d` (no-store) |
 | **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **done** | **Done** (interface, panes, windows and Library checked on the real stack, 2026-10-17) | `d1aa570`, `51e2cec`, `6914728`, `4f21c11` |
 | 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | Landed (visual acceptance pending) | `4aca5f8` |
-| 2a | admin auth gate and login form, Giga Images style (owner, 2026-10-17: login gate and form only, no OAuth; plan in `34`) | A2 | `34` | Wave 2 landed | In progress (`admin/auth-gate`) | |
-| 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 accepted | Not started | |
+| 2a | admin auth gate and login form, Giga Images style (owner, 2026-10-17: login gate and form only, no OAuth; plan in `34`) | A2 | `34` | Wave 2 landed | Landed (checked in Chrome at 1600 wide: gate, wrong password, demo sign-in, Channels skeleton page, console clean) | `487b934` |
+| 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 landed | In progress (`admin/channels`) | |
 | 4 | Providers and Titles | A | `28` | Wave 3 accepted | Not started | |
 | 5 | Playlists, Jobs and Accounts | A | `28` | Wave 4 accepted | Not started | |
 | 6 | audit rows, sweep, tests | A | `28` | Wave 5 accepted | Not started | |
