@@ -63,13 +63,24 @@ export function createTitleOverlay(store: Store) {
       .filter((row) => q === undefined || (str(row.title) ?? "").toLowerCase().includes(q));
   }
 
-  /** Page one carries the manual titles, placed by the sort; a manual title has no popularity, so `trending` ends with them. */
+  /**
+   * Page one carries the manual titles. TMDB's rows keep TMDB's order exactly (TMDB sorted them already); the manual
+   * titles are put in order among themselves and slotted in by the sort's key, each before the first TMDB row it
+   * outranks. A manual title has no popularity, so `trending` ends with them. With no manual title the answer is
+   * TMDB's, untouched.
+   */
   function merge(tmdbItems: Record<string, unknown>[], manual: Record<string, unknown>[], sort: Sort): Record<string, unknown>[] {
-    const all = [...tmdbItems, ...manual];
-    if (sort === "newest" || sort === "year") return all.sort(yearDesc);
-    if (sort === "oldest") return all.sort(yearAsc);
-    if (sort === "az") return all.sort(byTitle);
-    return all;
+    if (manual.length === 0) return tmdbItems;
+    const compare = sort === "newest" || sort === "year" ? yearDesc : sort === "oldest" ? yearAsc : sort === "az" ? byTitle : undefined;
+    if (compare === undefined) return [...tmdbItems, ...manual];
+    const ordered = [...manual].sort(compare);
+    const out: Record<string, unknown>[] = [];
+    let next = 0;
+    for (const row of tmdbItems) {
+      for (let m = ordered[next]; m !== undefined && compare(m, row) < 0; m = ordered[++next]) out.push(m);
+      out.push(row);
+    }
+    return [...out, ...ordered.slice(next)];
   }
 
   return { decorate, manualMatches, merge };

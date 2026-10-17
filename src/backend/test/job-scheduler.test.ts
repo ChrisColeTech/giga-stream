@@ -103,6 +103,43 @@ test("a catalog job is scheduled only when TMDB has a token; turning it off leav
   tmdb.calls.length = 0;
   const started = await send(t.app, "POST", "/api/titles/sync", { scope: "trending", kind: "movie", pages: 1 }, token);
   assert.equal(started.status, 202);
-  await until(async () => pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.lastOutcome") === "ok", "a manual sync");
-  assert.ok(tmdb.calls.includes("/trending/movie/week"));
+  // The earlier scheduled run left "ok" in the status, so wait on the manual run's own call, not on that.
+  await until(() => tmdb.calls.includes("/trending/movie/week"), "the manual sync's TMDB call");
+});
+
+test("the sync status is the most recent run of its kind, whether a job or a manual call made it", async () => {
+  const tmdb = await mutableTmdb();
+  const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
+  const token = (await signIn(t.app)).access;
+  const status = async () => (await send(t.app, "GET", "/api/titles/sync", undefined, token)).body;
+  const settled = () => until(async () => pick(await status(), "data.running") === false, "the sync to end");
+  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, token);
+  await send(t.app, "POST", "/api/jobs/1/run", {}, token);
+  await until(async () => pick(await status(), "data.lastOutcome") === "ok", "the job's run");
+  await settled();
+
+  // A manual run that fails (TMDB has no such title) replaces the job's "ok" in the status, and is reported running.
+  const started = await send(t.app, "POST", "/api/titles/sync", { scope: "titles", ids: ["movie-999"] }, token);
+  assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
+  await settled();
+  const after = await status();
+  assert.notEqual(pick(after, "data.lastOutcome"), "ok", "the manual run's outcome, not the job's");
+  assert.equal(typeof pick(after, "data.lastRunAt"), "number");
+});
+
+test("the playlist sync status is the most recent run, a job's or a manual one", async () => {
+  const { t, token, asked, api } = await setup();
+  await api("POST", "/api/playlists", { address: ONE });
+  const made = await api("POST", "/api/jobs", { type: "playlist", name: "One", config: { playlistId: 1 } });
+  await api("POST", `/api/jobs/${Number(pick(made.body, "data.id"))}/run`, {});
+  const status = async () => (await send(t.app, "GET", "/api/playlist-sync", undefined, token)).body;
+  assert.equal(pick(await status(), "data.lastOutcome"), "ok");
+  assert.equal(pick(await status(), "data.counts.created"), 1);
+  // A manual run that cannot reach the playlist replaces the job's outcome.
+  await api("PATCH", "/api/playlists/1", { address: "https://down.example/none" });
+  const failed = await api("POST", "/api/playlist-sync", {});
+  assert.equal(failed.status, 503);
+  assert.notEqual(pick(await status(), "data.lastOutcome"), "ok");
+  assert.equal(pick(await status(), "data.running"), false);
+  assert.equal(asked.length, 1, "only the first address was a playlist");
 });
