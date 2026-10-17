@@ -69,7 +69,7 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
         title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
-        onClick={() => changeFavourite(item.ref, !item.favorite)}
+        onClick={() => void changeFavourite(item.ref, !item.favorite)}
       >
         <Star
           className={cn("size-3.5", item.favorite ? "text-accent-text" : "text-muted")}

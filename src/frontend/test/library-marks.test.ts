@@ -9,6 +9,7 @@ const ITEMS: readonly LibraryItem[] = [
     ref: { kind: "title", id: "2" },
     kind: "movie",
     title: "Two",
+    watchId: "watch-2",
     genres: [],
     favorite: true,
     progress: { positionMs: 10, durationMs: 100, state: "watching" },
@@ -46,9 +47,17 @@ describe("resolving an item over the store and the fixture", () => {
   it("drops progress when an entry is removed or History is cleared", () => {
     const two = ITEMS[1];
     assert.ok(two !== undefined);
-    const key = itemKey(two.ref);
     assert.notEqual(resolveItem(two, EMPTY, NO_HISTORY, SEED).progress, undefined);
-    assert.equal(resolveItem(two, EMPTY, withRemoved(NO_HISTORY, key), SEED).progress, undefined);
-    assert.equal(resolveItem(two, EMPTY, withCleared(), SEED).progress, undefined);
+    assert.equal(resolveItem(two, EMPTY, withRemoved(NO_HISTORY, "watch-2"), SEED).progress, undefined);
+    assert.equal(resolveItem(two, EMPTY, withCleared(["watch-2"]), SEED).progress, undefined);
+  });
+
+  it("removes one watch row without hiding another entry for the same item", () => {
+    const base = ITEMS[1];
+    assert.ok(base !== undefined);
+    const other = { ...base, watchId: "watch-3" };
+    const marks = withRemoved(NO_HISTORY, "watch-2");
+    assert.equal(resolveItem(base, EMPTY, marks, SEED).progress, undefined);
+    assert.notEqual(resolveItem(other, EMPTY, marks, SEED).progress, undefined);
   });
 });

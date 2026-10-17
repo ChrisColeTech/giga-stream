@@ -5,15 +5,18 @@ import type { Scope } from "@/lib/library-query";
 import { buildShelves, type ShelfGroup } from "@/lib/rows-shelves";
 import type { CollectionRow } from "@/types/collection";
 import { TypeStrip } from "../TypeStrip";
+import { LibraryPager } from "../LibraryPager";
 import { RowsShelf } from "./RowsShelf";
 import { RowsSkeleton } from "./RowsSkeleton";
 import { navigateRows } from "./rows-navigation";
 import { ROWS_COPY } from "./rows-constants";
+import { rowsRenderState } from "@/lib/library-render-state";
 
 export interface LibraryRowsProps {
   readonly scope: Scope;
   /** The items the query shows (the rail's view, the type, the search and the filters), grouped into shelves. */
   readonly items: readonly ResolvedItem[];
+  readonly continuing: readonly ResolvedItem[];
   readonly collections: readonly CollectionRow[];
   readonly selected: string | null;
   /** The Continue watching setting; off (or in History), that shelf is not drawn. */
@@ -22,6 +25,12 @@ export interface LibraryRowsProps {
   readonly onSelect: (id: string) => void;
   readonly onRemoveWatch: (item: ResolvedItem) => void;
   readonly onSeeAll: (group: ShelfGroup) => void;
+  readonly onRefresh: () => void;
+  readonly loading: boolean;
+  readonly paging: boolean;
+  readonly hasMore: boolean;
+  readonly onLoadMore: () => void;
+  readonly titleRegionsLoading: boolean;
   /** Drawn under the type strip: the History strip while History is open, as the grid draws it. */
   readonly strip?: ReactNode;
 }
@@ -32,6 +41,7 @@ export interface LibraryRowsProps {
 export function LibraryRows({
   scope,
   items,
+  continuing,
   collections,
   selected,
   showContinue,
@@ -39,39 +49,47 @@ export function LibraryRows({
   onSelect,
   onRemoveWatch,
   onSeeAll,
+  onRefresh,
+  loading,
+  paging,
+  hasMore,
+  onLoadMore,
+  titleRegionsLoading,
   strip,
 }: LibraryRowsProps) {
   const marks = useAppStore((state) => state.marks);
   const shelves = useMemo(
-    () => buildShelves({ items, collections, marks, showContinue }),
-    [items, collections, marks, showContinue],
+    () => buildShelves({ items, continuing, collections, marks, showContinue }),
+    [items, continuing, collections, marks, showContinue],
   );
+  const render = rowsRenderState(shelves.length, hasMore, paging);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} />
+      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
-      {shelves.length === 0 ? (
-        <RowsSkeleton />
-      ) : (
-        <div
-          role="group"
-          aria-label={ROWS_COPY.listLabel}
-          className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto py-3"
-          onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => navigateRows(event, onSelect)}
-        >
-          {shelves.map((shelf) => (
-            <RowsShelf
-              key={shelf.id}
-              shelf={shelf}
-              collections={collections}
-              selected={selected}
-              onSelect={onSelect}
-              onRemoveWatch={onRemoveWatch}
-              onSeeAll={onSeeAll}
-            />
-          ))}
-        </div>
-      )}
+      <div
+        role="group"
+        aria-label={ROWS_COPY.listLabel}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto py-3"
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => navigateRows(event, onSelect)}
+      >
+        {render.showSkeleton && <RowsSkeleton />}
+        {shelves.map((shelf) => (
+          <RowsShelf
+            key={shelf.id}
+            shelf={shelf}
+            collections={collections}
+            selected={selected}
+            onSelect={onSelect}
+            onRemoveWatch={onRemoveWatch}
+            onSeeAll={onSeeAll}
+          />
+        ))}
+        {titleRegionsLoading && shelves.length > 0 && <RowsSkeleton />}
+        {render.showPager && (
+          <LibraryPager hasMore={hasMore} loading={paging} view="rows" onVisible={onLoadMore} />
+        )}
+      </div>
     </div>
   );
 }

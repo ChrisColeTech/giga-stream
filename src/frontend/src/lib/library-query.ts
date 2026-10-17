@@ -5,7 +5,7 @@ import type { LibraryItem, LibraryKind } from "@/types/library";
 
 export type Scope = "all" | LibraryKind;
 export type SourceId = "all" | "history" | "favorites" | `collection:${string}`;
-export type SortKey = "newest" | "oldest" | "az" | "year";
+export type SortKey = "newest" | "oldest" | "az" | "year" | "trending";
 export type WatchedFilter = "all" | "unwatched" | "watching" | "watched";
 /** The presentation of the results: a grid of cards, a list of rows, or the Rows view of shelves (`06` section 4.3). */
 export type ListView = "grid" | "list" | "rows";
@@ -87,6 +87,8 @@ export function sortItems(items: readonly ResolvedItem[], sort: SortKey): Resolv
       return copy.sort((a, b) => a.title.localeCompare(b.title));
     case "year":
       return copy.sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || a.title.localeCompare(b.title));
+    case "trending":
+      return copy;
   }
 }
 
@@ -105,10 +107,10 @@ export function continueItems(items: readonly ResolvedItem[], scope: Scope, sour
 }
 
 export interface ViewCounts {
-  readonly all: number;
-  readonly history: number;
-  readonly favorites: number;
-  readonly collections: Readonly<Partial<Record<string, number>>>;
+  readonly all?: number;
+  readonly history?: number;
+  readonly favorites?: number;
+  readonly collections: Readonly<Partial<Record<string, number | undefined>>>;
 }
 
 export function viewCounts(items: readonly ResolvedItem[], collections: readonly CollectionRow[]): ViewCounts {

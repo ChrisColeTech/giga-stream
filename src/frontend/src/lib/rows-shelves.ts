@@ -1,6 +1,6 @@
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { itemKey, type Marks, type ResolvedItem } from "@/lib/library-marks";
-import { collectionSource, continueItems, sortItems, sortedCollections, type LibraryQuery } from "@/lib/library-query";
+import { collectionSource, continueItems, sortedCollections, type LibraryQuery } from "@/lib/library-query";
 import type { CollectionRow } from "@/types/collection";
 import type { LibraryKind } from "@/types/library";
 
@@ -40,6 +40,7 @@ export interface Shelf {
 export interface ShelfSource {
   /** Every item with the Library's marks applied (`resolveItems`). Membership is read from each `collectionIds`. */
   readonly items: readonly ResolvedItem[];
+  readonly continuing?: readonly ResolvedItem[];
   readonly collections: readonly CollectionRow[];
   /** The store's marks. A favourite the store holds wins over the fixture's flag, as `resolveItem` reads it. */
   readonly marks: Marks;
@@ -88,13 +89,13 @@ function collectionShelf(row: CollectionRow, items: readonly ResolvedItem[]): Sh
 /** The ordered shelves: Continue Watching, Favorites, each collection alphabetically, Movies, TV and Local files, then
  *  the genre shelves. Only a shelf with items is returned. */
 export function buildShelves(source: ShelfSource): Shelf[] {
-  const items = sortItems(source.items, "newest");
+  const items = [...source.items];
   const candidates: Shelf[] = [
     {
       id: "continue",
       name: LIBRARY_COPY.continueHeading,
       group: { kind: "continue" },
-      items: source.showContinue === false ? [] : continueItems(items, "all"),
+      items: source.showContinue === false ? [] : source.continuing ?? continueItems(items, "all"),
     },
     {
       id: "favorites",

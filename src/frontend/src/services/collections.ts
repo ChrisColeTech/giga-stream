@@ -3,7 +3,7 @@ import type { CollectionType } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import { api } from "./api";
 import {
-  CollectionIdsSchema,
+  MembershipListSchema,
   CollectionListSchema,
   CollectionSchema,
   RemovedSchema,
@@ -52,9 +52,9 @@ export function removeMember(collectionId: string, ref: ItemRef): Promise<Collec
   );
 }
 
-export function readMemberships(ref: ItemRef, signal?: AbortSignal): Promise<readonly string[]> {
-  return api(`/api/items/${part(ref.kind)}/${part(ref.id)}/collections`, CollectionIdsSchema, {
+export function readMemberships(ref: ItemRef, signal?: AbortSignal) {
+  return api(`/api/items/${part(ref.kind)}/${part(ref.id)}/collections`, MembershipListSchema, {
     signal,
     area: "Catalog",
-  }).then((answer) => answer.collectionIds);
+  }).then((answer) => answer.memberships);
 }

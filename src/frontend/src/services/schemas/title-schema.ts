@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LibraryItemSchema } from "./library-schema";
+import { ImageUrlSchema, LibraryItemSchema } from "./library-schema";
 import { SourceSchema } from "./source-schema";
 
 export const TitleSchema = z.object({
@@ -13,8 +13,8 @@ export const TitleSchema = z.object({
   cast: z.array(z.string()).max(10),
   runtimeMs: z.number().int().positive().optional(),
   seasons: z.array(z.object({ season: z.number().int(), episodeCount: z.number().int().nonnegative() })).optional(),
-  posterUrl: z.string().optional(),
-  backdropUrl: z.string().optional(),
+  posterUrl: ImageUrlSchema.optional(),
+  backdropUrl: ImageUrlSchema.optional(),
   streamUrl: z.string().url().optional(),
   sources: z.array(SourceSchema).optional(),
 });
@@ -25,7 +25,7 @@ export const EpisodeSchema = z.object({
   title: z.string().optional(),
   airDate: z.string().optional(),
   runtimeMs: z.number().int().positive().optional(),
-  stillUrl: z.string().optional(),
+  stillUrl: ImageUrlSchema.optional(),
   streamUrl: z.string().url().optional(),
   sources: z.array(SourceSchema).optional(),
 });

@@ -7,9 +7,10 @@ import { Toggle } from "@/components/ui/Toggle";
 import { ArmedButton } from "@/components/ui/ArmedButton";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";
-import { clearHistory } from "@/services/library";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryPrefs } from "@/types/settings";
+import { clearWatch } from "@/services/watch";
+import { useState } from "react";
 
 
 const VIEWS = [
@@ -32,9 +33,16 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
   const prefs = useAppStore((state) => state.library);
   const setPrefs = useAppStore((state) => state.setLibraryPrefs);
   const say = useAppStore((state) => state.say);
+  const [clearing, setClearing] = useState(false);
   const clear = () => {
-    const result = clearHistory();
-    if (!result.ok) say(result.message, "warn");
+    if (clearing) return;
+    setClearing(true);
+    void clearWatch().then(() => {
+      useAppStore.getState().requestLibraryRefresh();
+      say("History cleared.");
+    }).catch((error: unknown) => {
+      say(error instanceof Error ? error.message : "Could not reach the fileserver.", "warn");
+    }).finally(() => setClearing(false));
   };
   return (
     <Workspace labels={SETTINGS_LABELS}>
@@ -77,7 +85,8 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
           label="History"
           tip="Show the library's history, or clear it. Clearing never touches your files or collections."
           trailing={
-            <ArmedButton question={LIBRARY_COPY.clearArmed} title={LIBRARY_COPY.clearTip} onConfirm={clear}>
+            <ArmedButton question={LIBRARY_COPY.clearArmed} title={LIBRARY_COPY.clearTip}
+              disabled={clearing} onConfirm={clear}>
               {LIBRARY_COPY.clearIdle}
             </ArmedButton>
           }

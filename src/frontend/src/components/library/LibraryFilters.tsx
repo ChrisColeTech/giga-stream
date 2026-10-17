@@ -17,7 +17,7 @@ import { FilterSetting } from "./FilterSetting";
 import { GenrePopover } from "./GenrePopover";
 import { SearchField } from "./SearchField";
 
-const SORT_KEYS: readonly SortKey[] = ["newest", "oldest", "az", "year"];
+const SORT_KEYS: readonly SortKey[] = ["newest", "oldest", "az", "year", "trending"];
 const WATCHED_KEYS: readonly WatchedFilter[] = ["all", "unwatched", "watching", "watched"];
 
 export interface LibraryFiltersProps {
@@ -27,11 +27,12 @@ export interface LibraryFiltersProps {
   readonly years: readonly number[];
   readonly onQuery: (change: Partial<LibraryQuery>) => void;
   readonly onView: (view: ListView) => void;
+  readonly trending: boolean;
 }
 
 /** The right pane of Library, on LoRA Studio's gallery filter pane (components/gallery/ImageFilters.tsx): a stack of
  *  settings, each a label over its control, with Clear filters pinned at the foot. */
-export function LibraryFilters({ query, view, genres, years, onQuery, onView }: LibraryFiltersProps) {
+export function LibraryFilters({ query, view, genres, years, onQuery, onView, trending }: LibraryFiltersProps) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
@@ -58,7 +59,7 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView }: 
           value={query.sort}
           onChange={(event) => onQuery({ sort: choiceOf(SORT_KEYS, event.target.value, "newest") })}
         >
-          {SORT_OPTIONS.map((option) => (
+          {[...SORT_OPTIONS, ...(trending ? [{ value: "trending" as const, label: "Trending" }] : [])].map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

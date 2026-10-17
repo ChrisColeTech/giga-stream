@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const ItemRefSchema = z.object({ kind: z.enum(["title", "local"]), id: z.string().min(1) });
+export const ImageUrlSchema = z.string().regex(/^\/api\/images\/[^/?#]+$/);
 
 export const LibraryItemSchema = z.object({
   ref: ItemRefSchema,
@@ -8,10 +9,11 @@ export const LibraryItemSchema = z.object({
   kind: z.enum(["movie", "tv", "local"]),
   title: z.string().min(1),
   year: z.number().int().optional(),
-  posterUrl: z.string().optional(),
+  posterUrl: ImageUrlSchema.optional(),
   quality: z.string().optional(),
   genres: z.array(z.string()),
   favorite: z.boolean(),
+  collectionSource: z.enum(["manual", "folder"]).optional(),
   progress: z
     .object({
       positionMs: z.number().int().nonnegative(),
@@ -31,5 +33,10 @@ export const LibraryPageSchema = z.object({
   trending: z.boolean(),
   titlesAvailable: z.boolean(),
 });
+export const CollectionLibraryPageSchema = LibraryPageSchema.extend({
+  items: z.array(LibraryItemSchema.extend({ collectionSource: z.enum(["manual", "folder"]) })),
+});
 
 export const ContinuePageSchema = z.object({ items: z.array(LibraryItemSchema) });
+
+export const FavoriteSchema = z.object({ ref: ItemRefSchema, favorite: z.boolean() });

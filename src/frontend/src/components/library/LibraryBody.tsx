@@ -1,4 +1,4 @@
-import { continueItems, type ListView, type Scope, type SourceId } from "@/lib/library-query";
+import { type ListView, type Scope, type SourceId } from "@/lib/library-query";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
 import { ContinueStrip } from "./ContinueStrip";
@@ -6,6 +6,10 @@ import { HistoryStrip } from "./HistoryStrip";
 import { PosterGrid } from "./PosterGrid";
 import { PosterList } from "./PosterList";
 import { TypeStrip } from "./TypeStrip";
+import { LibraryPager } from "./LibraryPager";
+import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SKELETON_CARDS, SKELETON_ROWS } from "@/lib/library-limits";
 
 export interface LibraryBodyProps {
   readonly scope: Scope;
@@ -19,12 +23,19 @@ export interface LibraryBodyProps {
   readonly items: readonly ResolvedItem[];
   /** The items the query shows, in order. */
   readonly shown: readonly ResolvedItem[];
+  readonly continuing: readonly ResolvedItem[];
   readonly collections: readonly CollectionRow[];
   readonly selected: string | null;
   readonly onScope: (scope: Scope) => void;
   readonly onSelect: (id: string) => void;
   readonly onRemoveWatch: (item: ResolvedItem) => void;
   readonly onClearHistory: () => void;
+  readonly onRefresh: () => void;
+  readonly loading: boolean;
+  readonly paging: boolean;
+  readonly hasMore: boolean;
+  readonly onLoadMore: () => void;
+  readonly titleRegionsLoading: boolean;
 }
 
 /** The centre of Library: the type strip, the History strip when History is open, then Continue Watching and the
@@ -36,23 +47,30 @@ export function LibraryBody({
   view,
   items,
   shown,
+  continuing,
   collections,
   selected,
   onScope,
   onSelect,
   onRemoveWatch,
   onClearHistory,
+  onRefresh,
+  loading,
+  paging,
+  hasMore,
+  onLoadMore,
+  titleRegionsLoading,
 }: LibraryBodyProps) {
   const inHistory = source === "history";
-  const continuing = inHistory || !showContinue ? [] : continueItems(items, scope, source);
+  const continueRows = inHistory || !showContinue ? [] : continuing;
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} />
+      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <ContinueStrip
-          items={continuing}
+          items={continueRows}
           selected={selected}
           collections={collections}
           onSelect={onSelect}
@@ -77,6 +95,10 @@ export function LibraryBody({
             onRemoveWatch={onRemoveWatch}
           />
         )}
+        {titleRegionsLoading && shown.length > 0 && (
+          view === "grid" ? <SkeletonCards count={SKELETON_CARDS} /> : <SkeletonRows count={SKELETON_ROWS} />
+        )}
+        <LibraryPager hasMore={hasMore} loading={paging} view={view} onVisible={onLoadMore} />
       </div>
     </div>
   );
