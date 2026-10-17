@@ -3,14 +3,38 @@
 // would show must really play. It exists because a stale row (a stream address on a retired port) passed the
 // whole gate while the product showed "This stream will not play".
 // Usage: node scripts/check/live-smoke.mjs [--optional]
-// Env:   GIGA_SMOKE_BACKEND  the admin backend's origin (default http://127.0.0.1:3001)
+// Env:   GIGA_SMOKE_BACKEND  the admin backend's origin. Without it, the PORT line of src/backend/.env, then of
+//        src/backend/dev.env, then 8091 (the development port of docs/03 section 1). Only that one line is read.
 //
 // Checks, one line per failure: (1) the backend's public channel list answers; (2) each enabled `live` channel
 // answers its master playlist (200, #EXTM3U) and the first variant or segment URI in it answers 200 too;
 // (3) each enabled `stream` channel on a loopback address is probed and reported UNREACHABLE when nothing
 // answers. Without a stack: exit 1, or with --optional print SKIPPED and exit 0. No sleeps, no polling.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const optional = process.argv.includes("--optional");
-const backend = (process.env.GIGA_SMOKE_BACKEND ?? "http://127.0.0.1:3001").replace(/\/+$/, "");
+const BACKEND_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "backend");
+const DEFAULT_PORT = "8091";
+
+/** The value of the PORT line in an env file, or undefined when there is no such line (the file is not printed). */
+function portIn(file) {
+  try {
+    return /^\s*PORT\s*=\s*["']?(\d+)["']?\s*$/m.exec(readFileSync(file, "utf8"))?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+/** The admin backend's origin (docs/29 section 18, B6). */
+function backendOrigin() {
+  if (process.env.GIGA_SMOKE_BACKEND) return process.env.GIGA_SMOKE_BACKEND.replace(/\/+$/, "");
+  const port = portIn(path.join(BACKEND_DIR, ".env")) ?? portIn(path.join(BACKEND_DIR, "dev.env")) ?? DEFAULT_PORT;
+  return `http://127.0.0.1:${port}`;
+}
+
+const backend = backendOrigin();
 const TIMEOUT_MS = 4000;
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
