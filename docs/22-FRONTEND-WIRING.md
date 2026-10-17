@@ -183,17 +183,19 @@ attaches the same address again; nothing is drawn over the player while it loads
 survives list re-reads.
 
 **Start and auto-start.** A user gesture (row click, Enter) attaches and plays. On launch, when `liveOnOpen` is
-`last` and the state's `lastChannelId` is still in the view, Live selects that channel and attaches its stream:
-with `autoplay` on it plays; with `autoplay` off (the default) it shows the first frame paused until the person
-presses play. A refused `play()` (browser policy) stays paused at the first frame; nothing is force-muted.
-`liveOnOpen: none` attaches nothing.
+`last` and the state's `lastChannelId` is still in the view, Live selects that channel and attaches its stream.
+What `autoplay` means on the element is this plan's stated default, not a documented rule *(default, the owner's to
+change)*: `autoplay` on plays at once; `autoplay` off (the `03` §3.2 default) shows the first frame paused until
+play; a refused `play()` stays paused at the first frame, and nothing is force-muted. `liveOnOpen: none` attaches
+nothing.
 
 **Pause.** The browser's own controls (the family decision, `21` §3.4a) and the video's own keys; the paused state
-is reported to the store for the inspector. Channels never write watch history (`03` §3.13).
+is component state today and moves to the playback slice at wiring *(default)*. Channels never write watch history
+(`03` §3.13).
 
 **Titles and local files (Player).** The same stage grammar: sources or `streamUrl` per §3.4, local files through
-the Range route. Resume follows `resumeMode`: `ask` shows the Resume / Start over banner, `resume` seeks to the
-watched position at once, `restart` starts at zero; progress writes per §3.4.
+the Range route. `resumeMode`'s values are read as named *(default, no doc spells them)*: `ask` shows the Resume /
+Start over banner, `resume` seeks to the watched position at once, `restart` starts at zero; progress writes per §3.4.
 
 ### 3.3 Library
 
@@ -319,8 +321,9 @@ PoC instrument (`16` §7).
 ### 3.9 Images — where each one loads
 
 Every image address an answer carries is already same-origin (`/api/images/<id>`, the cache's rewrite, `03` §3.11).
-They load as plain `<img src>` — never through `services/api.ts`, never logged in the drawer (`<img>` traffic is not
-visible in either runtime; §3.7 says so). The route answers a strong `ETag` and a long cache lifetime, so reloads
+They load as plain `<img src>` — never through `services/api.ts` *(default: an `<img>` is not a `fetch`, and `21` §9's
+list of what is loggable does not include them, but no rule names images)* — so they are not rows in the drawer.
+The route answers a strong `ETag` and a long cache lifetime, so reloads
 are `304`s from the cache on disk; the first-ever request fills the cache lazily (10 s timeout, ≤10 MiB,
 `image/*` only); a failed source answers `404 image.not_found` and only that image swaps to its glyph — the query
 and every other image are untouched (`06` §2, `21` §4.2's `PosterImage` and `LogoImage`).
@@ -333,8 +336,8 @@ and every other image are untouched (`06` §2, `21` §4.2's `PosterImage` and `L
 | Library | Title information window | 180 px artwork | `TitleDetail.posterUrl` |
 | Player | episode browser rows | 16:9 still with fallback | `Episode.stillUrl` |
 | Player | inspector Overview | poster at pane width | `TitleDetail.posterUrl` |
-| Player | related band | square 140 px thumbs (the poster cropped by `object-cover`; no second request) | `RelatedAnswer.items[].posterUrl` |
-| Collections window | members table | image column | the member's `posterUrl` |
+| Player | related band | square 140 px thumbs (the poster cropped to fit *(default: `object-cover`, no second request)*) | `RelatedAnswer.items[].posterUrl` |
+| Collections window | members table | image column *(default: the member's `posterUrl`, the one image a row carries)* | `LibraryItem.posterUrl` |
 
 Local files' stills are written by the scan's `poster-fetch` job: a just-scanned file shows the glyph, and its still
 appears at the next library read — no polling. Phase 1's glyphs-only default (`21` §8, question 1) ends wave by wave
