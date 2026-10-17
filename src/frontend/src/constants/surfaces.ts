@@ -46,6 +46,9 @@ export const DEFAULT_SURFACE: Surface = "library";
 /** The bottom pane of a surface stays above this height (the stage never collapses). */
 export const STAGE_MIN_HEIGHT = 240;
 
+/** How long an armed two-step (`ui/TwoStep`) waits for its second press before it re-arms (Sensenova's value). */
+export const TWO_STEP_MS = 4000;
+
 export const paneKey = (surface: Surface, side: PaneSide): PaneKey => `${surface}.${side}`;
 
 export const SIDES: readonly PaneSide[] = ["left", "bottom", "right"];

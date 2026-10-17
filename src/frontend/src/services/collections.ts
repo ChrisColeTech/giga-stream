@@ -1,6 +1,11 @@
 import type { ItemRef } from "@/types/library";
 import { notConnected, type ServiceResult } from "./not-connected";
 
+/** Re-reads every collection (`03` section 3.7). Phase 1 stub. */
+export function refreshCollections(): ServiceResult {
+  return notConnected();
+}
+
 /** Creates a collection (`03` section 3.7). Phase 1 stub. */
 export function createCollection(_name: string): ServiceResult {
   return notConnected();

@@ -4,6 +4,7 @@ import {
   cancelScan,
   chooseFolder,
   createCollection,
+  refreshCollections,
   removeCollection,
   removeFolder,
   removeMember,
@@ -18,6 +19,7 @@ import type { ItemRef } from "@/types/library";
 /** The Collections window's verbs. Each calls its fileserver method and answers whether it succeeded. A refusal is reported
  *  once on the notice line and changes nothing (`04` section 6). */
 export interface CollectionVerbs {
+  readonly refresh: () => boolean;
   readonly create: (name: string) => boolean;
   readonly rename: (collectionId: string, name: string) => boolean;
   readonly remove: (collectionId: string) => boolean;
@@ -39,6 +41,7 @@ export function useCollectionVerbs(): CollectionVerbs {
       return result.ok;
     };
     return {
+      refresh: () => report(refreshCollections()),
       create: (name) => report(createCollection(name)),
       rename: (collectionId, name) => report(renameCollection(collectionId, name)),
       remove: (collectionId) => report(removeCollection(collectionId)),

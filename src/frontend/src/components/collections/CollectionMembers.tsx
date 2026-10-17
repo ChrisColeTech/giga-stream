@@ -42,7 +42,7 @@ export function CollectionMembers({
   readonly rows: readonly MemberRow[];
 }) {
   return (
-    <Group id="section-members" title="Members" icon={Film} last>
+    <Group title="Members" icon={Film} last>
       {rows.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (

@@ -1,0 +1,62 @@
+import { FolderInput, FolderOpen } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import { Actions, FIELD_CONTROL, Group, Row } from "@/components/ui/Form";
+import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
+import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON } from "@/lib/collections-copy";
+import { createBlock } from "@/lib/collections-name";
+
+/** The labels the form's rows carry, so the index fixes its label column once. */
+export const NEW_COLLECTION_LABELS = ["Name", "Folder"] as const;
+
+/** The create form, as Sensenova's New dataset form (pages/datasets/NewDatasetForm.tsx): a name, and an optional folder
+ *  to start from, chosen through the native picker on the row's trailing edge; Create ends the group. Create is
+ *  disabled only while the name is blank; a created collection clears the field, a refused one keeps it. Delta: no
+ *  placeholder text (banned in Giga Stream). */
+export function NewCollectionForm() {
+  const verbs = useCollectionVerbs();
+  const [name, setName] = useState("");
+  const block = createBlock(name);
+  const create = () => {
+    if (block === undefined && verbs.create(name.trim())) setName("");
+  };
+  return (
+    <Group icon={FolderInput} title="New collection">
+      <Row label="Name" tip="What the collection is called in Library's rail and in Add to collection.">
+        <Input
+          value={name}
+          className={FIELD_CONTROL}
+          aria-label="Collection name"
+          maxLength={COLLECTION_NAME_MAX}
+          spellCheck={false}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) create();
+          }}
+        />
+      </Row>
+      <Row
+        label="Folder"
+        tip="Start the collection from a folder: its videos join as it is scanned. Files on disk are only read, never changed."
+        trailing={
+          <Button onClick={() => verbs.chooseFolder()}>
+            <FolderOpen aria-hidden /> Choose
+          </Button>
+        }
+      >
+        <Input value="" readOnly className={FIELD_CONTROL} aria-label="Source folder" />
+      </Row>
+      <Actions>
+        <Button
+          variant="primary"
+          disabled={block !== undefined}
+          title={block === undefined ? "Create the collection" : NAME_BLOCK_REASON[block]}
+          onClick={create}
+        >
+          Create
+        </Button>
+      </Actions>
+    </Group>
+  );
+}
