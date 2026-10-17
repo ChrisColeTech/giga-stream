@@ -6,10 +6,27 @@ export interface Span {
   readonly bottom: number;
 }
 
+/** A scroller with no height has no layout (display:none, collapsed): nothing can be "in range" of it, however its
+ *  zero-size rects compare. Without this a hidden Library chained pages forever. */
+export function pagerCanRequest(root: Span | null): boolean {
+  return root === null || root.bottom - root.top > 0;
+}
+
 /** True when the sentinel lies inside the scroller's box grown by the look-ahead on both edges. A zero-height
- *  sentinel exactly on an edge counts, as it does for an IntersectionObserver. */
+ *  sentinel exactly on an edge counts, as it does for an IntersectionObserver. A root without layout never counts. */
 export function withinLookAhead(sentinel: Span, root: Span, margin: number = PAGER_LOOK_AHEAD): boolean {
+  if (!pagerCanRequest(root)) return false;
   return sentinel.top <= root.bottom + margin && sentinel.bottom >= root.top - margin;
+}
+
+/** Hard bound: pages chained without the user scrolling. Being in range already means "the pane is not filled", so
+ *  chaining stops by itself once it is; this cap only guarantees a bug elsewhere can never run away. Scrolling
+ *  resets the count. */
+export const MAX_UNSCROLLED_PAGES = 8;
+
+/** True while another page may be chained without user scrolling. */
+export function mayChain(unscrolled: number): boolean {
+  return unscrolled < MAX_UNSCROLLED_PAGES;
 }
 
 /** Asks for a page unless one is already being asked for. `request` answers whether a page really was requested; a

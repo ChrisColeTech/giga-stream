@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { libraryEndEvent, libraryPageEvent, libraryStallEvent } from "@/lib/library-events";
-import { pagerStalled, requestVisiblePageOnce, withinLookAhead } from "@/lib/library-pager";
+import {
+  MAX_UNSCROLLED_PAGES, mayChain, pagerCanRequest, pagerStalled, requestVisiblePageOnce, withinLookAhead,
+} from "@/lib/library-pager";
 
 describe("withinLookAhead", () => {
   const root = { top: 100, bottom: 700 };
@@ -12,6 +14,38 @@ describe("withinLookAhead", () => {
   it("does not count a sentinel beyond the margin", () => {
     assert.equal(withinLookAhead({ top: 941, bottom: 941 }, root, 240), false);
     assert.equal(withinLookAhead({ top: -200, bottom: -200 }, root, 240), false);
+  });
+});
+
+describe("hidden scroller", () => {
+  it("is never in range, whatever the zero-size rects compare to", () => {
+    const hidden = { top: 0, bottom: 0 };
+    assert.equal(pagerCanRequest(hidden), false);
+    assert.equal(withinLookAhead(hidden, hidden, 240), false);
+    assert.equal(withinLookAhead({ top: 0, bottom: 0 }, { top: 50, bottom: 50 }, 240), false);
+  });
+  it("lets a laid-out or viewport root request", () => {
+    assert.equal(pagerCanRequest({ top: 0, bottom: 600 }), true);
+    assert.equal(pagerCanRequest(null), true);
+  });
+});
+
+describe("chaining until filled", () => {
+  const root = { top: 0, bottom: 600 };
+  it("chains while the sentinel is in range and stops once pushed past the look-ahead", () => {
+    let sentinelTop = 100;
+    let pages = 0;
+    while (withinLookAhead({ top: sentinelTop, bottom: sentinelTop }, root, 240) && mayChain(pages)) {
+      pages += 1;
+      sentinelTop += 300;
+    }
+    assert.equal(pages, 3);
+  });
+  it("is bounded without scrolling even if the sentinel never leaves range", () => {
+    let pages = 0;
+    while (withinLookAhead({ top: 0, bottom: 0 }, root, 240) && mayChain(pages)) pages += 1;
+    assert.equal(pages, MAX_UNSCROLLED_PAGES);
+    assert.equal(mayChain(0), true);
   });
 });
 
