@@ -13,12 +13,11 @@ export interface PosterListProps {
   readonly collections: readonly CollectionRow[];
   readonly onSelect: (id: string) => void;
   readonly onRemoveWatch: (item: ResolvedItem) => void;
-  readonly loading: boolean;
 }
 
-/** The list view: one row per title, in the same order as the grid. Only a pending empty request draws skeletons. */
-export function PosterList({ items, selected, inHistory, collections, onSelect, onRemoveWatch, loading }: PosterListProps) {
-  if (items.length === 0 && loading) return <SkeletonRows count={SKELETON_ROWS} />;
+/** The list view: one row per title, in the same order as the grid. Loading and settled empty use row skeletons. */
+export function PosterList({ items, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterListProps) {
+  if (items.length === 0) return <SkeletonRows count={SKELETON_ROWS} />;
   const ids = items.map((item) => item.ref.id);
   return (
     <div

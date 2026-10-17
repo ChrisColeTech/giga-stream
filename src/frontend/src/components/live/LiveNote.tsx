@@ -5,12 +5,11 @@ export interface LiveNoteProps {
   readonly icon: LucideIcon;
   readonly title: string;
   readonly sentence: string;
-  readonly action: string;
-  readonly onAction: () => void;
+  readonly action?: string;
+  readonly onAction?: () => void;
 }
 
-/** The note drawn over the picture when the stage has a problem to report: an icon, a title, one sentence and one action.
- *  The card lets presses through; only its action takes them. */
+/** A note over the picture: icon, title, sentence, and an action when the state has one. */
 export function LiveNote({ icon: Icon, title, sentence, action, onAction }: LiveNoteProps) {
   return (
     <div
@@ -20,9 +19,11 @@ export function LiveNote({ icon: Icon, title, sentence, action, onAction }: Live
       <Icon className="size-5 text-muted" aria-hidden />
       <p className="text-sm leading-5 font-semibold text-text">{title}</p>
       <p className="text-sm leading-5 text-muted">{sentence}</p>
-      <Button size="sm" variant="ghost" onClick={onAction} className="pointer-events-auto">
-        {action}
-      </Button>
+      {action !== undefined && onAction !== undefined && (
+        <Button size="sm" variant="ghost" onClick={onAction} className="pointer-events-auto">
+          {action}
+        </Button>
+      )}
     </div>
   );
 }

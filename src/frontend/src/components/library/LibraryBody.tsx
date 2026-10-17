@@ -84,7 +84,6 @@ export function LibraryBody({
             collections={collections}
             onSelect={onSelect}
             onRemoveWatch={onRemoveWatch}
-            loading={loading || titleRegionsLoading}
           />
         ) : (
           <PosterList
@@ -94,7 +93,6 @@ export function LibraryBody({
             collections={collections}
             onSelect={onSelect}
             onRemoveWatch={onRemoveWatch}
-            loading={loading || titleRegionsLoading}
           />
         )}
         {titleRegionsLoading && shown.length > 0 && (

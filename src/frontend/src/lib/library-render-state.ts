@@ -10,15 +10,14 @@ export function libraryRenderState(
   items: readonly ResolvedItem[],
   titlesAvailable: boolean,
   scope: Scope,
-  requestPending = false,
 ): LibraryRenderState {
   if (titlesAvailable) return { items, titleRegionsLoading: false };
   return {
     items: items.filter((item) => item.kind === "local"),
-    titleRegionsLoading: requestPending && scope !== "local",
+    titleRegionsLoading: scope !== "local",
   };
 }
 
-export function rowsRenderState(shelfCount: number, hasMore: boolean, paging: boolean, loading = false) {
-  return { showSkeleton: shelfCount === 0 && loading, showPager: hasMore || paging };
+export function rowsRenderState(shelfCount: number, hasMore: boolean, paging: boolean) {
+  return { showSkeleton: shelfCount === 0, showPager: hasMore || paging };
 }

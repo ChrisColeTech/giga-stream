@@ -14,6 +14,7 @@ import { sourceFailureReason } from "@/lib/player-copy";
 import { openingPosition } from "@/lib/player-opening";
 import { PlayerNavigation, settleLatestNavigation } from "@/lib/player-navigation";
 import { settleFinalProgress } from "@/lib/player-progress";
+import { selectedPlayerSource } from "@/lib/player-sources";
 import {
   createPlayerSession, fallbackPlayerItem, isOpen, itemFromLibrary, playerPlaybackKey,
   playingEpisodeOf, reducePlayerSession,
@@ -30,10 +31,8 @@ export function PlayerPage({ active }: { active: boolean }) {
   const [choice, setChoice] = useState<"ask" | "resume" | "restart">("ask");
   const [userInitiated, setUserInitiated] = useState(false);
   const handled = useRef(0); const navigation = useRef(new PlayerNavigation());
-  const currentPosition = useRef(0);
-  const [sourcePosition, setSourcePosition] = useState(0);
-  const data = usePlayerData(session, dataRetry);
-  const progress = usePlayerProgress(active);
+  const currentPosition = useRef(0); const [sourcePosition, setSourcePosition] = useState(0);
+  const data = usePlayerData(session, dataRetry); const progress = usePlayerProgress(active);
   const marks = useAppStore((state) => state.marks);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const libraryItems = useAppStore((state) => state.libraryItems);
@@ -56,10 +55,14 @@ export function PlayerPage({ active }: { active: boolean }) {
   });
   const playing = playingEpisodeOf(session);
   const sources = usePlayerSources(session, data);
-  const activeSource = sources.find((source) => source.id === media.activeSourceId);
+  const activeSource = selectedPlayerSource(sources, media.activeSourceId);
+  const stageView = activeSource?.id === media.activeSourceId ? view : { ...view, stage: { kind: "loading" } as const };
   const resume = resumeOf(view);
   const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
   const waitingForResume = choice === "ask" && resume !== undefined;
+  const playableUnitResolved = session.current?.kind === "local"
+    ? data.localInfo !== undefined
+    : session.current?.kind === "tv" ? data.playingEpisode !== undefined : data.detail !== undefined;
   const stageLoading = (data.basePending
     || (session.current?.kind === "tv" && playing !== undefined && data.playingPending)) && sources.length === 0;
   const browserLoading = data.basePending || data.seasonPending;
@@ -110,11 +113,7 @@ export function PlayerPage({ active }: { active: boolean }) {
   }, [playbackKey]);
 
   useEffect(() => {
-    if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
-    const ready = session.current.kind === "local"
-      ? data.localInfo !== undefined
-      : session.current.kind === "tv" ? data.playingEpisode !== undefined : data.detail !== undefined;
-    if (!ready) return;
+    if (session.current === null || (session.current.kind === "tv" && playing === undefined) || !playableUnitResolved) return;
     if (sources.length === 0) {
       const reason = sourceFailureReason(session.current.kind === "local", data.localInfo?.error?.message);
       setStage({ kind: "failed", reason });
@@ -175,10 +174,12 @@ export function PlayerPage({ active }: { active: boolean }) {
   return <WorkspaceSplit surface="player" active={active}
     left={<PlayerBrowser view={view} loading={browserLoading}
       onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
-    center={<PlayerStage view={view} commands={commands} sources={sources} activeSource={hostedSource}
-      selectedSourceId={media.activeSourceId ?? ""}
+    center={<PlayerStage view={stageView} commands={commands} sources={sources} activeSource={hostedSource}
+      selectedSourceId={activeSource?.id ?? ""}
       startPositionMs={startPositionMs} retry={retry} userInitiated={userInitiated}
-      loading={stageLoading} awaitingResume={waitingForResume} noSourceReason={noSourceReason}
+      loading={stageLoading} awaitingResume={waitingForResume}
+      playableUnitSelected={session.current?.kind !== "tv" || playing !== undefined}
+      playableUnitResolved={playableUnitResolved} noSourceReason={noSourceReason}
       onSource={(id) => {
         void progress.flush();
         setSourcePosition(currentPosition.current);

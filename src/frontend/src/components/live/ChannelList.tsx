@@ -18,11 +18,11 @@ export interface ChannelListProps {
   readonly onActivate: (id: string) => void;
 }
 
-/** The channel rows as one listbox with a single tab stop. Only a pending read draws skeleton rows. */
+/** The channel rows as one listbox with a single tab stop. Pending and settled empty views use the row skeleton. */
 export function ChannelList({ rows, loading, selectedId, playingId, onSelect, onActivate }: ChannelListProps) {
   const elements = useRef(new Map<string, HTMLLIElement>());
 
-  if (channelListRender(loading) === "skeleton") return <SkeletonRows count={LIST_SKELETON_ROWS} />;
+  if (channelListRender(loading, rows.length) === "skeleton") return <SkeletonRows count={LIST_SKELETON_ROWS} />;
 
   const ids = rows.map((row) => row.id);
   const stop = tabStopId(ids, selectedId);

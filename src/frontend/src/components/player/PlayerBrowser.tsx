@@ -2,6 +2,7 @@ import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { EpisodeRow } from "@/components/player/EpisodeRow";
 import { Select } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { progressRatio } from "@/lib/library-facts";
 import {
   BROWSER_SKELETON_COUNT, NO_SEASONS_REASON, PLAYER_IDLE_CONTROL_REASON, PLAYER_LOADING_REASON,
@@ -22,10 +23,14 @@ export function PlayerBrowser({ view, onSeason, onEpisode, loading }: PlayerBrow
   if (tab === undefined) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-none p-2.5" title={PLAYER_IDLE_CONTROL_REASON}>
-          <Select aria-label="Season" value="" disabled><option value="">Season</option></Select>
+        <div className="flex-none p-2.5">
+          <Tooltip text={PLAYER_IDLE_CONTROL_REASON} focusable label={`Season. ${PLAYER_IDLE_CONTROL_REASON}`}>
+            <Select aria-label="Season" value="" disabled><option value="">Season</option></Select>
+          </Tooltip>
         </div>
-        <div className="min-h-0 flex-1 border-t border-hair" />
+        <div className="min-h-0 flex-1 overflow-hidden border-t border-hair">
+          <SkeletonRows count={BROWSER_SKELETON_COUNT} />
+        </div>
       </div>
     );
   }
@@ -63,22 +68,25 @@ export function PlayerBrowser({ view, onSeason, onEpisode, loading }: PlayerBrow
 
   const noSeasons = seasons.length === 0;
   const disabledReason = loading ? PLAYER_LOADING_REASON : noSeasons ? NO_SEASONS_REASON : undefined;
+  const seasonControl = (
+    <Select
+      aria-label="Season"
+      value={season === undefined ? "" : String(season)}
+      disabled={disabledReason !== undefined}
+      onChange={(event) => onSeason(Number(event.target.value))}
+    >
+      {seasons.map((entry) => (
+        <option key={entry.season} value={String(entry.season)}>{`Season ${entry.season}`}</option>
+      ))}
+    </Select>
+  );
   return (
     <div className="flex min-w-[180px] flex-1 flex-col overflow-hidden">
       {/* No label: every option reads "Season N", so the select names itself. */}
-      <div className="flex-none p-2.5" title={disabledReason}>
-        <Select
-          aria-label="Season"
-          value={season === undefined ? "" : String(season)}
-          disabled={loading || noSeasons}
-          onChange={(event) => onSeason(Number(event.target.value))}
-        >
-          {seasons.map((entry) => (
-            <option key={entry.season} value={String(entry.season)}>
-              {`Season ${entry.season}`}
-            </option>
-          ))}
-        </Select>
+      <div className="flex-none p-2.5">
+        {disabledReason === undefined ? seasonControl : (
+          <Tooltip text={disabledReason} focusable label={`Season. ${disabledReason}`}>{seasonControl}</Tooltip>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-hair">
         {loading ? <SkeletonRows count={BROWSER_SKELETON_COUNT} /> : <EpisodeBrowser

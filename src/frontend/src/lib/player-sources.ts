@@ -19,3 +19,11 @@ export function localSource(url: string): PlayerSource {
 export function hasSourceChoice(sources: readonly PlayerSource[]): boolean {
   return sources.length >= 2;
 }
+
+/** Uses the committed choice when valid, otherwise the first source while the store synchronizes. */
+export function selectedPlayerSource(
+  sources: readonly PlayerSource[],
+  activeId: string | null,
+): PlayerSource | undefined {
+  return sources.find((source) => source.id === activeId) ?? sources[0];
+}

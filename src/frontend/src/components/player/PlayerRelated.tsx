@@ -22,7 +22,7 @@ export function PlayerRelated({ view, commands, loading }: PlayerRelatedProps) {
       </div>
     );
   if (view.tab === undefined || view.tab.kind === "local" || view.related.length === 0)
-    return <div className="h-full bg-panel" aria-label="Related titles" />;
+    return <div className="h-full bg-panel"><ThumbnailRailSkeleton /></div>;
   return (
     /* A list of buttons, not a listbox: each thumbnail is a press that opens its title, reached with Tab. */
     <ul aria-label="Related titles" className="m-0 flex h-full list-none items-stretch gap-1.5 overflow-x-auto bg-panel px-2.5 py-1.5">

@@ -46,9 +46,10 @@ describe("stage state", () => {
 });
 
 describe("channel list rendering", () => {
-  it("uses skeletons only while a channel request is pending", () => {
-    assert.equal(channelListRender(true), "skeleton");
-    assert.equal(channelListRender(false), "rows");
+  it("uses established skeletons for pending, unavailable and no-match lists", () => {
+    assert.equal(channelListRender(true, 0), "skeleton");
+    assert.equal(channelListRender(false, 0), "skeleton");
+    assert.equal(channelListRender(false, 2), "rows");
   });
 });
 

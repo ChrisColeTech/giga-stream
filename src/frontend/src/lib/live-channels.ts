@@ -10,8 +10,8 @@ export interface CategoryOption {
 
 export const EMPTY_CHANNEL_LIST: ChannelList = { items: [], categories: [], revision: 0 };
 
-export function channelListRender(loading: boolean): "skeleton" | "rows" {
-  return loading ? "skeleton" : "rows";
+export function channelListRender(loading: boolean, rowCount: number): "skeleton" | "rows" {
+  return loading || rowCount === 0 ? "skeleton" : "rows";
 }
 
 /** Resolves the initial selection and optional unattended attachment after state hydration. */

@@ -27,6 +27,8 @@ export interface PlayerStageProps {
   readonly userInitiated: boolean;
   readonly loading: boolean;
   readonly awaitingResume: boolean;
+  readonly playableUnitSelected: boolean;
+  readonly playableUnitResolved: boolean;
   readonly noSourceReason: string;
   readonly onSource: (id: string) => void;
   readonly onState: (state: StageState) => void;
@@ -70,7 +72,15 @@ export function PlayerStage(props: PlayerStageProps) {
   };
 
   const { tab, stage, item, favorite, memberIds, collections } = props.view;
-  const render = playerStageRender(tab !== undefined, props.loading, props.activeSource, stage, props.awaitingResume);
+  const render = playerStageRender(
+    tab !== undefined,
+    props.loading,
+    props.activeSource,
+    stage,
+    props.awaitingResume,
+    props.playableUnitSelected,
+    props.playableUnitResolved,
+  );
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     if (tab === undefined) return;
@@ -98,12 +108,12 @@ export function PlayerStage(props: PlayerStageProps) {
     <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-stage outline-none fullscreen:bg-black">
       <PlayerSourceControl sources={props.sources} activeId={props.selectedSourceId} onSelect={props.onSource} />
-      {render === "embed" && props.activeSource?.kind === "embed" && (
+      {(render === "embed" || render === "embed-failed") && props.activeSource?.kind === "embed" && (
         <EmbedHost source={props.activeSource.embed} positionMs={props.startPositionMs}
           subtitleLanguage={subtitleLanguage} electron={electron} retry={props.retry}
           onPlayback={embedPlayback} onReady={() => props.onState({ kind: "ready" })} />
       )}
-      {render === "native" && props.activeSource?.kind === "stream" && tab !== undefined && (
+      {(render === "native" || render === "native-failed") && props.activeSource?.kind === "stream" && tab !== undefined && (
         <NativePlayer url={props.activeSource.url} label={tab.title} positionMs={props.startPositionMs}
           autoplay={autoplay} userInitiated={props.userInitiated} retry={props.retry} pictureFit={pictureFit}
           errorReason={props.activeSource.id === "local" ? LOCAL_MEDIA_FAILURE : STREAM_FAILURE}
@@ -112,10 +122,12 @@ export function PlayerStage(props: PlayerStageProps) {
           onSeeked={props.onBoundary} onEnded={props.onBoundary} />
       )}
       {render === "idle" && <PlayerStageStatus kind="idle" onAction={props.commands.reveal} />}
+      {render === "choose-episode" && <PlayerStageStatus kind="choose-episode" />}
+      {render === "unavailable" && <PlayerStageStatus kind="unavailable" onAction={props.commands.retry} />}
       {render === "no-source" && (
         <PlayerStageStatus kind="no-source" reason={props.noSourceReason} onAction={props.commands.retry} />
       )}
-      {render === "failed" && stage.kind === "failed" && (
+      {(render === "native-failed" || render === "embed-failed") && stage.kind === "failed" && (
         <StageNote reason={stage.reason} onRetry={props.commands.retry} />
       )}
     </section>
