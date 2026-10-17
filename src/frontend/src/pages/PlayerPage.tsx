@@ -79,14 +79,7 @@ export function PlayerPage({ active }: { active: boolean }) {
       }
       center={<PlayerStage view={view} commands={commands} />}
       right={<PlayerInspector view={view} commands={commands} />}
-      bottom={
-        <PlayerRelated
-          view={view}
-          folded={session.relatedFolded}
-          onToggle={() => dispatch({ type: "toggleRelated" })}
-          commands={commands}
-        />
-      }
+      bottom={<PlayerRelated view={view} commands={commands} />}
     />
   );
 }

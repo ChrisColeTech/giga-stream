@@ -21,7 +21,6 @@ export const ALL_CATEGORY_LABEL = "All";
 export const CHANNEL_LIST_LABEL = "Channels";
 export const REFRESH_LABEL = "Refresh channels";
 export const DETAILS_HEADING = "Details";
-export const DETAILS_SECTION_ID = "live.details";
 export const PLAYER_LABEL = "Live player";
 export const PICTURE_FIT_LABEL = "Picture fit";
 

@@ -1,7 +1,7 @@
 import { Film } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
-import { Group } from "@/components/ui/Group";
+import { Group } from "@/components/ui/Form";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
@@ -42,12 +42,7 @@ export function CollectionMembers({
   readonly rows: readonly MemberRow[];
 }) {
   return (
-    <Group
-      id="collections.members"
-      title="Members"
-      icon={Film}
-      tip="Titles and local files added by hand. Removing one never touches the original files."
-    >
+    <Group id="collections.members" title="Members" icon={Film}>
       {rows.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (

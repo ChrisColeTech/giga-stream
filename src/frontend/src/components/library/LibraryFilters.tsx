@@ -1,7 +1,7 @@
 import { LayoutGrid, List, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { RailSection } from "@/components/ui/RailSection";
-import { SelectField } from "@/components/ui/SelectField";
+import { Select } from "@/components/ui/Field";
+import { FIELD_CONTROL } from "@/components/ui/Form";
 import { Segmented } from "@/components/ui/Segmented";
 import { LIBRARY_COPY, SORT_OPTIONS, WATCHED_OPTIONS } from "@/lib/library-copy";
 import {
@@ -29,76 +29,78 @@ export interface LibraryFiltersProps {
   readonly onView: (view: ListView) => void;
 }
 
-/** The right pane of Library: Search and view, then Filter. Each setting is a bold label over a 36 px control. */
+/** The right pane of Library, on LoRA Studio's gallery filter pane (components/gallery/ImageFilters.tsx): a stack of
+ *  settings, each a label over its control, with Clear filters pinned at the foot. */
 export function LibraryFilters({ query, view, genres, years, onQuery, onView }: LibraryFiltersProps) {
-  const yearOptions = [
-    { value: "", label: LIBRARY_COPY.anyYear },
-    ...years.map((year) => ({ value: String(year), label: String(year) })),
-  ];
   const atDefault = filtersAtDefault(query);
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-1.5">
-      <RailSection id="library.search-view" title="Search and view">
-        <FilterSetting label="Search">
-          <SearchField value={query.search} onChange={(search) => onQuery({ search })} />
-        </FilterSetting>
-        <FilterSetting label="View">
-          <Segmented<ListView>
-            aria-label="View"
-            options={[
-              { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" aria-hidden /> },
-              { value: "list", label: "List", icon: <List className="size-3.5" aria-hidden /> },
-              { value: "rows", label: "Rows", icon: <Rows3 className="size-3.5" aria-hidden /> },
-            ]}
-            value={view}
-            onChange={onView}
-            className="h-9 w-full [&>button]:h-full [&>button]:basis-0"
-          />
-        </FilterSetting>
-        <FilterSetting label="Sort">
-          <SelectField
-            label="Sort"
-            value={query.sort}
-            options={SORT_OPTIONS}
-            onChange={(value) => onQuery({ sort: choiceOf(SORT_KEYS, value, "newest") })}
-            className="h-9!"
-          />
-        </FilterSetting>
-      </RailSection>
-      <RailSection id="library.filter" title="Filter">
-        <FilterSetting label="Genre">
-          <GenrePopover genres={genres} selected={query.genres} onChange={(next) => onQuery({ genres: next })} />
-        </FilterSetting>
-        <FilterSetting label="Year">
-          <SelectField
-            label="Year"
-            value={query.year}
-            options={yearOptions}
-            onChange={(year) => onQuery({ year })}
-            className="h-9!"
-          />
-        </FilterSetting>
-        <FilterSetting label="Watched">
-          <SelectField
-            label="Watched"
-            value={query.watched}
-            options={WATCHED_OPTIONS}
-            onChange={(value) => onQuery({ watched: choiceOf(WATCHED_KEYS, value, "all") })}
-            className="h-9!"
-          />
-        </FilterSetting>
-        <div className="px-1">
-          <Button
-            variant="ghost"
-            full
-            disabled={atDefault}
-            title={atDefault ? LIBRARY_COPY.noFilter : undefined}
-            onClick={() => onQuery({ ...FILTER_DEFAULTS })}
-          >
-            Clear filters
-          </Button>
-        </div>
-      </RailSection>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
+      <FilterSetting label="Search">
+        <SearchField value={query.search} onChange={(search) => onQuery({ search })} />
+      </FilterSetting>
+      <FilterSetting label="View">
+        <Segmented<ListView>
+          aria-label="View"
+          equal
+          options={[
+            { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" /> },
+            { value: "list", label: "List", icon: <List className="size-3.5" /> },
+            { value: "rows", label: "Rows", icon: <Rows3 className="size-3.5" /> },
+          ]}
+          value={view}
+          onChange={onView}
+        />
+      </FilterSetting>
+      <FilterSetting label="Sort">
+        <Select
+          aria-label="Sort"
+          className={FIELD_CONTROL}
+          value={query.sort}
+          onChange={(event) => onQuery({ sort: choiceOf(SORT_KEYS, event.target.value, "newest") })}
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </FilterSetting>
+      <FilterSetting label="Genre">
+        <GenrePopover genres={genres} selected={query.genres} onChange={(next) => onQuery({ genres: next })} />
+      </FilterSetting>
+      <FilterSetting label="Year">
+        <Select aria-label="Year" className={FIELD_CONTROL} value={query.year} onChange={(event) => onQuery({ year: event.target.value })}>
+          <option value="">{LIBRARY_COPY.anyYear}</option>
+          {years.map((year) => (
+            <option key={year} value={String(year)}>
+              {year}
+            </option>
+          ))}
+        </Select>
+      </FilterSetting>
+      <FilterSetting label="Watched">
+        <Select
+          aria-label="Watched"
+          className={FIELD_CONTROL}
+          value={query.watched}
+          onChange={(event) => onQuery({ watched: choiceOf(WATCHED_KEYS, event.target.value, "all") })}
+        >
+          {WATCHED_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </FilterSetting>
+      <span className="flex-1" />
+      <Button
+        variant="ghost"
+        disabled={atDefault}
+        title={atDefault ? LIBRARY_COPY.noFilter : undefined}
+        onClick={() => onQuery({ ...FILTER_DEFAULTS })}
+      >
+        Clear filters
+      </Button>
     </div>
   );
 }

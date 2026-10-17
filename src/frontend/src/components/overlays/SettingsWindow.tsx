@@ -5,7 +5,6 @@ import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { LibrarySection } from "@/components/settings/LibrarySection";
 import { PlaybackSection } from "@/components/settings/PlaybackSection";
 import { SettingsRail } from "@/components/settings/SettingsRail";
-import { Workspace } from "@/components/ui/Workspace";
 import { workSpec } from "@/constants/child-window";
 import type { SettingsSectionId } from "@/constants/settings-sections";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
@@ -47,8 +46,7 @@ export function SettingsWindow() {
       <div className="flex min-h-0 min-w-0 flex-1 bg-bg">
         <SettingsRail selected={section} onSelect={setSection} />
         <div role="tabpanel" aria-label={section} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <Workspace>
-            {section === "appearance" && <AppearanceSection />}
+          {section === "appearance" && <AppearanceSection />}
             {section === "playback" && (
               <PlaybackSection
                 autoplay={autoplay}
@@ -67,7 +65,6 @@ export function SettingsWindow() {
             )}
             {section === "admin" && <AdminBackendSection adminUrl={SETTINGS_VALUES.adminUrl} onCommit={commitAddress} />}
             {section === "about" && <AboutSection />}
-          </Workspace>
         </div>
       </div>
     </ChildWindow>

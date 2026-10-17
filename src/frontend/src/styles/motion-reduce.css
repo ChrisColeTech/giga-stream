@@ -1,4 +1,5 @@
-/* Loads LAST. Zeroes motion to a legible final state; it never changes behaviour or focus order. */
+/* Loads LAST. Zeroes motion to a legible final state; it never changes
+   behaviour or focus order. */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

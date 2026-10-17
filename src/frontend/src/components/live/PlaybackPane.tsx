@@ -1,5 +1,6 @@
+import { Select } from "@/components/ui/Field";
+import { FIELD_CONTROL } from "@/components/ui/NumberField";
 import { Segmented } from "@/components/ui/Segmented";
-import { SelectField } from "@/components/ui/SelectField";
 import { EMPTY_VALUE, PICTURE_FIT_LABEL, PLAYBACK_SECTION_TITLES, REASON_NEEDS_PLAYING } from "@/lib/live-constants";
 import { PICTURE_FIT_OPTIONS, type PictureFit } from "@/lib/live-picture";
 import { PlaybackRow } from "./PlaybackRow";
@@ -10,30 +11,26 @@ export interface PlaybackPaneProps {
   readonly onFitChange: (fit: PictureFit) => void;
 }
 
-const noChange = () => undefined;
+/** A select that needs a playing stream: one option, disabled, the reason as its tooltip. */
+function IdleSelect({ label, value, text }: { readonly label: string; readonly value: string; readonly text: string }) {
+  return (
+    <Select aria-label={label} value={value} disabled title={REASON_NEEDS_PLAYING} className={FIELD_CONTROL}>
+      <option value={value}>{text}</option>
+    </Select>
+  );
+}
 
 /** The five playback groups (`06` section 3.3). Every row that needs a playing stream is disabled in place with the
  *  reason as its tooltip; Fit, Fill and Original always work. */
 export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
-  /* A readout is a value with no control: mono 11 px, one control height tall, dim because its row is disabled. */
-  const unplayed = (
-    <span title={REASON_NEEDS_PLAYING} className="flex h-ctl-md items-center font-mono text-[11px] text-dim">
-      {EMPTY_VALUE}
-    </span>
-  );
+  /* A readout is a value with no control, in the rail's mono, one control height tall. */
+  const unplayed = <span className="flex h-ctl-sm items-center font-mono text-[11px] text-muted">{EMPTY_VALUE}</span>;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <PlaybackSection id="live.playback.video" title={PLAYBACK_SECTION_TITLES.video}>
         <PlaybackRow label="Quality" reason={REASON_NEEDS_PLAYING}>
-          <SelectField
-            label="Quality"
-            value="auto"
-            options={[{ value: "auto", label: "Auto" }]}
-            onChange={noChange}
-            disabled
-            reason={REASON_NEEDS_PLAYING}
-          />
+          <IdleSelect label="Quality" value="auto" text="Auto" />
         </PlaybackRow>
         <PlaybackRow label="Resolution" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
@@ -45,7 +42,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
 
       <PlaybackSection id="live.playback.display" title={PLAYBACK_SECTION_TITLES.display}>
         <PlaybackRow label="Fit">
-          <Segmented options={PICTURE_FIT_OPTIONS} value={fit} onChange={onFitChange} aria-label={PICTURE_FIT_LABEL} />
+          <Segmented dense options={PICTURE_FIT_OPTIONS} value={fit} onChange={onFitChange} aria-label={PICTURE_FIT_LABEL} />
         </PlaybackRow>
         <PlaybackRow label="Aspect" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
@@ -54,14 +51,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
 
       <PlaybackSection id="live.playback.audio" title={PLAYBACK_SECTION_TITLES.audio}>
         <PlaybackRow label="Track" reason={REASON_NEEDS_PLAYING}>
-          <SelectField
-            label="Audio track"
-            value="default"
-            options={[{ value: "default", label: "Default" }]}
-            onChange={noChange}
-            disabled
-            reason={REASON_NEEDS_PLAYING}
-          />
+          <IdleSelect label="Audio track" value="default" text="Default" />
         </PlaybackRow>
         <PlaybackRow label="Language" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
@@ -70,23 +60,17 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
 
       <PlaybackSection id="live.playback.captions" title={PLAYBACK_SECTION_TITLES.captions}>
         <PlaybackRow label="Captions" reason={REASON_NEEDS_PLAYING}>
-          <SelectField
-            label="Captions"
-            value="off"
-            options={[{ value: "off", label: "Off" }]}
-            onChange={noChange}
-            disabled
-            reason={REASON_NEEDS_PLAYING}
-          />
+          <IdleSelect label="Captions" value="off" text="Off" />
         </PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.playback" title={PLAYBACK_SECTION_TITLES.playback}>
         <PlaybackRow label="Latency" reason={REASON_NEEDS_PLAYING}>
           <Segmented
+            dense
             aria-label="Latency"
             value="normal"
-            onChange={noChange}
+            onChange={() => undefined}
             options={[
               { value: "normal", label: "Normal", disabled: true, disabledReason: REASON_NEEDS_PLAYING },
               { value: "low", label: "Low", disabled: true, disabledReason: REASON_NEEDS_PLAYING },

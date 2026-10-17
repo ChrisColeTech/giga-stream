@@ -5,11 +5,11 @@ export interface PlayerFactProps {
   readonly value: string;
 }
 
-/** A read-only fact: a 12 px label and a mono 11 px value, with no control (`21` section 8a). */
+/** A read-only fact: the rail label and a mono value, with no control. */
 export function PlayerFact({ label, value }: PlayerFactProps) {
   return (
     <PlayerRow label={label}>
-      <span className="min-w-0 truncate font-mono text-[11px] text-muted tabular-nums">{value}</span>
+      <span className="min-w-0 truncate font-mono text-xs text-muted tabular-nums">{value}</span>
     </PlayerRow>
   );
 }

@@ -60,14 +60,13 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
           <PosterImage alt={item.title} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate font-sans text-[13px] text-text">{item.title}</span>
+          <span className="truncate text-sm text-text">{item.title}</span>
           {facts !== "" && <span className="truncate font-sans text-xs text-dim">{facts}</span>}
           {ratio !== undefined && <ProgressBar ratio={ratio} />}
         </span>
       </button>
       <IconButton
         bordered
-        round
         on={item.favorite}
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
@@ -88,7 +87,6 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
       </Button>
       <IconButton
         bordered
-        round
         aria-label={LIBRARY_COPY.moreActions}
         title={LIBRARY_COPY.moreActions}
         onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context)}

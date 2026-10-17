@@ -20,7 +20,6 @@ export function ZoomStepper({ value, onChange }: ZoomStepperProps) {
       <span title={lower} className="inline-flex">
         <IconButton
           bordered
-          size="sm"
           aria-label="Zoom out"
           title={lower ?? "Zoom out"}
           disabled={lower !== undefined}
@@ -29,11 +28,10 @@ export function ZoomStepper({ value, onChange }: ZoomStepperProps) {
           <Minus className="size-3.5" aria-hidden />
         </IconButton>
       </span>
-      <span className="w-9 text-center font-mono text-[11px] tabular-nums text-text">{formatZoom(value)}</span>
+      <span className="w-10 text-center font-mono text-sm tabular-nums text-text">{formatZoom(value)}</span>
       <span title={higher} className="inline-flex">
         <IconButton
           bordered
-          size="sm"
           aria-label="Zoom in"
           title={higher ?? "Zoom in"}
           disabled={higher !== undefined}

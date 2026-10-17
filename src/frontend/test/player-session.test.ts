@@ -89,10 +89,4 @@ describe("local favourites, membership and the related fold", () => {
     const removed = reducePlayerSession(added, { type: "toggleMember", itemId: "movie-1", collectionId: "c-a" });
     assert.deepEqual(removed.membership["movie-1"], []);
   });
-
-  it("the related band folds and unfolds", () => {
-    const folded = reducePlayerSession(playing(), { type: "toggleRelated" });
-    assert.equal(folded.relatedFolded, true);
-    assert.equal(reducePlayerSession(folded, { type: "toggleRelated" }).relatedFolded, false);
-  });
 });

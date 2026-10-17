@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
-import { Group } from "@/components/ui/Group";
-import { Row } from "@/components/ui/Row";
-import { TextField } from "@/components/ui/TextField";
+import { Input } from "@/components/ui/Field";
+import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { FACT_UNKNOWN, NEEDS_FILESERVER } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
+import { cn } from "@/lib/cn";
+
+const LABELS = ["Address", "Connection", "Revision", "Channels read", "Error"] as const;
+
+/* A read-only fact, in LoRA's About pane style. */
+const FACT = "flex h-9 items-center font-mono text-sm text-muted";
 
 export interface AdminBackendSectionProps {
   /** The saved admin backend address. The interface shows it and never contacts the backend (`01` section 4.4). */
@@ -13,8 +18,8 @@ export interface AdminBackendSectionProps {
   readonly onCommit: (address: string) => void;
 }
 
-/** Admin backend: the address, which saves through the fileserver, and the backend's state as disabled facts. The state
- *  has nothing to act on yet, so its rows stay disabled with their reason. */
+/** Admin backend: the address, which saves through the fileserver, and the backend's state as read-only facts, unknown
+ *  until the fileserver reports them. */
 export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionProps) {
   const [draft, setDraft] = useState(adminUrl);
   const [sent, setSent] = useState(adminUrl);
@@ -27,13 +32,19 @@ export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionP
     onCommit(next);
   };
 
+  const fact = (label: string, tip: string) => (
+    <Row label={label} tip={tip}>
+      <span className={FACT} title={NEEDS_FILESERVER}>{FACT_UNKNOWN}</span>
+    </Row>
+  );
+
   return (
-    <>
+    <Workspace labels={LABELS}>
       <Group id="settings.admin" title="Admin backend" icon={HardDrive}>
         <Row label="Address" tip="The admin backend's address. Press Enter or leave the field to save it.">
-          <TextField
+          <Input
             aria-label="Admin backend address"
-            mono
+            className={cn(FIELD_CONTROL, "font-mono")}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={commit}
@@ -44,19 +55,11 @@ export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionP
         </Row>
       </Group>
       <Group id="settings.admin.state" title="State" icon={Activity} last>
-        <Row label="Connection" tip="Whether the fileserver reaches the admin backend." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
-        </Row>
-        <Row label="Revision" tip="The backend's revision, which moves when its data changes." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
-        </Row>
-        <Row label="Channels read" tip="When the channels were last read from the backend." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
-        </Row>
-        <Row label="Error" tip="The last read's error, if it failed." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
-        </Row>
+        {fact("Connection", "Whether the fileserver reaches the admin backend.")}
+        {fact("Revision", "The backend's revision, which moves when its data changes.")}
+        {fact("Channels read", "When the channels were last read from the backend.")}
+        {fact("Error", "The last read's error, if it failed.")}
       </Group>
-    </>
+    </Workspace>
   );
 }

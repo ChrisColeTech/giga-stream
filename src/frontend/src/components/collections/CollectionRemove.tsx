@@ -1,7 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Group } from "@/components/ui/Group";
-import { Strip } from "@/components/ui/Strip";
+import { Actions, Group } from "@/components/ui/Form";
 import { useArmedAction } from "@/hooks/useArmedAction";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { ARM_TIMEOUT_MS, ARMED_LABEL, CONSEQUENCE } from "@/lib/collections-copy";
@@ -29,23 +28,25 @@ export function CollectionRemove({
   };
 
   return (
-    <Group
-      id="collections.remove"
-      title="Remove collection"
-      icon={Trash2}
-      tip="Removing a collection never touches the original files."
-      last
-    >
-      <Strip>
-        {armed && (
-          <span role="status" className="text-[13px] text-muted">
-            {CONSEQUENCE}
-          </span>
-        )}
-        <Button size="sm" variant="danger" onClick={onPress} onBlur={disarm}>
+    <Group id="collections.remove" title="Remove collection" icon={Trash2} last>
+      <Actions
+        left={
+          armed && (
+            <span role="status" className="text-sm text-muted">
+              {CONSEQUENCE}
+            </span>
+          )
+        }
+      >
+        <Button
+          variant="danger"
+          title="Removing a collection never touches the original files."
+          onClick={onPress}
+          onBlur={disarm}
+        >
           {armed ? ARMED_LABEL : "Remove collection"}
         </Button>
-      </Strip>
+      </Actions>
     </Group>
   );
 }

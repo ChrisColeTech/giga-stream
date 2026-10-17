@@ -2,9 +2,8 @@ import { Folder, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
-import { Group } from "@/components/ui/Group";
+import { Actions, Group } from "@/components/ui/Form";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-import { Strip } from "@/components/ui/Strip";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import { lastScanLabel } from "@/lib/collections-scan";
@@ -31,23 +30,21 @@ export function CollectionFolders({
 }) {
   const verbs = useCollectionVerbs();
   return (
-    <Group
-      id="collections.folders"
-      title="Folders"
-      icon={Folder}
-      tip="The folders this collection is built from. Files on disk are only read, never changed."
-    >
+    <Group id="collections.folders" title="Folders" icon={Folder}>
       {folders.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (
         <DataTable label="Folders" columns={COLUMNS} rows={folders} rowKey={(folder) => folder.id} />
       )}
-      <Strip>
-        <Button size="sm" onClick={() => verbs.attach(collectionId)}>
-          <FolderPlus className="size-3.5" />
+      <Actions>
+        <Button
+          title="Attach a folder this collection is built from. Files on disk are only read, never changed."
+          onClick={() => verbs.attach(collectionId)}
+        >
+          <FolderPlus />
           Attach folder
         </Button>
-      </Strip>
+      </Actions>
     </Group>
   );
 }

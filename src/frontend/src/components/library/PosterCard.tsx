@@ -27,6 +27,7 @@ export interface PosterCardProps {
  *  Info are round icon buttons at its lower left and the menu at its top right, all shown on hover and on keyboard focus
  *  and never over the centre. A press selects; Enter on the selected card opens Info. The title stays in the name. */
 export function PosterCard({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
+  /* Title information returns focus here when it closes: the card's own button. */
   const infoRef = useRef<HTMLButtonElement>(null);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
@@ -41,6 +42,7 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect, o
   return (
     <div data-card-id={id} className="group/card relative min-w-0" onContextMenu={onMenu}>
       <button
+        ref={infoRef}
         type="button"
         data-primary
         aria-label={item.title}
@@ -67,13 +69,12 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect, o
           )}
         >
           <div className="pointer-events-auto flex items-center gap-1.5">
-            <CardActions item={item} infoRef={infoRef} />
+            <CardActions item={item} />
           </div>
         </div>
         <div className={cn("pointer-events-auto absolute top-2 right-2 z-10", CARD_REVEAL)}>
           <IconButton
             bordered
-            round
             aria-label={LIBRARY_COPY.moreActions}
             title={LIBRARY_COPY.moreActions}
             onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context)}

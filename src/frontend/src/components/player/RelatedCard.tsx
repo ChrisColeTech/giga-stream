@@ -23,7 +23,6 @@ export function RelatedCard({ item, selected, onOpen }: RelatedCardProps) {
       onClick={onOpen}
       className={cn(
         "block aspect-4/3 h-full flex-none cursor-pointer overflow-hidden rounded-ctl border bg-surface p-0",
-        "transition-[border-color] duration-fade ease-linear",
         selected ? "border-accent" : "border-border hover:border-dim",
       )}
     >

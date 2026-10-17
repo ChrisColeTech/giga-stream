@@ -1,5 +1,10 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { FIELD_LABEL, FIELD_ROW, labelColumn } from "@/components/ui/NumberField";
 import { cn } from "@/lib/cn";
+
+/* Every inspector and browser row shares one label column, sized to the longest label any of them renders, so the
+   controls line up down the pane (LoRA Studio's rail rows, components/ui/NumberField.tsx). */
+const LABEL_COLUMN = { "--label-col": labelColumn(["Last watched", "Collections"]) } as CSSProperties;
 
 export interface PlayerRowProps {
   readonly label: string;
@@ -9,15 +14,15 @@ export interface PlayerRowProps {
   readonly children?: ReactNode;
 }
 
-/** An inspector row (`21` section 3.4a, Cut's row): a control label (12 px, muted) on a fixed track, its control to the
- *  right. A label is never mono (`21` section 8a). */
+/** An inspector row on the family rail grammar: the rail label in its fixed column, the control to the right. */
 export function PlayerRow({ label, disabled = false, reason, children }: PlayerRowProps) {
   return (
     <div
       title={disabled ? reason : undefined}
-      className={cn("flex min-h-6 items-center gap-2 px-2.5 py-0.5", disabled && "opacity-45")}
+      style={LABEL_COLUMN}
+      className={cn(FIELD_ROW, "min-h-ctl-sm", disabled && "opacity-45")}
     >
-      <span className="w-24 flex-none truncate font-sans text-xs text-muted">{label}</span>
+      <span className={FIELD_LABEL}>{label}</span>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">{children}</div>
     </div>
   );

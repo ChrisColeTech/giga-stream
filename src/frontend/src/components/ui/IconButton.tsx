@@ -1,71 +1,40 @@
-import type { ButtonHTMLAttributes, Ref } from "react";
-import { cn } from "@/lib/cn";
+import type { ButtonHTMLAttributes } from 'react'
 
-/* The size is a variant, never an appended class: `cn()` is a plain join, so an appended `size-*` would sit in the same
- * layer as the base size and lose on stylesheet order. `md` is the toolbar size (28px); `sm` is a window's row control. */
-const SIZES = { md: "size-ctl-md", sm: "size-ctl-sm" } as const;
+import { cn } from '@/lib/cn'
 
-/* Each state's fill, ink and edge is ONE string, chosen whole and never appended over another: `cn()` is a plain join
- * with no conflict resolution, so two colours in one layer would resolve by stylesheet order. Variants (`data-on:`) are
- * emitted after the base utilities, so they always win. */
 const BASE =
-  "inline-flex items-center justify-center border border-transparent p-0 cursor-pointer " +
-  "transition-[background,border-color,color,box-shadow] duration-fade ease-linear " +
-  "disabled:pointer-events-none disabled:cursor-default disabled:opacity-30 disabled:shadow-none " +
-  "data-on:border-accent-edge data-on:bg-accent-tint data-on:text-accent-text " +
-  "data-on:shadow-[var(--shadow-ctl-accent),var(--shadow-stroke-hi)] data-on:active:shadow-none";
+  'inline-flex size-ctl-md items-center justify-center rounded-ctl border border-transparent ' +
+  'bg-transparent p-0 text-muted cursor-pointer ' +
+  'transition-[background,border-color,color,box-shadow] duration-fade ease-linear ' +
+  'hover:bg-hov hover:text-text active:bg-hov active:text-faint ' +
+  'disabled:pointer-events-none disabled:cursor-default disabled:opacity-30 disabled:shadow-none ' +
+  /* The pressed state is a `data-on:` VARIANT, not an appended class list.
+     `cn()` is a plain join with no conflict resolution, so `bg-accent-tint`
+     sat in the same layer as the base `bg-transparent` and LOST to it on
+     stylesheet order — the titlebar's pane toggles showed no pressed state at
+     all. Variants are emitted after the base utilities, so they always win. */
+  'data-on:border-accent-edge data-on:bg-accent-tint data-on:text-accent-text ' +
+  'data-on:shadow-[var(--shadow-ctl-accent),var(--shadow-stroke-hi)] data-on:active:shadow-none'
 
-const PLAIN = "bg-transparent text-muted hover:bg-hov hover:text-text active:bg-hov active:text-faint";
-
-/* `bordered` is the STANDALONE icon action, so it wears the same raised shape as a button: a top-lit gradient from
- * --ctl-hi down to --ctl, a soft drop, and a press that REMOVES the shadow and flattens the fill. */
+/* `bordered` is the STANDALONE icon action — the seed dice and lock, the rail
+ * refreshes — so it wears the same raised shape as `Button` rather than a flat
+ * fill with an inset hairline (doc 11 §3). It was left behind when the buttons
+ * were enhanced, which read as two different control systems on one rail: a
+ * top-lit gradient from --ctl-hi down to --ctl, a soft drop, and a press that
+ * REMOVES the shadow and flattens the fill so the control visibly sinks. */
 const BORDERED =
-  "border-ctl-edge text-muted bg-[linear-gradient(180deg,var(--color-ctl-hi),var(--color-ctl))] " +
-  "shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)] " +
-  "hover:border-dim hover:text-text hover:bg-[linear-gradient(180deg,var(--color-ctl-hov),var(--color-ctl-hi))] " +
-  "active:bg-[var(--color-ctl)] active:text-muted active:shadow-none";
-
-/* `primary` is the one accent action of a group, the family's primary Button in icon form. */
-const PRIMARY =
-  "border-accent text-accent-ink bg-[linear-gradient(180deg,var(--color-accent-strong),var(--color-accent))] " +
-  "shadow-[var(--shadow-ctl-accent),var(--shadow-stroke-hi)] " +
-  "hover:border-accent-strong hover:bg-[linear-gradient(180deg,var(--color-accent-strong),var(--color-accent-strong))] " +
-  "active:bg-[var(--color-accent)] active:text-[color-mix(in_srgb,var(--color-accent-ink)_75%,transparent)] " +
-  "active:shadow-none";
+  'border-ctl-edge text-text bg-[linear-gradient(180deg,var(--color-ctl-hi),var(--color-ctl))] ' +
+  'shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)] ' +
+  'hover:border-dim hover:bg-[linear-gradient(180deg,var(--color-ctl-hov),var(--color-ctl-hi))] ' +
+  'active:bg-[var(--color-ctl)] active:text-muted active:shadow-none'
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Toggle-on state (a pane toggle whose pane is open, say). */
-  on?: boolean;
-  /** Give the button the same fill and edge as a button, for standalone actions. */
-  bordered?: boolean;
-  /** The accent action of a group: a filled, accent-ink icon, as the family's primary Button. */
-  primary?: boolean;
-  /** A circle rather than the control's rounded square, for the icon actions laid over artwork. */
-  round?: boolean;
-  /** `md` (28px) for toolbars; `sm` (24px) for a control in a window's row. */
-  size?: keyof typeof SIZES;
-  readonly ref?: Ref<HTMLButtonElement>;
+  on?: boolean
+  /** Give the button the same fill and edge as a .btn — for standalone actions. */
+  bordered?: boolean
 }
 
-export function IconButton({
-  on = false,
-  bordered = false,
-  primary = false,
-  round = false,
-  size = "md",
-  className,
-  type = "button",
-  ref,
-  ...rest
-}: IconButtonProps) {
-  const fill = primary ? PRIMARY : bordered ? BORDERED : PLAIN;
-  return (
-    <button
-      ref={ref}
-      type={type}
-      data-on={on ? "" : undefined}
-      className={cn(BASE, SIZES[size], fill, round ? "rounded-full" : "rounded-ctl", className)}
-      {...rest}
-    />
-  );
+export function IconButton({ on = false, bordered = false, className, type = 'button', ...rest }: IconButtonProps) {
+  return <button type={type} data-on={on ? '' : undefined} className={cn(BASE, bordered && BORDERED, className)} {...rest} />
 }

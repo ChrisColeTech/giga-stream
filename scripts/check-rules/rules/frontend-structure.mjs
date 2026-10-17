@@ -1,3 +1,4 @@
+import { isFamilyFile } from "../family-files.mjs";
 import { lineAt } from "../load-files.mjs";
 
 /**
@@ -19,7 +20,8 @@ export const frontendStructure = {
     for (const file of files) {
       if (file.program !== "frontend") continue;
 
-      if (file.rel.endsWith(".tsx") && /^src\/frontend\/src\/(components|pages)\//.test(file.rel) && !file.isTest) {
+      const componentFile = file.rel.endsWith(".tsx") && /^src\/frontend\/src\/(components|pages)\//.test(file.rel);
+      if (componentFile && !file.isTest && !isFamilyFile(file.rel)) {
         const exported = [...file.bare.matchAll(COMPONENT_EXPORT)].map((match) => match[1]);
         if (exported.length > 1) {
           findings.push({ file: file.rel, message: `exports ${exported.length} components; one per file` });

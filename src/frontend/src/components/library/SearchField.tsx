@@ -1,6 +1,8 @@
 import { Search, X } from "lucide-react";
+import { Input } from "@/components/ui/Field";
+import { FIELD_CONTROL } from "@/components/ui/Form";
 import { IconButton } from "@/components/ui/IconButton";
-import { TextField } from "@/components/ui/TextField";
+import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 
 export interface SearchFieldProps {
@@ -13,22 +15,22 @@ export function SearchField({ value, onChange }: SearchFieldProps) {
   const empty = value === "";
   return (
     <div className="relative flex min-w-0 items-center">
-      <Search className="pointer-events-none absolute left-2 size-3.5 text-muted" aria-hidden />
-      <TextField
+      <Search className="pointer-events-none absolute left-3 size-3.5 text-faint" aria-hidden />
+      <Input
         data-search
         aria-label="Search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9! pr-7 pl-7"
+        className={cn(FIELD_CONTROL, "pr-9! pl-8!")}
       />
       <IconButton
         aria-label={LIBRARY_COPY.searchClear}
         title={empty ? LIBRARY_COPY.searchEmpty : LIBRARY_COPY.searchClear}
         disabled={empty}
         onClick={() => onChange("")}
-        className="absolute right-1 size-6"
+        className="absolute right-1"
       >
-        <X className="size-3" aria-hidden />
+        <X className="size-3.5" aria-hidden />
       </IconButton>
     </div>
   );

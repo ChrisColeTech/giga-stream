@@ -1,7 +1,6 @@
 import { Search, X } from "lucide-react";
-import { SelectField } from "@/components/ui/SelectField";
-import { TextField } from "@/components/ui/TextField";
-import { cn } from "@/lib/cn";
+import { Input, Select } from "@/components/ui/Field";
+import { IconButton } from "@/components/ui/IconButton";
 import { categoryOptions } from "@/lib/live-channels";
 import { CATEGORY_LABEL, CLEAR_SEARCH_LABEL, SEARCH_LABEL } from "@/lib/live-constants";
 import type { ChannelCategory } from "@/types/channel";
@@ -26,37 +25,34 @@ export function ChannelSearch({
   onCategoryChange,
 }: ChannelSearchProps) {
   return (
-    <div className="flex flex-none flex-col gap-1.5 px-3 pb-2">
+    <div className="flex flex-none flex-col gap-1.5 px-2.5 pb-2">
       <div className="relative flex min-w-0 items-center">
-        <Search className="pointer-events-none absolute left-2 size-3.25 text-muted" aria-hidden />
-        <TextField
+        <Search className="pointer-events-none absolute left-2 size-3.5 text-faint" aria-hidden />
+        <Input
           aria-label={SEARCH_LABEL}
           value={query}
           data-search=""
           onChange={(event) => onQueryChange(event.target.value)}
-          className="pr-7 pl-7"
+          className="pr-8! pl-7!"
         />
         {query !== "" && (
-          <button
-            type="button"
+          <IconButton
             aria-label={CLEAR_SEARCH_LABEL}
+            title={CLEAR_SEARCH_LABEL}
             onClick={() => onQueryChange("")}
-            className={cn(
-              "absolute top-0.5 right-0.5 bottom-0.5 inline-flex w-5 cursor-pointer items-center justify-center",
-              "rounded-ctl border-0 bg-transparent text-muted transition-[background,color] duration-fade ease-linear",
-              "hover:bg-hov hover:text-text",
-            )}
+            className="absolute right-0"
           >
-            <X className="size-3" aria-hidden />
-          </button>
+            <X className="size-3.5" aria-hidden />
+          </IconButton>
         )}
       </div>
-      <SelectField
-        label={CATEGORY_LABEL}
-        value={category}
-        options={categoryOptions(categories, category, total)}
-        onChange={onCategoryChange}
-      />
+      <Select aria-label={CATEGORY_LABEL} value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+        {categoryOptions(categories, category, total).map((option) => (
+          <option key={option.value} value={option.value}>
+            {`${option.label} · ${option.count}`}
+          </option>
+        ))}
+      </Select>
     </div>
   );
 }

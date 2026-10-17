@@ -1,66 +1,65 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/cn";
+import { cn } from '@/lib/cn'
 
 export interface SegmentedOption<T extends string> {
-  value: T;
-  label: string;
-  /** Rendered before the label, an icon usually. */
-  icon?: ReactNode;
-  /** A choice this state of the world cannot serve. It stays in the track, dimmed and unpressable, with its reason
-   *  in `disabledReason`: disabled, never hidden. */
-  disabled?: boolean;
-  disabledReason?: string;
+  value: T
+  label: string
+  /** Rendered before the label — an icon, usually. */
+  icon?: React.ReactNode
+  /** A choice this state of the world cannot serve. It stays in the row,
+   *  dimmed and unpressable, WITH ITS REASON in `disabledReason` — hard rule
+   *  16: disabled, never hidden. A chip that vanishes takes its own
+   *  explanation with it and moves everything beside it. */
+  disabled?: boolean
+  /** Why it cannot be picked. Required in practice whenever `disabled` is set:
+   *  an inert control with no reason is exactly what rule 16 forbids. */
+  disabledReason?: string
 }
 
 interface SegmentedProps<T extends string> {
-  options: ReadonlyArray<SegmentedOption<T>>;
-  value: T;
-  onChange: (value: T) => void;
-  "aria-label"?: string;
-  /** Shorter segments, for a 30px bar like the events drawer's. */
-  dense?: boolean;
-  className?: string;
+  options: ReadonlyArray<SegmentedOption<T>>
+  value: T
+  onChange: (value: T) => void
+  'aria-label'?: string
+  /** Shorter chips, for a 30px bar. */
+  dense?: boolean
+  /** Every chip the width of the widest (owner, 2026-09-05: labels with counts made the chips "all different widths"). */
+  equal?: boolean
+  className?: string
 }
 
-/* A RECESSED TRACK HOLDING RAISED CHIPS, not a bordered strip with dividers. The track is --surface (darker than the
- * panel, so it reads sunken) with 2px of padding; the active chip gets the same top-lit gradient and drop as a button,
- * so "selected" reads as raised rather than merely tinted. `flex-none` so a settings row cannot squeeze the track below
- * its labels, and `overflow-hidden` so a narrow rail clips a label rather than wrapping it onto a second line. */
-const SEG_TRACK =
-  "inline-flex flex-none gap-0.5 overflow-hidden rounded-ctl border border-ctl-edge bg-surface p-0.5";
+/* PILL CHIPS, ONE LIT (owner's pick, 2026-09-05 night — docs/handoff/
+ * SEGMENTED-ALTERNATIVES.md candidate A): the recessed track with raised
+ * segments is the NAV's look (PageTabs) and must not appear anywhere else in
+ * the app. A one-of choice on a page is a row of flat pills with no track:
+ * off = hairline edge, muted text; on = the accent tint and edge the buttons
+ * use for `data-on`, so a lit chip reads like a pressed toggle button
+ * anywhere else. Counts ride inside the chip's label. `equal` sizes every
+ * chip to the widest so a row never re-flows as counts change. */
+const ROW = 'inline-flex flex-none flex-wrap items-center gap-1.5'
 
-const SEG_BUTTON =
-  "inline-flex min-w-0 grow cursor-pointer items-center justify-center gap-1.25 rounded-[3px] border-0 " +
-  "bg-transparent whitespace-nowrap text-muted transition-[background,color,box-shadow] duration-fade ease-linear " +
-  "hover:text-text " +
-  "data-active:bg-[linear-gradient(180deg,var(--color-ctl-hi),var(--color-ctl))] " +
-  "data-active:font-semibold data-active:text-accent-text " +
-  "data-active:shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)]";
+const CHIP =
+  'inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.25 rounded-full border border-ctl-edge ' +
+  'bg-transparent whitespace-nowrap text-muted transition-[background,color,border-color] duration-fade ease-linear ' +
+  'hover:bg-hov hover:text-text ' +
+  'data-active:border-accent-edge data-active:bg-accent-tint data-active:font-semibold data-active:text-accent-text ' +
+  'disabled:cursor-not-allowed disabled:text-dim disabled:hover:bg-transparent disabled:hover:text-dim'
 
-/** A segmented control: one home for a small closed set of choices. */
-export function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-  dense = false,
-  className,
-  ...rest
-}: SegmentedProps<T>) {
+/** Chips share a rail's full width equally — never ragged. */
+export const SEG_FULL = 'flex [&>button]:flex-1 [&>button]:justify-center'
+
+/** A one-of control: one home for a small closed set of choices. */
+export function Segmented<T extends string>({ options, value, onChange, dense = false, equal = false, className, ...rest }: SegmentedProps<T>) {
   return (
-    <div role="group" className={cn(SEG_TRACK, className)} {...rest}>
+    <div role="group" className={cn(equal ? 'inline-grid auto-cols-fr grid-flow-col gap-1.5' : ROW, className)} {...rest}>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           aria-pressed={option.value === value}
-          data-active={option.value === value ? "" : undefined}
+          data-active={option.value === value ? '' : undefined}
           disabled={option.disabled}
           title={option.disabled ? option.disabledReason : undefined}
-          className={cn(
-            SEG_BUTTON,
-            "disabled:cursor-not-allowed disabled:text-dim disabled:hover:text-dim",
-            dense ? "h-5 px-2.25 text-[11px]" : "h-[calc(var(--spacing-ctl-sm)-6px)] px-2 text-xs",
-          )}
+          className={cn(CHIP, dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs')}
           onClick={() => onChange(option.value)}
         >
           {option.icon}
@@ -68,5 +67,5 @@ export function Segmented<T extends string>({
         </button>
       ))}
     </div>
-  );
+  )
 }

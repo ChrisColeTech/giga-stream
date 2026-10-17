@@ -1,9 +1,9 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { LocalFileFacts } from "@/components/player/LocalFileFacts";
 import { MovieChapter } from "@/components/player/MovieChapter";
-import { SelectField, type SelectOption } from "@/components/ui/SelectField";
+import { Select } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-import { BROWSER_SKELETON_COUNT } from "@/lib/player-copy";
+import { BROWSER_SKELETON_COUNT, NO_SEASONS_REASON } from "@/lib/player-copy";
 import { episodeMarker, type PlayerView } from "@/lib/player-view";
 
 export interface PlayerBrowserProps {
@@ -32,25 +32,25 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
     return <MovieChapter title={tab.title} runtimeMs={detail?.runtimeMs} quality={item?.quality} />;
   }
 
-  const options: SelectOption[] = seasons.map((entry) => ({
-    value: String(entry.season),
-    label: `Season ${entry.season}`,
-    count: entry.episodeCount,
-  }));
-  const noSeasons = options.length === 0;
+  const noSeasons = seasons.length === 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-none flex-col gap-2 border-b border-hair p-2.5">
-        <span className="truncate text-[13px] font-semibold text-text">{tab.title}</span>
-        <SelectField
-          label="Season"
+        <span className="truncate text-sm font-semibold text-text">{tab.title}</span>
+        <Select
+          aria-label="Season"
           value={season === undefined ? "" : String(season)}
-          options={options}
           disabled={noSeasons}
-          reason={noSeasons ? "This title lists no seasons." : undefined}
-          onChange={(value) => onSeason(Number(value))}
-        />
+          title={noSeasons ? NO_SEASONS_REASON : "Season"}
+          onChange={(event) => onSeason(Number(event.target.value))}
+        >
+          {seasons.map((entry) => (
+            <option key={entry.season} value={String(entry.season)}>
+              {`Season ${entry.season} · ${entry.episodeCount}`}
+            </option>
+          ))}
+        </Select>
       </div>
       <EpisodeBrowser
         episodes={view.episodes}

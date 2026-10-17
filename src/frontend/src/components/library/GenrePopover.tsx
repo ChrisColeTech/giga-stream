@@ -1,7 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import { useState, type KeyboardEvent, type FocusEvent, useRef } from "react";
 import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/TextField";
+import { Input } from "@/components/ui/Field";
+import { FIELD_CONTROL } from "@/components/ui/Form";
 import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { SEARCH_MIN_GENRES } from "@/lib/library-limits";
@@ -43,9 +44,9 @@ export function GenrePopover({ genres, selected, onChange }: GenrePopoverProps) 
         full
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="h-9! justify-between px-2.5"
+        className="h-9! justify-between! px-3!"
       >
-        <span className="min-w-0 truncate font-sans text-[13px] font-normal">{label}</span>
+        <span className="min-w-0 truncate text-sm font-normal">{label}</span>
         <ChevronDown className="size-3.5 flex-none text-muted" aria-hidden />
       </Button>
       {open && (
@@ -55,7 +56,12 @@ export function GenrePopover({ genres, selected, onChange }: GenrePopoverProps) 
           className="absolute inset-x-0 top-full z-20 mt-1 flex max-h-72 flex-col gap-2 overflow-y-auto rounded-card border border-border bg-panel p-2 shadow-menu"
         >
           {genres.length >= SEARCH_MIN_GENRES && (
-            <TextField aria-label="Search genres" value={text} onChange={(event) => setText(event.target.value)} />
+            <Input
+              aria-label="Search genres"
+              className={FIELD_CONTROL}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
           )}
           <div className="flex flex-wrap gap-1.5">
             {shown.map((genre) => {

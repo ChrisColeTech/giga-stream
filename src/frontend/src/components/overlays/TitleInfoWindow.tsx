@@ -1,7 +1,8 @@
 import { FolderPlus, Play, Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PosterImage } from "@/components/ui/PosterImage";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { cn } from "@/lib/cn";
 import { workSpec } from "@/constants/child-window";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";
 import { changeFavourite, playRef } from "@/components/library/library-service";
@@ -39,7 +40,7 @@ export function TitleInfoWindow() {
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {item === undefined ? (
-              <Skeleton className="h-4" style={{ width: "60%" }} />
+              <span className={cn(SHIMMER, "h-4! w-[60%]")} />
             ) : (
               <h3 className="m-0 font-sans text-base font-semibold text-text">{item.title}</h3>
             )}
@@ -101,9 +102,9 @@ export function TitleInfoWindow() {
 function PlotSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      <Skeleton style={{ width: "95%" }} />
-      <Skeleton style={{ width: "88%" }} />
-      <Skeleton style={{ width: "70%" }} />
+      <span className={cn(SHIMMER, "w-[95%]")} />
+      <span className={cn(SHIMMER, "w-[88%]")} />
+      <span className={cn(SHIMMER, "w-[70%]")} />
     </div>
   );
 }

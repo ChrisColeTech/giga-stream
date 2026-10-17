@@ -13,7 +13,6 @@ export interface PlayerSession {
   readonly favorites: Readonly<Record<string, boolean>>;
   /** The collections each item is in, by item id. */
   readonly membership: Readonly<Record<string, readonly string[]>>;
-  readonly relatedFolded: boolean;
 }
 
 export type PlayerAction =
@@ -22,8 +21,7 @@ export type PlayerAction =
   | { readonly type: "season"; readonly season: number }
   | { readonly type: "episode"; readonly season: number; readonly episode: number }
   | { readonly type: "favorite"; readonly itemId: string; readonly value: boolean }
-  | { readonly type: "toggleMember"; readonly itemId: string; readonly collectionId: string }
-  | { readonly type: "toggleRelated" };
+  | { readonly type: "toggleMember"; readonly itemId: string; readonly collectionId: string };
 
 /** Two references name the same thing when their kind and id match. */
 export function sameRef(a: ItemRef, b: ItemRef): boolean {
@@ -39,7 +37,7 @@ export function createPlayerSession(
   current: PlayerTab | null,
   membership: Readonly<Record<string, readonly string[]>>,
 ): PlayerSession {
-  return { current, season: undefined, favorites: {}, membership, relatedFolded: false };
+  return { current, season: undefined, favorites: {}, membership };
 }
 
 /** Opening the item already playing does nothing but show the Player; opening another replaces the current one. */
@@ -80,7 +78,5 @@ export function reducePlayerSession(session: PlayerSession, action: PlayerAction
       return { ...session, favorites: { ...session.favorites, [action.itemId]: action.value } };
     case "toggleMember":
       return toggleMember(session, action.itemId, action.collectionId);
-    case "toggleRelated":
-      return { ...session, relatedFolded: !session.relatedFolded };
   }
 }

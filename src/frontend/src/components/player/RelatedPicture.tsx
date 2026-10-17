@@ -1,34 +1,17 @@
 import { useState } from "react";
-import { posterTone } from "@/lib/poster-tone";
 
 export interface RelatedPictureProps {
   readonly src: string | undefined;
-  /** The title. It is the picture's text alternative only; a thumbnail with no picture carries no words. */
+  /** The title. The thumbnail's tooltip carries it; the picture itself is decorative. */
   readonly alt: string;
 }
 
-/** The picture inside a related thumbnail (`PastRuns`): the image fills the frame. With no image, or one that cannot be
- *  shown, the frame is tinted in the title's colour family and carries no words. */
-export function RelatedPicture({ src, alt }: RelatedPictureProps) {
+/** The picture inside a related thumbnail, as `PastRuns` draws it: the image fills the frame. With no image, or one that
+ *  cannot be shown, the frame's own surface shows, with no tint and no words (`06` section 5.5). */
+export function RelatedPicture({ src }: RelatedPictureProps) {
   const [failed, setFailed] = useState(false);
-  if (src !== undefined && src !== "" && !failed) {
-    return (
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        className="block size-full object-cover"
-      />
-    );
-  }
-  const tone = `var(${posterTone(alt)})`;
+  if (src === undefined || src === "" || failed) return null;
   return (
-    <span
-      aria-hidden
-      className="block size-full"
-      style={{ background: `color-mix(in srgb, ${tone} 46%, var(--color-surface))` }}
-    />
+    <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className="block size-full object-cover" />
   );
 }

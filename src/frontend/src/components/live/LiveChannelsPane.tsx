@@ -64,9 +64,7 @@ export function LiveChannelsPane({
         onSelect={onSelect}
         onActivate={onActivate}
       />
-      <div className="flex-none border-t border-hair">
-        <ChannelDetails channel={selected} />
-      </div>
+      <ChannelDetails channel={selected} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { SHIMMER } from "@/constants/skeleton";
+import { SHIMMER } from "@/components/ui/SkeletonRows";
 import { COLLAPSE_S, EASE_P2P } from "@/constants/timing";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { cn } from "@/lib/cn";

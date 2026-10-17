@@ -1,7 +1,7 @@
 import { Library } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
-import { Group } from "@/components/ui/Group";
+import { Group } from "@/components/ui/Form";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import type { CollectionRow } from "@/types/collection";
@@ -43,13 +43,7 @@ export interface CollectionsTableProps {
  *  skeleton rows, not as an empty header (`06` section 2, rule 1). */
 export function CollectionsTable({ rows, onSelect }: CollectionsTableProps) {
   return (
-    <Group
-      id="collections.list"
-      title="Collections"
-      icon={Library}
-      tip="Every collection, with its totals and scan state."
-      last
-    >
+    <Group id="collections.list" title="Collections" icon={Library} last>
       {rows.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (
