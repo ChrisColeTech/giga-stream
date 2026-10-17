@@ -91,7 +91,10 @@ export async function buildApp(
     // Every saved live channel builds in the background, so the server answers at once. The seed (an empty
     // store only) starts its own channels as it creates them.
     ready.channels.startLive();
-    if (settings.SEED_TEST_CHANNELS) seedTestChannels(ready.channels, settings.FIXTURE_DIR);
+    if (settings.SEED_TEST_CHANNELS) {
+      const seeded = seedTestChannels(ready.channels, settings.FIXTURE_DIR);
+      if (seeded.repaired > 0) app.log.info(`seed: repaired ${seeded.repaired} legacy stream channel(s) into live channels`);
+    }
     ready.purgeExpiredSessions();
 
     // The one timer (docs/01 section 4.4) is armed for the earliest due enabled job (docs/26 section 3.11).

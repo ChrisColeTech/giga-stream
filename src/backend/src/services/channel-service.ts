@@ -12,7 +12,7 @@ import type {
   ChannelRecord,
   LiveRecord,
 } from "../types/channel.js";
-import type { ChannelInput, ChannelPatch } from "../types/channel-input.js";
+import type { ChannelInput, ChannelPatch, LiveChannelInput } from "../types/channel-input.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
@@ -164,6 +164,22 @@ export function createChannelService(deps: {
       audit.record(actor, { action: "channel.fault_cleared", subject: id });
       return { id, fault: null };
     },
+
+    /** The seed's repair: a stream row becomes the live row `input` describes, same id, one revision. */
+    replaceStreamWithLive(input: LiveChannelInput, actor: Actor): void {
+      if (existing(input.id).kind !== "stream") throw invalid("kind", "Only a stream channel is replaced by a live one.");
+      const record = newLiveRecord(input);
+      claimNumber(record);
+      checkLiveSource(record.live);
+      store.transaction(() => {
+        store.channels.remove(input.id);
+        store.channels.insert({ ...record, revision: store.revisions.next() }, now());
+      });
+      audit.record(actor, { action: "channel.updated", subject: input.id, detail: { fields: ["kind"], from: "stream" } });
+      live.apply(liveSpecOf({ ...record, revision: existing(input.id).revision }));
+    },
+    /** The row with this id, if any (the seed's read). */
+    peek: (id: string): ChannelRecord | undefined => store.channels.find(id),
 
     isEmpty: (): boolean => store.channels.isEmpty(),
 

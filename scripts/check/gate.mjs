@@ -39,6 +39,8 @@ const STEPS = [
   { name: "test backend", cwd: "src/backend", cmd: "npm", args: ["test"] },
   { name: "test fileserver", cwd: "src/fileserver", cmd: "npm", args: ["test"] },
   { name: "test frontend", cwd: "src/frontend", cmd: "npm", args: ["test"] },
+  // Last: against a stack that is already running, every enabled channel must really play. No stack = SKIPPED.
+  { name: "live smoke", cwd: ".", cmd: "node", args: ["scripts/check/live-smoke.mjs", "--optional"], skipMarker: "SKIPPED" },
 ];
 
 const PASSED_TESTS = /ℹ pass (\d+)/;
@@ -84,6 +86,10 @@ for (const step of STEPS) {
   const passed = Number(PASSED_TESTS.exec(run.output)?.[1] ?? 0);
   tests += passed;
   const ok = run.code === 0 && !run.timedOut;
+  if (ok && step.skipMarker && run.output.includes(step.skipMarker)) {
+    console.log(`${step.name.padEnd(22)} SKIPPED  (${run.output.trim()})`);
+    continue;
+  }
   if (!ok) failed++;
   const detail = run.timedOut ? `TIMED OUT after ${STEP_TIMEOUT_MS / 1000}s` : `${seconds}s${passed ? `, ${passed} tests` : ""}`;
   console.log(`${step.name.padEnd(22)} ${ok ? "PASS" : "FAIL"}  (${detail})`);
