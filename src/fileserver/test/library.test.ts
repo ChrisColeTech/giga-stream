@@ -61,6 +61,7 @@ test("view=all with type=local lists the files: quality from height, the still, 
   assert.equal(pick(item, "quality"), "1080p");
   assert.equal(pick(item, "posterUrl"), "/api/images/still-1");
   assert.equal(pick(item, "favorite"), true);
+  assert.equal(pick(item, "rating"), undefined, "a local file never has a rating");
   assert.deepEqual(pick(item, "progress"), { positionMs: 30_000, durationMs: 90_000, state: "watching" });
   assert.equal(pick(page.body, "data.titlesAvailable"), false, "no title read was made");
   assert.equal(pick(page.body, "data.total"), 1);

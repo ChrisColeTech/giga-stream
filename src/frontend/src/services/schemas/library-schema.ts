@@ -12,6 +12,8 @@ export const LibraryItemSchema = z.object({
   posterUrl: ImageUrlSchema.optional(),
   quality: z.string().optional(),
   genres: z.array(z.string()),
+  /** 0 to 10, unrounded. A value outside that range is dropped, not the row: the badge is a garnish. */
+  rating: z.number().min(0).max(10).optional().catch(undefined),
   favorite: z.boolean(),
   collectionSource: z.enum(["manual", "folder"]).optional(),
   progress: z
