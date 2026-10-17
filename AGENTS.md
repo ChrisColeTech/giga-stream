@@ -98,6 +98,13 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   only UI state (surface, panes, Theatre) and put it back as found, never delete or overwrite the owner's records
   without asking, and report every real problem seen, whether or not it was the thing asked about.
   Ask before starting a program the owner did not ask for. Stop processes by PID, never by name.
+- **Fix the obvious bug you find; never park it in a report** (owner, 2026-10-17: holding back a stale `.env` URL
+  and stale test constants was "brain dead"). A wrong port, a dead URL in a test, a stale env value or a
+  fixture that no longer matches the code is fixed in the same change, by the coordinator or by a worker whose
+  brief names it, not listed as "left for the owner". The owner's `.env` files are fixed too when the value is
+  plainly wrong (back the file up first; change only the wrong lines; never print secrets). Ask only when the
+  right value is a real choice. A found problem gets a fix or a worker the same turn, and a gate or smoke check
+  that would have caught it.
 - A worker works only in its own worktree and branch, compiles clean, writes tests but does not run
   them, never edits a doc, commits without pushing, and reports in the format of `docs/07` section 6.4.
 - Every code wave, including foundations other waves wait on, is implemented by a worker. The coordinator

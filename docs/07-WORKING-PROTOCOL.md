@@ -29,6 +29,13 @@ rules are in `01`; this document is about process.
   an audit of something else. When the owner asks for a change, make it; do not offer a menu.
 - **Act; ask only when blocked.** A decision the owner has to make is asked once, plainly. Everything
   else proceeds on the obvious default, and the default is stated in one line.
+- **Fix what you find; do not park it** (owner, 2026-10-17). A wrong port, a dead URL in a test, a stale
+  `.env` value, or a fixture that no longer matches the code is fixed in the change that found it, by the
+  coordinator or by a worker whose brief names it. Never write "left for the owner" or exclude a plainly wrong
+  file (a test constant, an `.env`) from a brief to stay in scope; widen the brief instead. An `.env` is edited
+  after a backup, only on the wrong lines, and its secrets are never printed (read it by line range, never in
+  full). Ask only when the right value is a real choice. Every problem found also gets the check that would have
+  caught it (a test, the gate or the smoke check).
 - **Report outcomes as they are.** A check that did not run is said to have not run; a test that failed
   is shown failing; something not verified is called unverified.
 
