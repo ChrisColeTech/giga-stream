@@ -1,6 +1,6 @@
 /**
  * The Windows app (`npm run dist:win` at the root; docs/07 section 6): the fileserver and its Electron shell,
- * nothing else. The admin backend and the live server are separate programs and never ship in it.
+ * nothing else. The admin backend is a separate program and never ships in it.
  *
  * What ships, and why each path lands where it does — the compiled code resolves every one of them
  * relative to itself, so nothing in the fileserver knows it is packaged:
