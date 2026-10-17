@@ -477,6 +477,47 @@ Providers rows, and any popup for Add to collection) are gone, with a grep provi
 3. **Provider stage (`06` 5.3).** Outside phase 1. Waits for the write-up from `14`.
 4. **Radix pin.** Default: `2.1.24`, the version Giga Images runs, checked against the two-week rule in section 4.1.
 
+## 8a. Visual sweep (2026-10-16)
+
+The owner's review found the surfaces inconsistent. This sweep sets one set of rules, and every surface meets them before
+its phase 1 is signed off. The reference for the look is the family: Giga Images' Generate and Studio (sidebars, controls),
+Giga LoRA Studio (the bottom rail, the grid), and Netflix's catalogue (the card and its buttons). The tokens are the family's.
+
+**Type. One scale, used the same way everywhere:**
+
+| Role | Face and size | Where |
+|---|---|---|
+| Section header | sans 11px semibold, faint; sentence case | every collapsible section (`Section`) |
+| Control label | sans 12px, muted | the label beside a control (`Row`, `SettingsRow`) |
+| Body text | sans 13px, text colour | descriptions, lists, names |
+| Title on a poster | sans 15px semibold, text colour | the fallback poster |
+| Value, count, timecode, identifier | mono 11px | values only; never a label |
+| Hint or disabled text | sans 12px, dim | a disabled reason is a tooltip, not visible text |
+
+No visible text is smaller than 11px. No mono text is used for a label or a header.
+
+**Motion. Only the family's durations and eases, from `index.css` and `constants/timing.ts`:** 140 ms for hover, press
+and colour changes (`duration-fade`); 200 ms for an entrance or a panel move (`duration-move`); 280 ms only for a full
+page transition. The ease is `ease-linear` for colour and `ease-in` for entrances. Reduced motion turns every one of them
+off. A card's hover lift is 2% over 140 ms. Nothing else moves on hover.
+
+**Icons. The accent marks state, and nothing else.** An icon is `text-muted` by default and `text-accent-text` only when it
+is on: a selected row, an on toggle, a playing channel, a favourite that is set. A decorative icon never takes the accent.
+
+**Buttons on cards.** The card's controls are the family's round icon buttons (`IconButton`, bordered, 28 px), not
+text buttons: a primary round Play, and round Info and menu buttons beside it. They sit in one row at the poster's
+lower left, appear on hover and on keyboard focus, and never sit over the centre of the card. The menu button is at the
+top right. No system or browser button look: the family's `Button` and `IconButton` only.
+
+**Rails and bottom bands.** The Player's related band is a port of Giga LoRA Studio's bottom rail (`components/generate/
+PastRuns.tsx` in `D:\Projects\giga-lora-studio`): the same panel ground, the same thumbnail frame, the same hover and
+selected render, the same row scroll. The differences that stay are the spec's: 2:3 posters (06 §5.5), the band's 210 px
+height (02 §1.3), and eight card skeletons. If a difference is found that is not on that list, it is a defect.
+
+**Readability.** Text sits on the surface tokens at the scale above. Muted text is the secondary colour, dim is for
+hints and disabled text only. A line never breaks a word; a long title is truncated with an ellipsis and its full text
+in the tooltip.
+
 ## 9. Events and the provider embed (probe)
 
 A read-only probe of `D:\Projects\giga-stream-poc\src\mockup` answered how the mockup embeds a provider's player and
