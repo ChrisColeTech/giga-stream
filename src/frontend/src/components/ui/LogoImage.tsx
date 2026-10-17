@@ -18,8 +18,8 @@ export function LogoImage({ src, alt }: { src?: string; alt: string }) {
           className="size-full object-contain"
         />
       ) : (
-        <span className="grid size-full place-items-center text-dim" role="img" aria-label={alt}>
-          <Tv className="size-3.5" aria-hidden />
+        <span className="grid size-full place-items-center" role="img" aria-label={alt}>
+          <Tv className="size-3.5 text-muted" aria-hidden />
         </span>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { Search, X } from "lucide-react";
 import { SelectField } from "@/components/ui/SelectField";
 import { TextField } from "@/components/ui/TextField";
+import { cn } from "@/lib/cn";
 import { categoryOptions } from "@/lib/live-channels";
 import { CATEGORY_LABEL, CLEAR_SEARCH_LABEL, SEARCH_LABEL } from "@/lib/live-constants";
 import type { ChannelCategory } from "@/types/channel";
@@ -27,7 +28,7 @@ export function ChannelSearch({
   return (
     <div className="flex flex-none flex-col gap-1.5 px-3 pb-2">
       <div className="relative flex min-w-0 items-center">
-        <Search className="pointer-events-none absolute left-2 size-3.25 text-dim" aria-hidden />
+        <Search className="pointer-events-none absolute left-2 size-3.25 text-muted" aria-hidden />
         <TextField
           aria-label={SEARCH_LABEL}
           value={query}
@@ -40,7 +41,11 @@ export function ChannelSearch({
             type="button"
             aria-label={CLEAR_SEARCH_LABEL}
             onClick={() => onQueryChange("")}
-            className="absolute top-0.5 right-0.5 bottom-0.5 inline-flex w-5 cursor-pointer items-center justify-center rounded-ctl border-0 bg-transparent text-muted hover:bg-hov hover:text-text"
+            className={cn(
+              "absolute top-0.5 right-0.5 bottom-0.5 inline-flex w-5 cursor-pointer items-center justify-center",
+              "rounded-ctl border-0 bg-transparent text-muted transition-[background,color] duration-fade ease-linear",
+              "hover:bg-hov hover:text-text",
+            )}
           >
             <X className="size-3" aria-hidden />
           </button>
