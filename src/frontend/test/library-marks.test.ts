@@ -34,9 +34,10 @@ describe("resolving an item over the store and the fixture", () => {
   });
 
   it("prefers the store's marks over the fixture", () => {
-    const marks = { favourites: { "movie:1": true }, memberships: { "movie:1": ["c-b"] } };
     const one = ITEMS[0];
     assert.ok(one !== undefined);
+    const key = itemKey(one.ref);
+    const marks = { favourites: { [key]: true }, memberships: { [key]: ["c-b"] } };
     const resolved = resolveItem(one, marks, NO_HISTORY, SEED);
     assert.equal(resolved.favorite, true);
     assert.deepEqual(resolved.collectionIds, ["c-b"]);
@@ -45,8 +46,9 @@ describe("resolving an item over the store and the fixture", () => {
   it("drops progress when an entry is removed or History is cleared", () => {
     const two = ITEMS[1];
     assert.ok(two !== undefined);
+    const key = itemKey(two.ref);
     assert.notEqual(resolveItem(two, EMPTY, NO_HISTORY, SEED).progress, undefined);
-    assert.equal(resolveItem(two, EMPTY, withRemoved(NO_HISTORY, "movie:2"), SEED).progress, undefined);
+    assert.equal(resolveItem(two, EMPTY, withRemoved(NO_HISTORY, key), SEED).progress, undefined);
     assert.equal(resolveItem(two, EMPTY, withCleared(), SEED).progress, undefined);
   });
 });
