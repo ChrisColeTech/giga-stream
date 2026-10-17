@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
         '/api': forward,
         '/live': forward,
         '/logos': forward,
+        '/test': forward,
       },
     },
     preview: {
@@ -51,6 +52,7 @@ export default defineConfig(({ mode }) => {
         '/api': forward,
         '/live': forward,
         '/logos': forward,
+        '/test': forward,
       },
     },
   }
