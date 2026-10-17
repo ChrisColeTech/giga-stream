@@ -12,8 +12,10 @@ const item = (id: string, kind: "movie" | "tv" | "local" = "movie"): PlayerTab =
   title: `Title ${id}`,
 });
 
+const NO_MARKS = { favourites: {}, memberships: {} };
+
 function playing(current: PlayerTab | null = item("movie-603")): PlayerSession {
-  return createPlayerSession(current, {});
+  return createPlayerSession(current);
 }
 
 describe("one item at a time", () => {
@@ -39,7 +41,7 @@ describe("closing", () => {
   it("close empties the Player back to its idle state", () => {
     const next = reducePlayerSession(playing(), { type: "close" });
     assert.equal(next.current, null);
-    assert.equal(viewOf(next).tab, undefined);
+    assert.equal(viewOf(next, NO_MARKS).tab, undefined);
   });
 
   it("closing an idle Player changes nothing that the panes draw", () => {
@@ -77,16 +79,32 @@ describe("episode and season choices", () => {
   });
 });
 
-describe("local favourites, membership and the related fold", () => {
-  it("a favourite change is held per item", () => {
-    const next = reducePlayerSession(playing(), { type: "favorite", itemId: "movie-1", value: true });
-    assert.equal(next.favorites["movie-1"], true);
+describe("opening where it was left", () => {
+  it("a series left partway opens on that episode and its season", () => {
+    const entry: LibraryItem = {
+      ref: { kind: "title", id: "tv-9" },
+      kind: "tv",
+      title: "Nine",
+      genres: [],
+      favorite: false,
+      progress: { positionMs: 1, durationMs: 10, state: "watching", season: 2, episode: 5 },
+    };
+    const next = reducePlayerSession(playing(null), { type: "open", item: itemFromLibrary(entry) });
+    assert.equal(next.current?.subtitle, "S02 E05");
+    assert.equal(viewOf(next, NO_MARKS).season, 2);
   });
 
-  it("toggling membership adds, then removes, the collection", () => {
-    const added = reducePlayerSession(playing(), { type: "toggleMember", itemId: "movie-1", collectionId: "c-a" });
-    assert.deepEqual(added.membership["movie-1"], ["c-a"]);
-    const removed = reducePlayerSession(added, { type: "toggleMember", itemId: "movie-1", collectionId: "c-a" });
-    assert.deepEqual(removed.membership["movie-1"], []);
+  it("a movie carries no episode", () => {
+    const entry: LibraryItem = { ref: { kind: "title", id: "movie-7" }, kind: "movie", title: "Seven", genres: [], favorite: false };
+    assert.equal(itemFromLibrary(entry).subtitle, undefined);
+  });
+});
+
+describe("the shared marks", () => {
+  it("the view reads favourites and memberships from the store's marks", () => {
+    const marks = { favourites: { "title:movie-603": true }, memberships: { "title:movie-603": ["c-a"] } };
+    const view = viewOf(playing(), marks);
+    assert.equal(view.favorite, true);
+    assert.deepEqual(view.memberIds, ["c-a"]);
   });
 });

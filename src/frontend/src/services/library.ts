@@ -16,6 +16,11 @@ export function playItem(_ref: ItemRef): ServiceResult {
   return notConnected();
 }
 
+/** Starts one exact episode of a series (`03` section 3.6: the episode's stream). Phase 1 stub. */
+export function playEpisode(_ref: ItemRef, _season: number, _episode: number): ServiceResult {
+  return notConnected();
+}
+
 /** Clears all watch history; favourites, collections and files are untouched (`03` section 3.13). Phase 1 stub. */
 export function clearHistory(): ServiceResult {
   return notConnected();

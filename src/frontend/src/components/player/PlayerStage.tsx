@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { StageNote } from "@/components/player/StageNote";
 import { collectionsSubmenu } from "@/lib/collection-menu";
+import { objectFitOf } from "@/lib/live-picture";
 import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { stageMenuItems } from "@/lib/player-stage-menu";
 import type { PlayerView } from "@/lib/player-view";
+import { useAppStore } from "@/store/app-store";
 
 export interface PlayerStageProps {
   readonly view: PlayerView;
@@ -19,12 +21,15 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
 }
 
-/** The stage (`06` section 5.3): the `<video>` fills the canvas, as Live's does, on the canvas's dark surface. There is
+/** The stage (`06` section 5.3): the `<video>` fills the canvas, as Live's does, on the stage's dark surface in every
+ *  theme, fitted by the Picture fit preference. There is
  *  no toolbar; Retry, Full screen, Reveal in Library, the item's marks and Close are the picture's context menu, and `F`
  *  toggles full screen. The browser's own controls sit on the dark surface (`styles/video.css`). */
 export function PlayerStage({ view, commands, onPausedChange }: PlayerStageProps) {
   const stageRef = useRef<HTMLElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  /* The Picture fit preference (Settings > Playback) applies to this stage as it does to Live's. */
+  const pictureFit = useAppStore((state) => state.playback.pictureFit);
 
   /* The stage's own fullscreen events keep the menu's label in step with Escape, which the browser handles. */
   useEffect(() => {
@@ -53,7 +58,11 @@ export function PlayerStage({ view, commands, onPausedChange }: PlayerStageProps
   const watchId = item?.progress === undefined ? undefined : item.watchId;
 
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
-    if (tab === undefined) return;
+    /* The idle stage has no menu of its own, and never the browser's video menu either. */
+    if (tab === undefined) {
+      event.preventDefault();
+      return;
+    }
     openMenu(
       event,
       stageMenuItems({
@@ -77,14 +86,15 @@ export function PlayerStage({ view, commands, onPausedChange }: PlayerStageProps
       aria-label="Stage"
       onKeyDown={onKeyDown}
       onContextMenu={onContextMenu}
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface outline-none fullscreen:bg-black"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-stage outline-none fullscreen:bg-black"
     >
       <video
         controls
         playsInline
         preload="none"
         aria-label={tab?.title ?? "Player"}
-        className="size-full bg-surface object-contain"
+        className="size-full bg-stage"
+        style={{ objectFit: objectFitOf(pictureFit) }}
         onPlay={() => onPausedChange(false)}
         onPause={() => onPausedChange(true)}
       />

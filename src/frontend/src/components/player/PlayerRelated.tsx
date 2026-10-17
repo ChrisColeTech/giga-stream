@@ -21,19 +21,17 @@ export function PlayerRelated({ view, commands }: PlayerRelatedProps) {
       </div>
     );
   return (
-    <div
-      className="flex h-full items-stretch gap-1.5 overflow-x-auto bg-panel px-2.5 py-1.5"
-      role="listbox"
-      aria-label="Related titles"
-    >
+    /* A list of buttons, not a listbox: each thumbnail is a press that opens its title, reached with Tab. */
+    <ul aria-label="Related titles" className="m-0 flex h-full list-none items-stretch gap-1.5 overflow-x-auto bg-panel px-2.5 py-1.5">
       {view.related.map((item) => (
-        <RelatedCard
-          key={`${item.ref.kind}-${item.ref.id}`}
-          item={item}
-          selected={current !== undefined && sameRef(item.ref, current)}
-          onOpen={() => commands.openRelated(item)}
-        />
+        <li key={`${item.ref.kind}-${item.ref.id}`} className="flex h-full flex-none">
+          <RelatedCard
+            item={item}
+            selected={current !== undefined && sameRef(item.ref, current)}
+            onOpen={() => commands.openRelated(item)}
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

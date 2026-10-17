@@ -1,5 +1,6 @@
 import { Clapperboard } from "lucide-react";
 import { Group, Row, Wide } from "@/components/ui/Form";
+import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
 import { cn } from "@/lib/cn";
@@ -14,7 +15,6 @@ export const TITLE_INFO_LABELS = ["Identity", "Genres", LIBRARY_COPY.rating, LIB
 
 /* A read-only value, in LoRA's About pane style. */
 const FACT = "flex min-h-9 items-center font-mono text-sm text-muted";
-const TEXT = "flex min-h-9 items-center text-sm leading-5 text-text";
 
 export interface TitleInfoBodyProps {
   readonly item: ResolvedItem;
@@ -48,8 +48,14 @@ export function TitleInfoBody({ item, detail }: TitleInfoBodyProps) {
         <span className={FACT}>{identityLine(item)}</span>
       </Row>
       {item.genres.length > 0 && (
-        <Row label="Genres">
-          <span className={TEXT}>{item.genres.join(" · ")}</span>
+        <Row label="Genres" align="start">
+          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0 py-2" aria-label="Genres">
+            {item.genres.map((name) => (
+              <li key={name} className={NAME_CHIP}>
+                {name}
+              </li>
+            ))}
+          </ul>
         </Row>
       )}
       {detail?.rating !== undefined && (
@@ -71,7 +77,7 @@ export function TitleInfoBody({ item, detail }: TitleInfoBodyProps) {
         <Row label={LIBRARY_COPY.cast} align="start">
           <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0 py-2" aria-label={LIBRARY_COPY.cast}>
             {detail.cast.map((name) => (
-              <li key={name} className="rounded-ctl border border-hair px-1.5 py-0.5 font-mono text-xs text-muted">
+              <li key={name} className={NAME_CHIP}>
                 {name}
               </li>
             ))}

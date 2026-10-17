@@ -2,9 +2,9 @@ import type { CSSProperties, ReactNode } from "react";
 import { FIELD_LABEL, FIELD_ROW, labelColumn } from "@/components/ui/NumberField";
 import { cn } from "@/lib/cn";
 
-/* Every inspector and browser row shares one label column, sized to the longest label any of them renders, so the
-   controls line up down the pane (LoRA Studio's rail rows, components/ui/NumberField.tsx). */
-const LABEL_COLUMN = { "--label-col": labelColumn(["Last watched", "Collections"]) } as CSSProperties;
+/* Every inspector fact shares one label column, sized to the longest label the inspector renders (Year, Quality, Rating,
+   Runtime, Seasons, Duration), so the values line up down the pane (LoRA Studio's rail rows, ui/NumberField.tsx). */
+const LABEL_COLUMN = { "--label-col": labelColumn(["Duration", "Quality", "Runtime", "Seasons"]) } as CSSProperties;
 
 export interface PlayerRowProps {
   readonly label: string;

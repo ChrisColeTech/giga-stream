@@ -16,11 +16,15 @@ export interface PlayerInspectorProps {
 }
 
 /** The right pane (`06` section 5.4): Overview and Details on the family accordion, each open block taking its share and
- *  scrolling inside itself, and Resume pinned at the foot while the video is paused. The item's marks (favorite,
+ *  scrolling inside itself, and Resume pinned at the foot while the video is paused (when the Resume setting is Ask).
+ *  The item's marks (favorite,
  *  collections, history) are the stage's context menu. With nothing open it is skeletons. */
 export function PlayerInspector({ view, commands, paused }: PlayerInspectorProps) {
   const folded = useAppStore((state) => state.folded);
   const toggleFold = useAppStore((state) => state.toggleFold);
+  /* Resume and Start over are the "Ask" answer of the Resume setting; set to always resume or always start over, the
+     Player has already done that on opening and asks nothing. */
+  const asks = useAppStore((state) => state.playback.resumeMode) === "ask";
   if (view.tab === undefined) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -40,7 +44,7 @@ export function PlayerInspector({ view, commands, paused }: PlayerInspectorProps
           <InspectorDetails view={view} />
         </Section>
       </div>
-      {paused && resume !== undefined && (
+      {asks && paused && resume !== undefined && (
         <ResumeFooter progress={resume} onResume={commands.resume} onStartOver={commands.startOver} />
       )}
     </div>

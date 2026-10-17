@@ -16,8 +16,7 @@ export function RelatedCard({ item, selected, onOpen }: RelatedCardProps) {
   return (
     <button
       type="button"
-      role="option"
-      aria-selected={selected}
+      aria-current={selected ? "true" : undefined}
       aria-label={item.title}
       title={item.title}
       onClick={onOpen}

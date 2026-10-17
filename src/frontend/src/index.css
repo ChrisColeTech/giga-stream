@@ -16,6 +16,9 @@
   --color-bg: #111113;
   --color-panel: #18181b;
   --color-surface: #0a0a0b;
+  /* Giga Stream delta (docs/23): the video stage is dark in every theme, as a video app's picture area is; the light
+     theme does not override it. */
+  --color-stage: #0a0a0b;
   --color-border: #2a2a2f;
   --color-hair: #202024;
 

@@ -1,4 +1,5 @@
-import { COLLECTION_ROWS } from "@/fixtures/collections";
+import { COLLECTION_ROWS, MEMBERSHIP } from "@/fixtures/collections";
+import { itemKey, type Marks } from "@/lib/library-marks";
 import { LIBRARY_ITEMS, RELATED_ITEMS, SERIES_EPISODES, TITLE_DETAILS } from "@/fixtures/titles";
 import { PLAYER_STAGE } from "@/fixtures/player";
 import { RELATED_LIMIT } from "@/lib/player-copy";
@@ -63,7 +64,8 @@ export function resumeOf(view: PlayerView): Progress | undefined {
   return progress?.state === "watching" ? progress : undefined;
 }
 
-export function viewOf(session: PlayerSession): PlayerView {
+/** The view of a session. `marks` are the store's favourites and memberships, so a change made anywhere shows here. */
+export function viewOf(session: PlayerSession, marks: Marks): PlayerView {
   const tab = session.current ?? undefined;
   if (tab === undefined) {
     return {
@@ -89,14 +91,15 @@ export function viewOf(session: PlayerSession): PlayerView {
   const season = tab.kind === "tv" ? (session.season ?? chosen?.season ?? seasons[0]?.season) : undefined;
   const episodes = (SERIES_EPISODES[tab.ref.id] ?? []).filter((episode) => episode.season === season);
   const related = tab.kind === "local" ? [] : (RELATED_ITEMS[tab.ref.id] ?? []).slice(0, RELATED_LIMIT);
+  const key = itemKey(tab.ref);
 
   return {
     tab,
     item,
     detail,
-    stage: PLAYER_STAGE[tab.id] ?? IDLE,
-    favorite: session.favorites[tab.ref.id] ?? item?.favorite ?? false,
-    memberIds: session.membership[tab.ref.id] ?? [],
+    stage: PLAYER_STAGE[tab.ref.id] ?? IDLE,
+    favorite: marks.favourites[key] ?? item?.favorite ?? false,
+    memberIds: marks.memberships[key] ?? MEMBERSHIP[tab.ref.id] ?? [],
     collections: COLLECTION_ROWS,
     season,
     episode: tab.kind === "tv" ? chosen?.episode : undefined,

@@ -1,5 +1,6 @@
 import { CircleAlert } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { LiveNote } from "@/components/live/LiveNote";
+import { RETRY_LABEL, STREAM_NOTE_TITLE } from "@/lib/live-constants";
 
 export interface StageNoteProps {
   /** The reason the stream failed, in one sentence. */
@@ -7,18 +8,12 @@ export interface StageNoteProps {
   readonly onRetry: () => void;
 }
 
-/** The centred note over the picture when a stream fails (`06` section 5.3): an icon, the reason and Retry, clear of the
- *  player's own controls. */
+/** The note over the picture when a stream fails (`06` section 5.3): Live's stage note, so the two stages report a
+ *  failure the same way (an icon, the title, the reason and Retry), in a band that stops above the player's controls. */
 export function StageNote({ reason, onRetry }: StageNoteProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 bottom-12 grid place-items-center p-4">
-      <div className="pointer-events-auto flex max-w-[320px] flex-col items-center gap-2.5 rounded-card border border-border bg-panel p-4 text-center shadow-menu">
-        <CircleAlert className="size-5 text-st-failed" aria-hidden />
-        <p className="m-0 text-sm leading-5 text-text">{reason}</p>
-        <Button size="sm" variant="ghost" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
+    <div className="pointer-events-none absolute inset-x-0 top-0 bottom-12 flex items-center justify-center p-4">
+      <LiveNote icon={CircleAlert} title={STREAM_NOTE_TITLE} sentence={reason} action={RETRY_LABEL} onAction={onRetry} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { CHIP } from "@/components/player/inspector-chip";
+import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PlayerFact } from "@/components/player/PlayerFact";
 import { FIELD_LABEL } from "@/components/ui/NumberField";
+import { cn } from "@/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { PlayerView } from "@/lib/player-view";
 
@@ -13,10 +14,11 @@ function Names({ label, names }: { readonly label: string; readonly names: reado
   if (names.length === 0) return null;
   return (
     <div className="flex flex-col gap-1">
-      <span className={FIELD_LABEL}>{label}</span>
+      {/* Over its chips, not beside them, so the label needs no column: the rail label's type at its own width. */}
+      <span className={cn(FIELD_LABEL, "w-auto!")}>{label}</span>
       <div className="flex flex-wrap gap-1">
         {names.map((name) => (
-          <span key={name} className={CHIP}>
+          <span key={name} className={NAME_CHIP}>
             {name}
           </span>
         ))}
@@ -26,10 +28,23 @@ function Names({ label, names }: { readonly label: string; readonly names: reado
 }
 
 /** The Details block (`06` section 5.4): the runtime or the season count, the genres and the cast. The episode on show is
- *  Overview's subtitle, so it is not repeated here. */
+ *  Overview's subtitle, so it is not repeated here. A local file has no catalogue entry, so its Details are the file's
+ *  own facts: the year, its length once it has been played, and the collections it is in. */
 export function InspectorDetails({ view }: InspectorDetailsProps) {
-  const { tab, item, detail, seasons } = view;
+  const { tab, item, detail, seasons, memberIds, collections } = view;
   if (tab === undefined) return null;
+
+  if (tab.kind === "local") {
+    const duration = item?.progress?.durationMs;
+    const names = collections.filter((row) => memberIds.includes(row.id)).map((row) => row.name);
+    return (
+      <>
+        {item?.year !== undefined && <PlayerFact label="Year" value={String(item.year)} />}
+        {duration !== undefined && <PlayerFact label="Duration" value={formatRuntime(duration)} />}
+        <Names label="Collections" names={names} />
+      </>
+    );
+  }
 
   return (
     <>

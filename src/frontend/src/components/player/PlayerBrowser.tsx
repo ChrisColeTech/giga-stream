@@ -43,7 +43,6 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
           code={tab.kind === "movie" ? "Movie" : "Local file"}
           selected
           marker={marker}
-          onSelect={() => undefined}
         />
       </div>
     );
