@@ -12,15 +12,17 @@ export function useCaptionOverlay(): void {
   const theme = useAppStore((state) => state.theme);
   const accent = useAppStore((state) => state.accent);
   const uiZoom = useAppStore((state) => state.uiZoom);
+  const signedIn = useAppStore((state) => state.signedIn);
 
   useEffect(() => {
     if (!hostAvailable()) return undefined;
     const push = (): void => {
       const style = getComputedStyle(document.documentElement);
       void setOverlay({
-        color: style.getPropertyValue("--color-panel").trim(),
+        /* Signed out there is no bar: the gate's right column (`--color-surface`) runs to the top edge under the strip. */
+        color: style.getPropertyValue(signedIn ? "--color-panel" : "--color-surface").trim(),
         symbolColor: style.getPropertyValue("--color-faint").trim(),
-        height: Math.round((TITLEBAR_HEIGHT - 1) * uiZoom),
+        height: Math.round((signedIn ? TITLEBAR_HEIGHT - 1 : TITLEBAR_HEIGHT) * uiZoom),
       });
     };
     push();
@@ -28,5 +30,5 @@ export function useCaptionOverlay(): void {
     const watched = theme === "system" ? window.matchMedia("(prefers-color-scheme: light)") : null;
     watched?.addEventListener("change", push);
     return () => watched?.removeEventListener("change", push);
-  }, [theme, accent, uiZoom]);
+  }, [theme, accent, uiZoom, signedIn]);
 }
