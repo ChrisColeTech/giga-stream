@@ -15,11 +15,104 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
       themeAccent: "amber",
       reducedMotion: "system",
       uiZoom: 1,
+      videoQuality: "auto",
+      audioLanguage: null,
+      lowLatency: false,
+      pictureFit: "fit",
+      resumeMode: "ask",
+      watchedPercent: 90,
+      liveOnOpen: "last",
       libraryView: "grid",
+      librarySort: "newest",
+      showContinue: true,
       subtitleLanguage: null,
+      pauseHistory: false,
+      rescanOnStartup: true,
       adminUrl: "http://127.0.0.1:8091",
     },
   });
+  await t.dispose();
+});
+
+test("every key of docs/03 section 3.2's table patches and reads back committed", async () => {
+  const t = await makeApp();
+  const patched = await send(t.app, "PATCH", "/api/settings", {
+    videoQuality: "saver",
+    audioLanguage: "de",
+    lowLatency: true,
+    pictureFit: "fill",
+    resumeMode: "resume",
+    watchedPercent: 95,
+    liveOnOpen: "none",
+    librarySort: "az",
+    showContinue: false,
+    pauseHistory: true,
+    rescanOnStartup: false,
+  });
+  assert.equal(patched.status, 200);
+  const data = pick(patched.body, "data") as Record<string, unknown>;
+  assert.equal(data.videoQuality, "saver");
+  assert.equal(data.audioLanguage, "de");
+  assert.equal(data.lowLatency, true);
+  assert.equal(data.pictureFit, "fill");
+  assert.equal(data.resumeMode, "resume");
+  assert.equal(data.watchedPercent, 95);
+  assert.equal(data.liveOnOpen, "none");
+  assert.equal(data.librarySort, "az");
+  assert.equal(data.showContinue, false);
+  assert.equal(data.pauseHistory, true);
+  assert.equal(data.rescanOnStartup, false);
+  await t.dispose();
+});
+
+test("an invalid value on a new key refuses the whole patch, naming the row", async () => {
+  const t = await makeApp();
+  const refusals: Array<[Record<string, unknown>, string]> = [
+    [{ videoQuality: "best" }, "Video quality must be auto, higher or saver."],
+    [{ audioLanguage: "d" }, "Audio language must be a language tag or empty."],
+    [{ lowLatency: "yes" }, "Low latency must be on or off."],
+    [{ pictureFit: "stretch" }, "Picture fit must be fit, fill or original."],
+    [{ resumeMode: "continue" }, "Resume must be ask, resume or restart."],
+    [{ watchedPercent: 99 }, "Watched percent must be 90, 95 or 100."],
+    [{ liveOnOpen: "first" }, "Live on open must be last or none."],
+    [{ librarySort: "rating" }, "Library sort must be newest, oldest, az or year."],
+    [{ showContinue: 1 }, "Show Continue must be on or off."],
+    [{ pauseHistory: "no" }, "Pause history must be on or off."],
+    [{ rescanOnStartup: null }, "Rescan on startup must be on or off."],
+  ];
+  for (const [row, message] of refusals) {
+    const answer = await send(t.app, "PATCH", "/api/settings", row);
+    assert.equal(answer.status, 422, JSON.stringify(row));
+    assert.equal(pick(answer.body, "error.code"), "settings.invalid");
+    assert.equal(pick(answer.body, "error.message"), message, JSON.stringify(row));
+  }
+  // Nothing committed by any refused patch: the defaults still stand.
+  const after = await send(t.app, "GET", "/api/settings");
+  assert.equal(pick(after.body, "data.watchedPercent"), 90);
+  assert.equal(pick(after.body, "data.pictureFit"), "fit");
+  await t.dispose();
+});
+
+test("the new keys survive a restart on the same data folder", async () => {
+  const dataDir = (await import("node:fs")).mkdtempSync(
+    (await import("node:path")).join((await import("node:os")).tmpdir(), "giga-settings-keys-"),
+  );
+  const first = await makeApp({ dataDir });
+  const patched = await send(first.app, "PATCH", "/api/settings", {
+    watchedPercent: 100,
+    liveOnOpen: "none",
+    librarySort: "year",
+  });
+  assert.equal(patched.status, 200);
+  await first.dispose();
+
+  const second = await makeApp({ dataDir });
+  const after = await send(second.app, "GET", "/api/settings");
+  assert.equal(pick(after.body, "data.watchedPercent"), 100);
+  assert.equal(pick(after.body, "data.liveOnOpen"), "none");
+  assert.equal(pick(after.body, "data.librarySort"), "year");
+  await second.dispose();
+  (await import("node:fs")).rmSync(dataDir, { recursive: true, force: true });
 });
 
 test("a patch commits the changed rows and returns the committed settings; it survives a restart", async () => {
