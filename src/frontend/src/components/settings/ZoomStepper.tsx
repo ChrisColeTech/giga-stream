@@ -1,7 +1,7 @@
 import { Minus, Plus } from "lucide-react";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { ZOOM_AT_MAX, ZOOM_AT_MIN } from "@/constants/settings-sections";
-import { canStepZoom, formatZoom, stepZoom } from "@/lib/settings-zoom";
+import { canStepZoom, formatZoom, stepZoom } from "@giga/ui/lib/settings-zoom";
 
 export interface ZoomStepperProps {
   readonly value: number;

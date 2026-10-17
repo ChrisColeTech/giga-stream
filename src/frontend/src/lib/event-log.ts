@@ -1,28 +1,16 @@
-import type { EventArea, EventRow } from "@/types/events";
+import {
+  restEvent as sharedRestEvent,
+  type EventInput as SharedEventInput,
+  type RequestOutcome,
+} from "@giga/ui/lib/event-log";
+import type { EventArea } from "@/types/events";
 
-export const EVENT_LOG_LIMIT = 200;
+/* The events log is the shared library's (`docs/27` step 6). The interface's rows name the fileserver as their host. */
+export { appendEvent, EVENT_LOG_LIMIT } from "@giga/ui/lib/event-log";
 
-export type EventInput = Omit<EventRow, "id" | "at"> & { readonly id?: string; readonly at?: number };
+export type EventInput = SharedEventInput<EventArea>;
 
-export function appendEvent(rows: readonly EventRow[], input: EventInput, now = Date.now()): readonly EventRow[] {
-  const row: EventRow = {
-    ...input,
-    id: input.id ?? `event-${now}-${rows.length}`,
-    at: input.at ?? now,
-  };
-  return [...rows, row].slice(-EVENT_LOG_LIMIT);
-}
-
-export function restEvent(
-  method: string,
-  status: number | "aborted" | "invalid" | "unreachable",
-  elapsedMs: number,
-  area: EventArea,
-): EventInput {
-  const failed = status === "invalid" || status === "unreachable" || (typeof status === "number" && status >= 400);
-  return {
-    tone: failed ? "warn" : "info",
-    area,
-    sentence: `${method.toUpperCase()} fileserver ${status} in ${Math.max(0, Math.round(elapsedMs))} ms.`,
-  };
+/** One finished REST request as a row of the interface's log: the host and the outcome, never the address. */
+export function restEvent(method: string, status: RequestOutcome, elapsedMs: number, area: EventArea): EventInput {
+  return sharedRestEvent("fileserver", method, status, elapsedMs, area);
 }

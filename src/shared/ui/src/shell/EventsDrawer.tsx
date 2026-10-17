@@ -1,11 +1,26 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
-import { SHIMMER } from "@giga/ui/lib/shimmer";
-import { COLLAPSE_S, EASE_P2P } from "@giga/ui/lib/motion-timing";
-import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
-import { cn } from "@giga/ui/lib/cn";
-import { useAppStore } from "@/store/app-store";
-import { EventRow } from "@giga/ui/shell/EventRow";
+import { cn } from "../lib/cn";
+import type { EventRow as EventRowData } from "../lib/event-log";
+import { COLLAPSE_S, EASE_P2P } from "../lib/motion-timing";
+import { SHIMMER } from "../lib/shimmer";
+import { useReduceMotion } from "../hooks/useReduceMotion";
+import { EventRow } from "./EventRow";
+
+/** The older page of a log that pages: `available` is false when there is nothing older to load. */
+export interface OlderPage {
+  readonly available: boolean;
+  readonly onLoad: () => void;
+}
+
+export interface EventsDrawerProps {
+  readonly open: boolean;
+  /** Oldest first; the newest is at the foot. */
+  readonly rows: readonly EventRowData[];
+  readonly onClear: () => void;
+  /** Present only for a log that pages: a `Load older` row sits at the top. */
+  readonly older?: OlderPage;
+}
 
 /* A COLLAPSIBLE BOTTOM PANEL, not a side drawer: a flex-none child of the app sitting between the pages and the
  * statusbar, 160px open (`06` section 1.3). Its height is a framer-motion tween, skipped under reduced motion. It stays
@@ -19,10 +34,9 @@ const HEAD_BUTTON =
   "inline-flex cursor-pointer items-center rounded-ctl border-0 bg-transparent px-1.5 py-0.5 font-sans text-xs " +
   "text-muted hover:bg-hov hover:text-text disabled:pointer-events-none disabled:opacity-45";
 
-export function EventsDrawer() {
-  const open = useAppStore((state) => state.eventsOpen);
-  const events = useAppStore((state) => state.events);
-  const clearEvents = useAppStore((state) => state.clearEvents);
+const countLine = (count: number): string => `${count} ${count === 1 ? "event" : "events"}`;
+
+export function EventsDrawer({ open, rows, onClear, older }: EventsDrawerProps) {
   const reduced = useReduceMotion();
   const scroller = useRef<HTMLDivElement | null>(null);
 
@@ -30,7 +44,7 @@ export function EventsDrawer() {
   useEffect(() => {
     const node = scroller.current;
     if (node !== null) node.scrollTop = node.scrollHeight;
-  }, [events.length]);
+  }, [rows.length]);
 
   return (
     <motion.div
@@ -43,20 +57,33 @@ export function EventsDrawer() {
     >
       <div className="flex h-7.5 flex-none items-center gap-2.5 border-b border-hair bg-panel px-2.5 py-1">
         <span className="text-xs text-muted">Events</span>
-        <span className="font-mono text-xs text-dim tabular-nums">{events.length}</span>
+        <span className="font-mono text-xs text-dim tabular-nums">{countLine(rows.length)}</span>
         <span className="flex-1" />
         <button
           type="button"
           className={HEAD_BUTTON}
-          disabled={events.length === 0}
-          title={events.length === 0 ? "The log is empty." : "Clear the log"}
-          onClick={clearEvents}
+          disabled={rows.length === 0}
+          title={rows.length === 0 ? "The log is empty." : "Clear the log"}
+          onClick={onClear}
         >
           Clear
         </button>
       </div>
       <div ref={scroller} className={SCROLL} role="log" aria-label="Events">
-        {events.length === 0 ? (
+        {older !== undefined && (
+          <div className="flex min-h-4 items-center py-px">
+            <button
+              type="button"
+              className={HEAD_BUTTON}
+              disabled={!older.available}
+              title={older.available ? "Load older events" : "No older events."}
+              onClick={older.onLoad}
+            >
+              Load older
+            </button>
+          </div>
+        )}
+        {rows.length === 0 ? (
           <div className="pointer-events-none" aria-hidden>
             {WIDTHS.map((width) => (
               <div key={width} className="flex min-h-4 items-center py-px">
@@ -65,7 +92,7 @@ export function EventsDrawer() {
             ))}
           </div>
         ) : (
-          events.map((row) => <EventRow key={row.id} row={row} />)
+          rows.map((row) => <EventRow key={row.id} row={row} />)
         )}
       </div>
     </motion.div>
