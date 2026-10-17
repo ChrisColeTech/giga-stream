@@ -29,8 +29,9 @@ export function SettingsWindow() {
 
   /* A refused save is reported once on the notice line; the section keeps the draft in its field. */
   const commitAddress = (address: string) => {
-    const result = saveSetting("adminUrl", address);
-    if (!result.ok) say(result.message, "warn");
+    void saveSetting("adminUrl", address)
+      .then(() => say("The admin address was saved."))
+      .catch((error: unknown) => say(error instanceof Error ? error.message : "The admin address was not saved.", "warn"));
   };
 
   return (
