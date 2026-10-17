@@ -27,7 +27,7 @@ layout, typography, controls or empty/loading grammar. Any visual change require
 | 2.6 Events/guards | Incomplete | Guard/stream/embed reports and About facts still need wiring; event fixtures remain |
 | 2.7 Cleanup/full walks | Incomplete | Runtime stubs, unused fixtures and unresolved audit findings remain |
 
-Latest coordinator gate: **PASS, 555 tests**. This is compilation/unit verification, not complete phase acceptance.
+Latest coordinator gate: **PASS, 559 tests**. This is compilation/unit verification, not complete phase acceptance.
 Chrome MCP verified repeated real Library answers with zero blank titles, populated title browser/inspector,
 restored inspector section toggles, corrected grid columns and layout-save behavior. It has not proved every
 surface/state or the packaged app's complete walkthrough. Previously produced installers are not final acceptance.
@@ -43,6 +43,14 @@ audit items are not marked verified by this check.
 The remaining wire sweep includes licences, startup rescans, dynamic stream track choices, partial-child
 decoding, season-zero handling, image/address boundaries, async player-policy acknowledgement, events and
 production stub/fixture removal. These are open work, not completed features.
+
+**Theatre mode, owner-directed (2026-10-17):** implemented and Chrome-verified end to end at the real root
+stack. Entering via the titlebar's ghost Theatre button collapses the active surface's left, right and bottom
+panes, paints the titlebar and statusbar backgrounds and borders black, and shows the button pressed
+("Layout saved." confirms the collapsed shell persisted). Exiting restores every pane to its pre-Theatre
+state (left and right rails reappear at full width), returns both bars to panel tone and unpresses the
+button. A reload after exit confirmed the healed layout persisted while Theatre itself did not. Gate PASS
+(559 tests); installer rebuilt from this state.
 
 ### Historical pre-wiring snapshot (2026-10-17, before wave A)
 
