@@ -15,7 +15,7 @@ export interface LibraryRailProps {
 export function LibraryRail({ source, counts, collections, onSource }: LibraryRailProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-1.5">
+      <div className="flex min-h-0 flex-1 flex-col py-1.5">
         <ViewsSection source={source} counts={counts} onSource={onSource} />
         <CollectionsSection source={source} collections={collections} counts={counts} onSource={onSource} />
       </div>

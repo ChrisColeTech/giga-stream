@@ -10,7 +10,8 @@ import { TypeStrip } from "./TypeStrip";
 export interface LibraryBodyProps {
   readonly scope: Scope;
   readonly inHistory: boolean;
-  readonly view: ListView;
+  /** The grid or the list; the Rows view is drawn by the page instead. */
+  readonly view: Exclude<ListView, "rows">;
   /** Every item with its marks applied: the source of Continue Watching and of the History's emptiness. */
   readonly items: readonly ResolvedItem[];
   /** The items the query shows, in order. */

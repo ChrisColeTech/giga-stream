@@ -7,7 +7,8 @@ export type Scope = "all" | LibraryKind;
 export type SourceId = "all" | "history" | "favorites" | `collection:${string}`;
 export type SortKey = "newest" | "oldest" | "az" | "year";
 export type WatchedFilter = "all" | "unwatched" | "watching" | "watched";
-export type ListView = "grid" | "list";
+/** The presentation of the results: a grid of cards, a list of rows, or the Rows view of shelves (`06` section 4.3). */
+export type ListView = "grid" | "list" | "rows";
 
 /** Everything the Library narrows by. Scope and source come from the rail and the type strip; the rest from the filters. */
 export interface LibraryQuery {
