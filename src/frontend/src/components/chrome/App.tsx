@@ -2,7 +2,7 @@ import { MotionConfig } from "framer-motion";
 import { useEffect } from "react";
 import { useAppHydration } from "@/hooks/useAppHydration";
 import { useNativeOverlay } from "@/hooks/useNativeOverlay";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { useSettingsWriteback } from "@/hooks/useSettingsWriteback";
 import { useShellKeyboard } from "@/hooks/useShellKeyboard";
 import { useShellWriteback } from "@/hooks/useShellWriteback";

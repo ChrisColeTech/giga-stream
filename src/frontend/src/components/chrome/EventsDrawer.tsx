@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
-import { COLLAPSE_S, EASE_P2P } from "@/constants/timing";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { COLLAPSE_S, EASE_P2P } from "@giga/ui/lib/motion-timing";
+import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { cn } from "@giga/ui/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { EventRow } from "./EventRow";

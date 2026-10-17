@@ -3,7 +3,7 @@ import { Group } from "@giga/ui/form/Group";
 import { Wide } from "@giga/ui/form/Wide";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
-import { ArmedButton } from "@/components/ui/ArmedButton";
+import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { cn } from "@giga/ui/lib/cn";
 import { TYPE_LABEL } from "@/lib/collections-copy";
 import { LIBRARY_COPY } from "@/lib/library-copy";

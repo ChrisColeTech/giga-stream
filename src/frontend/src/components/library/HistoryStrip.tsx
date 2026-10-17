@@ -1,4 +1,4 @@
-import { ArmedButton } from "@/components/ui/ArmedButton";
+import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 
 export interface HistoryStripProps {

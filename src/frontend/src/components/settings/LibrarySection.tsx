@@ -7,7 +7,7 @@ import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { Segmented } from "@giga/ui/controls/Segmented";
 import { Toggle } from "@giga/ui/controls/Toggle";
-import { ArmedButton } from "@/components/ui/ArmedButton";
+import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";
 import { useAppStore } from "@/store/app-store";

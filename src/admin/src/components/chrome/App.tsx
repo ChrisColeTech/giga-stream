@@ -1,5 +1,5 @@
 import { MotionConfig } from "framer-motion";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { useShellKeyboard } from "@/hooks/useShellKeyboard";
 import { useTheme } from "@/hooks/useTheme";
 import { AppShell } from "./AppShell";

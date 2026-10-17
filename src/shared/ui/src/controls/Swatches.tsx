@@ -1,26 +1,28 @@
-import { cn } from "@giga/ui/lib/cn";
-import type { Accent } from "@/types/shell";
+import { cn } from "../lib/cn";
 
-/** Each swatch always shows its own family, independent of the active accent. */
-const FILL: Record<Accent, string> = {
-  amber: "bg-sw-amber",
-  violet: "bg-sw-violet",
-  blue: "bg-sw-blue",
-  green: "bg-sw-green",
-  rose: "bg-sw-rose",
-};
+export interface SwatchOption<T extends string> {
+  readonly id: T;
+  /** The swatch's own fill, a token class (`bg-sw-amber`). Each swatch shows its own colour whatever the active one is. */
+  readonly fill: string;
+}
 
-/** The family's display order: amber, blue, green, violet, rose. */
-const ORDER: readonly Accent[] = ["amber", "blue", "green", "violet", "rose"];
+export interface SwatchesProps<T extends string> {
+  readonly value: T;
+  readonly onChange: (id: T) => void;
+  /** The swatches in display order. */
+  readonly options: readonly SwatchOption<T>[];
+  /** The group's accessible name, e.g. "Accent". */
+  readonly label: string;
+  readonly disabled?: boolean;
+}
 
-/** The accent colour-swatch radio group: five filled circles, each its OWN family whatever the active accent, the chosen
- *  one ringed. One tab stop (the chosen swatch); the arrows and Home/End move and Enter or Space chooses, so hunting
- *  from amber to rose is not four writes nobody asked for. */
-export function Swatches({ value, onChange, disabled = false }: { value: Accent; onChange: (accent: Accent) => void; disabled?: boolean }) {
+/** A radio group of filled circles, the chosen one ringed. One tab stop (the chosen swatch); the arrows and Home/End
+ *  move and Enter or Space chooses, so hunting along the row is not a write for every step. */
+export function Swatches<T extends string>({ value, onChange, options, label, disabled = false }: SwatchesProps<T>) {
   return (
     <span
       role="radiogroup"
-      aria-label="Accent"
+      aria-label={label}
       className="inline-flex items-center gap-2"
       onKeyDown={(event) => {
         const nodes = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='radio']"));
@@ -34,22 +36,22 @@ export function Swatches({ value, onChange, disabled = false }: { value: Accent;
         nodes[to]?.focus();
       }}
     >
-      {ORDER.map((accent) => (
+      {options.map(({ id, fill }) => (
         <button
-          key={accent}
+          key={id}
           type="button"
           role="radio"
-          aria-label={accent}
-          aria-checked={accent === value}
-          tabIndex={accent === value ? 0 : -1}
+          aria-label={id}
+          aria-checked={id === value}
+          tabIndex={id === value ? 0 : -1}
           disabled={disabled}
-          onClick={() => onChange(accent)}
+          onClick={() => onChange(id)}
           className={cn(
             "size-5 cursor-pointer rounded-full border-0 p-0 active:scale-90",
             "transition-[box-shadow,transform] duration-fade ease-linear disabled:cursor-not-allowed",
-            FILL[accent],
+            fill,
             /* The 2px ring sits outside the 20px fill (a shadow takes no room, so nothing shifts when it moves). */
-            accent === value ? "shadow-[0_0_0_2px_var(--color-text)]" : "shadow-none",
+            id === value ? "shadow-[0_0_0_2px_var(--color-text)]" : "shadow-none",
           )}
         />
       ))}

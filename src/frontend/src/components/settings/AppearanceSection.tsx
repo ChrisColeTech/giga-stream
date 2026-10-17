@@ -7,7 +7,8 @@ import { Workspace } from "@giga/ui/form/Workspace";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { Segmented } from "@giga/ui/controls/Segmented";
-import { Swatches } from "@/components/ui/Swatches";
+import { Swatches } from "@giga/ui/controls/Swatches";
+import { ACCENT_SWATCHES } from "@giga/ui/controls/accent-swatches";
 import { useAppStore } from "@/store/app-store";
 import type { MotionPreference, ThemeMode } from "@/types/shell";
 import { ZoomStepper } from "./ZoomStepper";
@@ -57,7 +58,7 @@ export function AppearanceSection() {
           <Segmented aria-label="Reduce motion" options={MOTIONS} value={motion} onChange={setMotion} />
         </Row>
         <Row label="Accent" tip="The highlight color for selection, focus, progress and the one main button on each screen.">
-          <Swatches value={accent} onChange={setAccent} />
+          <Swatches value={accent} onChange={setAccent} options={ACCENT_SWATCHES} label="Accent" />
         </Row>
         <Row label="UI zoom" tip="Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.">
           <ZoomStepper value={uiZoom} onChange={setZoom} />

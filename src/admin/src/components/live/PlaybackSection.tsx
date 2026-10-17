@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { labelColumn } from "@giga/ui/form/NumberField";
-import { Section } from "@/components/ui/Section";
+import { Section } from "@giga/ui/lists/Section";
 import { useAppStore } from "@/store/app-store";
 
 /* One label column for every playback row, sized to the longest label the pane renders (LoRA Studio's rail rows). */
