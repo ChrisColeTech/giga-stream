@@ -32,3 +32,6 @@ src/mockup/results/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Leftover local data of the retired standalone live server (legacy live-server.db for the importer)
+src/live-server/
