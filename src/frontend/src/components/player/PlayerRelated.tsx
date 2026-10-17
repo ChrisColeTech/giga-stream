@@ -45,7 +45,9 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
               ))}
             </div>
           ) : (
-            <div className="h-full overflow-hidden [&>div]:grid-cols-[repeat(8,48px)] [&>div]:gap-2 [&>div]:p-1">
+            /* The shared grid is auto-fill at 144 px and would wrap; these !important overrides pin it to one row of eight
+             * 48 px columns, the width of a 2:3 card at the band's 140 px height, and keep it from wrapping. */
+            <div className="h-full overflow-hidden [&>div]:!grid-flow-col [&>div]:!grid-cols-[repeat(8,48px)] [&>div]:!gap-2 [&>div]:!p-1 [&>div]:w-max">
               <SkeletonCards count={RELATED_SKELETON_COUNT} />
             </div>
           )}
