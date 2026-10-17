@@ -13,11 +13,11 @@ export interface EpisodeBrowserProps {
   readonly onSelect: (episode: number) => void;
 }
 
-/** The episode rows of one season, in a single scroll container. Loading and empty are the same skeleton. */
+/** The episode rows of one season, edge to edge like LoRA Studio's queue. Loading and empty are the same skeleton. */
 export function EpisodeBrowser({ episodes, selected, markerOf, onSelect }: EpisodeBrowserProps) {
   if (episodes.length === 0) return <SkeletonRows count={EPISODE_SKELETON_COUNT} />;
   return (
-    <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5">
+    <ul className="m-0 flex list-none flex-col p-0">
       {episodes.map((episode) => (
         <li key={episode.episode}>
           <EpisodeRow

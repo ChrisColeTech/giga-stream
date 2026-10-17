@@ -1,4 +1,5 @@
-import { Check, Clapperboard } from "lucide-react";
+import { Clapperboard } from "lucide-react";
+import { ACCENT } from "@/components/ui/Form";
 import { cn } from "@/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { EpisodeMarker } from "@/lib/player-view";
@@ -11,11 +12,14 @@ export interface EpisodeRowProps {
   readonly onSelect: () => void;
 }
 
-/** One episode row (`06` section 5.2): a 16:9 still, `E1`, the title, the duration and the watch marker. Selecting a row
- *  marks the exact episode; nothing loads from it in phase 1. */
+/** One episode row (`06` section 5.2) in LoRA Studio's queue row shape (components/generate/QueueRow.tsx), which the
+ *  rail's `SkeletonRows` mirrors: a 4:3 still in a 56px column, the title on the primary line, the episode number and
+ *  duration on the meta line. A watched episode wears the success bar on its left edge; one part watched carries the
+ *  2px progress hairline. Selecting a row marks the exact episode. */
 export function EpisodeRow({ episode, selected, marker, onSelect }: EpisodeRowProps) {
   const label = `E${episode.episode}`;
   const name = episode.title ?? label;
+  const watched = marker?.watched === true;
   return (
     <button
       type="button"
@@ -23,33 +27,32 @@ export function EpisodeRow({ episode, selected, marker, onSelect }: EpisodeRowPr
       aria-label={`${label} ${name}`}
       onClick={onSelect}
       className={cn(
-        "flex w-full cursor-pointer items-center gap-2.5 border-0 border-l-2 px-2 py-1.5 text-left font-sans",
-        "transition-[background,color] duration-fade ease-linear",
-        selected ? "border-l-accent bg-accent-tint text-accent-text" : "border-l-transparent bg-transparent text-muted hover:bg-hov hover:text-text",
+        "relative grid w-full cursor-pointer grid-cols-[56px_minmax(0,1fr)] items-start gap-x-2.5 text-left",
+        "border-0 border-b border-l-2 border-hair px-2.75 py-2",
+        "transition-colors duration-fade ease-linear hover:bg-hov",
+        selected ? "border-l-accent bg-ctl" : "border-l-transparent bg-transparent",
       )}
     >
-      <span className="relative flex aspect-video w-[88px] flex-none items-center justify-center overflow-hidden rounded-ctl bg-surface text-muted">
+      {watched && <span className={cn("absolute top-2 bottom-2 left-0 w-1 rounded-full", ACCENT.success)} aria-hidden />}
+      <span className="relative grid aspect-4/3 w-full place-items-center overflow-hidden rounded-ctl border border-hair bg-surface">
         {episode.stillUrl !== undefined ? (
-          <img src={episode.stillUrl} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+          <img src={episode.stillUrl} alt="" loading="lazy" className="absolute inset-0 block size-full object-cover" />
         ) : (
-          <Clapperboard className="size-4" aria-hidden />
+          <Clapperboard className="size-4 text-dim" aria-hidden />
         )}
-        {marker !== undefined && !marker.watched && (
-          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-hair" aria-hidden>
-            <span className="block h-full bg-accent" style={{ width: `${Math.round(marker.fraction * 100)}%` }} />
+      </span>
+      <span className="grid min-w-0 gap-1.25">
+        <span className="min-w-0 truncate font-mono text-xs text-text">{name}</span>
+        {marker !== undefined && !watched && (
+          <span className="block h-0.5 overflow-hidden rounded-[2px] bg-hair">
+            <i className="block h-full bg-accent" style={{ width: `${Math.round(marker.fraction * 100)}%` }} />
           </span>
         )}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted tabular-nums">
-          {label}
-          {marker?.watched === true && <Check className="size-3 text-st-done" aria-label="Watched" />}
+        <span className="flex min-w-0 justify-between gap-2 overflow-hidden font-mono text-xs text-faint">
+          <span className="truncate">{watched ? `${label} · watched` : label}</span>
+          {episode.runtimeMs !== undefined && <span className="flex-none">{formatRuntime(episode.runtimeMs)}</span>}
         </span>
-        <span className="truncate text-[13px]">{name}</span>
       </span>
-      {episode.runtimeMs !== undefined && (
-        <span className="flex-none font-mono text-[11px] text-muted tabular-nums">{formatRuntime(episode.runtimeMs)}</span>
-      )}
     </button>
   );
 }

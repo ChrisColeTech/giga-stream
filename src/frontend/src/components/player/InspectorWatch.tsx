@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import { CHIP } from "@/components/player/inspector-chip";
 import { InspectorHistoryRemove } from "@/components/player/InspectorHistoryRemove";
 import { PlayerFact } from "@/components/player/PlayerFact";
 import { PlayerRow } from "@/components/player/PlayerRow";
@@ -53,7 +54,7 @@ export function InspectorWatch({ view, commands }: InspectorWatchProps) {
   };
 
   return (
-    <div className="flex flex-col gap-1.25">
+    <>
       <PlayerFact label="Progress" value={progressText} />
       <PlayerFact label="Watched" value={watched ? "Yes" : "No"} />
       <PlayerFact label="Last watched" value="-" />
@@ -68,13 +69,13 @@ export function InspectorWatch({ view, commands }: InspectorWatchProps) {
       {memberNames.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {memberNames.map((name) => (
-            <span key={name} className="rounded-ctl border border-hair px-1.5 py-0.5 font-mono text-xs text-muted">
+            <span key={name} className={CHIP}>
               {name}
             </span>
           ))}
         </div>
       )}
       {progress !== undefined && <InspectorHistoryRemove watchId={item?.watchId} onRemove={commands.removeHistory} />}
-    </div>
+    </>
   );
 }
