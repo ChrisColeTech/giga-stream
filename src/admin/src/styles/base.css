@@ -1,0 +1,65 @@
+/* ============ base (ported from merge-ui) ============
+ * Only what a utility cannot reach: the document chain, the focus ring, and
+ * the scrollbars. Everything else is a Tailwind utility on the element. */
+@layer base {
+  /* #root is React's mount node. Without a height it breaks the 100% chain
+     and the whole shell collapses to its content height. */
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* Paths and tags are literal: no ligatures turning `>-` into an arrow. */
+  .font-mono, pre, code { font-variant-ligatures: none; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+    border-radius: 3px;
+  }
+
+  /* Headings are mono throughout — the app's voice for anything machine-ish. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  /* 8px with a padded thumb: the border is transparent and clipped to the
+     padding box, so the thumb reads narrower than its track without the track
+     itself shrinking and making the bar hard to hit. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-dim);
+    background-clip: padding-box;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+}

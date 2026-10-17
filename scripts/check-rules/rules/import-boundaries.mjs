@@ -16,7 +16,7 @@ function programOf(rel) {
 }
 
 /** Electron imports are confined to the fileserver's app folder (`01` section 4.2). */
-const ELECTRON_HOMES = ["src/fileserver/src/app/"];
+const ELECTRON_HOMES = ["src/fileserver/src/app/", "src/backend/src/app/"];
 
 const IO_IN_ROUTES = /^(node:)?(fs|fs\/promises|child_process|sqlite|net|http|https)$/;
 

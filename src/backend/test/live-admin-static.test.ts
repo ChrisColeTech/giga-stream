@@ -29,6 +29,8 @@ const BUILT = {
   "assets/app-1a2b.js": "console.log('admin');",
   "assets/app-1a2b.css": "body{margin:0}",
   "favicon.svg": "<svg xmlns='http://www.w3.org/2000/svg'/>",
+  "assets/JetBrainsMono-Regular-abc.woff2": "font-bytes",
+  "assets/face-abc.ttf": "font-bytes",
   ".hidden": "no",
 };
 
@@ -59,6 +61,16 @@ test("the built app is served: files by type, the page uncached, fingerprinted a
   assert.equal((await send(t.app, "GET", "/admin/index.html")).status, 200);
   const head = await send(t.app, "HEAD", "/admin/");
   assert.deepEqual([head.status, head.raw.length], [200, 0]);
+});
+
+test("fonts get their font types, fingerprinted; the page cannot be framed", async () => {
+  const t = await makeApp({ config: { ADMIN_DIST: dist(BUILT) } });
+  const woff = await send(t.app, "GET", "/admin/assets/JetBrainsMono-Regular-abc.woff2");
+  assert.deepEqual([woff.status, woff.headers["content-type"]], [200, "font/woff2"]);
+  assert.match(String(woff.headers["cache-control"]), /immutable/);
+  assert.equal((await send(t.app, "GET", "/admin/assets/face-abc.ttf")).headers["content-type"], "font/ttf");
+  const index = await send(t.app, "GET", "/admin/");
+  assert.deepEqual([index.headers["x-frame-options"], index.headers["referrer-policy"]], ["DENY", "same-origin"]);
 });
 
 test("an app path with no extension opens the page; a missing file, a dotfile or a write does not", async () => {

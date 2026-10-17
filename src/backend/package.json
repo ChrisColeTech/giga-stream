@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "main": "dist/app/main.js",
   "description": "Giga Stream admin backend (docs/03 Part B): channels and admin accounts on its own node:sqlite database, JWT sign-in with rotating refresh tokens, an audit log, public channel reads, changes that are live as soon as saved, and TLS or a trusted proxy off loopback. Titles through TMDB arrive in phase 7 of docs/08.",
   "engines": {
     "node": ">=24.11"
@@ -11,6 +12,9 @@
     "build:shared": "node src/build-shared.ts",
     "dev": "node src/build-shared.ts && tsx --env-file=dev.env --env-file-if-exists=.env src/server.ts",
     "start": "node --env-file-if-exists=.env --env-file=production.env dist/server.js",
+    "dev:app": "npm run build && electron .",
+    "dev:stack": "npm run build && electron . --wait-vite",
+    "start:app": "electron . --production",
     "build": "node src/build-shared.ts && tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/store/migrations','dist/store/migrations',{recursive:true})\"",
     "typecheck": "node src/build-shared.ts && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "node src/build-shared.ts && tsx --test test/*.test.ts",
@@ -23,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "electron": "^42.8.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"

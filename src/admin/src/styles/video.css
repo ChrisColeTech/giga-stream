@@ -1,0 +1,8 @@
+/* Giga Stream delta (docs/23 section 3.1). Chrome paints its native video controls on a grey layer that covers the
+ * whole element, so a stage with no picture yet reads light grey instead of the canvas's dark surface. The layers are
+ * made transparent; the control bar's own gradient and buttons stay as the browser draws them. */
+video::-webkit-media-controls,
+video::-webkit-media-controls-enclosure,
+video::-webkit-media-controls-overlay-enclosure {
+  background: transparent;
+}
