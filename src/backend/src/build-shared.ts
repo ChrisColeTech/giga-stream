@@ -14,13 +14,15 @@ import { build } from "esbuild";
  * `test` and `dev`. The library's tsconfig looks for `@types` in the fileserver's folder; this passes the
  * backend's own, so it builds with only the backend installed.
  *
- * Code splitting stays OFF so `dist` keeps the source layout (no `chunk-*.js` at its root). locate-tool no
- * longer depends on its depth (it walks up to the repository marker), but a stable layout is still the contract.
+ * Code splitting must stay ON. The fileserver imports several entries of the library; without splitting each
+ * entry bundles its OWN copy of any shared module, so module-level state (the scan registry and its progress)
+ * is duplicated and diverges (the fileserver's scan-lifecycle test fails). Splitting hoists shared modules into
+ * `chunk-*.js` at the root of `dist`, which is expected. locate-tool does not depend on its depth (it walks up
+ * to the repository marker), so a hoisted copy still finds the repository root.
  *
  * The fileserver builds the same `dist` with an identical script (`src/fileserver/src/build-shared.ts`), and the
  * dev stack starts both programs at once, so the two must stay identical in what they produce, and a `dist` that
- * is already newer than every source is left alone instead of being deleted under the other program's feet. A
- * `dist` holding any `chunk-*.js` was built by a splitting build and is never fresh: it is rebuilt here.
+ * is already newer than every source is left alone instead of being deleted under the other program's feet.
  */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHARED = path.resolve(HERE, "..", "..", "shared", "media");
@@ -42,7 +44,6 @@ function isFresh(): boolean {
   if (!existsSync(DIST)) return false;
   const built = [...collect(DIST, ".js", []), ...collect(DIST, ".d.ts", [])];
   if (built.length < entries.length * 2) return false;
-  if (readdirSync(DIST).some((name) => /^chunk-.*\.js$/.test(name))) return false;
   const newestSource = Math.max(...entries.map((file) => statSync(file).mtimeMs));
   return Math.min(...built.map((file) => statSync(file).mtimeMs)) > newestSource;
 }
@@ -56,7 +57,7 @@ if (isFresh()) {
     outdir: DIST,
     outbase: SOURCE,
     bundle: true,
-    splitting: false,
+    splitting: true,
     format: "esm",
     platform: "node",
     target: "node24",
