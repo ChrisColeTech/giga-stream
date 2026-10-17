@@ -40,7 +40,7 @@ export function fieldsOfSettings(settings: SettingsAnswer): SettingsFields {
   };
 }
 
-export function settingsPatchOf(fields: SettingsFields): SettingsPatch {
+export function settingsOfFields(fields: SettingsFields): SettingsAnswer {
   return {
     theme: fields.theme,
     themeAccent: fields.accent,
@@ -49,5 +49,30 @@ export function settingsPatchOf(fields: SettingsFields): SettingsPatch {
     ...fields.playback,
     ...fields.library,
     adminUrl: fields.adminUrl,
+  };
+}
+
+export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswer): SettingsPatch {
+  const value = settingsOfFields(current);
+  return {
+    ...(value.theme === baseline.theme ? {} : { theme: value.theme }),
+    ...(value.themeAccent === baseline.themeAccent ? {} : { themeAccent: value.themeAccent }),
+    ...(value.reducedMotion === baseline.reducedMotion ? {} : { reducedMotion: value.reducedMotion }),
+    ...(value.uiZoom === baseline.uiZoom ? {} : { uiZoom: value.uiZoom }),
+    ...(value.autoplay === baseline.autoplay ? {} : { autoplay: value.autoplay }),
+    ...(value.videoQuality === baseline.videoQuality ? {} : { videoQuality: value.videoQuality }),
+    ...(value.audioLanguage === baseline.audioLanguage ? {} : { audioLanguage: value.audioLanguage }),
+    ...(value.subtitleLanguage === baseline.subtitleLanguage ? {} : { subtitleLanguage: value.subtitleLanguage }),
+    ...(value.lowLatency === baseline.lowLatency ? {} : { lowLatency: value.lowLatency }),
+    ...(value.pictureFit === baseline.pictureFit ? {} : { pictureFit: value.pictureFit }),
+    ...(value.resumeMode === baseline.resumeMode ? {} : { resumeMode: value.resumeMode }),
+    ...(value.watchedPercent === baseline.watchedPercent ? {} : { watchedPercent: value.watchedPercent }),
+    ...(value.liveOnOpen === baseline.liveOnOpen ? {} : { liveOnOpen: value.liveOnOpen }),
+    ...(value.libraryView === baseline.libraryView ? {} : { libraryView: value.libraryView }),
+    ...(value.librarySort === baseline.librarySort ? {} : { librarySort: value.librarySort }),
+    ...(value.showContinue === baseline.showContinue ? {} : { showContinue: value.showContinue }),
+    ...(value.pauseHistory === baseline.pauseHistory ? {} : { pauseHistory: value.pauseHistory }),
+    ...(value.rescanOnStartup === baseline.rescanOnStartup ? {} : { rescanOnStartup: value.rescanOnStartup }),
+    ...(value.adminUrl === baseline.adminUrl ? {} : { adminUrl: value.adminUrl }),
   };
 }

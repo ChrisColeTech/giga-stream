@@ -21,6 +21,7 @@ export function SettingsWindow() {
   const requestLibrary = useAppStore((state) => state.requestLibrary);
   const adminUrl = useAppStore((state) => state.adminUrl);
   const setAdminUrl = useAppStore((state) => state.setAdminUrl);
+  const savedSettingsRevision = useAppStore((state) => state.savedSettingsRevision);
   const backend = useAppStore((state) => state.backend);
   const appVersion = useAppStore((state) => state.appVersion);
   const runtime = useAppStore((state) => state.runtime);
@@ -43,7 +44,12 @@ export function SettingsWindow() {
             <LibrarySection onOpenCollections={() => openCollections()} onOpenHistory={openHistory} />
           )}
           {section === "admin" && (
-            <AdminBackendSection adminUrl={adminUrl} backend={backend} onCommit={setAdminUrl} />
+            <AdminBackendSection
+              adminUrl={adminUrl}
+              savedRevision={savedSettingsRevision}
+              backend={backend}
+              onCommit={setAdminUrl}
+            />
           )}
           {section === "about" && <AboutSection version={appVersion} runtime={runtime} />}
         </div>

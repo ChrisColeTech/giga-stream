@@ -24,6 +24,8 @@ export function startShellWriteback(deps: ShellWritebackDeps): () => void {
   let ready = false;
   let writing = false;
   let active = true;
+  let queuedRevision = deps.getState().savedShellRevision;
+  let writeEnabled = deps.getState().shellWriteEnabled;
 
   const flush = async (): Promise<void> => {
     if (!active || writing || !ready || pending === null) return;
@@ -47,7 +49,13 @@ export function startShellWriteback(deps: ShellWritebackDeps): () => void {
   };
 
   const queue = (state: AppState): void => {
-    if (!state.shellWriteEnabled || state.shellRevision <= state.savedShellRevision) return;
+    if (!state.shellWriteEnabled) return;
+    if (!writeEnabled) {
+      writeEnabled = true;
+      queuedRevision = Math.max(queuedRevision, state.savedShellRevision);
+    }
+    if (state.shellRevision <= queuedRevision) return;
+    queuedRevision = state.shellRevision;
     pending = {
       revision: state.shellRevision,
       layout: { surface: state.surface, open: state.open, sizes: state.sizes },

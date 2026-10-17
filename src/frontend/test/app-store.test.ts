@@ -4,6 +4,7 @@ import { SURFACES, SURFACE_ORDER, limitsOf, limitsOfKey, paneKey } from "@/const
 import { resolveReduceMotion } from "@/hooks/useReduceMotion";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { useAppStore } from "@/store/app-store";
+import { decodeState } from "@/services/state";
 
 const state = () => useAppStore.getState();
 
@@ -106,6 +107,23 @@ describe("store slices and hydration", () => {
     assert.equal(state().surface, "live");
     assert.equal(state().theme, "dark");
     assert.equal(state().hydrationVersion, 1);
+  });
+
+  it("does not enable persistence for absent or unreadable snapshot parts", () => {
+    const malformed = decodeState({
+      shell: { activeSurface: "future", paneVisibility: {}, paneSizes: {} },
+      settings: { theme: "future" },
+    });
+    state().applySnapshot(malformed);
+    assert.ok(malformed.unreadable.includes("shell"));
+    assert.ok(malformed.unreadable.includes("settings"));
+    assert.equal(state().hydrationApplied, true);
+    assert.equal(state().shellWriteEnabled, false);
+    assert.equal(state().settingsWriteEnabled, false);
+    state().setSurface("player");
+    state().setTheme("light");
+    assert.equal(state().shellWriteEnabled, false);
+    assert.equal(state().settingsWriteEnabled, false);
   });
 
   it("provides live, playback and library state for later surface waves", () => {

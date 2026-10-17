@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/Field";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { FACT_UNKNOWN, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
+import { initialAdminDraft, reconcileAdminDraft } from "@/lib/settings-admin-draft";
 import { cn } from "@/lib/cn";
 import type { StateSnapshot } from "@/services/state";
 
@@ -13,30 +14,33 @@ const FACT = "flex h-9 items-center font-mono text-sm text-muted";
 export interface AdminBackendSectionProps {
   /** The saved admin backend address. The interface shows it and never contacts the backend (`01` section 4.4). */
   readonly adminUrl: string;
+  readonly savedRevision: number;
   readonly backend: StateSnapshot["backend"];
   /** Saves the address; called on Enter or when the field is left, with the trimmed draft. */
-  readonly onCommit: (address: string) => void;
+  readonly onCommit: (address: string) => number;
 }
 
 /** Admin backend: the address, which saves through the fileserver, and the backend's state as read-only facts, unknown
  *  until the fileserver reports them. */
-export function AdminBackendSection({ adminUrl, backend, onCommit }: AdminBackendSectionProps) {
-  const [draft, setDraft] = useState(adminUrl);
-  const [sent, setSent] = useState(adminUrl);
-  const [edited, setEdited] = useState(false);
+export function AdminBackendSection({ adminUrl, savedRevision, backend, onCommit }: AdminBackendSectionProps) {
+  const [form, setForm] = useState(() => initialAdminDraft(adminUrl));
 
   useEffect(() => {
-    if (edited) return;
-    setDraft(adminUrl);
-    setSent(adminUrl);
-  }, [adminUrl, edited]);
+    setForm((current) => reconcileAdminDraft(current, adminUrl, savedRevision));
+  }, [adminUrl, savedRevision]);
 
   const commit = () => {
-    const next = addressToSend(draft, sent);
+    const next = addressToSend(form.draft, form.sent);
     if (next === null) return;
-    setSent(next);
-    setDraft(next);
-    onCommit(next);
+    const submittedRevision = onCommit(next);
+    setForm((current) => ({
+      ...current,
+      draft: next,
+      sent: next,
+      edited: true,
+      submittedRevision,
+      editedAfterSubmit: false,
+    }));
   };
 
   const fact = (label: string, tip: string, value: string) => (
@@ -52,10 +56,15 @@ export function AdminBackendSection({ adminUrl, backend, onCommit }: AdminBacken
           <Input
             aria-label="Admin backend address"
             className={cn(FIELD_CONTROL, "font-mono")}
-            value={draft}
+            value={form.draft}
             onChange={(event) => {
-              setEdited(true);
-              setDraft(event.target.value);
+              const draft = event.target.value;
+              setForm((current) => ({
+                ...current,
+                draft,
+                edited: true,
+                editedAfterSubmit: current.submittedRevision !== null,
+              }));
             }}
             onBlur={commit}
             onKeyDown={(event) => {

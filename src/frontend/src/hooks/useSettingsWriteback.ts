@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-schema";
 import { patchSettings } from "@/services/settings";
 import { useAppStore, type AppState } from "@/store/app-store";
-import { settingsPatchOf } from "@/store/settings-state";
+import { settingsOfFields, settingsPatchOf } from "@/store/settings-state";
 
 interface PendingSettings {
   readonly revision: number;
@@ -20,6 +20,9 @@ export function startSettingsWriteback(deps: SettingsWritebackDeps): () => void 
   let pending: PendingSettings | null = null;
   let writing = false;
   let active = true;
+  let queuedRevision = deps.getState().savedSettingsRevision;
+  let observed = settingsOfFields(deps.getState());
+  let writeEnabled = deps.getState().settingsWriteEnabled;
 
   const drain = async (): Promise<void> => {
     if (writing) return;
@@ -30,11 +33,13 @@ export function startSettingsWriteback(deps: SettingsWritebackDeps): () => void 
       try {
         const answer = await deps.write(write.patch);
         if (!active) break;
-        deps.getState().applyCommittedSettings(answer, write.revision);
+        deps.getState().applyCommittedSettings(answer, write.revision, write.patch);
+        observed = settingsOfFields(deps.getState());
         deps.getState().say("Settings saved.");
       } catch (error: unknown) {
         if (!active) break;
-        deps.getState().rejectSettings(write.revision);
+        deps.getState().rejectSettings(write.revision, write.patch);
+        observed = settingsOfFields(deps.getState());
         const sentence = error instanceof Error ? error.message : "The settings were not saved.";
         deps.getState().say(sentence, "warn");
       }
@@ -43,8 +48,24 @@ export function startSettingsWriteback(deps: SettingsWritebackDeps): () => void 
   };
 
   const queue = (state: AppState): void => {
-    if (!state.settingsWriteEnabled || state.settingsRevision <= state.savedSettingsRevision) return;
-    pending = { revision: state.settingsRevision, patch: settingsPatchOf(state) };
+    if (!state.settingsWriteEnabled) return;
+    if (!writeEnabled) {
+      writeEnabled = true;
+      observed = settingsOfFields(state);
+      queuedRevision = Math.max(queuedRevision, state.savedSettingsRevision);
+    }
+    if (state.settingsRevision <= queuedRevision) return;
+    const changed = settingsPatchOf(state, observed);
+    observed = settingsOfFields(state);
+    queuedRevision = state.settingsRevision;
+    if (Object.keys(changed).length === 0) {
+      state.markSettingsSaved(state.settingsRevision);
+      return;
+    }
+    pending = {
+      revision: state.settingsRevision,
+      patch: { ...pending?.patch, ...changed },
+    };
     void drain();
   };
 
