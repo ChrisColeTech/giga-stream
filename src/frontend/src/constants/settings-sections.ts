@@ -28,6 +28,9 @@ export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
 /** Why a row that reads the fileserver or the admin backend cannot be used right now. */
 export const NEEDS_FILESERVER = "The fileserver is not connected.";
 
+/** Why the licences button is disabled: no licence text is bundled with this build to open. */
+export const NO_LICENCE_TEXT = "No licence text is bundled with this build.";
+
 /** A fact the fileserver has not supplied yet, drawn in place of its value. */
 export const FACT_UNKNOWN = "—";
 

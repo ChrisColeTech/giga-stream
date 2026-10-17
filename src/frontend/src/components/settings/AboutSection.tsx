@@ -2,7 +2,7 @@ import { Database, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Group } from "@/components/ui/Group";
 import { Row } from "@/components/ui/Row";
-import { FACT_UNKNOWN, NEEDS_FILESERVER, TMDB_NOTICE } from "@/constants/settings-sections";
+import { FACT_UNKNOWN, NEEDS_FILESERVER, NO_LICENCE_TEXT, TMDB_NOTICE } from "@/constants/settings-sections";
 
 /** About: the version and build, the runtime mode and the licences, all drawn disabled until the fileserver supplies
  *  them, and the TMDB notice the terms require (`11` section 6). */
@@ -17,7 +17,7 @@ export function AboutSection() {
           <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Licences" tip="The licences of this app and of the data it uses.">
-          <Button variant="ghost" size="sm" disabled title={NEEDS_FILESERVER}>
+          <Button variant="ghost" size="sm" disabled title={NO_LICENCE_TEXT}>
             View licences
           </Button>
         </Row>
