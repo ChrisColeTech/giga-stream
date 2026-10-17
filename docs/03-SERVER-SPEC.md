@@ -23,7 +23,7 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 7.2c Playlist sync | B | **done** (`playlist-sync.test.ts`: parse, dedupe, address-rule refusals, create/update/removed match paths, prune, dry run, single-flight, schedule, enrichment, one revision bump per run; landed 2026-10-16 and driven over HTTP against a live iptv-org playlist — boot run, dry run, update repair, prune, hand-row isolation, restart persistence) |
 | 7.3 Stream and image addresses | B | **done** (the address rule; part of every channel change) |
 | 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7) |
-| 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the provider embed fields per title wait on `14`'s results |
+| 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the sources rule is specified (see 7.5, from `14`'s results) and lands with wave A of `22` |
 | 7.6 TMDB client | B | **done** (read token, ~5/s pacing, `429` backoff, merged in-flight requests) |
 | 7.6b The catalog sync | B | **done** (`titles.test.ts`: store fill-through, restart from store, single-flight admin sync, `titles.synced`, audit as `system`, `TMDB_SYNC_SCHEDULE` warm-up, no revision bump; `404` from TMDB is `title.not_found`) |
 | 7.7-7.9 Test channels, socket, storage | B | **done** |
@@ -265,6 +265,7 @@ interface TitleDetail {
   posterUrl?: string;        // image-cache addresses
   backdropUrl?: string;
   streamUrl?: string;        // a movie's stream address; the player loads it. Absent when no rule is set
+  sources?: TitleSource[];   // the playable provider sources, in preference order (section 7.5)
 }
 
 interface Episode {
@@ -275,6 +276,19 @@ interface Episode {
   runtimeMs?: number;
   stillUrl?: string;         // an image-cache address
   streamUrl?: string;        // this exact episode's stream address; absent when no rule is set
+  sources?: TitleSource[];   // this exact episode's playable sources (section 7.5)
+}
+
+interface TitleSource {
+  providerId: number;
+  name: string;              // display name ("VidSrc")
+  url: string;               // the embed address for this exact title or episode, https (7.3)
+  origin: string;            // the origin allowed to post messages
+  order: number;
+  startParam?: string;       // the resume parameter, seconds, when documented
+  subtitlesParam?: string;   // the subtitle-language parameter, when documented
+  frameOrigins?: string[];   // the nested-frame origins the player really uses (14 section 2.4)
+  messageShape?: "vidsrc-status" | "player-event";   // absent: no documented messages
 }
 ```
 
@@ -286,12 +300,13 @@ interface Episode {
 
 All three answer `503 backend.unreachable` while the backend cannot be reached. Related titles are TMDB's
 recommendations (`basis: "tmdb"`); when TMDB has none, TMDB titles of the same genre and year, then
-genre, then year. A title with no `streamUrl` keeps Play disabled, with the reason
+genre, then year. A title with neither `streamUrl` nor `sources` keeps Play disabled, with the reason
 `No stream source is set up for titles.` as its tooltip.
 
 - **With providers**, the fileserver reads active providers live from the backend (section 7.2b) when
-  a title or episode is requested, and attaches the provider data to the answer. The client then plays
-  through the provider's embedded player. The fileserver holds the providers in its in-memory view
+  a title or episode is requested, and attaches the title's **sources** (section 7.5) to the answer —
+  the provider records themselves, and their `api_key`, stop at the fileserver. The client then plays
+  through a source's embedded player. The fileserver holds the providers in its in-memory view
   like channels: read on demand, kept for the request, never stored.
 
 ### 3.7 Collections
@@ -605,9 +620,18 @@ public-read pattern as channels: the fileserver reads them live, and the admin i
 interface BackendProvider {
   id: number;
   name: string;
-  source: string;            // string identifying the external service
-  api_key: string;           // the provider's API credential
+  source: string;            // string identifying the external service; unique per provider
+  api_key: string;           // the provider's API credential; stops at the backend and fileserver
   is_active: boolean;        // whether the provider should be used
+  order: number;             // preference order for auto-selection and the picker's sort
+  family: "embed" | "stream";// how it plays (16 section 3)
+  movieTemplate?: string;    // embed address with {tmdbId} (embed family; null: no movie source)
+  episodeTemplate?: string;  // embed address with {tmdbId}, {season}, {episode}
+  startParam?: string;       // the documented start-position parameter, seconds
+  subtitlesParam?: string;   // the documented subtitle-language parameter
+  origin?: string;           // the origin allowed to post messages (embed family)
+  frameOrigins?: string[];   // the nested-frame origins the player really uses (14 section 2.4)
+  messageShape?: "vidsrc-status" | "player-event";   // the documented message shape, if any
   created_at: string;        // ISO-8601 timestamp
 }
 ```
@@ -616,7 +640,7 @@ interface BackendProvider {
 |---|---|---|
 | `GET /api/providers` | anyone | every provider: `{ items: BackendProvider[] }` |
 | `GET /api/providers/:providerId` | anyone | one provider |
-| `POST /api/providers` | owner, editor | `{ name, source, api_key }`; answers `201` with the provider |
+| `POST /api/providers` | owner, editor | `{ name, source, api_key, order?, family, movieTemplate?, episodeTemplate?, startParam?, subtitlesParam?, origin?, frameOrigins?, messageShape? }`; answers `201` with the provider |
 | `PUT /api/providers/:providerId` | owner, editor | changes any of those fields |
 | `DELETE /api/providers/:providerId` | owner, editor | removes it; answers `{ id }` |
 
@@ -624,6 +648,13 @@ An unknown id is `404 provider.not_found`; an invalid field is `422 provider.inv
 Each change emits `providers.changed` and writes an audit entry. Provider changes raise the backend
 revision by one, so the fileserver's provider cache is invalidated automatically by the existing socket
 change notification.
+
+**Seeding.** `src/backend/scripts/seed-providers.ts` is the seeder: run by hand, it signs in with the
+bootstrap owner, skips when any provider exists, and creates the catalog through these routes — every
+embed host of `18` section 2 with its templates and parameters as captured (TV shapes marked verified or
+presumed there), and the stream-family records with their own `source` values and no templates. A provider
+of the stream family produces no source until one is proven playable without a resolve step (`00`
+section 5).
 
 ### 7.2c The playlist sync
 
@@ -717,10 +748,13 @@ a template that is not set leaves `streamUrl` absent. Each address must pass 7.3
   `http://127.0.0.1:8097/live/fx-sports/master.m3u8` and every episode at
   `http://127.0.0.1:8097/live/fx-kids/master.m3u8`), so any TMDB title plays a test stream in the app's
   own `<video>` and Player can be built and checked end to end.
-- **With providers**, a title plays in the provider's embedded player, not from a stream address (owner,
-  2026-10-16; `12` section 7). The fields that carry it (the provider, its embed address and origin, in
-  order of preference, per title and episode) are written here from the results of `14`, before phase 7
-  of `08` builds title playback.
+- **With providers**, a title plays in a provider's embedded player, not from a stream address (owner,
+  2026-10-16; `12` section 7; `14`). The backend fills, on every title detail and every episode it
+  answers, one `TitleSource` (section 3.6) per active provider of the embed family whose template applies
+  — the movie template with `{tmdbId}` filled for a movie, the episode template with `{tmdbId}`, `{season}`
+  and `{episode}` for an episode — ordered by `order` then id. A provider without a template for the kind,
+  or of the stream family, yields no source. Each address must pass 7.3. The sources are what playback
+  uses; the stream rule above stays the development lane, and plays when a title carries no sources.
 
 ### 7.6 TMDB
 

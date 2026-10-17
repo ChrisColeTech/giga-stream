@@ -491,9 +491,15 @@ one sentence and **Retry**, clear of the control bar. The stage's verbs are its 
 - A local file plays through the fileserver's Range route; a title with a stream address (in development,
   the test server) plays from it. Neither is converted or relayed.
 - **A provider's title plays in the provider's embedded player**, hosted in the stage in place of the
-  `<video>` (owner, 2026-10-16). What the stage shows around it, how Resume, progress, Fullscreen and Retry
-  work through the provider's documented parameters and messages, and how the next provider is tried when
-  one fails, are written here from the results of `14` before phase 9 of `08` builds it.
+  `<video>` (owner, 2026-10-16). The stage hosts the iframe of `22` section 3.4a (the PoC's proven frame:
+  allow list, referrer policy, the nested-frame guard, clean stop). Resume passes the watched seconds
+  through the source's start parameter; progress comes from the source's documented messages, on the same
+  cadence as the `<video>`'s; Retry re-creates the frame with a fresh address. When the title has two or
+  more playable sources (its provider sources, and its stream address if any, listed last as `App player`),
+  the stage toolbar gains a **Source** control (owner, 2026-10-17) that lists them and switches: picking one
+  clean-stops the current frame and hosts the next. With no pick, the first source by preference order
+  plays; when one source fails to start, the next in order is offered, not played unasked. A source without
+  documented messages plays but reports no progress.
 
 ### 5.4 Details (right)
 
@@ -671,7 +677,8 @@ collections**; a Latest scope or an invented Trending sort; text-only poster car
 window; editing or timeline controls.
 
 **Player:** a start prompt with no control; a transport that does nothing; a floating or external player; a
-whole series presented as an episode; a source or provider control; related titles as text rows.
+whole series presented as an episode; provider administration or a credential in the interface (the stage's
+Source control of 5.3 is the one exception); related titles as text rows.
 
 **Windows:** a centred modal card, a backdrop of a feature's own, a focus trap, a footer Cancel button, a
 commit action in a toolbar, a raw path or credential.

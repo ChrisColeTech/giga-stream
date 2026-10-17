@@ -12,11 +12,13 @@ corrected first.
 
 ## 0. What the source says today (checked 2026-10-17)
 
-- **Frontend.** Phase 1 is complete: every surface drawn, controls local or stubbed. Every service file returns
+- **Frontend.** Phase 1 is complete (with `25`'s visual-gap waves on top: the events drawer has real rows fed by
+  `say()`, the store carries a library request, preferences apply at once and save only the admin address —
+  VG-005, VG-063, VG-082), and phase 2 has not started: every service file returns
   `notConnected()` synchronously (`services/not-connected.ts`); `state`, `shell-state`, `ndjson`, `scan-stream`,
   `titles`, `favorites`, `watch`, `local-media`, `desktop` and `stream-player` do not exist yet. The store holds
-  no server state of any kind; the Statusbar has **no connection word** yet; the events drawer is a shimmer
-  placeholder; the stage renders a bare `<video>` with no source; `lib/player-view.ts` reads fixtures at module
+  no server state beyond that; the Statusbar has **no connection word** yet; the stage renders a bare `<video>`
+  with no source; `lib/player-view.ts` reads fixtures at module
   scope. `hls.js`, `zod` and the Radix menu are already dependencies; tests run on `node:test` through `tsx`.
   Vite serves 5171 and proxies `/api` to 8090.
 - **Fileserver.** Every route of `03` part A is built and tested (195 tests across the repo). It attaches the
@@ -309,9 +311,12 @@ cross-origin iframe is visible; in Electron the ad blocker reports what it **blo
 (`session.webRequest` is not used); `<img>` loads (posters, logos) are not logged. What is seeable is logged; what
 is not, is not claimed.
 
-The events log itself is `lib/event-log.ts` (append, cap, clear, filter — pure, unit-tested) plus a thin store
-slice for the drawer's open state; services, the stream player, the embed host and the guard receiver all append
-through it. Nothing polls.
+The events log exists as of `25` wave 1 (VG-005): the store holds `events` rows, `clearEvents`, and `say()`
+appends every warn or error notice as a row. This plan extends that log — it does not build a parallel one:
+`types/events.ts` gains the `Provider` area, the slice gains one `logEvent` action (append, id, the 200-row cap)
+fed by `services/api.ts`, the stream player, the embed host and the guard receiver, and the pure cap/format
+helper lives under `lib/` (named for the domain), unit-tested. The severity filter of `06` §7 filters these rows;
+Clear empties the list only. Nothing polls.
 
 ### 3.8 The ad blocker
 
@@ -362,7 +367,7 @@ So `02` section 2.1 is amended first, to add a `library` slice for collections a
 | `store/slices/library-slice.ts` | collections, the views' counts, the current library query |
 
 The store performs no I/O and holds no promise, timer, DOM node or media element (`02` section 2.1). The events
-log is not store state: it is `lib/event-log.ts`, and the drawer subscribes.
+rows live in the store as built (`25` VG-005) and grow by the one `logEvent` action of §3.7.
 
 ## 5. Hydration and write-back
 
