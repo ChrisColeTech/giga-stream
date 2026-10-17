@@ -7,19 +7,21 @@ import {
   removeCollection,
   removeFolder,
   removeMember,
-  renameCollection,
   replaceFolder,
   rescanFolder,
+  updateCollection,
 } from "@/services/collections";
 import type { ServiceResult } from "@/services/not-connected";
 import { useAppStore } from "@/store/app-store";
+import type { CollectionType } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 
 /** The Collections window's verbs. Each calls its fileserver method and answers whether it succeeded. A refusal is reported
  *  once on the notice line and changes nothing (`04` section 6). */
 export interface CollectionVerbs {
-  readonly create: (name: string) => boolean;
-  readonly rename: (collectionId: string, name: string) => boolean;
+  readonly create: (name: string, type: CollectionType) => boolean;
+  /** Saves the name and the type together, as the Details group's one Save does. */
+  readonly update: (collectionId: string, name: string, type: CollectionType) => boolean;
   readonly remove: (collectionId: string) => boolean;
   readonly attach: (collectionId: string) => boolean;
   /** Picks a folder for a collection being created. */
@@ -39,8 +41,8 @@ export function useCollectionVerbs(): CollectionVerbs {
       return result.ok;
     };
     return {
-      create: (name) => report(createCollection(name)),
-      rename: (collectionId, name) => report(renameCollection(collectionId, name)),
+      create: (name, type) => report(createCollection(name, type)),
+      update: (collectionId, name, type) => report(updateCollection(collectionId, { name, type })),
       remove: (collectionId) => report(removeCollection(collectionId)),
       attach: (collectionId) => report(attachFolder(collectionId)),
       chooseFolder: () => report(chooseFolder()),

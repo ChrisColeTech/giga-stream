@@ -293,6 +293,7 @@ genre, then year. A title with no `streamUrl` keeps Play disabled, with the reas
 interface Collection {
   id: string;
   name: string;
+  type: "movie" | "tv" | "local";   // what it holds, the owner's tag
   itemCount: number;         // manual members plus the files of its folders
   folders: Folder[];
   scanning: boolean;         // any of its folders is being scanned
@@ -304,8 +305,8 @@ interface Collection {
 | Route | Behaviour |
 |---|---|
 | `GET /api/collections` | every collection, alphabetical |
-| `POST /api/collections` | `{ name }`; answers `201` with it |
-| `PATCH /api/collections/:collectionId` | `{ name }` |
+| `POST /api/collections` | `{ name, type }`; answers `201` with it |
+| `PATCH /api/collections/:collectionId` | `{ name?, type? }` |
 | `DELETE /api/collections/:collectionId` | removes it, its members, its folders and their file records; files on disk are never touched |
 | `PUT /api/collections/:collectionId/items` | body `ItemRef`; adds a manual member (adding one already there is no change) |
 | `DELETE /api/collections/:collectionId/items/:kind/:itemId` | removes a manual member |

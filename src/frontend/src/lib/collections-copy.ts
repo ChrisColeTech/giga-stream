@@ -1,4 +1,12 @@
-import type { CollectionRow } from "@/types/collection";
+import type { CollectionRow, CollectionType } from "@/types/collection";
+
+/** A collection's type, as the one-of pill choice and the index column read it. */
+export const TYPE_CHOICES: ReadonlyArray<{ value: CollectionType; label: string }> = [
+  { value: "movie", label: "Movies" },
+  { value: "tv", label: "TV" },
+  { value: "local", label: "Local" },
+];
+export const TYPE_LABEL: Readonly<Record<CollectionType, string>> = { movie: "Movies", tv: "TV", local: "Local" };
 
 /* The Collections window's words that carry behaviour: the reasons a control is disabled, the consequence a two-step names,
  * and the field limits. Nothing is printed under a control (`06` section 2, rule 3). */

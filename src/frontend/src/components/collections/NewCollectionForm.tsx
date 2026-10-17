@@ -3,23 +3,26 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { Actions, FIELD_CONTROL, Group, Row } from "@/components/ui/Form";
+import { Segmented } from "@/components/ui/Segmented";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
-import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON } from "@/lib/collections-copy";
+import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";
+import type { CollectionType } from "@/types/collection";
 
 /** The labels the form's rows carry, so the index fixes its label column once. */
-export const NEW_COLLECTION_LABELS = ["Name", "Folder"] as const;
+export const NEW_COLLECTION_LABELS = ["Name", "Type", "Folder"] as const;
 
-/** The create form, as Sensenova's New dataset form (pages/datasets/NewDatasetForm.tsx): a name, and an optional folder
- *  to start from, chosen through the native picker on the row's trailing edge; Create ends the group. Create is
- *  disabled only while the name is blank; a created collection clears the field, a refused one keeps it. Delta: no
- *  placeholder text (banned in Giga Stream). */
+/** The create form, as Sensenova's New dataset form (pages/datasets/NewDatasetForm.tsx): a name, its type (Movies, TV
+ *  or Local, a one-of pill choice), and an optional folder to start from, chosen through the native picker on the row's
+ *  trailing edge; Create ends the group. Create is disabled only while the name is blank; a created collection clears
+ *  the field, a refused one keeps it. Delta: no placeholder text (banned in Giga Stream). */
 export function NewCollectionForm() {
   const verbs = useCollectionVerbs();
   const [name, setName] = useState("");
+  const [type, setType] = useState<CollectionType>("movie");
   const block = createBlock(name);
   const create = () => {
-    if (block === undefined && verbs.create(name.trim())) setName("");
+    if (block === undefined && verbs.create(name.trim(), type)) setName("");
   };
   return (
     <Group icon={FolderInput} title="New collection">
@@ -35,6 +38,9 @@ export function NewCollectionForm() {
             if (event.key === "Enter" && !event.nativeEvent.isComposing) create();
           }}
         />
+      </Row>
+      <Row label="Type" tip="What the collection holds: movies, TV series, or your own local files.">
+        <Segmented aria-label="Collection type" options={TYPE_CHOICES} value={type} onChange={setType} />
       </Row>
       <Row
         label="Folder"

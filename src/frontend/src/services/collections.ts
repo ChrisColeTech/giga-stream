@@ -1,13 +1,14 @@
+import type { CollectionType } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import { notConnected, type ServiceResult } from "./not-connected";
 
-/** Creates a collection (`03` section 3.7). Phase 1 stub. */
-export function createCollection(_name: string): ServiceResult {
+/** Creates a collection with its name and type (`03` section 3.7). Phase 1 stub. */
+export function createCollection(_name: string, _type: CollectionType): ServiceResult {
   return notConnected();
 }
 
-/** Renames a collection (`03` section 3.7). Phase 1 stub. */
-export function renameCollection(_collectionId: string, _name: string): ServiceResult {
+/** Saves a collection's name and type (`03` section 3.7). Phase 1 stub. */
+export function updateCollection(_collectionId: string, _change: { name: string; type: CollectionType }): ServiceResult {
   return notConnected();
 }
 

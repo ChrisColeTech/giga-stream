@@ -1,8 +1,12 @@
-/** One collection as the manager lists it: its totals (every item), its manual members and the items its attached folders
- *  hold, and the aggregate scan state of those folders. */
+/** What a collection holds, the owner's tag (`03` section 3.7): movies, TV, or local files. */
+export type CollectionType = "movie" | "tv" | "local";
+
+/** One collection as the manager lists it: its type, its totals (every item), its manual members and the items its
+ *  attached folders hold, and the aggregate scan state of those folders. */
 export interface CollectionRow {
   readonly id: string;
   readonly name: string;
+  readonly type: CollectionType;
   readonly total: number;
   readonly manual: number;
   readonly folders: number;

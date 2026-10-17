@@ -105,8 +105,8 @@ describe("continue watching, counts and collections", () => {
 
   it("counts every view and every collection", () => {
     const counts = viewCounts(ALL, [
-      { id: "c-x", name: "X", total: 0, manual: 0, folders: 0, scan: "idle" },
-      { id: "c-y", name: "Y", total: 0, manual: 0, folders: 0, scan: "idle" },
+      { id: "c-x", name: "X", type: "movie", total: 0, manual: 0, folders: 0, scan: "idle" },
+      { id: "c-y", name: "Y", type: "movie", total: 0, manual: 0, folders: 0, scan: "idle" },
     ]);
     assert.deepEqual(
       { all: counts.all, history: counts.history, favorites: counts.favorites },
@@ -118,8 +118,8 @@ describe("continue watching, counts and collections", () => {
 
   it("sorts collections by name", () => {
     const rows = sortedCollections([
-      { id: "2", name: "Zed", total: 0, manual: 0, folders: 0, scan: "idle" },
-      { id: "1", name: "Alpha", total: 0, manual: 0, folders: 0, scan: "idle" },
+      { id: "2", name: "Zed", type: "movie", total: 0, manual: 0, folders: 0, scan: "idle" },
+      { id: "1", name: "Alpha", type: "movie", total: 0, manual: 0, folders: 0, scan: "idle" },
     ]);
     assert.deepEqual(rows.map((row) => row.name), ["Alpha", "Zed"]);
   });

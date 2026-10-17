@@ -36,7 +36,7 @@ function item(
 }
 
 function collection(id: string, name: string): CollectionRow {
-  return { id, name, total: 0, manual: 0, folders: 0, scan: "idle" };
+  return { id, name, type: "movie", total: 0, manual: 0, folders: 0, scan: "idle" };
 }
 
 function named(shelves: readonly Shelf[]): string[] {

@@ -3,9 +3,9 @@ import type { ItemRef } from "@/types/library";
 
 /** PHASE 1 FIXTURE: the collections the Library rail and the Collections window draw (`03` section 3.7). */
 export const COLLECTION_ROWS: readonly CollectionRow[] = [
-  { id: "c-weekend", name: "Weekend picks", total: 4, manual: 4, folders: 0, scan: "idle" },
-  { id: "c-local", name: "Local films", total: 6, manual: 2, folders: 1, scan: "scanning" },
-  { id: "c-kids", name: "Kids", total: 0, manual: 0, folders: 0, scan: "idle" },
+  { id: "c-weekend", name: "Weekend picks", type: "movie", total: 4, manual: 4, folders: 0, scan: "idle" },
+  { id: "c-local", name: "Local films", type: "local", total: 6, manual: 2, folders: 1, scan: "scanning" },
+  { id: "c-kids", name: "Kids", type: "tv", total: 0, manual: 0, folders: 0, scan: "idle" },
 ];
 
 /** PHASE 1 FIXTURE: each collection's manual members, as item references. */
