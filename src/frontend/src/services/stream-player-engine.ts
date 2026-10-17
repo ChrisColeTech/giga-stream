@@ -9,6 +9,7 @@ export interface StreamLevel {
 export interface StreamTrack {
   readonly lang?: string;
   readonly name: string;
+  readonly default?: boolean;
 }
 
 export interface StreamEngine {

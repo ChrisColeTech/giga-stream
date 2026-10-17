@@ -10,13 +10,15 @@ import { HLS_ENGINE_FACTORY, type StreamEngine, type StreamEngineFactory } from 
 const HLS_MIME = "application/vnd.apple.mpegurl";
 
 const hostOf = (url: string): string => new URL(url).host;
-const matchingTrack = (tracks: readonly { readonly lang?: string }[], language: string | null): number =>
-  language === null ? -1 : tracks.findIndex((track) => track.lang?.toLowerCase() === language.toLowerCase());
+const matchingTrack = (tracks: readonly { readonly lang?: string }[], language: string): number =>
+  tracks.findIndex((track) => track.lang?.toLowerCase() === language.toLowerCase());
 
 export class StreamPlayerController {
   private engine: StreamEngine | null = null;
   private attachment: StreamAttachment | null = null;
   private preferences: StreamPreferences;
+  private defaultAudioTrack: number | null = null;
+  private audioOverrideApplied = false;
   private readonly video: HTMLVideoElement;
   private readonly callbacks: StreamPlayerCallbacks;
   private readonly engines: StreamEngineFactory;
@@ -40,6 +42,8 @@ export class StreamPlayerController {
 
   attach(attachment: StreamAttachment): void {
     this.detachMedia();
+    this.defaultAudioTrack = null;
+    this.audioOverrideApplied = false;
     this.attachment = attachment;
     this.callbacks.onFacts({});
     this.callbacks.onState("loading");
@@ -109,9 +113,31 @@ export class StreamPlayerController {
     const quality = this.preferences.videoQuality;
     engine.setLowLatency(this.preferences.lowLatency);
     engine.currentLevel = quality === "auto" ? -1 : quality === "saver" ? 0 : engine.levels.length - 1;
-    const audio = matchingTrack(engine.audioTracks, this.preferences.audioLanguage);
-    engine.audioTrack = audio;
-    engine.subtitleTrack = matchingTrack(engine.subtitleTracks, this.preferences.subtitleLanguage);
+    this.applyAudioPreference(engine);
+    const subtitle = this.preferences.subtitleLanguage;
+    engine.subtitleTrack = subtitle === null ? -1 : matchingTrack(engine.subtitleTracks, subtitle);
+  }
+
+  private applyAudioPreference(engine: StreamEngine): void {
+    if (this.defaultAudioTrack === null) {
+      const publishedDefault = engine.audioTracks.findIndex((track) => track.default === true);
+      if (publishedDefault >= 0) this.defaultAudioTrack = publishedDefault;
+      else if (engine.audioTrack >= 0) this.defaultAudioTrack = engine.audioTrack;
+      else if (engine.audioTracks.length > 0) this.defaultAudioTrack = 0;
+    }
+    const requested = this.preferences.audioLanguage;
+    if (requested === null) {
+      if (this.audioOverrideApplied && this.defaultAudioTrack !== null) {
+        engine.audioTrack = this.defaultAudioTrack;
+      }
+      this.audioOverrideApplied = false;
+      return;
+    }
+    const match = matchingTrack(engine.audioTracks, requested);
+    if (match >= 0) {
+      engine.audioTrack = match;
+      this.audioOverrideApplied = true;
+    }
   }
 
   private applyNativeCaptions(): void {

@@ -7,15 +7,16 @@ import type {
   StreamEngineFactory,
 } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";
-import type { StreamFacts, StreamStageState } from "@/types/stream-player";
+import type { StreamFacts, StreamPreferences, StreamStageState } from "@/types/stream-player";
 
 class FakeEngine implements StreamEngine {
   levels = [{ width: 640, height: 360, bitrate: 800_000 }, { width: 1280, height: 720, bitrate: 2_500_000 }];
-  audioTracks = [{ name: "English", lang: "en" }, { name: "Spanish", lang: "es" }];
+  audioTracks = [{ name: "English", lang: "en", default: true }, { name: "Spanish", lang: "es" }];
   subtitleTracks = [{ name: "English", lang: "en" }];
   liveSyncPosition = 12;
   currentLevel = -1;
-  audioTrack = 0;
+  private selectedAudioTrack = 0;
+  audioAssignments: number[] = [];
   subtitleTrack = -1;
   lowLatency = false;
   attached = false;
@@ -25,6 +26,11 @@ class FakeEngine implements StreamEngine {
   level?: () => void;
   fragmentError?: (reason: string) => void;
   fatal?: (reason: string) => void;
+  get audioTrack(): number { return this.selectedAudioTrack; }
+  set audioTrack(value: number) {
+    this.selectedAudioTrack = value;
+    this.audioAssignments.push(value);
+  }
   attach(): void { this.attached = true; }
   load(url: string): void { this.loaded = url; }
   onManifest(callback: () => void): void { this.manifest = callback; }
@@ -96,14 +102,14 @@ const preferences = {
   lowLatency: true,
 };
 
-function harness(video: FakeVideo, supported = true) {
+function harness(video: FakeVideo, supported = true, initialPreferences: StreamPreferences = preferences) {
   const engine = new FakeEngine();
   const factory: StreamEngineFactory = { supported: () => supported, create: () => engine };
   const states: Array<{ state: StreamStageState; reason?: string }> = [];
   const facts: StreamFacts[] = [];
   const events: EventInput[] = [];
   const refusals: string[] = [];
-  const controller = new StreamPlayerController(video.element, preferences, {
+  const controller = new StreamPlayerController(video.element, initialPreferences, {
     onState: (state, reason) => states.push({ state, reason }),
     onFacts: (value) => facts.push(value),
     onEvent: (event) => events.push(event),
@@ -123,11 +129,35 @@ describe("StreamPlayerController", () => {
     test.engine.manifest?.();
     assert.equal(test.engine.currentLevel, 1);
     assert.equal(test.engine.audioTrack, 1);
+    assert.deepEqual(test.engine.audioAssignments, [1]);
     assert.equal(test.engine.subtitleTrack, 0);
     assert.equal(test.engine.lowLatency, true);
     video.emit("loadeddata");
     assert.equal(test.states.at(-1)?.state, "ready");
     assert.equal(test.events[0]?.identity, "media.test");
+  });
+
+  it("leaves hls.js default audio untouched for null or an unavailable language", () => {
+    const nullAudio = harness(fakeVideo(), true, { ...preferences, audioLanguage: null });
+    nullAudio.controller.attach({ url: "https://media.test/null.m3u8", autoplay: false, userInitiated: false });
+    nullAudio.engine.manifest?.();
+    assert.deepEqual(nullAudio.engine.audioAssignments, []);
+    assert.equal(nullAudio.engine.audioTrack, 0);
+
+    const unavailable = harness(fakeVideo(), true, { ...preferences, audioLanguage: "fr" });
+    unavailable.controller.attach({ url: "https://media.test/fr.m3u8", autoplay: false, userInitiated: false });
+    unavailable.engine.manifest?.();
+    assert.deepEqual(unavailable.engine.audioAssignments, []);
+    assert.equal(unavailable.engine.audioTrack, 0);
+  });
+
+  it("restores the valid hls.js default when an audio override is cleared", () => {
+    const test = harness(fakeVideo());
+    test.controller.attach({ url: "https://media.test/live.m3u8", autoplay: false, userInitiated: false });
+    test.engine.manifest?.();
+    test.controller.updatePreferences({ ...preferences, audioLanguage: null });
+    assert.deepEqual(test.engine.audioAssignments, [1, 0]);
+    assert.equal(test.engine.audioTrack, 0);
   });
 
   it("uses native HLS, obeys unattended autoplay and never force-mutes a refusal", async () => {
