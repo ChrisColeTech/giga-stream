@@ -2,6 +2,8 @@ import { Library } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
 import { Group } from "@/components/ui/Group";
+import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import type { CollectionRow } from "@/types/collection";
 import { ScanState } from "./ScanState";
 
@@ -37,8 +39,8 @@ export interface CollectionsTableProps {
   readonly onSelect: (id: string) => void;
 }
 
-/** Every collection with its totals, manual and folder counts and aggregate scan state. The table is the empty state
- *  when there are none: a header and nothing else. */
+/** Every collection with its totals, manual and folder counts and aggregate scan state. With none, the table is drawn as
+ *  skeleton rows, not as an empty header (`06` section 2, rule 1). */
 export function CollectionsTable({ rows, onSelect }: CollectionsTableProps) {
   return (
     <Group
@@ -48,7 +50,11 @@ export function CollectionsTable({ rows, onSelect }: CollectionsTableProps) {
       tip="Every collection, with its totals and scan state."
       last
     >
-      <DataTable label="Collections" columns={collectionColumns(onSelect)} rows={rows} rowKey={(row) => row.id} />
+      {rows.length === 0 ? (
+        <SkeletonRows count={SKELETON_ROW_COUNT} />
+      ) : (
+        <DataTable label="Collections" columns={collectionColumns(onSelect)} rows={rows} rowKey={(row) => row.id} />
+      )}
     </Group>
   );
 }
