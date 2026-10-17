@@ -53,28 +53,29 @@ export function TitleInfoWindow() {
 
   return (
     <ChildWindow spec={SPEC} onClose={closeOverlay}>
+      {/* The strip sits directly under the header and above the scroller: only the body scrolls, nothing is at the foot. */}
+      <Actions pinned left={<>
+        <Button variant="ghost" aria-pressed={item?.favorite === true} disabled={item === undefined}
+          title={item === undefined ? LIBRARY_COPY.noItem : undefined}
+          onClick={() => { if (item !== undefined) void changeFavourite(item.ref, !item.favorite); }}>
+          <Star className={item?.favorite === true ? "text-accent-text" : undefined}
+            fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />
+          {item?.favorite === true ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
+        </Button>
+        <Button variant="ghost" disabled={item === undefined} title={item === undefined ? LIBRARY_COPY.noItem : undefined}
+          onClick={(event) => {
+            if (item !== undefined) openMembershipMenu(menuEventBelow(event.currentTarget), item, collections);
+          }}>
+          <FolderPlus aria-hidden /> Collections
+        </Button>
+      </>}>
+        <Button variant="primary" disabled={!playable} title={unavailable}
+          onClick={() => { if (item !== undefined && playable) playRef(item.ref); }}>
+          <Play aria-hidden /> {item?.kind === "tv" ? "Open in Player" : "Play"}
+        </Button>
+      </Actions>
       <Workspace labels={TITLE_INFO_LABELS}>
         {item === undefined ? <SkeletonRows count={6} /> : <TitleInfoBody item={item} detail={detail} />}
-        <Actions pinned left={<>
-          <Button variant="ghost" aria-pressed={item?.favorite === true} disabled={item === undefined}
-            title={item === undefined ? LIBRARY_COPY.noItem : undefined}
-            onClick={() => { if (item !== undefined) void changeFavourite(item.ref, !item.favorite); }}>
-            <Star className={item?.favorite === true ? "text-accent-text" : undefined}
-              fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />
-            {item?.favorite === true ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
-          </Button>
-          <Button variant="ghost" disabled={item === undefined} title={item === undefined ? LIBRARY_COPY.noItem : undefined}
-            onClick={(event) => {
-              if (item !== undefined) openMembershipMenu(menuEventBelow(event.currentTarget), item, collections);
-            }}>
-            <FolderPlus aria-hidden /> Collections
-          </Button>
-        </>}>
-          <Button variant="primary" disabled={!playable} title={unavailable}
-            onClick={() => { if (item !== undefined && playable) playRef(item.ref); }}>
-            <Play aria-hidden /> {item?.kind === "tv" ? "Open in Player" : "Play"}
-          </Button>
-        </Actions>
       </Workspace>
     </ChildWindow>
   );

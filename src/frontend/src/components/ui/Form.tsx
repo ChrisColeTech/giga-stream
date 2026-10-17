@@ -264,13 +264,12 @@ export function Wide({ children, className, fill = false }: { children: ReactNod
 }
 
 /** The form's end: ghost actions left, the one filled accent right. */
-/** `pinned` keeps the row against the bottom of a scrolling pane instead of sitting at the end of the content
- *  (owner, 2026-09-07: "you buried those action buttons at the bottom"). The overlays are where this matters —
- *  crop and the watermark remover already pin theirs outside the scroller, so a long step's verb is reachable
- *  without scrolling to find it. It cancels the workspace's own `px-6` so the bar spans the pane edge to edge. */
+/** `pinned` makes the row a fixed strip to be placed OUTSIDE the scroller, directly above a `Workspace` (owner,
+ *  2026-09-07: "you buried those action buttons at the bottom"; 2026-10-17: Title information's strip moves from the
+ *  foot to the top). It carries the workspace's own `px-6` and a hairline under it, so the body scrolls beneath it. */
 export function Actions({ left, children, className, pinned = false }: { left?: ReactNode; children: ReactNode; className?: string; pinned?: boolean }) {
   return (
-    <div className={cn('flex items-center gap-2 pt-1', pinned && 'sticky bottom-0 z-10 -mx-6 mt-2 border-t border-hair bg-surface px-6 pt-2 pb-2', className)}>
+    <div className={cn('flex items-center gap-2 pt-1', pinned && 'flex-none border-b border-hair bg-surface px-6 pt-2 pb-2', className)}>
       {left}
       <span className="flex-1" />
       {children}
