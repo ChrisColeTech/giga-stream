@@ -1,4 +1,5 @@
-import { NavGroup, NavItem } from "@/components/ui/NavRail";
+import { NavGroup } from "@giga/ui/lists/NavGroup";
+import { NavItem } from "@giga/ui/lists/NavItem";
 import type { SourceId, ViewCounts } from "@/lib/library-query";
 
 const VIEWS = [

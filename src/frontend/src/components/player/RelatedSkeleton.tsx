@@ -1,4 +1,4 @@
-import { SHIMMER } from "@/components/ui/SkeletonCards";
+import { SHIMMER_TILE as SHIMMER } from "@giga/ui/lib/shimmer";
 import { cn } from "@giga/ui/lib/cn";
 
 /** Matches the recommendation image and caption geometry without inventing title text. */

@@ -4,7 +4,7 @@ import { Row } from "@giga/ui/form/Row";
 import { Wide } from "@giga/ui/form/Wide";
 import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PosterImage } from "@/components/ui/PosterImage";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { cn } from "@giga/ui/lib/cn";
 import { durationLabel, identityLine, ratingLabel, seasonsLabel } from "@/lib/library-facts";
 import { LIBRARY_COPY } from "@/lib/library-copy";

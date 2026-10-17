@@ -1,4 +1,5 @@
-import { cn } from '@giga/ui/lib/cn'
+import { cn } from '../lib/cn'
+import { SHIMMER } from '../lib/shimmer'
 
 /* Every waiting OR empty region wears these (owner, 2026-08-06: "skeletons
  * everywhere for the empty states, and remove the text labels" — `StateLine`
@@ -11,15 +12,6 @@ import { cn } from '@giga/ui/lib/cn'
  * lands, so nothing shifts. A skeleton whose height does not match the row it
  * precedes CAUSES the jump it exists to prevent, so this file and
  * `generate/QueueRow.tsx` change together, always. */
-
-/** The shimmer block itself. Exported because the real queue row wears it too:
- *  a thumbnail slot with a picture on the way is a shimmer, and a slot with no
- *  picture is a glyph — two different facts that must not render the same
- *  (doc 03 §Loading and Empty). One definition, so the skeleton and the row it
- *  stands in for cannot drift apart. */
-export const SHIMMER =
-  'block h-[9px] rounded-ctl bg-[length:200%_100%] animate-skel-shimmer ' +
-  'bg-[linear-gradient(100deg,var(--color-hair)_30%,var(--color-border)_50%,var(--color-hair)_70%)]'
 
 /** A shimmer block is shorter than the text it stands in for, so a row built
  *  only from blocks lands shorter than the real row and everything jumps when

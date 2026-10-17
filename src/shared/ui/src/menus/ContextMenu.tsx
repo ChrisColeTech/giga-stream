@@ -1,7 +1,7 @@
 import * as Menu from '@radix-ui/react-dropdown-menu'
 import { useEffect, useRef } from 'react'
 
-import type { MenuAnchor, MenuItem } from '@/types/menu'
+import type { MenuAnchor, MenuItem } from './types'
 import { ContextMenuRow, MENU_PANEL } from './ContextMenuRow'
 import { ContextMenuSubmenu } from './ContextMenuSubmenu'
 

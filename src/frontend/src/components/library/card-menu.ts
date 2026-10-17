@@ -4,7 +4,7 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { openMenu } from "@/lib/menu";
 import type { CollectionRow } from "@/types/collection";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@giga/ui/menus/types";
 import type { MembershipSource } from "@/types/library";
 import { useAppStore } from "@/store/app-store";
 import { changeFavourite, changeMembership, loadMemberships, playRef } from "./library-service";

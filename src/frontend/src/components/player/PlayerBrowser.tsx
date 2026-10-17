@@ -1,7 +1,7 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { EpisodeRow } from "@/components/player/EpisodeRow";
 import { Select } from "@giga/ui/controls/Select";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { progressRatio } from "@/lib/library-facts";
 import {

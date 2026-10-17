@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@giga/ui/lib/cn";
+import { cn } from "../lib/cn";
 
 export interface Column<T> {
   readonly key: string;

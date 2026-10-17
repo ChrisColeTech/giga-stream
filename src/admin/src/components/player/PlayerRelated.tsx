@@ -1,5 +1,5 @@
 import { RelatedCard } from "@/components/player/RelatedCard";
-import { ThumbnailRailSkeleton } from "@/components/ui/SkeletonCards";
+import { ThumbnailRailSkeleton } from "@giga/ui/lists/ThumbnailRailSkeleton";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { sameRef } from "@/lib/player-session";
 import type { PlayerView } from "@/lib/player-view";

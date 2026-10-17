@@ -4,7 +4,7 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { openMenu } from "@/lib/menu";
 import type { CollectionRow } from "@/types/collection";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@giga/ui/menus/types";
 import { changeFavourite, changeMembership, playRef } from "./library-service";
 
 /** What openMenu reads from a pointer event: the anchor, and the two calls that keep a parent's handler out of it. */

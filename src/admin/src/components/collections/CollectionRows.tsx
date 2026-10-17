@@ -1,7 +1,8 @@
 import { Library } from "lucide-react";
 import { Group } from "@giga/ui/form/Group";
 import { Wide } from "@giga/ui/form/Wide";
-import { SHIMMER, SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { ArmedButton } from "@/components/ui/ArmedButton";
 import { cn } from "@giga/ui/lib/cn";
 import { TYPE_LABEL } from "@/lib/collections-copy";

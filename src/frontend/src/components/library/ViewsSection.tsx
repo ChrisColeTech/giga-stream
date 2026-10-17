@@ -1,6 +1,7 @@
-import { NavGroup, NavItem } from "@/components/ui/NavRail";
+import { NavGroup } from "@giga/ui/lists/NavGroup";
+import { NavItem } from "@giga/ui/lists/NavItem";
 import type { SourceId, ViewCounts } from "@/lib/library-query";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { cn } from "@giga/ui/lib/cn";
 
 const VIEWS = [

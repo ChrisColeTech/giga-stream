@@ -4,7 +4,7 @@ import { clampSize, inside, limitsOf, openBox, resized, roomOf } from "@/lib/chi
 import type { Edge } from "@/lib/child-bounds";
 import { useAppStore } from "@/store/app-store";
 import type { Box, ChildSpec } from "@/types/child-window";
-import { useViewport } from "./useViewport";
+import { useViewport } from "@giga/ui/hooks/useViewport";
 
 interface Gesture {
   readonly edge: Edge | "move";

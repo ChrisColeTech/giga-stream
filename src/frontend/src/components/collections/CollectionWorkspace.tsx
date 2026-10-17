@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { labelColumn } from "@giga/ui/lib/label-column";
-import { NavItem, NavRail } from "@/components/ui/NavRail";
-import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { NavItem } from "@giga/ui/lists/NavItem";
+import { NavRail } from "@giga/ui/lists/NavRail";
+import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { useCollectionMembers } from "@/hooks/useCollectionMembers";
 import { LIST_LABEL } from "@/lib/collections-copy";
 import { collectionFolder, collectionRow } from "@/lib/collections-model";

@@ -3,7 +3,7 @@ import { FolderPlus, Play, Star } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
 import { Actions } from "@giga/ui/form/Actions";
 import { Workspace } from "@giga/ui/form/Workspace";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";
 import { changeFavourite, playRef } from "@/components/library/library-service";
 import { TITLE_INFO_LABELS, TitleInfoBody } from "@/components/library/TitleInfoBody";

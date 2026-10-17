@@ -1,5 +1,6 @@
-import { NavGroup, NavItem } from "@/components/ui/NavRail";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { NavGroup } from "@giga/ui/lists/NavGroup";
+import { NavItem } from "@giga/ui/lists/NavItem";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";

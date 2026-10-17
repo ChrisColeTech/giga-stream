@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { Size } from "@/types/child-window";
+
+/** A window's inner size, in CSS pixels (the shape the program's child-window type also carries). */
+interface Size {
+  readonly width: number;
+  readonly height: number;
+}
 
 /** The main window's inner size, kept current as it is resized. */
 export function useViewport(): Size {

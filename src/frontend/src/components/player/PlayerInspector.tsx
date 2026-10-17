@@ -3,7 +3,7 @@ import { InspectorOverview } from "@/components/player/InspectorOverview";
 import { ResumeFooter } from "@/components/player/ResumeFooter";
 import { PlayerSourceControl, type PlayerSourceControlProps } from "./PlayerSourceControl";
 import { Section } from "@/components/ui/Section";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { INSPECTOR_SKELETON_COUNT } from "@/lib/player-copy";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { resumeOf, type PlayerView } from "@/lib/player-view";

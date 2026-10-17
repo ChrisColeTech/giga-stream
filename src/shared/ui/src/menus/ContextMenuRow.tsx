@@ -1,7 +1,7 @@
 import * as Menu from '@radix-ui/react-dropdown-menu'
 import { Check } from 'lucide-react'
 
-import type { MenuRow } from '@/types/menu'
+import type { MenuRow } from './types'
 
 /* One row of a context menu, and the class vocabulary every panel shares.
  *

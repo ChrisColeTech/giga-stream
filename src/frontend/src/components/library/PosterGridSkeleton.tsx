@@ -1,4 +1,4 @@
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { SkeletonCards } from "@giga/ui/lists/SkeletonCards";
 
 /** Loaded and waiting posters share their columns, spacing and 2:3 artwork geometry. */
 export const POSTER_GRID = "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3 p-3";

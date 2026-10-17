@@ -1,10 +1,10 @@
 import { Folder, FolderPlus } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
-import { DataTable } from "@/components/ui/DataTable";
-import type { Column } from "@/components/ui/DataTable";
+import { DataTable } from "@giga/ui/lists/DataTable";
+import type { Column } from "@giga/ui/lists/DataTable";
 import { Actions } from "@giga/ui/form/Actions";
 import { Group } from "@giga/ui/form/Group";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import { lastScanLabel, lastScanTitle } from "@/lib/collections-scan";

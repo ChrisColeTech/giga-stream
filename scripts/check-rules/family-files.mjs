@@ -3,19 +3,7 @@
  * family's shape: the size ceiling and the one-component-per-file rule skip them. Every other rule still applies.
  * A file joins this list only when `docs/23` section 3.1 lists it.
  */
-const UI = [
-  "ActionList",
-  "AppIcon",
-  "ContextMenu",
-  "ContextMenuRow",
-  "ContextMenuSubmenu",
-  "NavRail",
-  "Reveal",
-  "Section",
-  "SkeletonCards",
-  "SkeletonRows",
-  "SplitList",
-];
+const UI = ["Section"];
 
 /*
  * The admin's copies of the same files (the template's clone, docs/27 section 6.3) are family files too until the
@@ -24,7 +12,7 @@ const UI = [
 const ROOTS = ["src/frontend/src/", "src/admin/src/"];
 
 export const FAMILY_FILES = new Set([
-  ...ROOTS.flatMap((root) => [`${root}constants/motion.ts`, `${root}types/menu.ts`]),
+  ...ROOTS.map((root) => `${root}constants/motion.ts`),
   ...ROOTS.flatMap((root) => UI.map((name) => `${root}components/ui/${name}.tsx`)),
 ]);
 

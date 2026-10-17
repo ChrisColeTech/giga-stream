@@ -1,4 +1,4 @@
-import { NavRail } from "@/components/ui/NavRail";
+import { NavRail } from "@giga/ui/lists/NavRail";
 import type { SourceId, ViewCounts } from "@/lib/library-query";
 import type { CollectionRow } from "@/types/collection";
 import { CollectionsFooter } from "./CollectionsFooter";

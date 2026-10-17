@@ -1,4 +1,4 @@
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { SkeletonCards } from "@giga/ui/lists/SkeletonCards";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { SKELETON_CARDS } from "@/lib/library-limits";
 import type { ResolvedItem } from "@/lib/library-marks";

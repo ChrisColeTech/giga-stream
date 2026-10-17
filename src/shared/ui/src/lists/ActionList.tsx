@@ -1,12 +1,13 @@
-import { Plus, RefreshCw, Search, type LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { IconButton } from '@giga/ui/controls/IconButton'
-import { Input } from '@giga/ui/controls/Input'
-import { Select } from '@giga/ui/controls/Select'
-import { ACCENT, type Accent } from '@giga/ui/form/form-classes'
-import { Segmented } from '@giga/ui/controls/Segmented'
-import { SHIMMER } from '@/components/ui/SkeletonRows'
-import { cn } from '@giga/ui/lib/cn'
+import { Plus, RefreshCw, Search } from 'lucide-react'
+
+import { IconButton } from '../controls/IconButton'
+import { Input } from '../controls/Input'
+import { Segmented } from '../controls/Segmented'
+import { Select } from '../controls/Select'
+import { ACCENT } from '../form/form-classes'
+import { cn } from '../lib/cn'
+import { SHIMMER } from '../lib/shimmer'
+import type { ActionListProps } from './action-list-types'
 
 /* THE ACTION LIST (nano-gpt-proxy `action-list.tsx`, ported to the family
  * tokens; doc 06 §2.2 "the models list in the action-list shape"): a header
@@ -15,48 +16,6 @@ import { cn } from '@giga/ui/lib/cn'
  * description, actions that appear on hover, a trailing glyph. One row can
  * be selected. No frame — it sits on the open stage; the rows scroll (max 480px); an empty list is
  * skeleton rows of the same shape, never a sentence (doc 03 §Loading and Empty). */
-export interface ActionItem {
-  id: string
-  title: string
-  description?: string
-  icon?: ReactNode
-  /** The left-edge bar: what state the row is in (the ramp lives in Form.tsx so a settings Row draws the same bar — §20.5). */
-  accent?: Accent
-  /** Shown on hover: buttons the row offers. */
-  actions?: ReactNode
-  trailing?: ReactNode
-  disabled?: boolean
-  title_attr?: string
-  onClick?: () => void
-}
-
-export interface ActionListToolbar {
-  tabs?: ReadonlyArray<{ value: string; label: string }>
-  activeTab?: string
-  onTabChange?: (value: string) => void
-  searchValue?: string
-  searchPlaceholder?: string
-  onSearchChange?: (value: string) => void
-  filterValue?: string
-  filterOptions?: ReadonlyArray<{ value: string; label: string }>
-  onFilterChange?: (value: string) => void
-  onRefresh?: () => void
-  onAdd?: () => void
-  addLabel?: string
-}
-
-export interface ActionListProps {
-  title?: string
-  icon?: LucideIcon
-  items: ActionItem[]
-  toolbar?: ActionListToolbar
-  selectedId?: string | null
-  onSelect?: (id: string) => void
-  /** Skeleton rows drawn while `items` is empty (loading or none — doc 03 §Loading and Empty). */
-  skeleton?: number
-  size?: 'sm' | 'default' | 'lg'
-  className?: string
-}
 
 const SIZE = { sm: 'px-3 py-2', default: 'px-4 py-2.5', lg: 'px-5 py-3' } as const
 

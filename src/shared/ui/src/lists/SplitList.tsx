@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { cn } from '@giga/ui/lib/cn'
-import { SHIMMER } from './SkeletonRows'
+import { cn } from '../lib/cn'
+import { SplitSkeleton } from './SplitSkeleton'
 
 /* THE SPLIT LIST (doc 03 §Frontend Rules, doc 06 §1c): a parent → child →
  * grandchild browser on the OPEN stage — no frame, no panel, one hairline
@@ -52,24 +52,6 @@ const ROW =
   'relative flex h-9 w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent px-3 text-left text-sm text-muted ' +
   'transition-colors duration-fade hover:bg-hov hover:text-text disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ' +
   'data-selected:bg-ctl data-selected:text-text'
-
-const LINE_BOX = "before:content-['\\200b']"
-
-export function SplitSkeleton({ count, tick = true }: { count: number; tick?: boolean }) {
-  return (
-    <div className="pointer-events-none" aria-hidden>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex h-9 items-center gap-2.5 px-3">
-          {tick && <span className="size-3.5 flex-none rounded-[3px] border border-hair" />}
-          <span className={cn('min-w-0 flex-1 text-sm', LINE_BOX)}>
-            <span className={cn(SHIMMER, 'h-[9px] rounded-ctl')} style={{ width: `${45 + ((i * 37) % 40)}%` }} />
-          </span>
-          <span className={cn(SHIMMER, 'h-[9px] w-6 rounded-ctl')} />
-        </div>
-      ))}
-    </div>
-  )
-}
 
 /** Without `height` the list fills its parent (a `Wide fill` in a `Group fill`); with it, a fixed box inside a scrolling page. */
 export function SplitList({ columns, height, className }: { columns: SplitColumn[]; height?: number; className?: string }) {

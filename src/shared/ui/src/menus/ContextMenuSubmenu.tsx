@@ -1,8 +1,8 @@
 import * as Menu from '@radix-ui/react-dropdown-menu'
 import { ChevronRight } from 'lucide-react'
 
-import { cn } from '@giga/ui/lib/cn'
-import type { MenuItem } from '@/types/menu'
+import { cn } from '../lib/cn'
+import type { MenuItem } from './types'
 import { ContextMenuRow, MENU_PANEL, MENU_ROW } from './ContextMenuRow'
 
 /* `Collections ▸` — the one submenu doc 03 §Context menu actions and doc 10

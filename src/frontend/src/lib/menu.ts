@@ -1,5 +1,5 @@
 import { emit } from "@giga/ui/lib/bus";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@giga/ui/menus/types";
 
 /**
  * Summon the app's one context menu at the pointer.

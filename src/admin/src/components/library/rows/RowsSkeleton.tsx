@@ -1,5 +1,4 @@
-import { SHIMMER as FILL } from "@/components/ui/SkeletonCards";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { SHIMMER, SHIMMER_TILE as FILL } from "@giga/ui/lib/shimmer";
 import { cn } from "@giga/ui/lib/cn";
 import { POSTER_COLUMNS, ROW_GAP, SKELETON_SHELF_CARDS, SKELETON_SHELVES } from "./rows-constants";
 
