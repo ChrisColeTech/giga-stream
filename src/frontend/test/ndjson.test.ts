@@ -62,7 +62,7 @@ describe("scan streaming", () => {
       }),
       JSON.stringify({ type: "progress", found: 1, probed: 0, total: null }),
       JSON.stringify({ type: "progress", found: 1, probed: 1, total: 1 }),
-      JSON.stringify({ type: "done", files: [], found: 1, probed: 1, unplayable: 0 }),
+      JSON.stringify({ type: "done", found: 1, probed: 1, unplayable: 0 }),
     ];
     globalThis.fetch = async (input, init) => {
       assert.equal(input, "/api/folders/f%2F1/scan");
@@ -89,6 +89,12 @@ describe("scan streaming", () => {
       }).success,
       false,
     );
+  });
+
+  it("accepts only the public counts on done", () => {
+    const counts = { type: "done", found: 1, probed: 1, unplayable: 0 } as const;
+    assert.equal(ScanEventSchema.safeParse(counts).success, true);
+    assert.equal(ScanEventSchema.safeParse({ ...counts, files: [] }).success, false);
   });
 
   it("treats cancelled as a successful terminal event", async () => {

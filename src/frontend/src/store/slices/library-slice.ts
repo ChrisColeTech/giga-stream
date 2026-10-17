@@ -65,10 +65,14 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       rescanOnStartup: DEFAULT_SETTINGS.rescanOnStartup,
     },
     setCollections: (collections) => set({ collections, collectionsVersion: get().collectionsVersion + 1 }),
-    beginCollectionsRead: () => get().collectionsVersion,
+    beginCollectionsRead: () => {
+      const version = get().collectionsVersion + 1;
+      set({ collectionsVersion: version });
+      return version;
+    },
     acceptCollectionsRead: (version, collections) => {
       if (version !== get().collectionsVersion) return false;
-      set({ collections, collectionsVersion: version + 1 });
+      set({ collections });
       return true;
     },
     upsertCollection: (collection) =>
@@ -89,6 +93,7 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
               }
             : collection,
         ),
+        ...(folder.scanning ? { scanProgress: withoutKey(get().scanProgress, folder.id) } : {}),
         collectionsVersion: get().collectionsVersion + 1,
       }),
     removeFolderState: (folderId) =>
@@ -102,10 +107,14 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
         collectionsVersion: get().collectionsVersion + 1,
       }),
     setJobs: (jobs) => set({ jobs, jobsVersion: get().jobsVersion + 1 }),
-    beginJobsRead: () => get().jobsVersion,
+    beginJobsRead: () => {
+      const version = get().jobsVersion + 1;
+      set({ jobsVersion: version });
+      return version;
+    },
     acceptJobsRead: (version, jobs) => {
       if (version !== get().jobsVersion) return false;
-      set({ jobs, jobsVersion: version + 1 });
+      set({ jobs });
       return true;
     },
     upsertJob: (job) => set({ jobs: replaceById(get().jobs, job), jobsVersion: get().jobsVersion + 1 }),
@@ -136,4 +145,10 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
 function replaceById<T extends { readonly id: string }>(rows: readonly T[], next: T): T[] {
   const found = rows.some((row) => row.id === next.id);
   return found ? rows.map((row) => (row.id === next.id ? next : row)) : [...rows, next];
+}
+
+function withoutKey<T>(record: Readonly<Record<string, T>>, key: string): Record<string, T> {
+  const next = { ...record };
+  delete next[key];
+  return next;
 }

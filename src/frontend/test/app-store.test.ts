@@ -137,6 +137,11 @@ describe("store slices and hydration", () => {
     assert.equal(state().collections[0]?.folders[0]?.id, "f-1");
     assert.equal(state().scanProgress["f-1"]?.total, null);
     assert.equal(state().jobs[0]?.state, "cancelling");
+    state().upsertFolder("c-1", { ...folder, scanning: false });
+    state().setScanProgress("f-1", { found: 2, probed: 2, total: 2, done: true });
+    state().upsertFolder("c-1", folder);
+    assert.equal(state().scanProgress["f-1"], undefined);
+    assert.equal(state().collections[0]?.folders[0]?.scanning, true);
     state().removeFolderState("f-1");
     state().removeJobState("j-1");
     state().removeCollectionState("c-1");
@@ -164,12 +169,14 @@ describe("store slices and hydration", () => {
 
     const first = state().beginCollectionsRead();
     const second = state().beginCollectionsRead();
+    assert.notEqual(first, second);
     assert.equal(state().acceptCollectionsRead(second, [collection]), true);
     assert.equal(state().acceptCollectionsRead(first, []), false);
     assert.equal(state().collections[0]?.id, "c-new");
 
     const oldJobs = state().beginJobsRead();
     const newJobs = state().beginJobsRead();
+    assert.notEqual(oldJobs, newJobs);
     const job = {
       id: "j-new",
       kind: "folder-scan" as const,
@@ -178,8 +185,8 @@ describe("store slices and hydration", () => {
       state: "running" as const,
       createdAt: 3,
     };
-    assert.equal(state().acceptJobsRead(newJobs, [job]), true);
     assert.equal(state().acceptJobsRead(oldJobs, []), false);
+    assert.equal(state().acceptJobsRead(newJobs, [job]), true);
     assert.equal(state().jobs[0]?.id, "j-new");
   });
 

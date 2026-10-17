@@ -24,7 +24,6 @@ const FactsSchema = z.object({
   audioCodec: z.string().optional(),
   audioChannels: z.number().int().positive().optional(),
 }).strict();
-const ScannedFileSchema = FileSchema.extend({ facts: FactsSchema.optional() });
 export const ScanEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("found"), file: FileSchema }).strict(),
   z.object({ type: z.literal("probed"), file: FileSchema, facts: FactsSchema }).strict(),
@@ -36,7 +35,6 @@ export const ScanEventSchema = z.discriminatedUnion("type", [
   }).strict(),
   z.object({
     type: z.literal("done"),
-    files: z.array(ScannedFileSchema),
     found: z.number().int().nonnegative(),
     probed: z.number().int().nonnegative(),
     unplayable: z.number().int().nonnegative(),

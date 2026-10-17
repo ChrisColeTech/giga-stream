@@ -1,5 +1,6 @@
 import { Square } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useScanObserver } from "@/hooks/useScanObserver";
 import { cancelJob, listJobs } from "@/services/jobs";
 import { useAppStore } from "@/store/app-store";
 import { isLive } from "@/types/job";
@@ -14,6 +15,7 @@ const BUTTON =
   "hover:bg-hov hover:text-st-failed active:bg-hov disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-2.75";
 
 export function RunningWork() {
+  useScanObserver();
   const say = useAppStore((state) => state.say);
   const jobs = useAppStore((state) => state.jobs);
   const live = jobs.filter(isLive);

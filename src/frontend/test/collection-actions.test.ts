@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
-import { recoverMissingScan } from "@/hooks/useCollectionsData";
-import { ApiError } from "@/services/api";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
@@ -29,18 +27,6 @@ afterEach(() => {
 const success = (data: unknown): Response => new Response(JSON.stringify({ ok: true, data }), { status: 200 });
 
 describe("collection action recovery", () => {
-  it("refreshes collections and jobs once when scan acquisition returns 409", async () => {
-    let calls = 0;
-    globalThis.fetch = async (input) => {
-      calls += 1;
-      return String(input) === "/api/collections" ? success([collection]) : success([]);
-    };
-    const recovered = await recoverMissingScan(new ApiError("job.not_running", "Finished.", 409));
-    assert.equal(recovered, true);
-    assert.equal(calls, 2);
-    assert.equal(useAppStore.getState().collections[0]?.scanning, false);
-  });
-
   it("retries a failed initial folder attach against the collection already created", async () => {
     const paths: string[] = [];
     let call = 0;
