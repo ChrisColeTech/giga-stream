@@ -47,7 +47,7 @@ flows.
 | Refresh | the channel list is read again from the backend and every stream's status refreshed; the playing channel is not interrupted |
 | Backend lost | after a short grace period the channel and title lists clear to skeletons; the player, the shell and local data are unaffected |
 | Backend back | the lists fill again; nothing is replaced under the cursor except the rows |
-| Play a title or a local file | a Player tab opens or is reused and Player is shown; Library keeps its state |
+| Play a title or a local file | the Player shows it in place, replacing the current item, and Player is shown; Library keeps its state |
 | Open a window or popup | menus and other popups close; Player and Live fullscreen exit; pane toggles and the surface switch sleep under a window's scrim; playback continues |
 | Close a window or popup | focus returns to the control that opened it, if it still exists |
 | Collapse or reopen a pane | the pane slides; the new visibility is saved |

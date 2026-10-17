@@ -104,6 +104,7 @@ disabled, or local, where the row says so.
 | Title information | `GET /api/titles/:id`; `.../seasons/:season`; `.../related` | the wide popup reads the detail; Play is enabled when the title has a `streamUrl`, and disabled with `No stream source is set up for titles.` otherwise (`03` section 3.6) |
 | Clear history | `DELETE /api/watch` | the two-step's second press clears all history; favourites, collections and files are untouched |
 | Remove from History | `DELETE /api/watch/:watchId` | removes one entry |
+| Rows shelves (`06` section 4.2) | the same `GET /api/library` answer, grouped in the client: the facets' genres, the kinds, the collections list, the favourites; no shelf adds a request | shelves are groups of the one query, so a change to the query changes every shelf; a group with no items is not drawn |
 | Image failure | `GET /api/images/:id` | only that image shows its fallback; the query is not failed (`03` section 3.11) |
 
 ### 3.4 Player
@@ -145,8 +146,10 @@ disabled, or local, where the row says so.
 
 ### 3.7 Events drawer
 
-`03` does not say what produces the drawer's rows. The default in force is that the interface records its own events:
-connection changes, request outcomes and scan events. The owner confirms this before the wave is built (section 6, question 1).
+The drawer shows network traffic (`21` section 9). Its rows come from four sources: the interface's own REST calls
+(`services/api.ts`), the stream's HLS events (fragment loads, level switches, errors), the embed's load outcome, and the
+blocked-request counts Electron reports. A row keeps the method, host and status, and never a query string (`06` section 7).
+The row shape and the open decisions are section 8, question 1.
 
 ## 4. Store
 
@@ -203,6 +206,13 @@ phase 11), not here.
 
 ## 8. Open questions
 
-1. **Events drawer rows (wave 2.6).** `03` does not say where the rows come from. The default is the interface's own
-   record of connection changes, request outcomes and scan events. The owner confirms this before the wave is built.
+1. **Events drawer rows (wave 2.6).** Decided in principle: network traffic (`21` section 9). Three decisions are open:
+   - **Path.** Host only (the probe's recommendation, and what the Electron host already reports), or host and path with
+     the query dropped. Paths of the fileserver's own API carry ids, not secrets; a stream address may carry a token.
+   - **Electron blocked counts.** They reach the renderer only by a push, which `01` section 1.2 forbids ("no push channel").
+     Either the counts are read by request, or `01` section 1.2 is amended first. Recommendation: read by request.
+   - **Embed traffic.** The interface cannot see what a provider's embed fetches, in a browser or in Electron. The drawer
+     shows the embed's load outcome and the blocked counts only, and says so in the row's tooltip. Confirm.
+   - **Missing data.** `data\providers.json` is not in `giga-stream-poc\src\mockup`. Provide it, or say where it is, before
+     the provider stage is built.
 2. **Provider stage (`06` 5.3).** Outside this phase. It waits for the write-up from `14`.

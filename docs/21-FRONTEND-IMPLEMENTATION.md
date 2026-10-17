@@ -167,6 +167,27 @@ tools surface a bottom rail; and its delete in the context menu fires with no tw
 | Inspector (right): Overview (poster, identity, plot, rating, genres), Details (genres, cast, runtime or seasons, local file facts), Watch (progress, Favorite, collections, Collections button, Remove from History) | `06` 5.4 | placeholder |
 | Related band (bottom): toolbar `Related`, its basis, collapse toggle; 2:3 cards, at most 20; 8 skeletons; local files collapsed with the reason | `06` 5.5 | placeholder |
 
+### 3.3c Library's Rows view (owner decision, 2026-10-16)
+
+The Library gets a third presentation, Rows, beside Grid (the default) and List. The spec is `06` section 4.2, "Rows", and
+its wiring is `22` section 3.3. Rows shows the same cards as the grid, grouped into shelves:
+
+| Shelf | Source | Shown when |
+|---|---|---|
+| Continue Watching | the continue answer, as the grid's strip | there is progress |
+| Favorites | the favourites of the store's marks | there is at least one |
+| Each collection, alphabetical | the collections rail | the collection has items |
+| Movies, TV, Local files | the kinds of the library items | the kind has items |
+| Up to six genres | the facets, with at least three items each | the genre has three or more |
+
+Each shelf has a heading with its count and a **See all** that opens the grid with the group applied. A row scrolls
+sideways with chevrons at its edges, and keeps the grid's keys within a row. Its cards are the grid's `PosterCard`, and its
+Continue Watching cards are the Continue cards. Netflix's rows are the model: horizontal shelves with headings, and cards at
+the grid's size. A shelf is a presentation of the grid's query, so no shelf adds a request of its own in phase 1.
+
+The grouping is a pure function in `lib/rows-shelves.ts`, tested under `test/rows-shelves.test.ts`. It is the one piece with
+logic, so it carries the tests.
+
 ### 3.4a Player's family alignment: Giga Cut's studio
 
 The owner asked for the studio, which is Player, to be similar to Giga Cut. Cut's studio is egui (Rust), so the
@@ -305,6 +326,7 @@ Seven owners, one per surface. An owner edits only its listed paths. A path list
 | Settings | `components/overlays/SettingsWindow.tsx`, `components/settings/`, `constants/settings-sections.ts` |
 | Collections | `components/overlays/CollectionsWindow.tsx`, `components/collections/` |
 | Events | `components/chrome/EventsDrawer.tsx`, `components/chrome/EventRow.tsx` |
+| Rows | `components/library/rows/` (new), `lib/rows-*.ts`, `test/rows-*.test.ts`, and the Rows option of the view switch in `pages/LibraryPage.tsx` only |
 
 An owner may add pure helpers under `src/frontend/src/lib/`, named with its surface prefix (`live-`, `library-`,
 `player-`, `settings-`, `collections-`, `events-`), and never a shared name. Fixtures and every shared part are read-only.
@@ -407,6 +429,7 @@ Wave 0 files of section 4, with their own paths only. Nothing else lands on it e
 | Settings | `D:\Projects\.giga-worktrees\p1-settings` | `phase1/settings` |
 | Collections | `D:\Projects\.giga-worktrees\p1-collections` | `phase1/collections` |
 | Events | `D:\Projects\.giga-worktrees\p1-events` | `phase1/events` |
+| Rows | `D:\Projects\.giga-worktrees\p1-rows` | `phase1/rows` |
 
 Each owner runs `npm ci` in its own worktree's `src/frontend`, never in a tree whose app is running (`07` section 4).
 

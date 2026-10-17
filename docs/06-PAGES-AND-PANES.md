@@ -292,7 +292,23 @@ virtualized when the result is large.
 **List view**
 
 One row per title: thumbnail, title, kind, year, genres, quality, progress, Favorite, Play and Info. The same
-commands as the card. Grid and List only change presentation, never the query or the selection.
+commands as the card. Grid, List and Rows only change presentation, never the query or the selection.
+
+**Rows** (a third presentation, owner decision 2026-10-16). The library is a set of shelves, one per group. Each shelf is a
+heading and a horizontal row of the same cards as the grid. Shelves appear in this fixed order, each only when it has items:
+
+1. Continue Watching (the strip of §4.2).
+2. Favorites.
+3. Each collection, alphabetical, as the collections rail lists them.
+4. Movies, TV and Local files, by kind.
+5. Genres: each genre the facets report with at least three items, most items first, at most six.
+
+A shelf's heading shows its count. Its right end holds **See all**, which switches to the grid with that group applied:
+a genre sets the Genre filter; a kind sets the type strip; a collection opens that collection; Favorites opens the
+Favorites view. A row scrolls sideways, with chevron buttons at its edges that show while the pointer is over it.
+Left and Right move across a row's cards, Up and Down move between rows, and Home and End go to the first and last
+card of a row. Selection is single, as in the grid. A shelf whose data is loading shows skeleton cards in its row.
+Trending is not a shelf: it is offered only with a real popularity signal (§4.3). Rows offers no tile-size control.
 
 **History**
 
@@ -318,7 +334,7 @@ Two collapsible sections; each setting stacks its label over a 36px control.
 | Section | Filter | Control |
 |---|---|---|
 | Search and view | Search | a field with a search icon and a clear control; combines with the type strip and every filter |
-| Search and view | View | Grid / List, segmented |
+| Search and view | View | Grid / List / Rows, segmented; Grid is the default |
 | Search and view | Sort | a select: Newest (the default), Oldest, A to Z, Year, and Trending only when the backend supplies a real current popularity signal |
 | Filter | Genre | a populated multi-choice popover of chips, with a search box when there are 12 or more |
 | Filter | Year | a populated select |
@@ -371,22 +387,22 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-Player is always enabled. With no tab open its stage is the player alone, nothing drawn over it, and its
+Player is always enabled. With nothing open its stage is the player alone, nothing drawn over it, and its
 panes are skeletons.
 
-### 5.1 Tabs
+### 5.1 One title at a time (owner decision, 2026-10-16)
 
-Tabs sit above the stage, in a fixed strip. Each shows a small glyph or poster, the title and a close icon.
+The Player has no tabs. It plays one title or one local file at a time, and the stage shows it the way Live's stage does
+(§5.3): the picture fills the centre pane, fitted whole, with nothing drawn over it.
 
 | Rule | Behaviour |
 |---|---|
-| Identity | one tab per movie title; one per series (changing the episode reuses the tab, and its subtitle shows `Sxx Exx`); one per local file |
-| Reopening | opening something that already has a tab activates it |
-| Limit | at most 12; opening a 13th closes the least recently used inactive tab, after its final progress write |
-| Closing | the active tab cannot close until its final progress write settles or a short timeout expires |
-| Context menu | **Close**, **Close others**, **Reveal in Library** |
-| Kept while inactive | a tab's detail and scroll; an inactive tab holds no media element or HLS instance |
-| Not here | no channel tabs: a channel plays in Live |
+| Opening | a title or file opens in place, replacing the current one. The current item's final progress write settles first |
+| Reopening | opening the item that is already playing does nothing but show Player |
+| Episodes | choosing another episode of the same series loads it in place; the season select starts nothing |
+| Closing | **Close** in the stage's toolbar empties the Player back to its idle state, after the final progress write settles or a short timeout expires |
+| Context menu | the stage toolbar's menu holds **Reveal in Library** and **Close** |
+| Not here | no tab strip, no tab limit, no channel: a channel plays in Live |
 
 ### 5.2 Episode browser (left)
 
@@ -400,7 +416,7 @@ then `EpisodeCard` rows.
 | Title | the episode's title |
 | Duration or progress | when known |
 | Watch marker | the exact episode's state |
-| Activation | loads that exact season and episode in the same tab |
+| Activation | loads that exact season and episode in place |
 
 Selected and playing are different states. Changing the season does not start anything. The list is
 virtualized and shows 10 row skeletons while it loads.
@@ -425,7 +441,7 @@ reason and **Retry**, and the picture is fitted whole by default.
   and **Start over** once the media has loaded; autoplay may choose Resume itself only when that setting is
   on.
 - **Progress** is written about every 30 seconds while playing (never more often) and immediately on pause,
-  ended, seek settle, tab switch and close. Each playback numbers its writes from 1 and a lower number can
+  ended, seek settle and close. Each playback numbers its writes from 1 and a lower number can
   never replace a higher one.
 - **Fullscreen** is the stage; `F` toggles it.
 - A local file plays through the fileserver's Range route; a title with a stream address (in development,
@@ -438,7 +454,7 @@ reason and **Retry**, and the picture is fitted whole by default.
 ### 5.4 Details (right)
 
 Three collapsible blocks (§2.8) of mono key and value facts, a dash with no title open. They stay stable for
-the open tab's kind.
+the open item's kind.
 
 | Block | Contents |
 |---|---|
@@ -456,7 +472,7 @@ A band across the full work area.
 |---|---|
 | Toolbar | `Related`, the basis it was found by (`TMDB`, from TMDB's recommendations, `11` section 4; otherwise `Genre + year`, `Genre` or `Year` over the catalog), and a collapse toggle |
 | Cards | a horizontal row of 2:3 cards with poster, title and year; at most 20 at first; never text-only rows |
-| Activation | opens or reuses that title's tab and keeps the current one; a movie loads at once, a series waits for an episode to be chosen |
+| Activation | replaces the current item with that title; a movie loads at once, a series waits for an episode to be chosen |
 | Loading and empty | 8 card skeletons |
 | Failure | the last cards stay and one notice says why |
 | Local file | the band is collapsed and its toggle disabled, with the reason `No related titles for local files` as its tooltip |
@@ -465,13 +481,13 @@ A band across the full work area.
 
 | From | Result |
 |---|---|
-| a movie card's Play | a movie tab is opened or reused, Player is shown, the title's stream address is given to the player; Library is unchanged |
-| a series card's Play or Open | a series tab is opened or reused, Player is shown, the episode browser shows the last or resumable season with that episode focused, and **nothing loads** until an exact episode is chosen |
-| a local card's Play | a local-file tab is opened or reused and the file plays through its Range route |
-| a related card | as above, and the current tab stays |
-| **Reveal in Library** (stage toolbar or tab menu) | Library is shown with the item selected, in the current collection if it holds the item, otherwise History, All or a collection that does, and scrolled into view; Player stays loaded |
+| a movie card's Play | the Player shows that movie in place, and the title's stream address is given to the player; Library is unchanged |
+| a series card's Play or Open | the Player shows the series in place, the episode browser shows the last or resumable season with that episode focused, and **nothing loads** until an exact episode is chosen |
+| a local card's Play | the Player shows the file in place and it plays through its Range route |
+| a related card | as above, and the current item is replaced |
+| **Reveal in Library** (stage toolbar menu) | Library is shown with the item selected, in the current collection if it holds the item, otherwise History, All or a collection that does, and scrolled into view; Player stays loaded |
 
-A failed load leaves the tab open with a failed stage and **Retry**; it does not bounce back to Library.
+A failed load leaves the item in place with a failed stage and **Retry**; it does not bounce back to Library.
 
 ---
 

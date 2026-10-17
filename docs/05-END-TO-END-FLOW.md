@@ -74,7 +74,7 @@ The fileserver and the interface never see a provider. The admin backend never c
    History, Favorites or a collection; narrow with the type strip (All / Movies / TV / Local) and the filters.
 2. **Info** on a card opens the Title information popup without stopping anything; **Play** opens a Player
    tab.
-3. **Player** — a tab per title or local file; for a series, choose a season and an episode and that exact
+3. **Player** — one title or local file at a time, filling the stage as Live's channel does; for a series, choose a season and an episode and that exact
    episode loads. The stage's controls are the browser's own. Progress is written about every 30 seconds
    while playing and on pause, seek, switch and close.
 4. **Resume** — a title you left partway offers its recorded position.
@@ -91,7 +91,7 @@ skeletons while local files, collections, favorites and history stay usable.
    name, never a path. The fileserver attaches the folder and queues a recursive scan; the statusbar and the
    window show the same job, and files appear as they are found. Your files are read in place and never
    written.
-4. **Play** a local card — a Player tab plays the file through the fileserver's Range route; seeking
+4. **Play** a local card — the Player plays the file through the fileserver's Range route; seeking
    proves `206`.
 5. **Remove** — a two-step on the collection's own control; the index rows go, your files and history do not.
 
