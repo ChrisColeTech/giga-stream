@@ -4,8 +4,7 @@ import type { ResolvedItem } from "@/lib/library-marks";
 import { openMenu } from "@/lib/menu";
 import type { CollectionRow } from "@/types/collection";
 import type { MenuItem } from "@/types/menu";
-import { playRef } from "./library-service";
-import { removeWatch, setFavorite, setMembership } from "./marks-store";
+import { changeFavourite, changeMembership, playRef } from "./library-service";
 
 /** What openMenu reads from a pointer event: the anchor, and the two calls that keep a parent's handler out of it. */
 export type MenuEvent = Parameters<typeof openMenu>[0];
@@ -21,7 +20,9 @@ export function menuEventBelow(element: HTMLElement): MenuEvent {
 /** The `Collections ▸` row of one item: a check for each membership, and a click toggles it. */
 export function membershipRow(item: ResolvedItem, collections: readonly CollectionRow[]): MenuItem {
   const isMember = (id: string): boolean => item.collectionIds.includes(id);
-  return collectionsSubmenu(collections, isMember, (id) => setMembership(item.ref, id, !isMember(id)));
+  return collectionsSubmenu(collections, isMember, (id) =>
+    changeMembership(item.ref, id, !isMember(id), item.collectionIds),
+  );
 }
 
 /** A menu of only the Collections submenu, opened from Title information's Collections button. */
@@ -33,6 +34,7 @@ export interface CardMenuContext {
   readonly collections: readonly CollectionRow[];
   readonly inHistory: boolean;
   readonly onInfo: () => void;
+  readonly onRemoveWatch: () => void;
 }
 
 /** A card's context menu: Play or Open, Info, Favorite, Collections, and in History the removal of the watch entry. */
@@ -43,7 +45,7 @@ export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: Card
     {
       kind: "action",
       label: item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite,
-      onSelect: () => setFavorite(item.ref, !item.favorite),
+      onSelect: () => changeFavourite(item.ref, !item.favorite),
     },
     { kind: "separator" },
     membershipRow(item, context.collections),
@@ -52,9 +54,7 @@ export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: Card
       label: LIBRARY_COPY.removeWatch,
       disabled: item.watchId === undefined,
       disabledReason: LIBRARY_COPY.noWatchEntry,
-      onSelect: () => {
-        if (item.watchId !== undefined) removeWatch(item.ref, item.watchId);
-      },
+      onSelect: context.onRemoveWatch,
     },
   ]);
 }

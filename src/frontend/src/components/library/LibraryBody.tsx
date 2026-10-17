@@ -1,12 +1,11 @@
-import { HistoryStrip } from "./HistoryStrip";
-import { TypeStrip } from "./TypeStrip";
-import { ContinueStrip } from "./ContinueStrip";
-import { PosterGrid } from "./PosterGrid";
-import { PosterList } from "./PosterList";
-import { clearHistory } from "./marks-store";
 import { continueItems, type ListView, type Scope } from "@/lib/library-query";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
+import { ContinueStrip } from "./ContinueStrip";
+import { HistoryStrip } from "./HistoryStrip";
+import { PosterGrid } from "./PosterGrid";
+import { PosterList } from "./PosterList";
+import { TypeStrip } from "./TypeStrip";
 
 export interface LibraryBodyProps {
   readonly scope: Scope;
@@ -20,6 +19,8 @@ export interface LibraryBodyProps {
   readonly selected: string | null;
   readonly onScope: (scope: Scope) => void;
   readonly onSelect: (id: string) => void;
+  readonly onRemoveWatch: (item: ResolvedItem) => void;
+  readonly onClearHistory: () => void;
 }
 
 /** The centre of Library: the type strip, the History strip when History is open, then Continue Watching and the
@@ -34,19 +35,35 @@ export function LibraryBody({
   selected,
   onScope,
   onSelect,
+  onRemoveWatch,
+  onClearHistory,
 }: LibraryBodyProps) {
   const continuing = inHistory ? [] : continueItems(items, scope);
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <TypeStrip scope={scope} onScope={onScope} />
-      {inHistory && <HistoryStrip empty={historyEmpty} onClear={clearHistory} />}
+      {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         {!inHistory && <ContinueStrip items={continuing} />}
         {view === "grid" ? (
-          <PosterGrid items={shown} selected={selected} inHistory={inHistory} collections={collections} onSelect={onSelect} />
+          <PosterGrid
+            items={shown}
+            selected={selected}
+            inHistory={inHistory}
+            collections={collections}
+            onSelect={onSelect}
+            onRemoveWatch={onRemoveWatch}
+          />
         ) : (
-          <PosterList items={shown} selected={selected} inHistory={inHistory} collections={collections} onSelect={onSelect} />
+          <PosterList
+            items={shown}
+            selected={selected}
+            inHistory={inHistory}
+            collections={collections}
+            onSelect={onSelect}
+            onRemoveWatch={onRemoveWatch}
+          />
         )}
       </div>
     </div>
