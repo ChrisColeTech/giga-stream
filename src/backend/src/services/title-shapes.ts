@@ -51,11 +51,8 @@ export const num = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
 export const str = (value: unknown): string | undefined => (typeof value === "string" && value !== "" ? value : undefined);
 export const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? (value as unknown[]) : []);
-const nonBlank = (value: unknown): string | undefined => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-};
+const nonBlank = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
 const tmdbTitleOf = (kind: Kind, value: Record<string, unknown>): string | undefined =>
   nonBlank(kind === "movie" ? value.title : value.name);
 const yearOf = (date: unknown): number | undefined => {
@@ -67,9 +64,7 @@ const image = (path: unknown, size: string): string | undefined =>
 
 /** TMDB answering `404` for a title is `title.not_found` (docs/03 section 7.4), not an outage. */
 export function mapTitle404(error: unknown, titleId: string): never {
-  if (error instanceof AppError && error.details?.status === 404) {
-    throw new AppError(ERRORS.titleNotFound, { titleId });
-  }
+  if (error instanceof AppError && error.details?.status === 404) throw new AppError(ERRORS.titleNotFound, { titleId });
   throw error;
 }
 
@@ -99,12 +94,26 @@ export function formatSchedule(intervalMs: number | undefined): string {
   return `${intervalMs}ms`;
 }
 
+/** A series' seasons from TMDB's answer, mapped to the detail contract (docs/03 section 7.4): `season_number` becomes
+ *  `season`, `episode_count` becomes `episodeCount`; the specials (season 0) and empty seasons are left out, in TMDB's
+ *  order. A later season read replaces an entry with its episodes (`title-reads.seasons`). */
+function seasonsOf(kind: Kind, answer: Record<string, unknown>): Array<{ season: number; episodeCount: number }> {
+  return listOf(answer.seasons).flatMap((entry) => {
+    const season = num(asRecord(entry).season_number);
+    const episodeCount = num(asRecord(entry).episode_count);
+    return kind !== "tv" || season === undefined || season < 1 || episodeCount === undefined || episodeCount <= 0
+      ? []
+      : [{ season, episodeCount }];
+  });
+}
+
 /** A full TMDB record (with `credits,external_ids` appended) as the stored detail payload. */
 export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unknown>): Record<string, unknown> {
   const title = tmdbTitleOf(kind, answer);
   if (title === undefined) throw new AppError(ERRORS.tmdbUnavailable, { reason: `answer without a ${kind} title` });
   const castList = listOf(asRecord(answer.credits).cast);
   const runtime = num(answer.runtime);
+  const seasons = seasonsOf(kind, answer);
   return {
     id: titleIdOf(kind, tmdbId),
     tmdbId,
@@ -121,6 +130,7 @@ export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unkn
     runtimeMs: runtime !== undefined ? runtime * 60_000 : undefined,
     status: str(answer.status),
     imdbId: str(answer.imdb_id) ?? str(asRecord(answer.external_ids).imdb_id),
+    ...(seasons.length > 0 && { seasons }),
   };
 }
 
@@ -154,10 +164,7 @@ export function rowsOf(kind: Kind, values: unknown[], now: number): Record<strin
 
 /** Validate a stored output row, or safely reshape a legacy raw TMDB list row. */
 export function storedRowOf(
-  kind: Kind,
-  tmdbId: number,
-  payload: unknown,
-  readAt: number,
+  kind: Kind, tmdbId: number, payload: unknown, readAt: number,
 ): Record<string, unknown> | undefined {
   const record = asRecord(payload);
   if (record.id === titleIdOf(kind, tmdbId) && record.kind === kind && num(record.tmdbId) === tmdbId) {

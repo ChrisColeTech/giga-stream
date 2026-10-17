@@ -32,7 +32,13 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
   surface switch sleep with it.
 - **Theatre mode** (owner, 2026-10-17) paints the titlebar and statusbar black (`bg-black`) over the normal
   panel colour and collapses the panes; the panes' collapse is the ordinary toggle, so the saved layout
-  follows it and exiting restores the remembered per-side state.
+  follows it and exiting restores the remembered per-side state. Every surface goes black with the bars —
+  the black is the root token remap of `02` section 14 (`bg`, `panel`, `surface`, `stage`, `hair`,
+  `border`), so panes, input backgrounds, borders, separators and scrollbars all follow; controls keep
+  their own fill and edge, so buttons, chips and the rails' selected rows read as in the normal theme
+  (owner, 2026-10-17: theatre is a minimal change). The centre pane keeps a subtle spotlight:
+  a static radial gradient (owner, 2026-10-17), never animated or filtered, so it costs no GPU while it
+  shows.
 - There is no account, search field, Settings gear, provider chip or media control in the titlebar.
 
 ### 1.2 Statusbar (24px)
@@ -42,9 +48,10 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 | **Running work** | First. LoRA Studio's running work: a 112px bar that fills to the first running job's percent (full and pulsing when the job cannot say how far it is, as a scan walking a folder), then `N running · X%` in mono, or `idle` over an empty track, then **Stop**. Stop cancels the first running job on one press (owner: a confirm makes no sense on an emergency stop); with nothing running it is disabled, `Nothing to stop`. The job's label and percent are the tooltip. Phase 1 reads the jobs fixture and Stop calls the `cancelJob` stub |
 | **Notice line** | One polite live region. Each sentence replaces the last, in the text colour; a warn or error has a tone-coloured alert glyph before it, so it stays legible on the light theme and colour is not the only signal. It carries every outcome, refusal and unreadable-answer report. A warn or error is also appended to the events log |
 | **Events** | An icon and the label "Events". Toggles the drawer; tinted while it is open |
-| **Browser protection status** | `unprotected` in a plain browser, with a tooltip explaining that Electron's shell guards and ad blocker are absent; belongs here, never over the media (owner, 2026-10-17) |
 | **Settings** | An icon and the label "Settings". Opens the Settings window. It is not a toggle and is never lit: the window's scrim covers the statusbar, and the window's `X` and Escape close it |
 
+There is no browser protection status: the static `unprotected` label was removed (owner, 2026-10-17) — a
+notice nothing can be acted on; the About section's runtime facts report the browser case.
 There is no connection dot or word. A dot is not used for state anywhere, and the outcome of the last request
 is the notice line's sentence. The fileserver's answers land there too: a refusal's sentence, and any part of
 an answer the interface could not read.
@@ -533,8 +540,8 @@ value sits at the row's right edge; the label column is sized to the longest lab
 The read-only Watch block is gone (owner, 2026-10-16). Favorite, Collections and Remove from History are the
 stage's context menu; the episode marker in the browser shows progress.
 
-The media stage carries no runtime-status badge or source selector. Browser `unprotected` status belongs
-in the application statusbar; Source belongs in this inspector footer (owner, 2026-10-17).
+The media stage carries no runtime-status badge or source selector; Source belongs in this inspector footer
+(owner, 2026-10-17).
 
 There is no Clear History here: it belongs to Library.
 

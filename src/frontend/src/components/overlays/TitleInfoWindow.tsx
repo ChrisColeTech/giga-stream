@@ -43,8 +43,10 @@ export function TitleInfoWindow() {
     return () => controller.abort();
   }, [ref]);
 
+  /* A series plays through its episodes, not the series payload (the backend fills streamUrl and sources on movies
+   * only), so a TV title is playable as soon as its information is read; the player resolves the episode. */
   const playable = item?.kind === "local" || (detail !== undefined && (
-    detail.streamUrl !== undefined || (detail.sources?.length ?? 0) > 0
+    item?.kind === "tv" || detail.streamUrl !== undefined || (detail.sources?.length ?? 0) > 0
   ));
   const unavailable = item === undefined ? LIBRARY_COPY.noItem : item.kind !== "local" && detail === undefined
     ? "Title information is loading." : !playable ? NO_SOURCE : undefined;

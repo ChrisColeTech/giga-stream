@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EventInput } from "@/lib/event-log";
 import { registerLiveStreamTarget, requestLiveStream } from "@/services/live-stream-session";
-import type {
-  StreamEngine,
-  StreamEngineFactory,
-} from "@/services/stream-player-engine";
+import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";
 import type { StreamFacts, StreamPreferences, StreamStageState } from "@/types/stream-player";
 

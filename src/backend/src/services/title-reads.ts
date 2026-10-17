@@ -121,9 +121,12 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
     async detail(titleId: string): Promise<Record<string, unknown>> {
       const [kind, id] = parseTitleId(titleId);
       try {
-        // A thin list row is fresh but incomplete: one forced fetch fills it (docs/11 section 7.3).
+        // A thin list row is fresh but incomplete: one forced fetch fills it (docs/11 section 7.3). A series
+        // detail stored before the seasons mapping lacks them: one forced fetch heals it (docs/03 section 7.6b).
         let payload = await ensureTitle(kind, id);
-        if (payload.shape !== "detail") payload = await ensureTitle(kind, id, true);
+        if (payload.shape !== "detail" || (kind === "tv" && !Array.isArray(payload.seasons))) {
+          payload = await ensureTitle(kind, id, true);
+        }
         await enrichWithOmdb(kind, id, payload);
         const output = storedRowOf(kind, id, payload, now());
         if (output === undefined) throw new AppError(ERRORS.titleNotFound, { titleId });

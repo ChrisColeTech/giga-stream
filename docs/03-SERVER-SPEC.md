@@ -22,7 +22,7 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
 | 7.2c Playlist sync | B | **done** (`playlist-sync.test.ts`: parse, dedupe, address-rule refusals, create/update/removed match paths, prune, dry run, single-flight, schedule, enrichment, one revision bump per run; landed 2026-10-16 and driven over HTTP against a live iptv-org playlist — boot run, dry run, update repair, prune, hand-row isolation, restart persistence) |
 | 7.3 Stream and image addresses | B | **done** (the address rule; part of every channel change) |
-| 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7) |
+| 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7). **Gap found 2026-10-17:** the TV detail never carried `seasons` — the mapping of TMDB's `seasons[]` was unspecified in the type and untested, so the Player's episode browser never started; remediation in 7.4 and 7.6b lands with the mapping, the store-heal rule, and detail/seasons tests against the real chain |
 | 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the sources rule is specified (see 7.5, from `14`'s results) and lands with wave A of `22` |
 | 7.6 TMDB client | B | **done** (read token, ~5/s pacing, `429` backoff, merged in-flight requests) |
 | 7.6b The catalog sync | B | **done** (`titles.test.ts`: store fill-through, restart from store, single-flight admin sync, the outcome in the status, audit as `system`, `TMDB_SYNC_SCHEDULE` warm-up, no revision bump; `404` from TMDB is `title.not_found`) |
@@ -740,6 +740,7 @@ interface BackendTitle {
   posterUrl?: string;        // TMDB image addresses (11 section 2)
   backdropUrl?: string;
   popularity?: { score: number; readAt: number };   // TMDB popularity and when it was read
+  seasons?: Array<{ season: number; episodeCount: number }>;   // a series (remediation 2026-10-17)
   streamUrl?: string;        // a movie's address from the rule (7.5)
 }
 ```
@@ -758,6 +759,21 @@ interface BackendTitle {
   Paging stops at TMDB's page 500.
 - An id TMDB does not know is `404 title.not_found`. Without `TMDB_READ_TOKEN`, or when TMDB cannot be
   reached and nothing is cached, the title routes answer `503 tmdb.unavailable`.
+
+**The seasons mapping (remediation, owner, 2026-10-17).** The detail route's `seasons` for a series is
+mapped by the backend from TMDB's `GET /tv/{id}` answer: `seasons[].season_number` becomes `season`,
+`seasons[].episode_count` becomes `episodeCount` (`11` section 3). Season 0 (Specials) and seasons with
+an `episode_count` of 0 are left out; TMDB's array order is kept, so `seasons[0]` is the lowest real
+season. The field names are translated here, never passed through raw — TMDB's snake_case names would
+answer no reader. This mapping was missing from the first build (`BackendTitle` above had no `seasons`
+and `detailOf` dropped TMDB's array), which left every series without seasons or episodes: the Player
+only requests a season after seeing `seasons[0]` in the detail, so an absent array silently disables the
+whole episode browser, and the seasons route itself is never reached. Both reference backends confirm
+the shape: mediamash-backend maps `season_number > 0` into a detail payload that carries seasons from
+the first response; core-main (OMSS) types TMDB's `seasons[]` but never maps it — the same failure this
+remediation closes. The fileserver accepts both entry shapes (`{ season, episodeCount }` and, after a
+season read, `{ season, episodes[] }` — a per-season read replaces that season's entry with its episode
+list, `03` section 7.4's seasons route).
 
 ### 7.5 The stream address rule
 
@@ -796,6 +812,10 @@ nobody "adds a title" — the store only ever mirrors TMDB.
 - **Fill-through.** Every title route answers from the store when the entry exists and is fresh; on a
   miss or staleness it fetches TMDB, stores the answer, then answers. A restart serves everything the
   store already holds.
+- **Healing an old shape (owner, 2026-10-17).** A stored entry is fresh for days, so when the detail
+  contract gains a field the old rows cannot carry it. The rule: on a detail read, a stored payload that
+  is missing a field the contract gives its shape — a series detail without `seasons` — is refetched
+  whole once, and the refetched payload replaces it. Later reads are ordinary fill-through again.
 - **Bulk sync (admin).** `POST /api/titles/sync` — body `{ scope: "trending" | "popular", kind:
   "movie" | "tv", pages? }`, or `{ scope: "titles", ids: [...] }` — walks TMDB's trending or popular
   lists for that kind (first `pages`, default 5), storing each title and its popularity, and refetching

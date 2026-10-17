@@ -30,7 +30,6 @@ export function Statusbar() {
   const openOverlay = useAppStore((state) => state.openOverlay);
   const notice = useAppStore((state) => state.notice);
   const theatre = useAppStore((state) => state.theatre);
-  const browser = typeof window === "undefined" || window.pocHost?.runtime !== "electron";
 
   return (
     <footer className={cn(BAR, barTone(theatre))}>
@@ -42,12 +41,6 @@ export function Statusbar() {
         </span>
       )}
       <span className="flex-1" />
-      {browser && (
-        <span className="flex-none font-mono text-xs text-faint"
-          title="Browser mode: Electron's shell guards and ad blocker are not available.">
-          unprotected
-        </span>
-      )}
       <button
         type="button"
         aria-pressed={eventsOpen}

@@ -103,6 +103,10 @@
   --animate-fade-in: fade-in var(--duration-fast) var(--ease-in);
   /* The skeleton sweep the skeletons have always asked for and never had (scroll audit 2026-09-06, plan §6). */
   --animate-skel-shimmer: skel-shimmer 1.6s linear infinite;
+
+  /* Theatre's spotlight (owner, 2026-10-17): theme-independent, so it reads on the black stage in every
+     theme; workspace.css mixes its outer stops down from this one value. */
+  --color-spot: rgba(255, 255, 255, 0.045);
 }
 
 /* ============ theme + accent families (ported from merge-ui) ============
@@ -191,9 +195,24 @@
   --color-accent-ink: #ffffff;
 }
 :root[data-theme="light"][data-accent="rose"] {
-  --color-accent: #be123c;
-  --color-accent-strong: #9f1239;
+  --color-accent: #6d28d9;
+  --color-accent-strong: #5b21b6;
   --color-accent-ink: #ffffff;
+}
+
+/* ============ theatre (owner, 2026-10-17) ============
+ * Theatre mode is a token remap, not per-component rules (02 §14: retheming means editing tokens): the
+ * shell tone goes black — the surfaces, pane fills, input backgrounds and every hairline and border, which
+ * all read these variables — and nothing else. Controls keep their own fill and edge, so buttons, chips and
+ * the rails' selected rows read exactly as in the normal theme; the accent, hover tint, state tones and
+ * focus ring stay too. */
+:root[data-theatre] {
+  --color-bg: #000;
+  --color-panel: #000;
+  --color-surface: #000;
+  --color-stage: #000;
+  --color-hair: #000;
+  --color-border: #000;
 }
 
 @import "./styles/base.css";

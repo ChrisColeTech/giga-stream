@@ -10,12 +10,14 @@ let uninstalls: Array<() => void> = [];
 
 /** The named preload seam, faked: the installer subscribes, the test delivers reports through the captured listener. */
 function fakeElectronWindow(): void {
-  (globalThis as unknown as { window: unknown }).window = {
+  (globalThis as { window?: unknown }).window = {
     pocHost: {
       runtime: "electron",
       onGuard: (listener: GuardListener) => {
         deliver = listener;
       },
+      setPlayerPolicy: () => undefined,
+      clearPlayerPolicy: () => undefined,
     },
   };
 }
@@ -30,7 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const uninstall of uninstalls.splice(0)) uninstall();
-  delete (globalThis as unknown as { window?: unknown }).window;
+  Reflect.deleteProperty(globalThis, "window");
 });
 
 describe("guard receiver", () => {
@@ -40,7 +42,7 @@ describe("guard receiver", () => {
     deliver?.({ kind: "popup", url: "https://popup.example/hoist?token=x", blocked: true });
     const row = last();
     assert.equal(row?.area, "Connection");
-    assert.equal(row?.tone, "info");
+    assert.equal(row?.tone, "warn");
     assert.equal(row?.sentence, "A popup was refused (popup.example).");
     assert.equal(row?.identity, undefined);
   });

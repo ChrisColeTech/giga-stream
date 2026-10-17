@@ -139,6 +139,33 @@ test("malformed TMDB siblings are skipped while valid movie and TV names remain"
   await t.dispose();
 });
 
+test("a series detail maps TMDB's seasons, leaving out the specials and empty seasons", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({ config: tmdbOn(tmdb) });
+  const detail = await send(t.app, "GET", "/api/titles/tv-1399");
+  assert.deepEqual(pick(detail.body, "data.seasons"), [{ season: 1, episodeCount: 10 }]);
+  await t.dispose();
+});
+
+test("a series detail stored before the seasons mapping is healed by one forced refetch", async () => {
+  const tmdb = await stubTmdb();
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), "title-seasons-"));
+  const first = await makeApp({ dataDir, config: tmdbOn(tmdb) });
+  await send(first.app, "GET", "/api/titles/tv-1399");
+  await first.dispose();
+  const db = new DatabaseSync(path.join(dataDir, "admin.db"));
+  db.prepare("UPDATE titles SET payload = ? WHERE kind = 'tv' AND tmdb_id = 1399").run(
+    JSON.stringify({ id: "tv-1399", tmdbId: 1399, kind: "tv", shape: "detail", title: "Game of Thrones", genres: [] }),
+  );
+  db.close();
+
+  const second = await makeApp({ dataDir, config: tmdbOn(tmdb) });
+  const healed = await send(second.app, "GET", "/api/titles/tv-1399");
+  assert.deepEqual(pick(healed.body, "data.seasons"), [{ season: 1, episodeCount: 10 }]);
+  await second.dispose();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
 test("a season answers its episodes; genres answer from TMDB", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) });

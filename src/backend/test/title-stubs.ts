@@ -30,6 +30,11 @@ const GOT_DETAIL = {
   genres: [{ id: 18, name: "Drama" }],
   credits: { cast: [{ name: "Peter Dinklage" }] },
   external_ids: { imdb_id: "tt0944947" },
+  seasons: [
+    { season_number: 0, episode_count: 5, air_date: "2010-12-05" },
+    { season_number: 1, episode_count: 10, air_date: "2011-04-17" },
+    { season_number: 2, episode_count: 0, air_date: "2012-04-01" },
+  ],
 };
 
 const OMDB_MATRIX = {

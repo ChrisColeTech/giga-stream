@@ -85,7 +85,7 @@ sections 3.6 and 7.4.
 | Genres | the names from the detail call (lists map `genre_ids` through the cached genre lists) |
 | Cast chips | the first ten `credits.cast[].name` |
 | Runtime | `runtime` (minutes) for a movie |
-| Seasons and episode counts | `seasons[]` for a series |
+| Seasons and episode counts | `seasons[]` for a series, mapped by the backend (`season_number` to `season`, `episode_count` to `episodeCount`); season 0 Specials and empty seasons are left out (`03` section 7.4) |
 | An exact episode | `season_number`, `episode_number`, `name`, `air_date`, the still at w300 |
 | The Trending sort | `popularity`, with its source (TMDB) and the time it was read |
 | Related titles | the title's `/recommendations`, first page, in TMDB's order |
