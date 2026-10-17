@@ -26,6 +26,9 @@ export function registerAdminStatic(app: FastifyInstance, services: Services): v
       .header("content-type", answer.contentType)
       .header("cache-control", answer.cacheControl)
       .header("x-content-type-options", "nosniff")
+      // The admin signs in and changes records: no other site may frame it or learn which page opened it.
+      .header("x-frame-options", "DENY")
+      .header("referrer-policy", "same-origin")
       .send(answer.body);
   });
 }

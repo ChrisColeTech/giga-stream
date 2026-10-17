@@ -14,5 +14,8 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src"]
+  // `.cts` is not matched by a bare `src`: without it src/app/preload.cts is skipped by typecheck and build, and the
+  // Electron window loads a preload that does not exist. NodeNext emits it as dist/app/preload.cjs, the name
+  // src/app/main.ts asks for.
+  "include": ["src/**/*.ts", "src/**/*.cts"]
 }
