@@ -41,12 +41,19 @@ test("the built bundle's assets and the favicon serve; the SPA entry answers dee
   rmSync(dist, { recursive: true, force: true });
 });
 
-test("an unknown /api address stays the JSON 404 envelope, never the SPA entry", async () => {
+test("an unknown /api or /healthz address stays the JSON 404 envelope, never the SPA entry", async () => {
   const dist = makeDist(["index.html", "assets/app.js"]);
   const t = await makeApp({ webDist: dist });
   const answer = await send(t.app, "GET", "/api/nope");
   assert.equal(answer.status, 404);
   assert.equal(pick(answer.body, "error.code"), "route.not_found");
+  const health = await send(t.app, "GET", "/healthz/nope");
+  assert.equal(health.status, 404);
+  assert.equal(pick(health.body, "error.code"), "route.not_found");
+  // The SPA entry is a GET answer only: a POST deep link keeps the envelope.
+  const posted = await send(t.app, "POST", "/some/deep/link");
+  assert.equal(posted.status, 404);
+  assert.equal(pick(posted.body, "error.code"), "route.not_found");
   await t.dispose();
   rmSync(dist, { recursive: true, force: true });
 });
