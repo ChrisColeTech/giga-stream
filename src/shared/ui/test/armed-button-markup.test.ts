@@ -7,7 +7,7 @@ import { ArmedButton } from '../src/controls/ArmedButton'
 import { ARMED_TITLE, armedFace } from '../src/controls/armed-face'
 
 const render = (extra: { title?: string; disabled?: boolean } = {}): string =>
-  renderToStaticMarkup(createElement(ArmedButton, { question: 'Remove Films?', onConfirm: () => undefined, ...extra }, 'Remove'))
+  renderToStaticMarkup(createElement(ArmedButton, { children: 'Remove', question: 'Remove Films?', onConfirm: () => undefined, ...extra }))
 
 test('at rest the two-step is a ghost button naming its verb, with the caller tooltip', () => {
   const html = render({ title: 'Remove this collection' })
