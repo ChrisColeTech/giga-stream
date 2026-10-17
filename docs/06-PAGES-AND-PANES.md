@@ -324,14 +324,16 @@ LoRA Studio's gallery tile with Giga Stream's 2:3 poster (owner decision). Cards
 | Card element | Behaviour |
 |---|---|
 | Art | the poster in one bordered button: the dim border on hover, the accent border and ring when selected. With no image it is drawn as a poster in the title's colour family with the title set large at its foot, which is the content itself, not placeholder copy |
-| Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite |
+| Rating | a small badge in the art's top left corner: the star glyph and the rating to one decimal (`7.1`) in mono, on the family's dim scrim chip; absent when the title has no rating (a local file never has one) (owner, 2026-10-17) |
+| Details glyph | a small `Info` glyph button in the art's top right corner (named `Details for <title>`). A click or `Enter` opens a **details popover** anchored to it, never the Title information window: rating, year, `Movie` or `2 seasons · 14 episodes`, runtime, genres and the plot's opening lines, read from the title's detail (shimmer lines while it is read). `Escape`, an outside press or a second press closes it; it never selects the card or opens the work window (owner, 2026-10-17) |
+| Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite; with the Details glyph drawn it sits directly beneath the glyph |
 | Progress | a bar on the art's bottom edge for a title in progress |
 | Verbs | under the art, on equal ghost tile buttons: **Play** (**Open** for a series), **Info**, and a fixed square menu button |
 | Title | a visible, single-line title beneath the poster and above the verbs, with ellipsis for overflow; the full title also remains the tooltip and accessible name (owner, 2026-10-17) |
 
 - Cards retain the family tile and now show a title line beneath the art (owner, 2026-10-17); no added year
-  line, watched check or quality badge. The watch state is the progress bar and Title information, and the
-  quality is in Title information and the list. Grid and Rows shelves use the same visible-title card.
+  line, watched check or quality badge; the rating badge and the Details glyph above are the owner's additions.
+  The watch state is the progress bar and Title information, and the quality is in Title information and the list. Grid and Rows shelves use the same visible-title card.
 - A press on the art selects the card and opens its Info; `Enter` on a focused card does exactly what the press
   does. Play and Info are always drawn, never only on hover.
 - Context menu (on the card and from its menu button): the watch line as a heading when there is progress, Play
@@ -421,9 +423,9 @@ is nothing to cancel. The body is `Form`'s page grammar with one group.
 | Group heading | the title, with the year as its badge. The one group does not fold (`01` section 9's exception) |
 | Artwork and plot | a 180px-wide poster (or its drawn fallback) beside the full plot; three shimmer lines while the detail is not read; a local file has no plot |
 | Rows | Identity (`1999 · Movie · 1080p`), Genres and Cast as hairline name chips (`NAME_CHIP`, the same chips as the Player's Details), Rating, Runtime or Seasons (`2 seasons · 14 episodes`), Progress (the watch block) when there is one |
-| Action strip | pinned at the foot: **Favorite** (the star lights as the accent glyph, no edge) and **Collections** on the left, **Play** (**Open in Player** for a series), the one accent, on the right |
+| Action strip | pinned directly under the header, above the body (owner, 2026-10-17: the toolbar moves from the foot to the top): **Favorite** (the star lights as the accent glyph, no edge) and **Collections** on the left, **Play** (**Open in Player** for a series), the one accent, on the right |
 
-- Only the body scrolls; the header and the action strip stay fixed.
+- Only the body scrolls; the header and the action strip stay fixed, and nothing is drawn at the foot.
 - Favorite applies immediately, and so does a collection toggled from **Collections**. `Escape` or `X` closes it and keeps
   what was applied. Focus returns to the opener only if it still exists and no newer target owns focus.
 - It holds no video, filmstrip, episode browser, source picker or transport. Only **Play** hands off to
