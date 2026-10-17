@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { field, syncAll, titleApp } from "./title-edit-kit.js";
+import { FOUR_DAYS_MS, field, later, syncAll, titleApp } from "./title-edit-kit.js";
 import { itemsOf } from "./live-channel-kit.js";
 import { pick, send } from "./test-app.js";
 
@@ -16,8 +16,6 @@ test("every write needs a signed-in admin: 401 without a token, and for the dele
     ["PATCH", "/api/titles/movie-603", { plot: "x" }],
     ["DELETE", "/api/titles/movie-603", undefined],
     ["POST", "/api/titles/movie-603/revert", undefined],
-    ["POST", "/api/titles/movie-603/restore", undefined],
-    ["GET", "/api/titles?deleted=true", undefined],
   ] as const;
   for (const [method, url, body] of writes) {
     for (const token of [undefined, "not-a-token"]) {
@@ -47,7 +45,6 @@ test("a title made by hand is created, read, edited, cleared and deleted; the re
   assert.deepEqual([gone.status, gone.body], [200, { ok: true, data: { id } }]);
   assert.equal((await send(t.app, "GET", `/api/titles/${id}`)).status, 404);
   assert.equal((await send(t.app, "DELETE", `/api/titles/${id}`, undefined, token)).status, 404);
-  assert.deepEqual(itemsOf((await send(t.app, "GET", "/api/titles?deleted=true", undefined, token)).body), [], "a manual title leaves no tombstone");
   const actions = (pick((await send(t.app, "GET", "/api/audit?limit=10", undefined, token)).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
   assert.deepEqual(actions.slice(0, 3), ["title.deleted", "title.updated", "title.created"]);
 });
@@ -163,20 +160,48 @@ test("revert has nothing to go back to for a title made by hand, and a missing t
   assert.equal((await send(t.app, "POST", "/api/titles/movie-999/revert", undefined, token)).status, 404);
 });
 
-test("deleting a synced title writes a tombstone that can be listed and restored", async () => {
+test("deleting a synced title is a real delete: the stored copy goes, and a later read or sync may add it again", async () => {
   const h = await titleApp();
   const { t, token } = h;
   await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
-  await send(t.app, "GET", "/api/titles/movie-603");
+  await send(t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, token);
   assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 200);
-  const gone = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.deepEqual([gone.status, pick(gone.body, "error.code")], [404, "title.not_found"]);
-  const listed = await send(t.app, "GET", "/api/titles?deleted=true", undefined, token);
-  assert.deepEqual(itemsOf(listed.body).map((i) => [i.id, i.title, i.state]), [["movie-603", "The Matrix", "deleted"]]);
-  assert.equal((await send(t.app, "POST", "/api/titles/movie-603/restore", undefined, token)).status, 200);
-  assert.equal((await send(t.app, "POST", "/api/titles/movie-603/restore", undefined, token)).status, 404);
-  assert.deepEqual(itemsOf((await send(t.app, "GET", "/api/titles?deleted=true", undefined, token)).body), []);
+  assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 404, "nothing stored to delete");
+  h.tmdb.calls.length = 0;
+  const again = await send(t.app, "GET", "/api/titles/movie-603");
+  assert.deepEqual([again.status, field(again, "plot"), field(again, "state")], [200, "TMDB plot v1", "synced"], "TMDB's copy, without the edit");
+  assert.ok(h.tmdb.calls.includes("/movie/603"));
+});
+
+test("enabled is a field of the title: a disabled title leaves the public reads, and an admin's read keeps it", async () => {
+  const h = await titleApp();
+  const { t, token } = h;
+  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  const manual = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
+  assert.equal(field(await send(t.app, "GET", `/api/titles/${manual}?includeDisabled=true`, undefined, token), "enabled"), true);
+  await send(t.app, "GET", "/api/titles/movie-603");
+  for (const id of ["movie-603", manual]) {
+    const off = await send(t.app, "PATCH", `/api/titles/${id}`, { enabled: false }, token);
+    assert.deepEqual([off.status, field(off, "enabled"), field(off, "state")], [200, false, id === manual ? "manual" : "synced"], "enabled is not an edit");
+  }
+  const titles = async (query: string, token?: string) =>
+    itemsOf((await send(t.app, "GET", `/api/titles?kind=movie&sort=az${query}`, undefined, token)).body).map((i) => [i.title, i.enabled]);
+  assert.deepEqual(await titles(""), [], "public: nothing disabled");
+  assert.deepEqual(await titles("&includeDisabled=true"), [], "the option is ignored without a token");
+  assert.deepEqual(await titles("&includeDisabled=true", "not-a-token"), []);
+  assert.deepEqual(await titles("&includeDisabled=true", token), [["Home Movie", false], ["The Matrix", false]]);
+  const search = await send(t.app, "GET", "/api/titles/search?kind=movie&q=home");
+  assert.deepEqual(itemsOf(search.body).map((i) => i.title), []);
+  for (const id of ["movie-603", manual]) {
+    assert.equal((await send(t.app, "GET", `/api/titles/${id}`)).status, 404, id);
+    assert.equal((await send(t.app, "GET", `/api/titles/${id}?includeDisabled=true`)).status, 404, `${id} without a token`);
+    assert.equal((await send(t.app, "GET", `/api/titles/${id}?includeDisabled=true`, undefined, token)).status, 200, id);
+  }
+  // A sync neither re-enables it nor skips it.
+  await later(h, FOUR_DAYS_MS);
+  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603?includeDisabled=true", undefined, await later(h, 0)), "enabled"), false);
+  await send(t.app, "PATCH", "/api/titles/movie-603", { enabled: true }, await later(h, 0));
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");
-  const actions = (pick((await send(t.app, "GET", "/api/audit?limit=10", undefined, token)).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
-  assert.deepEqual(actions.slice(0, 2), ["title.restored", "title.deleted"]);
+  assert.equal(pick((await send(t.app, "GET", "/api/titles/movie-603")).body, "data.enabled"), undefined, "no enabled on a public answer");
 });

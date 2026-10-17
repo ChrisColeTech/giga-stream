@@ -17,13 +17,18 @@ export type { BrowseQuery, SyncRequest, SyncStatus } from "./title-shapes.js";
 
 const notFound = (titleId: string): AppError => new AppError(ERRORS.titleNotFound, { titleId });
 
+/** An admin's read passes `includeDisabled`; a public read leaves the disabled titles out. */
+export interface ReadOptions {
+  includeDisabled?: boolean;
+}
+
 /**
  * Titles (docs/03 sections 7.4, 7.6b; docs/26 decision D20): fill-through reads over the synced store, the
- * catalog-sync job - one at a time, audited, and one of the backend's two scheduled timers (`01` section 4.4) -
- * and the records an admin makes and edits. The two fills of section 7.5 are attached to detail and season
- * answers as they are answered, never stored: the providers' sources and the stream rule's `streamUrl`,
- * neither displacing the other. Every answer carries a `state` (synced, edited, manual), shows an admin's edits
- * over TMDB's row, leaves out a title an admin deleted, and lists the titles made by hand beside TMDB's.
+ * catalog sync - single-flight and audited; the backend's scheduler runs it through a job - and the records an admin
+ * makes and edits. The two fills of section 7.5 are attached to detail and season answers as they are answered,
+ * never stored: the providers' sources and the stream rule's `streamUrl`, neither displacing the other. Every
+ * answer carries a `state` (synced, edited, manual), shows an admin's edits over TMDB's row, leaves out a disabled
+ * title unless an admin asks, and lists the titles made by hand beside TMDB's.
  */
 export function createTitleService(deps: {
   store: Store;
@@ -33,7 +38,7 @@ export function createTitleService(deps: {
   streams: StreamTemplates;
   now: () => number;
   allowLoopback: boolean;
-  /** The stored schedule setting, shown in the sync status. */
+  /** The schedule shown in the sync status: the first enabled catalog job's. */
   scheduleLabel?: () => string;
 }) {
   const { store } = deps;
@@ -56,25 +61,39 @@ export function createTitleService(deps: {
     }
   }
 
-  async function manualDetail(titleId: string): Promise<Record<string, unknown>> {
+  /** A manual title, or 404 when it is not there or is disabled and the read is public. */
+  function manualRow(titleId: string, options: ReadOptions) {
     const row = store.titles.findById(titleId);
-    if (row?.origin !== "manual") throw notFound(titleId);
-    const view = viewOf(row);
+    if (row?.origin !== "manual" || (!row.enabled && options.includeDisabled !== true)) throw notFound(titleId);
+    return row;
+  }
+
+  /** A synced title is hidden from a public read while it is disabled. */
+  function checkEnabled(titleId: string, options: ReadOptions): void {
+    if (options.includeDisabled === true) return;
+    if (store.titles.findById(titleId)?.enabled === false) throw notFound(titleId);
+  }
+
+  async function manualDetail(titleId: string, options: ReadOptions): Promise<Record<string, unknown>> {
+    const row = manualRow(titleId, options);
+    const view = viewOf(row, options.includeDisabled === true);
     const filled = row.tmdbId === null ? view : sources.withDetail({ ...view, tmdbId: row.tmdbId });
     // The admin's own address wins; the stream rule only fills a manual title that has none.
     return typeof view.streamUrl === "string" || row.tmdbId === null ? filled : streams.withDetail(filled);
   }
 
   return {
-    ...sync,
     ...records,
+    startSync: sync.startSync,
+    runNow: sync.runNow,
+    isSyncRunning: sync.isRunning,
     ensureTitle: reads.ensureTitle,
     genres: reads.genres,
 
-    async browse(query: BrowseQuery): Promise<ListAnswer> {
-      const manual = overlay.manualMatches(query);
+    async browse(query: BrowseQuery, options: ReadOptions = {}): Promise<ListAnswer> {
+      const manual = overlay.manualMatches({ ...query, ...options });
       const answer = await tmdbPage(() => reads.browse(query), query.page, manual.length);
-      const items = overlay.decorate(answer.items);
+      const items = overlay.decorate(answer.items, options.includeDisabled);
       return {
         ...answer,
         items: query.page === 1 ? overlay.merge(items, manual, query.sort) : items,
@@ -82,57 +101,56 @@ export function createTitleService(deps: {
       };
     },
 
-    async search(kind: Kind, q: string, page: number): Promise<ListAnswer> {
-      const manual = overlay.manualMatches({ kind, q });
+    async search(kind: Kind, q: string, page: number, options: ReadOptions = {}): Promise<ListAnswer> {
+      const manual = overlay.manualMatches({ kind, q, ...options });
       const answer = await tmdbPage(() => reads.search(kind, q, page), page, manual.length);
-      const items = overlay.decorate(answer.items);
+      const items = overlay.decorate(answer.items, options.includeDisabled);
       return { ...answer, items: page === 1 ? [...manual, ...items] : items, totalResults: answer.totalResults + manual.length };
     },
 
-    async detail(titleId: string): Promise<Record<string, unknown>> {
-      if (isManualId(titleId)) return manualDetail(titleId);
-      const [kind, tmdbId] = parseTitleId(titleId);
-      if (store.titles.isDeleted(kind, tmdbId)) throw notFound(titleId);
+    async detail(titleId: string, options: ReadOptions = {}): Promise<Record<string, unknown>> {
+      if (isManualId(titleId)) return manualDetail(titleId, options);
+      parseTitleId(titleId);
+      checkEnabled(titleId, options);
       const answer = await reads.detail(titleId);
       const filled = streams.withDetail(sources.withDetail(answer));
       const row = store.titles.findById(titleId);
       if (row === undefined) return { ...filled, state: "synced" };
-      const withEdits = overlay.decorate([filled])[0] ?? filled;
+      const withEdits = overlay.decorate([filled], options.includeDisabled)[0] ?? filled;
       // An address the admin edited outranks the stream rule's.
       const own = row.editedFields.includes("streamUrl") ? asRecord(row.payload).streamUrl : undefined;
       return typeof own === "string" ? { ...withEdits, streamUrl: own } : withEdits;
     },
 
-    async seasons(titleId: string, season: number): Promise<{ episodes: unknown[] }> {
+    async seasons(titleId: string, season: number, options: ReadOptions = {}): Promise<{ episodes: unknown[] }> {
       if (isManualId(titleId)) {
-        const row = store.titles.findById(titleId);
-        if (row?.origin !== "manual") throw notFound(titleId);
+        const row = manualRow(titleId, options);
         const known = listOf(asRecord(row.payload).seasons).find((s) => num(asRecord(s).season) === season);
         const answer = { episodes: listOf(asRecord(known).episodes) };
         return row.tmdbId === null ? answer : sources.withEpisodes(answer, row.tmdbId);
       }
-      const [kind, tmdbId] = parseTitleId(titleId);
-      if (store.titles.isDeleted(kind, tmdbId)) throw notFound(titleId);
+      const [, tmdbId] = parseTitleId(titleId);
+      checkEnabled(titleId, options);
       const answer = await reads.seasons(titleId, season);
       return streams.withEpisodes(sources.withEpisodes(answer, tmdbId), tmdbId);
     },
 
-    async recommendations(titleId: string): Promise<{ items: Record<string, unknown>[] }> {
+    async recommendations(titleId: string, options: ReadOptions = {}): Promise<{ items: Record<string, unknown>[] }> {
       if (isManualId(titleId)) {
-        if (store.titles.findById(titleId)?.origin !== "manual") throw notFound(titleId);
+        manualRow(titleId, options);
         return { items: [] };
       }
-      const [kind, tmdbId] = parseTitleId(titleId);
-      if (store.titles.isDeleted(kind, tmdbId)) throw notFound(titleId);
+      parseTitleId(titleId);
+      checkEnabled(titleId, options);
       const answer = await reads.recommendations(titleId);
-      return { items: overlay.decorate(answer.items) };
+      return { items: overlay.decorate(answer.items, options.includeDisabled) };
     },
 
     status(): SyncStatus {
-      return sync.status();
+      return { ...sync.status(), schedule: deps.scheduleLabel?.() ?? "off" };
     },
     close(): void {
-      sync.clearSchedule();
+      sync.stop();
     },
   };
 }

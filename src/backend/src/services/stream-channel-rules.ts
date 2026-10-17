@@ -30,8 +30,10 @@ export function newStreamRecord(input: StreamChannelInput, id: string, allowLoop
     source: null,
     streamUrl: input.streamUrl,
     syncName: null,
+    playlistId: null,
     editedFields: [],
     revision: 0,
+    enabled: true,
   };
   checkAddresses(record, allowLoopback);
   return record;

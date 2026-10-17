@@ -89,21 +89,12 @@ test("a title made by hand is never touched by a sync, even with a TMDB id of it
   assert.equal(field(await send(h.t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");
 });
 
-test("a title an admin deleted is skipped by the sync, by id, by the read and by the healing refetch", async () => {
+test("a deleted synced title is added again by the next sync, as a plain synced one", async () => {
   const h = await titleApp();
   await syncAll(h, SYNC_MOVIES);
-  await send(h.t.app, "GET", "/api/titles/movie-603");
+  await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, h.token);
   assert.equal((await send(h.t.app, "DELETE", "/api/titles/movie-603", undefined, h.token)).status, 200);
-  h.tmdb.calls.length = 0;
-  await later(h, FOUR_DAYS_MS);
   await syncAll(h, SYNC_MOVIES);
-  await syncAll(h, { scope: "titles", ids: ["movie-603"] });
-  assert.equal(h.tmdb.calls.includes("/movie/603"), false, "the ids scope did not fetch it");
-  const gone = await send(h.t.app, "GET", "/api/titles/movie-603");
-  assert.deepEqual([gone.status, pick(gone.body, "error.code")], [404, "title.not_found"]);
-  assert.equal(h.tmdb.calls.includes("/movie/603"), false, "the read did not fetch it");
-  const browse = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
-  assert.equal((pick(browse.body, "data.items") as unknown[]).length, 0);
-  const search = await send(h.t.app, "GET", "/api/titles/search?kind=movie&q=matrix");
-  assert.equal((pick(search.body, "data.items") as unknown[]).length, 0);
+  const back = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
+  assert.deepEqual(["title", "state"].map((f) => pick(back.body, `data.items.0.${f}`)), ["The Matrix", "synced"]);
 });

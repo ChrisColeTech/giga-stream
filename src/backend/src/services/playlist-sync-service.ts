@@ -2,22 +2,21 @@ import { randomUUID } from "node:crypto";
 
 import { AppError, ERRORS } from "../constants/errors.js";
 import { PLAYLIST_SYNC_EXAMPLES_MAX } from "../constants/limits.js";
+import type { PlaylistRecord } from "../store/playlist-repository.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistSyncAnswer, PlaylistSyncCounts, PlaylistSyncStatus } from "../types/playlist-sync.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { httpsLogoUrl, type LogoResolver } from "./logo-resolver.js";
-import type { M3uEntry } from "./m3u-parser.js";
 import { fetchPlaylist } from "./playlist-fetch.js";
 import { playlistRefOf } from "./playlist-ref.js";
-import { planSync } from "./playlist-sync-plan.js";
+import { type PlannedEntry, planSync } from "./playlist-sync-plan.js";
 
 /**
  * The playlist sync (docs/03 section 7.2c, docs/26 section 3.10): each configured playlist is fetched once,
  * parsed, run through the address rule (https only - refusals are skipped and counted, never imported broken),
  * matched against the rows the sync owns (the same host first, then tvgId, then the playlist's own name), and
  * written in one transaction with one revision bump, which readers see in their next channel read. A match takes
- * the entry's values except the fields an admin edited; an entry an admin deleted is ignored; `prune` never deletes
- * an edited row (`kept`). Hand-created rows (`source` absent) are never matched, updated or removed. Single flight:
+ * the entry's values except the fields an admin edited; `prune` never deletes an edited row (`kept`). Hand-created rows (`source` absent) are never matched, updated or removed. Single flight:
  * a second start is `409 playlist.busy`. Every run - manual, dry or scheduled - is one `channel.imported` audit entry.
  */
 export function createPlaylistSyncService(deps: {
@@ -44,19 +43,23 @@ export function createPlaylistSyncService(deps: {
     }
   }
 
-  async function performRun(options: { dryRun: boolean; prune: boolean }, actor: Actor, hosts: string[]): Promise<PlaylistSyncAnswer> {
+  async function performRun(
+    options: { dryRun: boolean; prune: boolean },
+    actor: Actor,
+    hosts: string[],
+    targets: PlaylistRecord[],
+  ): Promise<PlaylistSyncAnswer> {
     let skipped = 0;
     let refused = 0;
     const refusalExamples: string[] = [];
-    const usable: Array<{ host: string; entry: M3uEntry }> = [];
-    // The addresses are read from the store at each run, so an admin's change is the next run's list.
-    for (const { url } of store.syncSettings.playlists()) {
-      const playlist = await fetchPlaylist({ url, maxBytes, maxEntries, allowLoopback, fetchImpl });
+    const usable: PlannedEntry[] = [];
+    for (const target of targets) {
+      const playlist = await fetchPlaylist({ url: target.address, maxBytes, maxEntries, allowLoopback, fetchImpl });
       hosts.push(playlist.host);
       skipped += playlist.skipped;
       refused += playlist.refused;
       refusalExamples.push(...playlist.refusalExamples);
-      for (const entry of playlist.entries) usable.push({ host: playlist.host, entry });
+      for (const entry of playlist.entries) usable.push({ host: playlist.host, playlistId: target.id, entry });
     }
     refusalExamples.length = Math.min(refusalExamples.length, PLAYLIST_SYNC_EXAMPLES_MAX);
 
@@ -69,7 +72,6 @@ export function createPlaylistSyncService(deps: {
       owned: store.channels.listSynced(),
       usable,
       hosts,
-      isIgnored: (host, tvgId, name) => store.tombstones.hasChannel(host, tvgId, name),
       newId: () => `ch_${randomUUID()}`,
     });
     const { creates, updates, vanished } = plan;
@@ -80,7 +82,6 @@ export function createPlaylistSyncService(deps: {
       refused,
       removed: vanished.length,
       kept: plan.kept.length,
-      ignored: plan.ignored,
     };
     if (!options.dryRun && counts.created + counts.updated + counts.removed > 0) {
       store.transaction(() => {
@@ -101,19 +102,28 @@ export function createPlaylistSyncService(deps: {
   return {
     isRunning: (): boolean => running !== null,
 
-    /** One run; the route awaits it, so the answer is this run's counts. A second start is `409`. */
-    async run(options: { dryRun?: boolean; prune?: boolean }, actor: Actor): Promise<PlaylistSyncAnswer> {
+    /**
+     * One run over `targets` (default: every enabled playlist, read from the store now); the route awaits it, so the
+     * answer is this run's counts. A second start is `409`. Each playlist in the run keeps how it went.
+     */
+    async run(options: { dryRun?: boolean; prune?: boolean }, actor: Actor, targets?: PlaylistRecord[]): Promise<PlaylistSyncAnswer> {
       if (running !== null) throw new AppError(ERRORS.playlistBusy, { startedAt: running.startedAt });
       running = { startedAt: now() };
       const hosts: string[] = [];
+      const list = targets ?? store.playlists.list().filter((p) => p.enabled);
+      const remember = (outcome: string): void => {
+        for (const p of list) if (store.playlists.find(p.id)) store.playlists.recordSync(p.id, now(), outcome);
+      };
       try {
-        const answer = await performRun({ dryRun: options.dryRun ?? false, prune: options.prune ?? false }, actor, hosts);
-        const { created, updated, skipped, refused, removed, kept, ignored } = answer;
-        last = { finishedAt: now(), outcome: "ok", counts: { created, updated, skipped, refused, removed, kept, ignored } };
+        const answer = await performRun({ dryRun: options.dryRun ?? false, prune: options.prune ?? false }, actor, hosts, list);
+        const { created, updated, skipped, refused, removed, kept } = answer;
+        last = { finishedAt: now(), outcome: "ok", counts: { created, updated, skipped, refused, removed, kept } };
+        remember("ok");
         return answer;
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "failed";
         last = { finishedAt: now(), outcome: message };
+        remember(message);
         auditSafe(actor, { failed: message, ...(hosts.length > 0 && { hosts }) });
         throw error;
       } finally {
@@ -126,7 +136,7 @@ export function createPlaylistSyncService(deps: {
         running: running !== null,
         ...(running !== null && { startedAt: running.startedAt }),
         ...(last !== null && { lastRunAt: last.finishedAt, lastOutcome: last.outcome, ...(last.counts && { counts: last.counts }) }),
-        playlists: store.syncSettings.playlists().map(playlistRefOf),
+        playlists: store.playlists.list().map(playlistRefOf),
       };
     },
   };

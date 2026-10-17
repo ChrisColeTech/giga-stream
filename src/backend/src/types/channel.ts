@@ -47,12 +47,14 @@ export interface LiveSettingsView {
 
 export interface StreamAdminChannel extends BackendChannel {
   kind: "stream";
+  enabled: boolean;
   /** The fields an admin edited on a synced row; absent when none. */
   editedFields?: string[];
 }
 
 export interface LiveAdminChannel extends BackendChannel, LiveSettingsView, LiveStatus {
   kind: "live";
+  enabled: boolean;
 }
 
 /** The admin's full view of a channel (docs/26 section 3.3): the public fields plus a live row's engine state. */
@@ -71,6 +73,8 @@ interface RecordCore {
   number: string | null;
   logoUrl: string | null;
   revision: number;
+  /** A disabled row stays in the admin's lists and is left out of every public read; no sync changes it. */
+  enabled: boolean;
 }
 
 /** A live row's own columns: its encoding and exactly one of a folder or the ordered videos. */
@@ -89,6 +93,8 @@ export interface StreamRecord extends RecordCore {
   source: string | null;
   /** The playlist's own name for the entry (a synced row), kept apart from `name` so a rename keeps the match. */
   syncName: string | null;
+  /** The playlist record that created or last updated the row; `source` stays that playlist's host. */
+  playlistId: number | null;
   /** The fields an admin edited on a synced row: a sync never overwrites them (docs/26 section 3.10). */
   editedFields: string[];
 }

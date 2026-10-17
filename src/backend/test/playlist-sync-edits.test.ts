@@ -1,5 +1,5 @@
 // How the playlist sync treats an admin's edits (docs/26 section 3.10): edited fields, the playlist's own name,
-// prune, tombstones and revert. The playlist is a string the test changes; nothing touches the network.
+// prune, deleting, `enabled` and revert. The playlist is a string the test changes; nothing touches the network.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -58,8 +58,8 @@ test("a sync keeps what an admin edited, takes the rest, and a rename does not c
   setPlaylist(V2);
   const second = await run();
   assert.deepEqual(
-    ["created", "updated", "ignored", "kept"].map((f) => pick(second.body, `data.${f}`)),
-    [0, 2, 0, 0],
+    ["created", "updated", "kept"].map((f) => pick(second.body, `data.${f}`)),
+    [0, 2, 0],
     "ESPN (its address) and Cartoon changed; ABC's only change was its edited address",
   );
   const rows = await channels();
@@ -83,38 +83,38 @@ test("prune never deletes an edited row: it is kept, counted, and audited", asyn
   assert.deepEqual(["removed", "kept"].map((f) => pick(real.body, `data.${f}`)), [1, 1]);
   assert.deepEqual((await channels()).map((c) => c.name).sort(), ["ABC News", "ESPN"]);
   const status = await send(t.app, "GET", "/api/playlist-sync", undefined, token);
-  assert.deepEqual(["removed", "kept", "ignored"].map((f) => pick(status.body, `data.counts.${f}`)), [1, 1, 0]);
+  assert.deepEqual(["removed", "kept"].map((f) => pick(status.body, `data.counts.${f}`)), [1, 1]);
   const audit = pick((await send(t.app, "GET", "/api/audit?limit=5", undefined, token)).body, "data.items.0.detail.kept");
   assert.equal(audit, 1);
 });
 
-test("deleting a synced row writes a tombstone: the sync ignores the entry until it is restored", async () => {
+test("deleting a synced row is a real delete: a later sync adds it again, with a new id", async () => {
   const { t, token, run, channels, byName } = await setup();
   await run();
   const cartoon = await byName("Cartoon");
-  const hand = String(pick((await send(t.app, "POST", "/api/channels", { name: "Mine", category: "X", streamUrl: "https://h.example/a.m3u8" }, token)).body, "data.id"));
-  await send(t.app, "DELETE", `/api/channels/${hand}`, undefined, token);
-  assert.equal(itemsOf((await send(t.app, "GET", "/api/playlist-sync/ignored", undefined, token)).body).length, 0, "a hand-made row leaves none");
-  await send(t.app, "PATCH", `/api/channels/${await byName("ESPN")}`, { name: "ESPN HD" }, token);
   assert.equal((await send(t.app, "DELETE", `/api/channels/${cartoon}`, undefined, token)).status, 200);
-  assert.equal((await send(t.app, "DELETE", `/api/channels/${await byName("ESPN HD")}`, undefined, token)).status, 200);
-
+  assert.deepEqual((await channels()).map((c) => c.name).sort(), ["ABC News", "ESPN"]);
   const again = await run();
-  assert.deepEqual(["created", "ignored"].map((f) => pick(again.body, `data.${f}`)), [0, 2]);
-  assert.deepEqual((await channels()).map((c) => c.name), ["ABC News"]);
+  assert.equal(pick(again.body, "data.created"), 1);
+  const back = (await channels()).find((c) => c.name === "Cartoon");
+  assert.ok(back && back.id !== cartoon);
+});
 
-  assert.equal((await send(t.app, "GET", "/api/playlist-sync/ignored")).status, 401);
-  const list = itemsOf((await send(t.app, "GET", "/api/playlist-sync/ignored", undefined, token)).body);
-  assert.deepEqual(list.map((i) => [i.name, i.host, i.syncName]).sort(), [["Cartoon", "cdn.example", "Cartoon"], ["ESPN HD", "cdn.example", "ESPN"]]);
-  const ignoredId = String(list.find((i) => i.name === "Cartoon")?.id);
-  assert.equal((await send(t.app, "DELETE", `/api/playlist-sync/ignored/${ignoredId}`)).status, 401);
-  assert.deepEqual((await send(t.app, "DELETE", `/api/playlist-sync/ignored/${ignoredId}`, undefined, token)).body, { ok: true, data: { id: Number(ignoredId) } });
-  assert.equal((await send(t.app, "DELETE", `/api/playlist-sync/ignored/${ignoredId}`, undefined, token)).status, 404);
-  const restored = await run();
-  assert.deepEqual(["created", "ignored"].map((f) => pick(restored.body, `data.${f}`)), [1, 1]);
+test("a disabled synced row stays disabled through a sync and is still updated; the public reads leave it out", async () => {
+  const { t, token, run, channels, byName, playlist: setPlaylist } = await setup();
+  await run();
+  const espn = await byName("ESPN");
+  const off = await send(t.app, "PATCH", `/api/channels/${espn}`, { enabled: false }, token);
+  assert.deepEqual([pick(off.body, "data.enabled"), pick(off.body, "data.editedFields")], [false, undefined], "enabled is not an edit");
   assert.deepEqual((await channels()).map((c) => c.name).sort(), ["ABC News", "Cartoon"]);
-  const actions = (pick((await send(t.app, "GET", "/api/audit?limit=50", undefined, token)).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
-  assert.ok(actions.includes("channel.sync_ignored_restored"));
+  assert.equal((await send(t.app, "GET", `/api/channels/${espn}`)).status, 404);
+  setPlaylist(V2);
+  const second = await run();
+  assert.equal(pick(second.body, "data.updated"), 3, "the disabled row is updated like the others");
+  const admin = itemsOf((await send(t.app, "GET", "/api/admin-channels", undefined, token)).body);
+  const row = admin.find((c) => c.id === espn);
+  assert.deepEqual([row?.enabled, row?.streamUrl, row?.category], [false, "https://stream.example/espn-2.m3u8", "Sports2"]);
+  assert.equal((await channels()).length, 2, "and it is still left out of the public list");
 });
 
 test("revert forgets the edits of a synced row, so the next sync supplies its values; hand-made rows cannot revert", async () => {
@@ -136,11 +136,11 @@ test("revert forgets the edits of a synced row, so the next sync supplies its va
   assert.ok(actions.includes("channel.reverted"));
 });
 
-test("a run answers kept and ignored beside the older counts", async () => {
+test("a run answers kept beside the older counts", async () => {
   const { run } = await setup();
   const first = await run();
   assert.deepEqual(
-    ["created", "updated", "skipped", "refused", "removed", "kept", "ignored"].map((f) => pick(first.body, `data.${f}`)),
-    [3, 0, 0, 0, 0, 0, 0],
+    ["created", "updated", "skipped", "refused", "removed", "kept"].map((f) => pick(first.body, `data.${f}`)),
+    [3, 0, 0, 0, 0, 0],
   );
 });

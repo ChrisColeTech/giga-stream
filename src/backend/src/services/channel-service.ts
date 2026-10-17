@@ -61,12 +61,17 @@ export function createChannelService(deps: {
   }
 
   return {
+    /** The public read: a disabled channel is not in it (docs/26 section 3.11). */
     list: (base: string): ChannelList => ({
-      items: store.channels.list().map((record) => publicChannel(record, base)),
+      items: store.channels.list().filter((record) => record.enabled).map((record) => publicChannel(record, base)),
       revision: store.revisions.current(),
     }),
 
-    get: (id: string, base: string): BackendChannel => publicChannel(existing(id), base),
+    get(id: string, base: string): BackendChannel {
+      const record = existing(id);
+      if (!record.enabled) throw new AppError(ERRORS.channelNotFound);
+      return publicChannel(record, base);
+    },
 
     /** The admin's full view: both kinds, with a live row's state, playlist and fault. */
     listAdmin: (base: string): AdminChannelList => ({
@@ -83,7 +88,7 @@ export function createChannelService(deps: {
       return adminChannel(saved, base, live);
     },
 
-    update(id: string, patch: ChannelPatch, actor: Actor, base: string): AdminChannel {
+    async update(id: string, patch: ChannelPatch, actor: Actor, base: string): Promise<AdminChannel> {
       const current = existing(id);
       if (patch.kind !== undefined && patch.kind !== current.kind) {
         throw invalid("kind", "A channel's kind cannot be changed.");
@@ -97,27 +102,25 @@ export function createChannelService(deps: {
         checkLiveSource(next.live);
         record = next;
       }
-      store.transaction(() => store.channels.update({ ...record, revision: store.revisions.next() }));
+      const next: ChannelRecord = { ...record, enabled: patch.enabled ?? current.enabled };
+      store.transaction(() => store.channels.update({ ...next, revision: store.revisions.next() }));
       audit.record(actor, { action: "channel.updated", subject: id, detail: { fields: Object.keys(patch) } });
       const saved = existing(id);
-      if (saved.kind === "live") live.apply(liveSpecOf(saved));
+      // A disabled live channel is not running: it stops, and an edit does not start it.
+      if (saved.kind === "live") {
+        if (saved.enabled) live.apply(liveSpecOf(saved));
+        else await live.remove(id);
+      }
       return adminChannel(saved, base, live);
     },
 
-    /** Stops a live row's runtime first, then deletes the row. */
+    /** Stops a live row's runtime first, then deletes the row. A synced row is really deleted: a later sync may add it again. */
     async remove(id: string, actor: Actor): Promise<{ id: string }> {
       const current = existing(id);
       if (current.kind === "live") await live.remove(id);
       store.transaction(() => {
         store.channels.remove(id);
         store.revisions.next();
-        // A deleted synced row must not come back with the next sync (docs/26 section 3.10, rule 4).
-        if (current.kind === "stream" && current.source !== null) {
-          store.tombstones.addChannel(
-            { host: current.source, tvgId: current.tvgId, syncName: current.syncName ?? current.name, label: current.name },
-            now(),
-          );
-        }
       });
       audit.record(actor, { action: "channel.deleted", subject: id, detail: { name: current.name, kind: current.kind } });
       return { id };
@@ -140,6 +143,7 @@ export function createChannelService(deps: {
     /** Re-reads a folder source and rebuilds the channel; the old stream keeps playing until the new is ready. */
     rebuild(id: string, actor: Actor, base: string): AdminChannel {
       const current = existingLive(id);
+      if (!current.enabled) throw invalid("enabled", "A disabled channel is not running; enable it first.");
       checkLiveSource(current.live);
       live.apply(liveSpecOf(current));
       audit.record(actor, { action: "channel.rebuilt", subject: id });
@@ -165,7 +169,7 @@ export function createChannelService(deps: {
 
     /** The start: every saved live row builds in the background, so the server answers at once. */
     startLive(): void {
-      for (const record of store.channels.list()) if (record.kind === "live") live.apply(liveSpecOf(record));
+      for (const record of store.channels.list()) if (record.kind === "live" && record.enabled) live.apply(liveSpecOf(record));
     },
   };
 }

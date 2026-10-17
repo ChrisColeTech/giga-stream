@@ -12,6 +12,8 @@ export interface StoredTitle {
   origin: "tmdb" | "manual";
   /** The payload fields an admin edited; a sync merges TMDB's payload under them. */
   editedFields: string[];
+  /** A disabled title stays in the admin's lists and is left out of the public reads; no sync changes it. */
+  enabled: boolean;
   payload: unknown;
   popularityScore: number | null;
   popularityReadAt: number | null;
@@ -34,6 +36,7 @@ const TitleRow = z.object({
   tmdb_id: z.number().nullable(),
   origin: z.enum(["tmdb", "manual"]),
   edited_fields: z.string().nullable(),
+  enabled: z.number().int(),
   payload: z.string(),
   popularity_score: z.number().nullable(),
   popularity_read_at: z.number().nullable(),
@@ -60,6 +63,7 @@ function stored(row: z.infer<typeof TitleRow>): StoredTitle {
     tmdbId: row.tmdb_id,
     origin: row.origin,
     editedFields: editedOf(row.edited_fields),
+    enabled: row.enabled === 1,
     payload: JSON.parse(row.payload) as unknown,
     popularityScore: row.popularity_score,
     popularityReadAt: row.popularity_read_at,
@@ -68,18 +72,17 @@ function stored(row: z.infer<typeof TitleRow>): StoredTitle {
 }
 
 const COLUMNS =
-  "id, kind, tmdb_id, origin, edited_fields, payload, popularity_score, popularity_read_at, fetched_at";
+  "id, kind, tmdb_id, origin, edited_fields, enabled, payload, popularity_score, popularity_read_at, fetched_at";
 
 /**
  * The title store (docs/03 section 7.6b): `titles` and `title_lists`. A TMDB title is written whole on every sync or
  * fill-through, but `put` is the one place that decides what a write may change: it merges TMDB's payload under the
- * fields an admin edited, and skips a title an admin deleted (a tombstone). Manual titles are never written by it.
+ * fields an admin edited and leaves `enabled` alone. Manual titles are never written by it.
  */
 export function createTitleRepository(db: DatabaseSync) {
   const byTmdb = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE kind = ? AND tmdb_id = ? AND origin = 'tmdb'`);
   const byId = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE id = ?`);
   const manual = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE origin = 'manual' ORDER BY fetched_at DESC, id`);
-  const deleted = db.prepare("SELECT 1 AS hit FROM sync_tombstones WHERE kind = ? AND tmdb_id = ?");
   const upsert = db.prepare(`
     INSERT INTO titles (id, kind, tmdb_id, origin, payload, popularity_score, popularity_read_at, fetched_at)
     VALUES (?, ?, ?, 'tmdb', ?, ?, ?, ?)
@@ -90,7 +93,7 @@ export function createTitleRepository(db: DatabaseSync) {
       fetched_at = excluded.fetched_at`);
   const insertManual = db.prepare(`
     INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES (?, ?, ?, 'manual', ?, ?)`);
-  const update = db.prepare("UPDATE titles SET payload = ?, edited_fields = ?, tmdb_id = ? WHERE id = ?");
+  const update = db.prepare("UPDATE titles SET payload = ?, edited_fields = ?, tmdb_id = ?, enabled = ? WHERE id = ?");
   const clearEdits = db.prepare("UPDATE titles SET edited_fields = NULL WHERE id = ?");
   const remove = db.prepare("DELETE FROM titles WHERE id = ?");
   const oneList = db.prepare("SELECT ids, total_pages, total_results, fetched_at FROM title_lists WHERE key = ?");
@@ -116,10 +119,7 @@ export function createTitleRepository(db: DatabaseSync) {
     findById,
     /** Every title made by hand, newest first. */
     listManual: (): StoredTitle[] => manual.all().map((row) => stored(TitleRow.parse(row))),
-    /** Whether an admin deleted this TMDB title from the sync (a tombstone). */
-    isDeleted: (kind: "movie" | "tv", tmdbId: number): boolean => deleted.get(kind, tmdbId) !== undefined,
     put(title: TitleWrite): void {
-      if (deleted.get(title.kind, title.tmdbId) !== undefined) return;
       const id = `${title.kind}-${title.tmdbId}`;
       const existing = findById(id);
       const payload = existing && existing.editedFields.length > 0
@@ -130,10 +130,10 @@ export function createTitleRepository(db: DatabaseSync) {
     insertManual(title: { id: string; kind: "movie" | "tv"; tmdbId: number | null; payload: unknown; at: number }): void {
       insertManual.run(title.id, title.kind, title.tmdbId, JSON.stringify(title.payload), title.at);
     },
-    /** An admin's edit: the new payload, the fields now edited (none for a manual title) and a manual title's TMDB id. */
-    updateRecord(id: string, change: { payload: unknown; editedFields: string[]; tmdbId: number | null }): void {
+    /** An admin's edit: the new payload, the fields now edited (none for a manual title), a manual title's TMDB id, `enabled`. */
+    updateRecord(id: string, change: { payload: unknown; editedFields: string[]; tmdbId: number | null; enabled: boolean }): void {
       const edited = change.editedFields.length > 0 ? JSON.stringify(change.editedFields) : null;
-      update.run(JSON.stringify(change.payload), edited, change.tmdbId, id);
+      update.run(JSON.stringify(change.payload), edited, change.tmdbId, change.enabled ? 1 : 0, id);
     },
     clearEdits(id: string): void {
       clearEdits.run(id);

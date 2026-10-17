@@ -40,6 +40,7 @@ export function readLegacyChannels(file: string): LiveRecord[] {
         number: String(r.number),
         logoUrl: null,
         revision: 0,
+        enabled: true,
         live: {
           mode: r.mode,
           captions: r.captions === 1,

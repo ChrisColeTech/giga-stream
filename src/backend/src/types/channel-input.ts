@@ -102,6 +102,8 @@ export const ChannelPatchSchema = z
     variants: variants.optional(),
     folder: absolutePath.optional(),
     videos: videos.optional(),
+    // A field of the record: a disabled channel leaves every public read, and no sync changes it (docs/26 3.11).
+    enabled: z.boolean().optional(),
   })
   .strict()
   .refine((patch) => patch.folder === undefined || patch.videos === undefined, {

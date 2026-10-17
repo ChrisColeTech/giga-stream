@@ -38,7 +38,7 @@ export function registerChannels(app: FastifyInstance, services: Services): void
     const principal = signedIn(services, request, ANY_ADMIN);
     const { channelId } = parseInput(ChannelParams, request.params);
     const patch = parseInput(ChannelPatchSchema, request.body, ERRORS.channelInvalid);
-    return ok(reply, services.channels.update(channelId, patch, actorOf(request, principal), baseOf(request)));
+    return ok(reply, await services.channels.update(channelId, patch, actorOf(request, principal), baseOf(request)));
   });
 
   app.delete("/api/channels/:channelId", async (request, reply) => {

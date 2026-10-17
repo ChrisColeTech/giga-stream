@@ -8,10 +8,13 @@ export type TitleState = "synced" | "edited" | "manual";
 export const stateOf = (row: StoredTitle): TitleState =>
   row.origin === "manual" ? "manual" : row.editedFields.length > 0 ? "edited" : "synced";
 
-/** A stored record as the routes answer it: its payload without the list snapshot, and its `state`. */
-export function viewOf(row: StoredTitle): Record<string, unknown> {
+/**
+ * A stored record as the routes answer it: its payload without the list snapshot, and its `state`. `enabled` is an
+ * admin's field: it is on the admin's answers and never on a public read.
+ */
+export function viewOf(row: StoredTitle, withEnabled = true): Record<string, unknown> {
   const { listSnapshot: _snapshot, ...payload } = asRecord(row.payload);
-  return { ...payload, id: row.id, kind: row.kind, state: stateOf(row) };
+  return { ...payload, id: row.id, kind: row.kind, state: stateOf(row), ...(withEnabled && { enabled: row.enabled }) };
 }
 
 const yearDesc = (a: Record<string, unknown>, b: Record<string, unknown>): number =>
@@ -23,36 +26,36 @@ const byTitle = (a: Record<string, unknown>, b: Record<string, unknown>): number
 
 /**
  * What the title reads add to TMDB's answers (docs/26 decision D20): an admin's edits laid over a row TMDB has just
- * answered, a `state` on every item, the titles an admin deleted left out, and the titles made by hand merged in.
+ * answered, a `state` on every item, the disabled titles left out of a public read (an admin's read, with
+ * `includeDisabled`, keeps them and says `enabled`), and the titles made by hand merged in.
  */
 export function createTitleOverlay(store: Store) {
-  /** Edits over TMDB's row, the state word, and nothing at all for a tombstoned title. */
-  function decorate(items: Record<string, unknown>[]): Record<string, unknown>[] {
+  function decorate(items: Record<string, unknown>[], includeDisabled = false): Record<string, unknown>[] {
     const out: Record<string, unknown>[] = [];
     for (const item of items) {
-      const kind = item.kind === "tv" ? "tv" : "movie";
-      const tmdbId = num(item.tmdbId);
-      if (tmdbId !== undefined && store.titles.isDeleted(kind, tmdbId)) continue;
       const row = store.titles.findById(str(item.id) ?? "");
       if (row === undefined || row.origin !== "tmdb") {
-        out.push({ ...item, state: "synced" });
+        out.push({ ...item, state: "synced", ...(includeDisabled && { enabled: true }) });
         continue;
       }
+      if (!row.enabled && !includeDisabled) continue;
       const edited = row.editedFields.length > 0 ? applyFields(item, row.payload, row.editedFields) : item;
-      out.push({ ...edited, state: stateOf(row) });
+      out.push({ ...edited, state: stateOf(row), ...(includeDisabled && { enabled: row.enabled }) });
     }
     return out;
   }
 
   /** The titles made by hand that fit a browse or search, as list rows (a series' episodes stay out of a list). */
-  function manualMatches(filter: { kind: "movie" | "tv"; genre?: string; year?: number; q?: string }): Record<string, unknown>[] {
+  function manualMatches(filter: {
+    kind: "movie" | "tv"; genre?: string; year?: number; q?: string; includeDisabled?: boolean;
+  }): Record<string, unknown>[] {
     const genre = filter.genre?.toLowerCase();
     const q = filter.q?.toLowerCase();
     return store.titles
       .listManual()
-      .filter((row) => row.kind === filter.kind)
+      .filter((row) => row.kind === filter.kind && (row.enabled || filter.includeDisabled === true))
       .map((row) => {
-        const { seasons: _seasons, ...listRow } = viewOf(row);
+        const { seasons: _seasons, ...listRow } = viewOf(row, filter.includeDisabled === true);
         return listRow;
       })
       .filter((row) => filter.year === undefined || num(row.year) === filter.year)

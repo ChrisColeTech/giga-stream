@@ -5,7 +5,7 @@ import { ERRORS } from "../constants/errors.js";
 import type { Services } from "../services/service-registry.js";
 import { SORTS } from "../services/title-service.js";
 import { ok } from "./envelope.js";
-import { ANY_ADMIN, actorOf, signedIn } from "./guard.js";
+import { ANY_ADMIN, actorOf, isAdmin, signedIn } from "./guard.js";
 import { TitleInputSchema, TitlePatchSchema } from "../types/title-input.js";
 import { parseInput } from "./parse-input.js";
 
@@ -15,15 +15,17 @@ const BrowseQuery = z.object({
   genre: z.string().max(60).optional(),
   year: z.coerce.number().int().min(1800).max(2200).optional(),
   page: z.coerce.number().int().min(1).max(500).default(1),
-  // The titles an admin deleted from the sync (owner or editor), instead of the browse.
-  deleted: z.enum(["true", "false"]).optional(),
+  // An admin's read also lists the disabled titles; without an owner's or editor's token it is ignored.
+  includeDisabled: z.enum(["true", "false"]).optional(),
 });
 
 const SearchQuery = z.object({
   kind: z.enum(["movie", "tv"]).default("movie"),
   q: z.string().trim().min(1).max(200),
   page: z.coerce.number().int().min(1).max(500).default(1),
+  includeDisabled: z.enum(["true", "false"]).optional(),
 });
+const DetailQuery = z.object({ includeDisabled: z.enum(["true", "false"]).optional() });
 
 // A title made by hand is `custom-<uuid>`: 43 characters.
 const TitleParams = z.object({ titleId: z.string().min(3).max(60) });
@@ -54,16 +56,9 @@ const SyncBody = z
 export function registerTitles(app: FastifyInstance, services: Services): void {
   app.get("/api/titles", async (request, reply) => {
     const query = parseInput(BrowseQuery, request.query, ERRORS.requestInvalid);
-    if (query.deleted === "true") {
-      signedIn(services, request, ANY_ADMIN);
-      return ok(reply, services.titles.deleted());
-    }
+    const options = { includeDisabled: query.includeDisabled === "true" && isAdmin(services, request) };
     const kinds: ("movie" | "tv")[] = query.kind === "all" ? ["movie", "tv"] : [query.kind];
-    const answers = await Promise.all(
-      kinds.map((kind) =>
-        services.titles.browse({ ...query, kind }),
-      ),
-    );
+    const answers = await Promise.all(kinds.map((kind) => services.titles.browse({ ...query, kind }, options)));
     const items = answers.flatMap((a) => a.items);
     return ok(reply, {
       items,
@@ -75,7 +70,8 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
 
   app.get("/api/titles/search", async (request, reply) => {
     const query = parseInput(SearchQuery, request.query, ERRORS.requestInvalid);
-    const answer = await services.titles.search(query.kind, query.q, query.page);
+    const options = { includeDisabled: query.includeDisabled === "true" && isAdmin(services, request) };
+    const answer = await services.titles.search(query.kind, query.q, query.page, options);
     return ok(reply, answer);
   });
 
@@ -122,24 +118,23 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
     return ok(reply, await services.titles.revert(titleId, actorOf(request, principal)));
   });
 
-  app.post("/api/titles/:titleId/restore", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
-    const { titleId } = parseInput(TitleParams, request.params);
-    return ok(reply, services.titles.restore(titleId, actorOf(request, principal)));
+  // The public reads leave a disabled title out; `includeDisabled` with an admin's token keeps it (docs/26 3.11).
+  const readOptions = (request: Parameters<typeof isAdmin>[1]) => ({
+    includeDisabled: parseInput(DetailQuery, request.query, ERRORS.requestInvalid).includeDisabled === "true" && isAdmin(services, request),
   });
 
   app.get("/api/titles/:titleId", async (request, reply) => {
     const { titleId } = parseInput(TitleParams, request.params);
-    return ok(reply, await services.titles.detail(titleId));
+    return ok(reply, await services.titles.detail(titleId, readOptions(request)));
   });
 
   app.get("/api/titles/:titleId/seasons/:season", async (request, reply) => {
     const params = parseInput(SeasonParams, request.params);
-    return ok(reply, await services.titles.seasons(params.titleId, params.season));
+    return ok(reply, await services.titles.seasons(params.titleId, params.season, readOptions(request)));
   });
 
   app.get("/api/titles/:titleId/recommendations", async (request, reply) => {
     const { titleId } = parseInput(TitleParams, request.params);
-    return ok(reply, await services.titles.recommendations(titleId));
+    return ok(reply, await services.titles.recommendations(titleId, readOptions(request)));
   });
 }

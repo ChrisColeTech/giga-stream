@@ -12,9 +12,10 @@ import { registerErrorHandling } from "./api/envelope.js";
 import { registerHealth } from "./api/health.js";
 import { registerLiveFaults } from "./api/live-faults.js";
 import { registerLiveStreams } from "./api/live-streams.js";
+import { registerJobs } from "./api/jobs.js";
+import { registerPlaylists } from "./api/playlists.js";
 import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
-import { registerSyncSettings } from "./api/sync-settings.js";
 import { registerTitles } from "./api/titles.js";
 import { config, type Config } from "./config.js";
 import { DATABASE_FILE_NAME } from "./constants/deployment.js";
@@ -93,18 +94,17 @@ export async function buildApp(
     if (settings.SEED_TEST_CHANNELS) seedTestChannels(ready.channels, settings.FIXTURE_DIR);
     ready.purgeExpiredSessions();
 
-    // The two schedules - the system's two timers (docs/01 section 4.4) - are armed from the stored sync settings
-    // (docs/26 section 3.11): the catalog sync's when TMDB has a token, the playlist sync's when it has playlists.
-    ready.syncSettings.applySchedules();
+    // The one timer (docs/01 section 4.4) is armed for the earliest due enabled job (docs/26 section 3.11).
+    ready.scheduler.arm();
 
     if (owner === "none") {
       app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_EMAIL/PASSWORD: nobody can sign in");
     }
     app.addHook("onClose", async () => {
+      ready.scheduler.stop();
+      ready.titles.close();
       // Every ffmpeg tree is killed and every encode-mode output removed before the store closes.
       await ready.live.stop();
-      ready.titles.clearSchedule();
-      ready.playlistSchedule.clearSchedule();
       store.close();
     });
     app.addHook("onSend", async (request, reply) => {
@@ -129,7 +129,8 @@ export async function buildApp(
     registerProviders(app, ready);
     registerTitles(app, ready);
     registerPlaylistSync(app, ready);
-    registerSyncSettings(app, ready);
+    registerPlaylists(app, ready);
+    registerJobs(app, ready);
     registerAdminStatic(app, ready);
     return app;
   } catch (error) {

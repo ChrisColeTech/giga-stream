@@ -85,6 +85,8 @@ export const TitlePatchSchema = z
     seasons: nullable(fields.seasons),
     streamUrl: nullable(fields.streamUrl),
     tmdbId: nullable(fields.tmdbId),
+    // A field of the record, not of the payload: a disabled title leaves the public reads, and no sync changes it.
+    enabled: z.boolean().optional(),
   })
   .strict();
 export type TitlePatch = z.infer<typeof TitlePatchSchema>;

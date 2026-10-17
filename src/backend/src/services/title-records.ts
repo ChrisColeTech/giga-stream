@@ -20,11 +20,11 @@ const seasonsOf = (seasons: SeasonInput[]): unknown[] =>
   seasons.map((s) => ({ season: s.season, episodes: s.episodes.map((e) => ({ ...e, season: s.season })) }));
 
 /**
- * The title records (docs/26 decision D20): create, edit, delete, revert and restore. A title made by hand
- * (`custom-<uuid>`) is the admin's alone; a synced one records the fields an admin edited (`edited_fields`), which the
- * store keeps every later sync, fill-through and healing refetch from overwriting. Deleting a synced title writes a
- * tombstone, so it stays gone until restored; deleting a manual one removes it. Titles are not channel data, so none
- * of this touches the revision (docs/03 section 7.6b).
+ * The title records (docs/26 decision D20): create, edit, delete and revert. A title made by hand (`custom-<uuid>`)
+ * is the admin's alone; a synced one records the fields an admin edited (`edited_fields`), which the store keeps
+ * every later sync, fill-through and healing refetch from overwriting. `enabled` is a field of the record: a
+ * disabled title leaves the public reads and no sync ever changes it. Deleting is a real delete, so a later sync or
+ * read may add a synced title again. Titles are not channel data, so none of this touches the revision.
  */
 export function createTitleRecords(deps: {
   store: Store;
@@ -66,7 +66,6 @@ export function createTitleRecords(deps: {
     const row = store.titles.findById(titleId);
     if (row !== undefined || isManualId(titleId)) return found(titleId);
     const [kind, tmdbId] = parseTitleId(titleId);
-    if (store.titles.isDeleted(kind, tmdbId)) throw new AppError(ERRORS.titleNotFound, { titleId });
     try {
       await ensureTitle(kind, tmdbId);
     } catch (error) {
@@ -94,7 +93,7 @@ export function createTitleRecords(deps: {
       if (row.origin === "tmdb" && patch.tmdbId !== undefined) {
         throw invalid("tmdbId", "A title from TMDB keeps its TMDB id.");
       }
-      const { tmdbId, seasons, ...rest } = patch;
+      const { tmdbId, seasons, enabled, ...rest } = patch;
       const values: Record<string, unknown> = {
         ...rest,
         ...(seasons !== undefined && { seasons: seasons === null ? null : seasonsOf(seasons) }),
@@ -112,20 +111,16 @@ export function createTitleRecords(deps: {
         if (tmdbId === null) delete payload.tmdbId;
         else if (tmdbId !== undefined) payload.tmdbId = tmdbId;
       }
-      store.titles.updateRecord(titleId, { payload, editedFields, tmdbId: nextTmdbId });
-      audit.record(actor, { action: "title.updated", subject: titleId, detail: { fields: fields.concat(tmdbId === undefined ? [] : ["tmdbId"]) } });
+      store.titles.updateRecord(titleId, { payload, editedFields, tmdbId: nextTmdbId, enabled: enabled ?? row.enabled });
+      const touched = [...fields, ...(tmdbId === undefined ? [] : ["tmdbId"]), ...(enabled === undefined ? [] : ["enabled"])];
+      audit.record(actor, { action: "title.updated", subject: titleId, detail: { fields: touched } });
       return viewOf(found(titleId));
     },
 
+    /** A real delete. A synced title may come back with a later sync or read; `enabled` is how to keep it hidden. */
     remove(titleId: string, actor: Actor): { id: string } {
       const row = found(titleId);
-      store.transaction(() => {
-        store.titles.remove(titleId);
-        if (row.origin === "tmdb" && row.tmdbId !== null) {
-          const title = (row.payload as Record<string, unknown>).title;
-          store.tombstones.addTitle(row.kind, row.tmdbId, typeof title === "string" ? title : titleId, now());
-        }
-      });
+      store.titles.remove(titleId);
       audit.record(actor, { action: "title.deleted", subject: titleId, detail: { origin: row.origin } });
       return { id: titleId };
     },
@@ -139,34 +134,11 @@ export function createTitleRecords(deps: {
         await ensureTitle(row.kind, row.tmdbId, true);
       } catch (error) {
         // The refetch failed: the edits were not given up.
-        store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId });
+        store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId, enabled: row.enabled });
         return mapTitle404(error, titleId);
       }
       audit.record(actor, { action: "title.reverted", subject: titleId, detail: { fields: row.editedFields } });
       return viewOf(found(titleId));
-    },
-
-    /** The synced titles an admin deleted, newest first. */
-    deleted() {
-      const items = store.tombstones.listTitles().map((t) => ({
-        id: `${t.kind}-${t.tmdbId ?? 0}`,
-        kind: t.kind,
-        tmdbId: t.tmdbId,
-        title: t.label,
-        state: "deleted",
-        deletedAt: t.createdAt,
-      }));
-      return { items, page: 1, totalPages: 1, totalResults: items.length };
-    },
-
-    /** Removes the tombstone, so the next sync or read brings the title back. */
-    restore(titleId: string, actor: Actor): { id: string } {
-      const [kind, tmdbId] = parseTitleId(titleId);
-      const tombstone = store.tombstones.findTitle(kind, tmdbId);
-      if (tombstone === undefined) throw new AppError(ERRORS.titleNotFound, { titleId });
-      store.tombstones.remove(tombstone.id);
-      audit.record(actor, { action: "title.restored", subject: titleId, detail: { title: tombstone.label } });
-      return { id: titleId };
     },
   };
 }

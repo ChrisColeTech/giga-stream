@@ -4,20 +4,25 @@ import type { M3uEntry } from "./m3u-parser.js";
 export interface SyncPlan {
   creates: Array<{ host: string; record: Omit<StreamRecord, "revision"> }>;
   updates: StreamRecord[];
-  /** Entries an admin deleted from the sync: skipped, counted, never recreated (docs/26 section 3.10, rule 4). */
-  ignored: number;
   /** Sync-owned rows whose entry has gone and that no admin edited: what `prune` may delete. */
   vanished: StreamRecord[];
   /** Sync-owned rows whose entry has gone but that an admin edited: `prune` never deletes them (rule 3). */
   kept: StreamRecord[];
 }
 
+/** One playlist entry with the playlist record it came from. */
+export interface PlannedEntry {
+  host: string;
+  playlistId: number;
+  entry: M3uEntry;
+}
+
 /**
  * A matched row takes the entry's values except the fields an admin edited (rule 1); the display name is never
- * overwritten. Without an edit the entry wins, as it always did: its address always, its category, number and logo
- * whenever it has one.
+ * overwritten, and neither is `enabled`: a disabled row stays disabled and is still updated otherwise. Without an
+ * edit the entry wins, as it always did: its address always, its category, number and logo whenever it has one.
  */
-export function mergeEntry(match: StreamRecord, entry: M3uEntry): StreamRecord {
+export function mergeEntry(match: StreamRecord, entry: M3uEntry, playlistId: number): StreamRecord {
   const edited = new Set(match.editedFields);
   return {
     ...match,
@@ -25,26 +30,28 @@ export function mergeEntry(match: StreamRecord, entry: M3uEntry): StreamRecord {
     category: edited.has("category") ? match.category : (entry.groupTitle ?? match.category),
     number: edited.has("number") ? match.number : (entry.number ?? match.number),
     logoUrl: edited.has("logoUrl") ? match.logoUrl : (entry.logoUrl ?? match.logoUrl),
+    playlistId,
     revision: 0,
   };
 }
 
 const sameValues = (a: StreamRecord, b: StreamRecord): boolean =>
-  a.streamUrl === b.streamUrl && a.logoUrl === b.logoUrl && a.category === b.category && a.number === b.number;
+  a.streamUrl === b.streamUrl && a.logoUrl === b.logoUrl && a.category === b.category && a.number === b.number
+  && a.playlistId === b.playlistId;
 
 /**
- * Decides one run, with no side effect: which entries create a row, which update one, which an admin deleted, and
- * which sync-owned rows have no entry any more. Entries match the rows of their own host first and then every
- * sync-owned row, by tvg-id and then by the playlist's own name (`syncName`, rule 2), never by the display name.
+ * Decides one run, with no side effect: which entries create a row, which update one, and which sync-owned rows
+ * have no entry any more. Entries match the rows of their own host first and then every sync-owned row, by tvg-id
+ * and then by the playlist's own name (`syncName`, rule 2), never by the display name. Only the hosts of the
+ * playlists in this run can lose a row to `prune`.
  */
 export function planSync(input: {
   owned: StreamRecord[];
-  usable: Array<{ host: string; entry: M3uEntry }>;
+  usable: PlannedEntry[];
   hosts: string[];
-  isIgnored: (host: string, tvgId: string | undefined, name: string) => boolean;
   newId: () => string;
 }): SyncPlan {
-  const { owned, usable, hosts, isIgnored, newId } = input;
+  const { owned, usable, hosts, newId } = input;
   const byHost = new Map<string, StreamRecord[]>();
   for (const channel of owned) {
     const rows = byHost.get(channel.source ?? "");
@@ -64,12 +71,8 @@ export function planSync(input: {
     return undefined;
   };
 
-  const plan: SyncPlan = { creates: [], updates: [], ignored: 0, vanished: [], kept: [] };
-  for (const { host, entry } of usable) {
-    if (isIgnored(host, entry.tvgId, entry.name)) {
-      plan.ignored += 1;
-      continue;
-    }
+  const plan: SyncPlan = { creates: [], updates: [], vanished: [], kept: [] };
+  for (const { host, entry, playlistId } of usable) {
     const match = findMatch(entry, host);
     if (match === undefined) {
       plan.creates.push({
@@ -77,13 +80,13 @@ export function planSync(input: {
         record: {
           kind: "stream", id: newId(), name: entry.name, category: entry.groupTitle ?? "", number: entry.number ?? null,
           logoUrl: entry.logoUrl ?? null, tvgId: entry.tvgId ?? null, source: host, streamUrl: entry.streamUrl,
-          syncName: entry.name, editedFields: [],
+          syncName: entry.name, playlistId, editedFields: [], enabled: true,
         },
       });
       continue;
     }
     used.add(match.id);
-    const merged = mergeEntry(match, entry);
+    const merged = mergeEntry(match, entry, playlistId);
     if (!sameValues(merged, match)) plan.updates.push(merged);
   }
   for (const channel of owned) {

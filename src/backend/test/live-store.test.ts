@@ -37,6 +37,7 @@ const live = (id: string, number: string, videos: string[], folder: string | nul
   number,
   logoUrl: null,
   revision: 0,
+  enabled: true,
   live: { mode: "loop", captions: false, variants: ["360p", "720p"], folder, videos },
 });
 
@@ -64,14 +65,16 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
       tvgId: "tv-1",
       source: "cdn.example",
       syncName: "Old News", // migration 010 gives a synced row the playlist's name it already had
+      playlistId: null,
       editedFields: [],
+      enabled: true, // migration 013: every existing row is enabled
     };
     assert.deepEqual(store.channels.find("ch_old"), expected);
     assert.deepEqual(store.channels.listSynced(), [expected]);
     assert.equal(store.channels.countLive(), 0);
     store.close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
-    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 10 });
+    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 14 });
     db.close();
   });
 });

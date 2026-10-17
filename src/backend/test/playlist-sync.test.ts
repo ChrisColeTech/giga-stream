@@ -187,7 +187,7 @@ test("PLAYLIST_SYNC_SCHEDULE arms a system run; without playlists it stays unarm
   const status = await send(t.app, "GET", "/api/playlist-sync", undefined, access);
   assert.equal(pick(status.body, "data.schedule"), "120ms");
   assert.equal(pick(status.body, "data.counts.created"), 2);
-  assert.deepEqual(pick(status.body, "data.playlists"), [{ id: 1, host: "cdn.example", masked: "https://cdn.example/…" }]);
+  assert.deepEqual(pick(status.body, "data.playlists"), [{ id: 1, name: "cdn.example", host: "cdn.example", masked: "https://cdn.example/…" }]);
   const imported = (await auditOf(t, access)).find((e) => e.action === "channel.imported");
   assert.ok(imported !== undefined);
   assert.equal(imported.actorEmail ?? null, null, "a scheduled run is audited as system");
@@ -201,7 +201,7 @@ test("PLAYLIST_SYNC_SCHEDULE arms a system run; without playlists it stays unarm
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   const off = await send(idle.app, "GET", "/api/playlist-sync", undefined, idleAccess);
-  assert.equal(pick(off.body, "data.schedule"), "120ms", "shown as stored; no playlists, so nothing ran above");
+  assert.equal(pick(off.body, "data.schedule"), "off", "no playlists: no job, so the schedule stays unarmed");
   await idle.dispose();
 });
 

@@ -43,12 +43,18 @@ export function publicChannel(record: ChannelRecord, base: string): BackendChann
 export function adminChannel(record: ChannelRecord, base: string, engine: LiveEngine): AdminChannel {
   const view = publicChannel(record, base);
   if (record.kind === "stream") {
-    return { ...view, kind: "stream", ...(record.editedFields.length > 0 && { editedFields: record.editedFields }) };
+    return {
+      ...view,
+      kind: "stream",
+      enabled: record.enabled,
+      ...(record.editedFields.length > 0 && { editedFields: record.editedFields }),
+    };
   }
   const { mode, captions, variants, folder, videos } = record.live;
   return {
     ...view,
     kind: "live",
+    enabled: record.enabled,
     mode,
     captions,
     variants,
