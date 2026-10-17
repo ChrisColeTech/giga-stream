@@ -20,7 +20,7 @@ export function collectionsSubmenu(
       ? [
           {
             kind: "action",
-            label: "No collections yet",
+            label: "No collections",
             disabled: true,
             disabledReason: "Create one from Manage collections in the Library rail.",
             onSelect: () => undefined,

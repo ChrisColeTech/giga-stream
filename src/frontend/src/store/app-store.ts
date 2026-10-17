@@ -43,8 +43,16 @@ export interface AppState {
   theme: ThemeMode;
   accent: Accent;
   motion: MotionPreference;
+  /** Favourites and collection memberships, by item key (`kind:id`). Phase 1a keeps the changes here, so every surface
+   *  reads the same marks; phase 2 reads them from the fileserver (`22` section 3.3). */
+  marks: {
+    readonly favourites: Readonly<Record<string, boolean>>;
+    readonly memberships: Readonly<Record<string, readonly string[]>>;
+  };
 
   setSurface: (surface: Surface) => void;
+  setFavourite: (key: string, favourite: boolean) => void;
+  setMembership: (key: string, collectionId: string, member: boolean) => void;
   togglePane: (side: PaneSide) => void;
   commitSizes: (patch: Partial<Record<PaneKey, number>>) => void;
   toggleEvents: () => void;
@@ -89,6 +97,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   theme: "dark",
   accent: "amber",
   motion: "system",
+  marks: { favourites: {}, memberships: {} },
 
   setSurface: (surface) => set({ surface }),
 
@@ -113,4 +122,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setTheme: (theme) => set({ theme }),
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),
+  setFavourite: (key, favourite) => {
+    const { marks } = get();
+    set({ marks: { ...marks, favourites: { ...marks.favourites, [key]: favourite } } });
+  },
+  setMembership: (key, collectionId, member) => {
+    const { marks } = get();
+    const current = marks.memberships[key] ?? [];
+    const next = member ? [...current.filter((id) => id !== collectionId), collectionId] : current.filter((id) => id !== collectionId);
+    set({ marks: { ...marks, memberships: { ...marks.memberships, [key]: next } } });
+  },
 }));
