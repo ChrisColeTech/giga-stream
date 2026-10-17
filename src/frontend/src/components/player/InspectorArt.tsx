@@ -8,14 +8,15 @@ export interface InspectorArtProps {
 }
 
 /** The Overview's art: the full width of the pane at 16:9, so it tracks the pane as it resizes and never sits off to one
- *  side. A poster is cropped from its upper part, where the title art sits. With no picture the frame is tinted in the
+ *  side. `flex-none`: it sits in the section's flex column, and an aspect-ratio box is the one child that would shrink
+ *  there instead of the section scrolling. A poster is cropped from its upper part, where the title art sits. With no picture the frame is tinted in the
  *  title's color family and carries no words; the title is written once, under it. */
 export function InspectorArt({ src, title }: InspectorArtProps) {
   const [failed, setFailed] = useState(false);
   const tone = `var(${posterTone(title)})`;
   return (
     <div
-      className="relative aspect-video w-full overflow-hidden rounded-card border border-border bg-surface"
+      className="relative aspect-video w-full flex-none overflow-hidden rounded-card border border-border bg-surface"
       style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${tone} 46%, var(--color-surface)) 0%, var(--color-surface) 82%)` }}
     >
       {src !== undefined && src !== "" && !failed && (
