@@ -1,24 +1,28 @@
-import { Eye, RotateCcw } from "lucide-react";
+import { Palette, RotateCcw } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
+import { ACCENT_SWATCHES } from "@giga/ui/controls/accent-swatches";
+import { Segmented } from "@giga/ui/controls/Segmented";
+import { Swatches } from "@giga/ui/controls/Swatches";
 import { Actions } from "@giga/ui/form/Actions";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
-import { SETTINGS_LABELS } from "@/constants/settings-sections";
-import { SETTINGS_VALUES } from "@/fixtures/settings";
-import { Segmented } from "@giga/ui/controls/Segmented";
-import { Swatches } from "@giga/ui/controls/Swatches";
-import { ACCENT_SWATCHES } from "@giga/ui/controls/accent-swatches";
+import type { MotionPreference } from "@giga/ui/hooks/useReduceMotion";
+import type { ThemeChoice } from "@giga/ui/store/chrome-types";
+import {
+  APPEARANCE_DEFAULTS,
+  RESTORE_AT_DEFAULTS,
+  RESTORE_TITLE,
+  SETTINGS_LABELS,
+} from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
-import type { MotionPreference, ThemeMode } from "@/types/shell";
 import { ZoomStepper } from "./ZoomStepper";
-
 
 const THEMES = [
   { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
   { value: "system", label: "System" },
-] as const satisfies ReadonlyArray<{ value: ThemeMode; label: string }>;
+] as const satisfies ReadonlyArray<{ value: ThemeChoice; label: string }>;
 
 const MOTIONS = [
   { value: "system", label: "Follow system" },
@@ -26,7 +30,8 @@ const MOTIONS = [
   { value: "on", label: "On" },
 ] as const satisfies ReadonlyArray<{ value: MotionPreference; label: string }>;
 
-/** Appearance: the Theme and Reduce motion choices, the Accent swatches and the UI zoom stepper. Each changes the shell at once. */
+/** Appearance: the Theme and Reduce motion choices, the Accent swatches, the UI zoom stepper and `Restore defaults`. Each
+ *  changes the shell at once; nothing is saved until Wave 7. */
 export function AppearanceSection() {
   const theme = useAppStore((state) => state.theme);
   const setTheme = useAppStore((state) => state.setTheme);
@@ -37,14 +42,14 @@ export function AppearanceSection() {
   const uiZoom = useAppStore((state) => state.uiZoom);
   const setZoom = useAppStore((state) => state.setZoom);
   const atDefaults =
-    theme === SETTINGS_VALUES.theme &&
-    motion === SETTINGS_VALUES.reducedMotion &&
-    accent === SETTINGS_VALUES.themeAccent &&
-    uiZoom === SETTINGS_VALUES.uiZoom;
+    theme === APPEARANCE_DEFAULTS.theme &&
+    motion === APPEARANCE_DEFAULTS.motion &&
+    accent === APPEARANCE_DEFAULTS.accent &&
+    uiZoom === APPEARANCE_DEFAULTS.uiZoom;
 
   return (
     <Workspace labels={SETTINGS_LABELS}>
-      <Group id="settings.appearance" title="Appearance" icon={Eye} last>
+      <Group id="settings.appearance" title="Appearance" icon={Palette} last>
         <Row
           label="Theme"
           tip="Dark or light colors for the whole app, or System to follow the desktop's own light or dark mode, switching when it does."
@@ -66,13 +71,13 @@ export function AppearanceSection() {
         <Actions>
           <Button
             variant="ghost"
-            disabled={atDefaults}
-            title={atDefaults ? "Appearance is already at its defaults." : "Dark, Follow system, Amber and a zoom of 1"}
+            title={RESTORE_TITLE}
+            reason={atDefaults ? RESTORE_AT_DEFAULTS : undefined}
             onClick={() => {
-              setTheme(SETTINGS_VALUES.theme);
-              setMotion(SETTINGS_VALUES.reducedMotion);
-              setAccent(SETTINGS_VALUES.themeAccent);
-              setZoom(SETTINGS_VALUES.uiZoom);
+              setTheme(APPEARANCE_DEFAULTS.theme);
+              setMotion(APPEARANCE_DEFAULTS.motion);
+              setAccent(APPEARANCE_DEFAULTS.accent);
+              setZoom(APPEARANCE_DEFAULTS.uiZoom);
             }}
           >
             <RotateCcw aria-hidden /> Restore defaults

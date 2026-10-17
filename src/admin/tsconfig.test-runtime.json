@@ -16,7 +16,7 @@
       "framer-motion": ["./node_modules/framer-motion/dist/es/index.mjs"],
       "zustand": ["./node_modules/zustand/esm/index.mjs"],
       "lucide-react": ["./node_modules/lucide-react/dist/esm/lucide-react.mjs"],
-      "@radix-ui/react-dropdown-menu": ["./node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs"]
+      "allotment": ["./node_modules/allotment/dist/legacy.js"]
     }
   }
 }
