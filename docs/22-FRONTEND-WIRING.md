@@ -166,6 +166,35 @@ disabled, or local, where the row says so.
 | Playback settings | the attached `hls.js` levels, tracks and latency | quality, audio, captions, latency enabled with the stream's real values; a row the stream cannot serve keeps its reason (`06` section 3.3) |
 | Fit, Fill, Original | none | local, always usable (`06` section 3.3) |
 
+#### 3.2a Channel and stream lifecycle
+
+**Loading the list.** The channels are read on interaction, never on a timer (`03` §4): the mount state read carries
+the whole list; switching to the Live surface re-reads it; search and category re-query it (`GET /api/channels?q=
+&category=`, 250 ms debounce, a newer request abandons the older); the Refresh control and the no-channels note call
+`POST /api/channels/refresh`, which re-reads regardless of the live view's 30 s TTL and re-probes every stream. A
+refused read keeps the last rows and says why; with the backend unreachable the list is skeletons and the next
+request is what finds the backend again (`03` §5.1). Probe statuses arrive with each read's answer (`03` §5.2).
+
+**Loading the stream.** A row click or Enter selects, `PATCH /api/channels/last` remembers it, and the stage's
+`<video>` attaches `channel.streamUrl` through `services/stream-player.ts` — `hls.js` when the browser can run it,
+the browser's own HLS otherwise (`02` §3.1). The address is published data: the player loads the origin directly,
+the fileserver never relays it (`00` §5). Ready is the first frame; a failed stream shows the note with Retry, which
+attaches the same address again; nothing is drawn over the player while it loads (`00` §4.2). A playing stream
+survives list re-reads.
+
+**Start and auto-start.** A user gesture (row click, Enter) attaches and plays. On launch, when `liveOnOpen` is
+`last` and the state's `lastChannelId` is still in the view, Live selects that channel and attaches its stream:
+with `autoplay` on it plays; with `autoplay` off (the default) it shows the first frame paused until the person
+presses play. A refused `play()` (browser policy) stays paused at the first frame; nothing is force-muted.
+`liveOnOpen: none` attaches nothing.
+
+**Pause.** The browser's own controls (the family decision, `21` §3.4a) and the video's own keys; the paused state
+is reported to the store for the inspector. Channels never write watch history (`03` §3.13).
+
+**Titles and local files (Player).** The same stage grammar: sources or `streamUrl` per §3.4, local files through
+the Range route. Resume follows `resumeMode`: `ask` shows the Resume / Start over banner, `resume` seeks to the
+watched position at once, `restart` starts at zero; progress writes per §3.4.
+
 ### 3.3 Library
 
 | Control | Route | Behaviour |
@@ -286,6 +315,30 @@ unblocked and says so). This plan wires what the interface shows of it: every `a
 in a browser, and provider embeds are always sandboxed in the browser case (`14` §2.3). No new setting: the
 blocker is on wherever the desktop shell runs (`16` §9.4 defaulted). The PoC's strict-mode allow lists stay a
 PoC instrument (`16` §7).
+
+### 3.9 Images — where each one loads
+
+Every image address an answer carries is already same-origin (`/api/images/<id>`, the cache's rewrite, `03` §3.11).
+They load as plain `<img src>` — never through `services/api.ts`, never logged in the drawer (`<img>` traffic is not
+visible in either runtime; §3.7 says so). The route answers a strong `ETag` and a long cache lifetime, so reloads
+are `304`s from the cache on disk; the first-ever request fills the cache lazily (10 s timeout, ≤10 MiB,
+`image/*` only); a failed source answers `404 image.not_found` and only that image swaps to its glyph — the query
+and every other image are untouched (`06` §2, `21` §4.2's `PosterImage` and `LogoImage`).
+
+| Surface | Spot | Component | Answer field |
+|---|---|---|---|
+| Live | channel rows | `LogoImage`, 4:3 at 56 px | `Channel.logoUrl` |
+| Library | grid, list, Rows shelves | `PosterImage`, 2:3 ≥144 px | `LibraryItem.posterUrl` |
+| Library | Continue Watching cards | `PosterImage` | `LibraryItem.posterUrl` (continue answer) |
+| Library | Title information window | 180 px artwork | `TitleDetail.posterUrl` |
+| Player | episode browser rows | 16:9 still with fallback | `Episode.stillUrl` |
+| Player | inspector Overview | poster at pane width | `TitleDetail.posterUrl` |
+| Player | related band | square 140 px thumbs (the poster cropped by `object-cover`; no second request) | `RelatedAnswer.items[].posterUrl` |
+| Collections window | members table | image column | the member's `posterUrl` |
+
+Local files' stills are written by the scan's `poster-fetch` job: a just-scanned file shows the glyph, and its still
+appears at the next library read — no polling. Phase 1's glyphs-only default (`21` §8, question 1) ends wave by wave
+as each surface receives its real answers (2.2 logos, 2.4 posters, 2.5 stills).
 
 ## 4. Store
 
