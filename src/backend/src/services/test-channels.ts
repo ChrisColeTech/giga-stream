@@ -1,36 +1,41 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+import type { VariantName } from "../constants/live-media.js";
+import type { LiveCategory } from "../types/live-stream.js";
 import type { ChannelService } from "./channel-service.js";
 
-/** The streaming test server's address (docs/10, docs/03 section 7.7). */
-const TEST_SERVER = "http://127.0.0.1:8097";
+/** The four test channels of docs/10 section 3.3: the ids, names, numbers, categories and ladders it serves. */
+const TEST_CHANNELS: Array<{ id: string; name: string; category: LiveCategory; number: string; variants: VariantName[] }> = [
+  { id: "fx-news", name: "Fixture News", category: "News", number: "1", variants: ["360p", "720p"] },
+  { id: "fx-sports", name: "Fixture Sports", category: "Sports", number: "2", variants: ["360p", "720p", "1080p"] },
+  { id: "fx-music", name: "Fixture Music", category: "Music", number: "3", variants: ["360p", "720p"] },
+  { id: "fx-kids", name: "Fixture Kids", category: "Kids", number: "4", variants: ["360p", "720p"] },
+];
 
-/** The four channels of docs/10 section 3.2, with the ids, names, numbers and categories it serves. */
-const TEST_CHANNELS = [
-  { id: "fx-news", name: "Fixture News", category: "News", number: "1" },
-  { id: "fx-sports", name: "Fixture Sports", category: "Sports", number: "2" },
-  { id: "fx-music", name: "Fixture Music", category: "Music", number: "3" },
-  { id: "fx-kids", name: "Fixture Kids", category: "Kids", number: "4" },
-] as const;
+/** The refusal when the seed is asked for and the fixture files are not made. */
+export const SEED_NEEDS_FIXTURES =
+  "SEED_TEST_CHANNELS=true needs the fixture files in FIXTURE_DIR: run `npm run fixtures` from the repository root";
 
-/** With `SEED_TEST_CHANNELS`, a backend with no channels creates the four test channels. */
-export function seedTestChannels(channels: ChannelService): number {
+/** The fixture files a test channel plays: `live/<kind>-1.mp4` to `-3.mp4` (docs/10 section 2.1). */
+const fixtureVideos = (fixtureDir: string, id: string) =>
+  [1, 2, 3].map((n) => path.join(fixtureDir, "live", `${id.replace(/^fx-/, "")}-${n}.mp4`));
+
+/**
+ * With `SEED_TEST_CHANNELS`, a backend with no channels creates the four test channels as live rows, each a
+ * list of three fixture files from `fixtureDir` (made by scripts/fixtures/make-fixtures.mjs) and served by
+ * this backend itself. News has captions. Needs no `ALLOW_LOOPBACK_STREAMS`: a live row stores no address.
+ */
+export function seedTestChannels(channels: ChannelService, fixtureDir: string): number {
   if (!channels.isEmpty()) return 0;
+  const missing = TEST_CHANNELS.flatMap((c) => fixtureVideos(fixtureDir, c.id)).find((file) => !existsSync(file));
+  if (missing !== undefined) throw new Error(`${SEED_NEEDS_FIXTURES} (${missing} is missing)`);
   for (const c of TEST_CHANNELS) {
     channels.create(
-      {
-        name: c.name,
-        category: c.category,
-        number: c.number,
-        streamUrl: `${TEST_SERVER}/live/${c.id}/master.m3u8`,
-        logoUrl: `${TEST_SERVER}/logos/${c.id}.png`,
-      },
+      { kind: "live", ...c, mode: "loop", captions: c.id === "fx-news", videos: fixtureVideos(fixtureDir, c.id) },
       { address: "seed" },
-      c.id,
+      "",
     );
   }
   return TEST_CHANNELS.length;
 }
-
-/** The refusal when the seed is asked for without the loopback flag (docs/03 section 7.7). */
-export const SEED_NEEDS_LOOPBACK =
-  "SEED_TEST_CHANNELS=true needs ALLOW_LOOPBACK_STREAMS=true: the test channels point at the streaming " +
-  "test server on http://127.0.0.1:8097.";

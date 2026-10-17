@@ -1,7 +1,9 @@
 import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
+import { createLiveEngine, type LiveSeams } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistSyncStatus } from "../types/playlist-sync.js";
 import { createAccountService } from "./account-service.js";
+import { createAdminStatic } from "./admin-static-service.js";
 import { createAuditService } from "./audit-service.js";
 import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
@@ -27,6 +29,14 @@ export interface ServiceOptions {
   episodeStreamTemplate: string;
   now: () => number;
   dataDir: string;
+  /** Loop mode's encoded videos (`CACHE_DIR`, default `<dataDir>/cache`); large. */
+  cacheDir: string;
+  /** The built admin app, served at `/admin/` when it has an `index.html`. */
+  adminDist: string;
+  /** Where the live engine reports a channel that failed to build. */
+  log: (line: string) => void;
+  /** Test seams of the live engine: a fake build, a fake sleep. */
+  live?: LiveSeams;
   playlistUrls: string[];
   playlistSyncMaxBytes: number;
   playlistSyncMax: number;
@@ -59,13 +69,24 @@ export function createServices(store: Store, options: ServiceOptions) {
     episodeTemplate: options.episodeStreamTemplate,
     allowLoopback: options.allowLoopback,
   });
+  const live = createLiveEngine({
+    cacheDir: options.cacheDir,
+    dataDir: options.dataDir,
+    now,
+    log: options.log,
+    knows: (id) => store.channels.find(id)?.kind === "live",
+    ...(options.live && { seams: options.live }),
+  });
+  options.live?.onEngine?.(live);
   return {
     audit,
     auth,
     tmdb,
     omdb,
+    live,
+    adminStatic: createAdminStatic(options.adminDist),
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
-    channels: createChannelService({ store, audit, allowLoopback: options.allowLoopback, now }),
+    channels: createChannelService({ store, audit, live, allowLoopback: options.allowLoopback, now }),
     providers: createProviderService({ store, audit, now }),
     titles: createTitleService({ store, audit, tmdb, omdb, streams, now }),
     playlistSync: {
@@ -80,6 +101,7 @@ export function createServices(store: Store, options: ServiceOptions) {
       version: APP_VERSION,
       revision: store.revisions.current(),
       tmdb: options.tmdbToken !== "" ? ("configured" as const) : ("absent" as const),
+      liveChannels: store.channels.countLive(),
     }),
   };
 }

@@ -7,6 +7,17 @@ export const CHANNEL_CATEGORY_MAX = 60;
 export const CHANNEL_NUMBER_MAX = 12;
 export const ADDRESS_MAX = 2048;
 
+// Live channels (docs/10 section 3.1). A live id is kebab-case; a number is a whole 1 to 9999 on the wire as text.
+export const LIVE_ID_MAX = 64;
+export const LIVE_NUMBER_MIN = 1;
+export const LIVE_NUMBER_MAX = 9_999;
+export const PATH_MAX = 1_024;
+/** Videos one live channel may list by path; a larger set belongs in a folder. */
+export const CHANNEL_VIDEOS_MAX = 2_000;
+export const FAULT_DURATION_MAX_MS = 24 * 60 * 60 * 1000;
+/** A channel write may carry up to CHANNEL_VIDEOS_MAX paths, which the default body limit would refuse. */
+export const CHANNEL_BODY_LIMIT_BYTES = 256 * 1024;
+
 // Providers (docs/03 section 7.2b).
 export const PROVIDER_NAME_MAX = 120;
 export const SOURCE_MAX = 60;

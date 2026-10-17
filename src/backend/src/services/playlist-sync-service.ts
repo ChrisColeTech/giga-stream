@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { AppError, ERRORS } from "../constants/errors.js";
 import { PLAYLIST_SYNC_EXAMPLES_MAX } from "../constants/limits.js";
-import type { ChannelRecord } from "../store/channel-repository.js";
 import type { Store } from "../store/store.js";
-import type { BackendChannel } from "../types/channel.js";
+import type { StreamRecord } from "../types/channel.js";
 import type { PlaylistSyncAnswer, PlaylistSyncCounts, PlaylistSyncStatus } from "../types/playlist-sync.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { httpsLogoUrl, type LogoResolver } from "./logo-resolver.js";
@@ -64,15 +63,15 @@ export function createPlaylistSyncService(deps: {
       entry.logoUrl = httpsLogoUrl(entry.logoUrl) ?? httpsLogoUrl(await logos.resolve(entry.name, entry.tvgId));
     }
 
-    const owned = store.channels.list().filter((channel) => channel.source !== undefined);
-    const byHost = new Map<string, BackendChannel[]>();
+    const owned = store.channels.listSynced();
+    const byHost = new Map<string, StreamRecord[]>();
     for (const channel of owned) {
       const rows = byHost.get(channel.source ?? "");
       if (rows === undefined) byHost.set(channel.source ?? "", [channel]);
       else rows.push(channel);
     }
     const used = new Set<string>();
-    const findMatch = (entry: M3uEntry, host: string): BackendChannel | undefined => {
+    const findMatch = (entry: M3uEntry, host: string): StreamRecord | undefined => {
       for (const pool of [byHost.get(host) ?? [], owned]) {
         if (entry.tvgId !== undefined) {
           const byId = pool.find((c) => !used.has(c.id) && c.tvgId === entry.tvgId);
@@ -84,21 +83,21 @@ export function createPlaylistSyncService(deps: {
       return undefined;
     };
 
-    const creates: Array<{ host: string; record: Omit<ChannelRecord, "revision"> }> = [];
-    const updates: ChannelRecord[] = [];
+    const creates: Array<{ host: string; record: Omit<StreamRecord, "revision"> }> = [];
+    const updates: StreamRecord[] = [];
     for (const { host, entry } of usable) {
       const match = findMatch(entry, host);
       if (match === undefined) {
-        const record: Omit<ChannelRecord, "revision"> = {
-          id: `ch_${randomUUID()}`, name: entry.name, category: entry.groupTitle ?? "", number: entry.number ?? null,
+        const record: Omit<StreamRecord, "revision"> = {
+          kind: "stream", id: `ch_${randomUUID()}`, name: entry.name, category: entry.groupTitle ?? "", number: entry.number ?? null,
           logoUrl: entry.logoUrl ?? null, tvgId: entry.tvgId ?? null, source: host, streamUrl: entry.streamUrl,
         };
         creates.push({ host, record });
         continue;
       }
       used.add(match.id);
-      const record: ChannelRecord = {
-        id: match.id, name: match.name, category: entry.groupTitle ?? match.category,
+      const record: StreamRecord = {
+        kind: "stream", id: match.id, name: match.name, category: entry.groupTitle ?? match.category,
         number: entry.number ?? match.number ?? null, logoUrl: entry.logoUrl ?? match.logoUrl ?? null,
         tvgId: match.tvgId ?? null, source: match.source ?? null, streamUrl: entry.streamUrl, revision: 0,
       };
@@ -106,7 +105,7 @@ export function createPlaylistSyncService(deps: {
         record.category !== match.category || record.number !== (match.number ?? null);
       if (changed) updates.push(record);
     }
-    const vanished = owned.filter((c) => c.source !== undefined && hosts.includes(c.source) && !used.has(c.id));
+    const vanished = owned.filter((c) => c.source !== null && hosts.includes(c.source) && !used.has(c.id));
     const counts: PlaylistSyncCounts = { created: creates.length, updated: updates.length, skipped, refused, removed: vanished.length };
     if (!options.dryRun && counts.created + counts.updated + counts.removed > 0) {
       store.transaction(() => {

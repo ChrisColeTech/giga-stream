@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { FastifyCorsOptions } from "@fastify/cors";
 
 import type { Config } from "./config.js";
 import { JWT_SECRET_MIN } from "./constants/limits.js";
@@ -38,6 +39,20 @@ export function tlsOptions(settings: Config): { cert: Buffer; key: Buffer } | un
 export const corsOrigins = (settings: Config): string[] =>
   settings.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
 
-/** Routes whose answers must never be cached: they carry tokens or account details. */
+/** Routes whose answers must never be cached: they carry tokens, account details or a live row's local paths. */
 export const isPrivateRoute = (url: string): boolean =>
-  /^\/api\/(auth|admin-accounts|audit)(\/|\?|$)/.test(url);
+  /^\/api\/(auth|admin-accounts|audit|admin-channels)(\/|\?|$)/.test(url);
+
+const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+/**
+ * The CORS policy of the live stream addresses (`/live/...`, `/logos/...`; docs/10 section 3.1), which a player
+ * on another origin loads directly: loopback origins always, plus `CORS_ORIGINS`; GET and HEAD, the `Range`
+ * request header, and the headers a player reads back. `/api` keeps its own policy (`corsOrigins` alone).
+ */
+export const streamCorsOptions = (settings: Config): FastifyCorsOptions => ({
+  origin: [LOOPBACK_ORIGIN, ...corsOrigins(settings)],
+  methods: ["GET", "HEAD"],
+  allowedHeaders: ["range"],
+  exposedHeaders: ["content-length", "content-range", "accept-ranges"],
+});
