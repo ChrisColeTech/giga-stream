@@ -295,7 +295,12 @@ should be crud for titles and playlists."* So there are two new record types: a 
   `src/fileserver/src/app` and must be amended; NOT built yet, `28` and `29` plan it): a main process that opens one window on the
   backend's own `/admin/` page and answers the preload's IPC (the native folder picker for `Choose`, the window-overlay
   colours for the caption buttons). Started as a plain server (`npm start`) the backend stays headless and serves the same
-  pages to a browser, where `Choose` is not available (a typed path only). The admin is not part of the desktop app's
+  pages to a browser, where `Choose` is not available (a typed path only). **The backend app closes to the tray** (owner,
+  2026-10-17: "backend server should close to tray"): the window's close button hides the window and the backend, with
+  every live channel it is running, keeps running; a tray icon (tooltip `Giga Stream Admin` and the backend's address)
+  opens the window again on a click, and its menu has `Open Giga Stream Admin` and `Quit`; only `Quit` stops the backend
+  and exits (when the app only attached to an already running backend, `Quit` stops nothing but itself). A second launch
+  shows the existing window instead of starting another. The admin is not part of the desktop app's
   installer (`AGENTS.md`, Commands): the backend ships separately.
 
 ### 4.2 Shell (proposed; `02` section 1, `06` section 1)
