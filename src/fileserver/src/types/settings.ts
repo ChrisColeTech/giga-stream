@@ -18,7 +18,7 @@ export interface Settings {
   /** The share of the duration where an entry becomes `watched` (3.13; the table wins over prose). */
   watchedPercent: 90 | 95 | 100;
   liveOnOpen: "last" | "none";
-  libraryView: "grid" | "list";
+  libraryView: "grid" | "list" | "rows";
   librarySort: "newest" | "oldest" | "az" | "year";
   showContinue: boolean;
   subtitleLanguage: string | null;
@@ -43,7 +43,7 @@ export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   resumeMode: z.enum(["ask", "resume", "restart"]),
   watchedPercent: z.union([z.literal(90), z.literal(95), z.literal(100)]),
   liveOnOpen: z.enum(["last", "none"]),
-  libraryView: z.enum(["grid", "list"]),
+  libraryView: z.enum(["grid", "list", "rows"]),
   librarySort: z.enum(["newest", "oldest", "az", "year"]),
   showContinue: z.boolean(),
   subtitleLanguage: z.string().min(2).max(35).nullable(),
@@ -89,7 +89,7 @@ export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   resumeMode: "Resume must be ask, resume or restart.",
   watchedPercent: "Watched percent must be 90, 95 or 100.",
   liveOnOpen: "Live on open must be last or none.",
-  libraryView: "Library view must be grid or list.",
+  libraryView: "Library view must be grid, list or rows.",
   librarySort: "Library sort must be newest, oldest, az or year.",
   showContinue: "Show Continue must be on or off.",
   subtitleLanguage: "Subtitle language must be a language tag or empty.",
