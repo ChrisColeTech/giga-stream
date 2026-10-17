@@ -103,14 +103,15 @@ describe("the Settings window", () => {
 });
 
 describe("the sign-in page", () => {
-  it("is a page, not a modal: one Sign in group of Email and Password, no fold, no placeholder", () => {
+  it("is a page, not a modal: the brand column and one Sign in form of Email and Password, no placeholder", () => {
     const html = render(SignInPage);
     assert.ok(html.includes('aria-label="Sign in"') && !html.includes("aria-modal"));
+    assert.ok(html.includes("GIGA") && html.includes("Run the channels."));
     assert.ok(html.indexOf('aria-label="Email"') < html.indexOf('aria-label="Password"'));
     assert.ok(html.includes('type="email"') && html.includes('type="password"'));
     assert.ok(!/\splaceholder=/.test(html), "no placeholder attribute");
     assert.ok(!html.includes("aria-expanded"), "no fold");
-    assert.ok(html.includes("max-w-120"));
+    assert.ok(html.includes("--label-col"));
   });
 
   it("disables `Sign in` with its reason until both fields are filled", () => {

@@ -1,10 +1,7 @@
 /* The fixture session: who is signed in and Settings' About facts (`28` section 8). Example hosts only. Deleted by `29`,
  * when the backend answers `/api/auth/me` and `/healthz`. */
 
-export interface SessionActor {
-  readonly email: string;
-  readonly name: string;
-}
+import type { SessionActor } from "@/types/auth";
 
 /** The actor the events sentences name (the mockup's `MOCK_ACTOR`). */
 export const FIXTURE_ACTOR: SessionActor = { email: "ada@example.test", name: "Ada" };
