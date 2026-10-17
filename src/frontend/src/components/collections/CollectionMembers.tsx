@@ -1,25 +1,46 @@
-import { Film, X } from "lucide-react";
+import { Film } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
 import { Group } from "@/components/ui/Group";
-import { REMOVE_MEMBER_REASON } from "@/lib/collections-copy";
+import { PosterImage } from "@/components/ui/PosterImage";
+import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import type { MemberRow } from "@/lib/collections-members";
-import { CollectionIconAction } from "./CollectionIconAction";
+import { MemberRemoveAction } from "./MemberRemoveAction";
 
-const COLUMNS: ReadonlyArray<Column<MemberRow>> = [
-  { key: "title", label: "title or file", cell: (row) => row.title },
-  { key: "year", label: "year", align: "right", width: "72px", cell: (row) => row.year },
-  {
-    key: "remove",
-    label: "",
-    align: "right",
-    width: "44px",
-    cell: (row) => <CollectionIconAction icon={X} label={`Remove ${row.title}`} reason={REMOVE_MEMBER_REASON} />,
-  },
-];
+function memberColumns(collectionId: string): ReadonlyArray<Column<MemberRow>> {
+  return [
+    {
+      key: "poster",
+      label: "",
+      width: "36px",
+      cell: (row) => (
+        <div className="w-5">
+          <PosterImage alt={row.title} src={row.poster} />
+        </div>
+      ),
+    },
+    { key: "title", label: "title or file", cell: (row) => row.title },
+    { key: "year", label: "year", align: "right", width: "72px", cell: (row) => row.year },
+    {
+      key: "remove",
+      label: "",
+      align: "right",
+      width: "44px",
+      cell: (row) => <MemberRemoveAction collectionId={collectionId} memberRef={row.ref} title={row.title} />,
+    },
+  ];
+}
 
-/** The members of one collection: the titles and local files added by hand, each with its remove control. */
-export function CollectionMembers({ rows }: { readonly rows: readonly MemberRow[] }) {
+/** The members of one collection: the titles and local files added by hand, each with its remove control. With none, the
+ *  table is drawn as skeleton rows, not as an empty header (`06` section 2, rule 1). */
+export function CollectionMembers({
+  collectionId,
+  rows,
+}: {
+  readonly collectionId: string;
+  readonly rows: readonly MemberRow[];
+}) {
   return (
     <Group
       id="collections.members"
@@ -27,7 +48,11 @@ export function CollectionMembers({ rows }: { readonly rows: readonly MemberRow[
       icon={Film}
       tip="Titles and local files added by hand. Removing one never touches the original files."
     >
-      <DataTable label="Members" columns={COLUMNS} rows={rows} rowKey={(row) => row.key} />
+      {rows.length === 0 ? (
+        <SkeletonRows count={SKELETON_ROW_COUNT} />
+      ) : (
+        <DataTable label="Members" columns={memberColumns(collectionId)} rows={rows} rowKey={(row) => row.key} />
+      )}
     </Group>
   );
 }
