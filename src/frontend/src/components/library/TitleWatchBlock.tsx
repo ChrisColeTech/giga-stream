@@ -2,13 +2,14 @@ import { progressRatio, watchLine } from "@/lib/library-facts";
 import type { Progress } from "@/types/library";
 import { ProgressBar } from "./ProgressBar";
 
-/** The watch block of Title information: the episode, the watched state or the time left, and the bar. */
+/** The watch progress of Title information, as a row's value: the episode, the watched state or the time left, and the
+ *  bar under it. */
 export function TitleWatchBlock({ progress }: { readonly progress: Progress }) {
   const ratio = progressRatio(progress);
   return (
-    <div className="flex flex-col gap-1.5 rounded-card border border-hair bg-surface p-2.5">
-      <p className="m-0 font-sans text-xs text-text">{watchLine(progress)}</p>
-      {ratio !== undefined && <ProgressBar ratio={ratio} />}
+    <div className="flex min-h-9 min-w-0 flex-1 flex-col justify-center gap-1.5">
+      <span className="font-mono text-sm text-muted">{watchLine(progress)}</span>
+      {ratio !== undefined && <ProgressBar ratio={ratio} className="rounded-full" />}
     </div>
   );
 }

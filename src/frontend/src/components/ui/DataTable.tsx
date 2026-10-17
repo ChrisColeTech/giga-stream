@@ -12,10 +12,10 @@ export interface Column<T> {
 /* A header is a section header (11px semibold, faint, sans), never mono. A cell is body text; a right-aligned value is
  * mono 11px in muted, so the numbers compare down the column. Each cell names its own text style: a plain join would
  * leave two colour utilities on one element and let stylesheet order decide. */
-const TH = "border-b border-hair bg-panel px-3 py-1.5 font-sans text-[11px] font-semibold text-faint";
+const TH = "border-b border-hair bg-panel px-3 py-1.5 font-sans text-xs font-semibold text-faint";
 const TD = "truncate border-t border-hair px-3 py-1.5";
-const TEXT = "text-[13px] text-text";
-const VALUE = "text-right font-mono text-[11px] tabular-nums text-muted";
+const TEXT = "text-sm text-text";
+const VALUE = "text-right font-mono text-xs tabular-nums text-muted";
 
 /** A table, never a dialog that grows with its content. A header and a row per record; measured numbers are mono and
  *  right-aligned so they compare down the column. An empty table renders its header and nothing else: the empty state is
