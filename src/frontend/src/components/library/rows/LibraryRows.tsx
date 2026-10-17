@@ -87,7 +87,7 @@ export function LibraryRows({
         ))}
         {titleRegionsLoading && shelves.length > 0 && <RowsSkeleton />}
         {render.showPager && (
-          <LibraryPager hasMore={hasMore} loading={paging} view="rows" onVisible={onLoadMore} />
+          <LibraryPager hasMore={hasMore} loading={paging} view="rows" scope={scope} onVisible={onLoadMore} />
         )}
       </div>
     </div>
