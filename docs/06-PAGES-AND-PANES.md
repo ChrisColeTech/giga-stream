@@ -523,8 +523,10 @@ row with nothing wired yet is disabled in place and its reason is its tooltip.
 ### 6.3 Collections
 
 A left rail of All and every collection alphabetically. **All** holds a **New collection** group (a name, an
-optional **Folder** to start from through the native dialog, and **Create** at the last row) and a table of
-collections with their counts and scan state. A selected collection shows its attached folders first (name,
+optional **Folder** to start from through the native dialog, and **Create** at the last row) and the list of
+collections on the family action list (owner, 2026-10-16: the table "doesnt let me crud"): each row carries its
+scan state as the left-edge bar, its name and its totals; on hover, **Attach folder**, **Rename** (in place,
+over the list) and a two-step **Remove**; a press opens the collection. A selected collection shows its attached folders first (name,
 indexed count, scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**) with **Attach
 folder** through the native dialog, then its member table (image, title, year, remove), **Rename**, and a
 two-step **Remove collection** that states `Original files remain untouched.` A token that expires keeps the

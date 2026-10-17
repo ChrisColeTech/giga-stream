@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CollectionCreateGroup } from "@/components/collections/CollectionCreateGroup";
 import { CollectionDetail } from "@/components/collections/CollectionDetail";
-import { CollectionsTable } from "@/components/collections/CollectionsTable";
+import { CollectionsList } from "@/components/collections/CollectionsList";
 import { Workspace } from "@/components/ui/Form";
 import { NavGroup, NavItem, NavRail } from "@/components/ui/NavRail";
 import { StatusDot } from "@/components/ui/StatusDot";
@@ -15,7 +15,7 @@ import { ChildWindow } from "./ChildWindow";
 const SPEC = workSpec("collections", "Collections");
 const ALL = "all";
 const SORTED = alphabetical(COLLECTION_ROWS);
-const LABELS = ["Name", "Folder"] as const;
+const LABELS = ["Name", "Folder", "Rename"] as const;
 
 /** Collections: a work window (`06` section 6.3). The rail lists All, then every collection alphabetically, a scan dot
  *  beside any whose folder is scanning; All holds the create group and the table, and a selected collection shows its
@@ -50,7 +50,7 @@ export function CollectionsWindow() {
             {chosen === undefined ? (
               <>
                 <CollectionCreateGroup />
-                <CollectionsTable rows={SORTED} onSelect={setSelected} />
+                <CollectionsList rows={SORTED} onSelect={setSelected} />
               </>
             ) : (
               <CollectionDetail key={chosen.id} collection={chosen} onRemoved={() => setSelected(ALL)} />
