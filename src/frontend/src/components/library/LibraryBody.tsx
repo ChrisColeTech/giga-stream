@@ -98,7 +98,7 @@ export function LibraryBody({
         {titleRegionsLoading && shown.length > 0 && (
           view === "grid" ? <PosterGridSkeleton count={SKELETON_CARDS} /> : <SkeletonRows count={SKELETON_ROWS} />
         )}
-        <LibraryPager hasMore={hasMore} loading={paging} view={view} onVisible={onLoadMore} />
+        <LibraryPager hasMore={hasMore} loading={paging} view={view} scope={scope} onVisible={onLoadMore} />
       </div>
     </div>
   );
