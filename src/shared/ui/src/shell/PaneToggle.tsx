@@ -10,6 +10,9 @@ export interface PaneToggleProps {
   /** Why the toggle is asleep or has no pane to show. Absent when it works. */
   readonly reason?: string;
   readonly onToggle: () => void;
+  /** What the toggle shows, when the app calls its pane something else (the admin's `the events band`): the toggle reads
+   *  `Toggle <name>`. Absent, the side's own name. */
+  readonly name?: string;
 }
 
 const TOGGLES: Readonly<Record<PaneSide, { label: string; Icon: LucideIcon }>> = {
@@ -21,8 +24,9 @@ const TOGGLES: Readonly<Record<PaneSide, { label: string; Icon: LucideIcon }>> =
 /** A pane's show and hide toggle. Ghost: transparent at rest, a hover fill, the accent tint while the pane is shown. A
  *  toggle with a reason stays in place, disabled, never hidden, so the chrome does not shuffle from page to page. A
  *  disabled button takes no pointer events, so the reason hangs on the wrapper, which does. */
-export function PaneToggle({ side, lit, reason, onToggle }: PaneToggleProps) {
-  const { label, Icon } = TOGGLES[side];
+export function PaneToggle({ side, lit, reason, onToggle, name }: PaneToggleProps) {
+  const { label: sideName, Icon } = TOGGLES[side];
+  const label = name ?? sideName;
   return (
     <span className="inline-flex" title={reason}>
       <IconButton

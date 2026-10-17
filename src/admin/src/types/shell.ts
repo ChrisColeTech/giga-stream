@@ -1,14 +1,10 @@
-/** The three persistent surfaces (`03` section 1). Switching never remounts the shell. */
-export type Surface = "live" | "library" | "player";
+import type { PaneSide } from "@giga/ui/panes/pane-types";
 
-export type PaneSide = "left" | "right" | "bottom";
+/** The six tabs of the admin (`26` section 4.4). The pill is the only navigation; there is no router. */
+export type Tab = "channels" | "providers" | "titles" | "playlists" | "jobs" | "accounts";
 
-/** A pane's identity in the store and the tween engine: the surface and the side it sits on. */
-export type PaneKey = `${Surface}.${PaneSide}`;
+export type { PaneSide };
 
-export type ThemeMode = "dark" | "light" | "system";
-
-export type Accent = "amber" | "violet" | "blue" | "green" | "rose";
-
-/** "system" follows the OS, "off" always animates (the default), "on" never does. */
-export type MotionPreference = "system" | "off" | "on";
+/** A pane's identity in the store and the tween engine: the tab and the side it sits on. The admin has a left pane only
+ *  (a workspace's rail), so every key ends in `.left`. */
+export type PaneKey = `${Tab}.${PaneSide}`;

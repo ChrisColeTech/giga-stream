@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../lib/cn'
+import { placeTooltip, type TooltipPlacement } from '../lib/tooltip-place'
 
 /* A REAL tooltip (doc 06 §1c): a styled bubble above its anchor on hover and
  * on keyboard focus, wired with aria-describedby, never the browser's yellow
@@ -13,11 +14,10 @@ import { cn } from '../lib/cn'
  * every scrolling workspace and painted under any later stacking context;
  * a fixed element at the top layer is clipped by nothing. It flips below
  * the anchor when there is no room above, and stays inside the viewport
- * horizontally. */
-const GAP = 8
+ * horizontally; its arrow follows the anchor's centre, so a bubble the viewport pushed sideways still points at its
+ * anchor (`lib/tooltip-place.ts`). */
 const MAX_W = 320
-
-type Pos = { left: number; top: number; below: boolean }
+const ARROW_HALF = 6
 
 export function Tooltip({
   text,
@@ -36,7 +36,7 @@ export function Tooltip({
   const anchor = useRef<HTMLSpanElement | null>(null)
   const bubble = useRef<HTMLSpanElement | null>(null)
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState<Pos | null>(null)
+  const [pos, setPos] = useState<TooltipPlacement | null>(null)
 
   useLayoutEffect(() => {
     if (!open) {
@@ -47,13 +47,7 @@ export function Tooltip({
     const b = bubble.current
     if (a === null || b === null) return
     const place = () => {
-      const r = a.getBoundingClientRect()
-      const w = b.offsetWidth
-      const h = b.offsetHeight
-      const below = r.top - h - GAP < 4
-      const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8)
-      const top = below ? r.bottom + GAP : r.top - h - GAP
-      setPos({ left, top, below })
+      setPos(placeTooltip(a.getBoundingClientRect(), { width: b.offsetWidth, height: b.offsetHeight }, window.innerWidth))
     }
     place()
     window.addEventListener('scroll', place, true)
@@ -93,9 +87,10 @@ export function Tooltip({
             {text}
             <span
               className={cn(
-                'absolute left-1/2 -ml-1.5 size-3 rotate-45 border-border bg-panel',
+                'absolute size-3 rotate-45 border-border bg-panel',
                 pos?.below === true ? 'bottom-full -mb-1.5 border-t border-l' : 'top-full -mt-1.5 border-r border-b',
               )}
+              style={{ left: pos?.arrow ?? '50%', marginLeft: -ARROW_HALF }}
               aria-hidden
             />
           </span>,

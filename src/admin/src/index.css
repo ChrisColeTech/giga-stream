@@ -15,39 +15,3 @@
 
 /* LAST: a kill-switch has to win the cascade. */
 @import "../../shared/ui/src/styles/motion-reduce.css";
-
-/* ============ workspace split ============
- * The ONE grid that sizes panes (family shell pattern). A component class,
- * not utilities: Tailwind cannot carry a multi-column template, and Chrome
- * will not interpolate a grid-template transition from its initial state —
- * so the side tracks are `auto` and the PANE's own width/height animates
- * (140ms ease-p2p), which every engine interpolates. The --lw/--gl/--rw/--
- * gr/--bh/--gb variables are written ONLY by useWorkspaceSplit. Dragging has
- * no transition. */
-@layer components {
-  .workspace-split {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-    grid-template-rows: minmax(0, 1fr) auto auto;
-  }
-  .workspace-split > [data-pane="left"]   { grid-area: 1 / 1; width: var(--lw, 0px); }
-  .workspace-split > [data-pane="gl"]     { grid-area: 1 / 2; width: var(--gl, 0px); }
-  .workspace-split > [data-pane="center"] { grid-area: 1 / 3; }
-  .workspace-split > [data-pane="gr"]     { grid-area: 1 / 4; width: var(--gr, 0px); }
-  .workspace-split > [data-pane="right"]  { grid-area: 1 / 5; width: var(--rw, 0px); }
-  .workspace-split > [data-pane="gb"]     { grid-area: 2 / 1 / auto / -1; height: var(--gb, 0px); }
-  .workspace-split > [data-pane="bottom"] { grid-area: 3 / 1 / auto / -1; height: var(--bh, 0px); }
-  /* The content keeps its committed size while the pane clips shut, so it
-     slides off rather than reflowing narrower every frame. */
-  .workspace-split > [data-pane="left"] > * { width: var(--lw-open, 0px); flex: none; }
-  .workspace-split > [data-pane="right"] > * { width: var(--rw-open, 0px); flex: none; }
-  .workspace-split > [data-pane="bottom"] > * { height: var(--bh-open, 0px); flex: none; }
-  .workspace-split > [data-pane="gl"], .workspace-split > [data-pane="left"],
-  .workspace-split > [data-pane="gr"], .workspace-split > [data-pane="right"] {
-    transition: width var(--duration-fast) var(--ease-p2p);
-  }
-  .workspace-split > [data-pane="gb"], .workspace-split > [data-pane="bottom"] {
-    transition: height var(--duration-fast) var(--ease-p2p);
-  }
-  body[data-resizing] .workspace-split > * { transition: none; }
-}

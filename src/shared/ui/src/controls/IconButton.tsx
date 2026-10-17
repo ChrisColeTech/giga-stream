@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
 
+import { Tooltip } from '../form/Tooltip'
 import { cn } from '../lib/cn'
 
 const BASE =
@@ -33,8 +34,17 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   on?: boolean
   /** Give the button the same fill and edge as a .btn — for standalone actions. */
   bordered?: boolean
+  /** Why the button cannot be used now: natively `disabled`, in the focusable `Tooltip` labelled "Label. reason" (the
+   *  `aria-label` is the label). Absent, no wrapper. A native `title` would double the bubble, so it is dropped. */
+  reason?: string
 }
 
-export function IconButton({ on = false, bordered = false, className, type = 'button', ...rest }: IconButtonProps) {
-  return <button type={type} data-on={on ? '' : undefined} className={cn(BASE, bordered && BORDERED, className)} {...rest} />
+export function IconButton({ on = false, bordered = false, reason, className, type = 'button', ...rest }: IconButtonProps) {
+  const classes = cn(BASE, bordered && BORDERED, className)
+  if (reason === undefined) return <button type={type} data-on={on ? '' : undefined} className={classes} {...rest} />
+  return (
+    <Tooltip text={reason} focusable label={`${rest['aria-label'] ?? 'Button'}. ${reason}`}>
+      <button type={type} data-on={on ? '' : undefined} className={classes} {...rest} title={undefined} disabled />
+    </Tooltip>
+  )
 }
