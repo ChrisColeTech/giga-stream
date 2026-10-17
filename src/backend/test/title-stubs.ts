@@ -64,6 +64,16 @@ const LIST_ROW = {
   genre_ids: [878],
 };
 
+const TV_LIST_ROW = {
+  id: 1399,
+  name: "Game of Thrones",
+  first_air_date: "2011-04-17",
+  vote_average: 8.4,
+  popularity: 120,
+  poster_path: "/got.jpg",
+  genre_ids: [18],
+};
+
 const SEASON = {
   episodes: [{ episode_number: 1, name: "Winter Is Coming", air_date: "2011-04-17", runtime: 62 }],
 };
@@ -87,22 +97,39 @@ async function serve(handle: (url: URL, json: (body: unknown, status?: number) =
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
 
+interface TmdbStubOptions {
+  movieRows?: unknown[];
+  tvRows?: unknown[];
+  recommendationRows?: unknown[];
+}
+
 /** A stub TMDB: records request keys, answers the paths the service calls. */
-export async function stubTmdb() {
+export async function stubTmdb(options: TmdbStubOptions = {}) {
   const calls: string[] = [];
-  const page = (url: URL) => ({ page: url.searchParams.get("page"), results: [LIST_ROW], total_pages: 1, total_results: 1 });
+  const movieRows = options.movieRows ?? [LIST_ROW];
+  const tvRows = options.tvRows ?? [TV_LIST_ROW];
+  const page = (url: URL, results: unknown[]) => ({
+    page: url.searchParams.get("page"),
+    results,
+    total_pages: 1,
+    total_results: results.length,
+  });
   const base = await serve((url, json) => {
     calls.push(url.pathname + url.search);
     const p = url.pathname;
     if (p === "/movie/603") return json(MATRIX);
     if (p === "/tv/1399") return json(GOT_DETAIL);
-    if (p === "/discover/movie" || p === "/discover/tv") return json({ ...page(url), page: 1 });
-    if (p === "/trending/movie/week" || p === "/trending/tv/week") return json(page(url));
-    if (p === "/movie/popular" || p === "/tv/popular") return json(page(url));
+    if (p === "/discover/movie") return json({ ...page(url, movieRows), page: 1 });
+    if (p === "/discover/tv") return json({ ...page(url, tvRows), page: 1 });
+    if (p === "/search/movie") return json(page(url, movieRows));
+    if (p === "/search/tv") return json(page(url, tvRows));
+    if (p === "/trending/movie/week" || p === "/movie/popular") return json(page(url, movieRows));
+    if (p === "/trending/tv/week" || p === "/tv/popular") return json(page(url, tvRows));
     if (p === "/genre/movie/list") return json({ genres: [{ id: 878, name: "Science Fiction" }] });
     if (p === "/tv/1399/season/1") return json(SEASON);
     if (p === "/movie/603/recommendations" || p === "/tv/1399/recommendations") {
-      return json({ page: 1, results: [{ ...LIST_ROW, id: 1399, title: "Game of Thrones" }], total_pages: 1, total_results: 1 });
+      const results = options.recommendationRows ?? [{ ...LIST_ROW, id: 1399, title: "Game of Thrones" }];
+      return json({ page: 1, results, total_pages: 1, total_results: results.length });
     }
     return json({ status_message: "not found" }, 404);
   });

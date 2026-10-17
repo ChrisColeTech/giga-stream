@@ -50,6 +50,13 @@ export const num = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
 export const str = (value: unknown): string | undefined => (typeof value === "string" && value !== "" ? value : undefined);
 export const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? (value as unknown[]) : []);
+const nonBlank = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+};
+const tmdbTitleOf = (kind: Kind, value: Record<string, unknown>): string | undefined =>
+  nonBlank(kind === "movie" ? value.title : value.name);
 const yearOf = (date: unknown): number | undefined => {
   const year = Number(str(date)?.slice(0, 4));
   return Number.isInteger(year) && year > 1800 ? year : undefined;
@@ -93,6 +100,8 @@ export function formatSchedule(intervalMs: number | undefined): string {
 
 /** A full TMDB record (with `credits,external_ids` appended) as the stored detail payload. */
 export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unknown>): Record<string, unknown> {
+  const title = tmdbTitleOf(kind, answer);
+  if (title === undefined) throw new AppError(ERRORS.tmdbUnavailable, { reason: `answer without a ${kind} title` });
   const castList = listOf(asRecord(answer.credits).cast);
   const runtime = num(answer.runtime);
   return {
@@ -100,7 +109,7 @@ export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unkn
     tmdbId,
     kind,
     shape: "detail" as const,
-    title: str(answer.title) ?? str(answer.name) ?? "",
+    title,
     year: yearOf(answer.release_date) ?? yearOf(answer.first_air_date),
     genres: listOf(answer.genres).map((g) => str(asRecord(g).name) ?? "").filter((name) => name !== ""),
     rating: num(answer.vote_average),
@@ -115,16 +124,17 @@ export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unkn
 }
 
 /** A thin list row: the detail route enriches it when the title is opened. */
-export function rowOf(kind: Kind, tmdb: Record<string, unknown>, now: number): Record<string, unknown> {
+export function rowOf(kind: Kind, tmdb: Record<string, unknown>, now: number): Record<string, unknown> | undefined {
   const tmdbId = num(tmdb.id);
-  if (tmdbId === undefined) throw new AppError(ERRORS.tmdbUnavailable, { reason: "answer without an id" });
+  const title = tmdbTitleOf(kind, tmdb);
+  if (tmdbId === undefined || title === undefined) return undefined;
   const popularity = num(tmdb.popularity);
   return {
     id: titleIdOf(kind, tmdbId),
     tmdbId,
     kind,
     shape: "list" as const,
-    title: str(tmdb.title) ?? str(tmdb.name) ?? "",
+    title,
     year: yearOf(tmdb.release_date) ?? yearOf(tmdb.first_air_date),
     genres: listOf(tmdb.genre_ids).map(String),
     rating: num(tmdb.vote_average),
@@ -132,6 +142,29 @@ export function rowOf(kind: Kind, tmdb: Record<string, unknown>, now: number): R
     backdropUrl: image(tmdb.backdrop_path, "w1280"),
     ...(popularity !== undefined && { popularity: { score: popularity, readAt: now } }),
   };
+}
+
+export function rowsOf(kind: Kind, values: unknown[], now: number): Record<string, unknown>[] {
+  return values.flatMap((value) => {
+    const row = rowOf(kind, asRecord(value), now);
+    return row === undefined ? [] : [row];
+  });
+}
+
+/** Validate a stored output row, or safely reshape a legacy raw TMDB list row. */
+export function storedRowOf(
+  kind: Kind,
+  tmdbId: number,
+  payload: unknown,
+  readAt: number,
+): Record<string, unknown> | undefined {
+  const record = asRecord(payload);
+  const title = nonBlank(record.title);
+  if (record.id === titleIdOf(kind, tmdbId) && record.kind === kind && num(record.tmdbId) === tmdbId && title !== undefined) {
+    return { ...record, title };
+  }
+  if (num(record.id) !== tmdbId) return undefined;
+  return rowOf(kind, record, readAt);
 }
 
 /** The OMDb block of docs/11 section 7.2: only the fields the product shows, `Plot` kept raw. */
