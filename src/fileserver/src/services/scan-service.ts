@@ -167,8 +167,9 @@ export function createScanService(deps: {
               });
             }
           } else if (event.type === "progress") {
-            const percent = event.total === null ? 0 : Math.round((event.probed / event.total) * 100);
-            context.report(percent);
+            // While the walk is still discovering files the total is unknown: report indeterminate
+            // (22 section 7a), never a false 0; the job's percent simply stays unset (3.9).
+            context.report(event.total === null ? null : Math.round((event.probed / event.total) * 100));
           } else if (event.type === "done") {
             folders.setFolderScannedAt(folder.id, now());
             files.deleteMissing(folder.id, keepPaths);

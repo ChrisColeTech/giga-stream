@@ -4,6 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { openDatabase } from "../src/store/database.js";
+import { createCollectionRepository } from "../src/store/collection-repository.js";
+import { createLocalFileRepository } from "../src/store/local-file-repository.js";
+import { createJobRepository } from "../src/store/job-repository.js";
+import { createJobService, type JobContext } from "../src/services/job-service.js";
+import { createScanService } from "../src/services/scan-service.js";
+
 const folderRoot = mkdtempSync(path.join(os.tmpdir(), "giga-jobs-root-"));
 process.env.TEST_FOLDER_ROOT = folderRoot;
 const { makeApp, pick, send } = await import("./app-fixture.js");
@@ -92,6 +99,44 @@ test("a restart marks every job left behind as interrupted, with none resumed", 
   assert.equal(states.get("job-queued")?.error?.code, "job.interrupted");
   await second.dispose();
   rmSync(dataDir, { recursive: true, force: true });
+});
+
+test("a scan job stays indeterminate while the walk finds files, then climbs to 100 (22 section 7a)", async () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "giga-scan-pct-"));
+  for (const name of ["a.mp4", "b.mp4", "c.mp4"]) writeFileSync(path.join(root, name), "bytes");
+  // Real stores on an in-memory database; only the stills lane is a stub.
+  const db = openDatabase(":memory:");
+  const folders = createCollectionRepository(db);
+  folders.insertCollection("col-1", "Percent", 0);
+  folders.addFolder("folder-1", "col-1", root, "PercentLane", 0);
+  const stills: string[] = [];
+  const scans = createScanService({
+    jobs: createJobService({ repository: createJobRepository(db), now: () => 0 }),
+    folders,
+    files: createLocalFileRepository(db),
+    posters: { queue: (id) => void stills.push(id), runner: async () => undefined },
+    now: () => 0,
+  });
+  const reports: Array<number | null> = [];
+  const context: JobContext = {
+    jobId: "job-1",
+    kind: "folder-scan",
+    request: { folderId: "folder-1" },
+    signal: new AbortController().signal,
+    report: (percent) => void reports.push(percent),
+  };
+  await scans.runner(context);
+  const firstNumber = reports.findIndex((one) => one !== null);
+  assert.ok(firstNumber > 0, "the walk reported at least one indeterminate round");
+  assert.ok(
+    reports.slice(0, firstNumber).every((one) => one === null),
+    "the walk reports null (indeterminate), never a false 0",
+  );
+  assert.notEqual(reports[firstNumber], 0, "the first measured round is not 0 either");
+  assert.equal(reports.at(-1), 100, "probing climbs to 100");
+  assert.equal(stills.length, 3, "every new file queued its still");
+  db.close();
+  rmSync(root, { recursive: true, force: true });
 });
 
 after(async () => {
