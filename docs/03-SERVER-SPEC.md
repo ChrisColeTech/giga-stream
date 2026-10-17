@@ -393,8 +393,10 @@ The scan itself is the shared library's async generator (`scanFolder`, `src/shar
 whose facts come back, then `done` — and the scan route (`GET /api/folders/:folderId/scan`) streams those
 events line by line, NDJSON, as the generator yields them. That is how progress reaches the interface with
 no socket and no polling: one request, one streamed answer, in the shape the generator already produces.
-The HTTP wire shape removes every `absolutePath` before serialization. File entries carry only the relative
-`path`, size/modified facts and documented media facts; a local absolute path never crosses the server boundary.
+The HTTP wire shape removes every `absolutePath` before serialization. `found` and `probed` file entries carry
+only the relative `path`, size/modified facts and documented media facts; terminal `done` carries only
+`found`, `probed` and `unplayable` counts (no repeated file inventory). A local absolute path never crosses the
+server boundary, and retained terminal catch-up is bounded.
 
 ### 3.9 Jobs
 

@@ -441,7 +441,8 @@ state read — enough for the rail and the status bar, by the no-polling rule.
 
 Wave 2.3 closes the stream-boundary details: queued scans own their catch-up stream before a runner starts;
 terminal catch-up remains available for the fileserver run; `cancelled` is terminal success; serialized file
-events omit `absolutePath`; and folder-scan Job answers carry `folderId` so cancellation never guesses by label.
+events omit `absolutePath`, and terminal `done` repeats no file inventory; folder-scan Job answers carry
+`folderId` so cancellation never guesses by label.
 
 ## 8. Decisions taken (formerly open questions)
 
