@@ -2,11 +2,9 @@ import { useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
 import { Input } from "@/components/ui/Field";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
-import { FACT_UNKNOWN, NEEDS_FILESERVER } from "@/constants/settings-sections";
+import { FACT_UNKNOWN, NEEDS_FILESERVER, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
 import { cn } from "@/lib/cn";
-
-const LABELS = ["Address", "Connection", "Revision", "Channels read", "Error"] as const;
 
 /* A read-only fact, in LoRA's About pane style. */
 const FACT = "flex h-9 items-center font-mono text-sm text-muted";
@@ -39,7 +37,7 @@ export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionP
   );
 
   return (
-    <Workspace labels={LABELS}>
+    <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.admin" title="Admin backend" icon={HardDrive}>
         <Row label="Address" tip="The admin backend's address. Press Enter or leave the field to save it.">
           <Input

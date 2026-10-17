@@ -5,12 +5,12 @@ import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { Segmented } from "@/components/ui/Segmented";
 import { Toggle } from "@/components/ui/Toggle";
 import { ArmedButton } from "@/components/ui/ArmedButton";
+import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";
 import { clearHistory } from "@/services/library";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryPrefs } from "@/types/settings";
 
-const LABELS = ["Default view", "Default sort", "Continue watching", "Pause history", "Rescan on startup"] as const;
 
 const VIEWS = [
   { value: "grid", label: "Grid" },
@@ -37,7 +37,7 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
     if (!result.ok) say(result.message, "warn");
   };
   return (
-    <Workspace labels={LABELS}>
+    <Workspace labels={SETTINGS_LABELS}>
       <Group title="Library" icon={Library}>
         <Row label="Default view" tip="Show the library as a grid of posters, a list, or rows of shelves.">
           <Segmented

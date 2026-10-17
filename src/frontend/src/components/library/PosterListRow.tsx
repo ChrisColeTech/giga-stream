@@ -64,8 +64,8 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
           {ratio !== undefined && <ProgressBar ratio={ratio} />}
         </span>
       </button>
+      {/* Lit is the filled accent star alone: a body toggle carries no raised edge. */}
       <IconButton
-        on={item.favorite}
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
         title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}

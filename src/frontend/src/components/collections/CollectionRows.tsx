@@ -1,12 +1,14 @@
 import { Library } from "lucide-react";
 import { Group, Wide } from "@/components/ui/Form";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SHIMMER, SkeletonRows } from "@/components/ui/SkeletonRows";
 import { ArmedButton } from "@/components/ui/ArmedButton";
+import { cn } from "@/lib/cn";
 import { TYPE_LABEL } from "@/lib/collections-copy";
+import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { CollectionRow } from "@/types/collection";
 
 /* The stored collections, as Sensenova's datasets grid (pages/datasets/DatasetRows.tsx): a header row of column names,
- * then a row per collection that opens it, with Delete beside the row it removes as an inline two-step. Deltas: no tick
+ * then a row per collection that opens it, with Remove (the rail menu's word) beside the row as an inline two-step. Deltas: no tick
  * column (Sensenova's tick picks the app context for a forward verb, and this window has none), and no Refresh on the
  * heading (owner: section headers carry no buttons).
  *
@@ -24,7 +26,8 @@ export function CollectionRows({ rows, onOpen, onDelete }: CollectionRowsProps) 
   return (
     <Group icon={Library} title="Collections" last>
       <Wide>
-        <div className={`${COLS} font-mono text-xs text-dim`}>
+        {/* The folders table's header (ui/DataTable): sans 12px semibold, faint, on the panel over a hairline. */}
+        <div className={`${COLS} border-b border-hair bg-panel py-1.5 font-sans text-xs font-semibold text-faint`}>
           <span>name</span>
           <span>type</span>
           <span className="text-right">videos</span>
@@ -44,16 +47,25 @@ export function CollectionRows({ rows, onOpen, onDelete }: CollectionRowsProps) 
                 >
                   <span className="h-9 truncate leading-9 font-medium text-text">{row.name}</span>
                   <span className="truncate text-muted">{TYPE_LABEL[row.type]}</span>
-                  <span className="text-right font-mono text-xs tabular-nums text-muted">{row.total}</span>
+                  {/* While a scan runs, the count is still arriving: the rail's shimmer pill, the partial count its
+                      tooltip, so the index and the rail say "scanning" the same way and no scan column is spent. */}
+                  {row.scan === "scanning" ? (
+                    <span className="flex justify-end" title={LIBRARY_COPY.scanningSoFar(row.total)}>
+                      <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />
+                      <span className="sr-only">{LIBRARY_COPY.scanning}</span>
+                    </span>
+                  ) : (
+                    <span className="text-right font-mono text-xs tabular-nums text-muted">{row.total}</span>
+                  )}
                   <span className="text-right font-mono text-xs tabular-nums text-muted">{row.folders}</span>
                 </button>
                 <span className="flex justify-end">
                   <ArmedButton
-                    question={`Delete ${row.name}?`}
-                    title="Delete the collection; the original files are untouched"
+                    question={`Remove ${row.name}?`}
+                    title="Remove the collection; the original files are untouched"
                     onConfirm={() => onDelete(row.id)}
                   >
-                    Delete
+                    Remove
                   </ArmedButton>
                 </span>
               </li>

@@ -37,9 +37,9 @@ export function TitleInfoWindow() {
           pinned
           left={
             <>
+              {/* A lit toggle in the body is its glyph alone, never the raised accent edge of a chrome toggle. */}
               <Button
                 variant="ghost"
-                on={item?.favorite === true}
                 aria-pressed={item?.favorite === true}
                 disabled={item === undefined}
                 title={none}
@@ -47,7 +47,11 @@ export function TitleInfoWindow() {
                   if (item !== undefined) changeFavourite(item.ref, !item.favorite);
                 }}
               >
-                <Star fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />
+                <Star
+                  className={item?.favorite === true ? "text-accent-text" : undefined}
+                  fill={item?.favorite === true ? "currentColor" : "none"}
+                  aria-hidden
+                />
                 {item?.favorite === true ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
               </Button>
               <Button

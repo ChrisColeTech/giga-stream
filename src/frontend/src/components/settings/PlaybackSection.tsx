@@ -3,10 +3,10 @@ import { Select } from "@/components/ui/Field";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { Segmented } from "@/components/ui/Segmented";
 import { Toggle } from "@/components/ui/Toggle";
+import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
 import type { PlaybackPrefs } from "@/types/settings";
 
-const LABELS = ["Autoplay", "Resume", "Mark as watched", "On open"] as const;
 
 const RESUME = [
   { value: "ask", label: "Ask" },
@@ -32,7 +32,7 @@ export function PlaybackSection() {
   const playback = useAppStore((state) => state.playback);
   const setPlayback = useAppStore((state) => state.setPlayback);
   return (
-    <Workspace labels={LABELS}>
+    <Workspace labels={SETTINGS_LABELS}>
       <Group title="Playback" icon={Play}>
         <Row label="Autoplay" tip="Start the next episode when one ends.">
           <Toggle checked={playback.autoplay} aria-label="Autoplay" onChange={(on) => setPlayback({ autoplay: on })} />

@@ -4,3 +4,8 @@ import { notConnected, type ServiceResult } from "./not-connected";
 export function saveSetting(_key: string, _value: string | number | boolean | null): ServiceResult {
   return notConnected();
 }
+
+/** Reads the licence texts the fileserver bundles (`03` section 3.2, About), to show in Settings. Phase 1 stub. */
+export function readLicences(): ServiceResult {
+  return notConnected();
+}

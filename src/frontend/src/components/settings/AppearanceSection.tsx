@@ -1,6 +1,7 @@
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Actions, Group, Row, Workspace } from "@/components/ui/Form";
+import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { Segmented } from "@/components/ui/Segmented";
 import { Swatches } from "@/components/ui/Swatches";
@@ -8,7 +9,6 @@ import { useAppStore } from "@/store/app-store";
 import type { MotionPreference, ThemeMode } from "@/types/shell";
 import { ZoomStepper } from "./ZoomStepper";
 
-const LABELS = ["Theme", "Reduce motion", "Accent", "UI zoom"] as const;
 
 const THEMES = [
   { value: "dark", label: "Dark" },
@@ -39,7 +39,7 @@ export function AppearanceSection() {
     uiZoom === SETTINGS_VALUES.uiZoom;
 
   return (
-    <Workspace labels={LABELS}>
+    <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.appearance" title="Appearance" icon={Eye} last>
         <Row
           label="Theme"

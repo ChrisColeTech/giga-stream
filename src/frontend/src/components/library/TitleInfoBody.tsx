@@ -22,15 +22,22 @@ export interface TitleInfoBodyProps {
   readonly detail: TitleDetail | undefined;
 }
 
-/** Title information's one group on the family page grammar: the title as the heading, the poster beside the plot, then
- *  each fact as a row, and the watch progress last. */
+/** Title information's one group on the family page grammar: the title as the heading, the 180px poster beside the
+ *  plot, then each fact as a row, and the watch progress last. */
 export function TitleInfoBody({ item, detail }: TitleInfoBodyProps) {
   const local = item.kind === "local";
   const progress = item.progress;
   return (
-    <Group icon={Clapperboard} title={item.title} badge={item.year === undefined ? undefined : String(item.year)} last>
+    /* Not foldable: the window holds this one group, and folding it would leave only the actions. */
+    <Group
+      icon={Clapperboard}
+      title={item.title}
+      badge={item.year === undefined ? undefined : String(item.year)}
+      collapsible={false}
+      last
+    >
       <Wide className="flex gap-4">
-        <div className="w-[140px] flex-none">
+        <div className="w-[180px] flex-none">
           <PosterImage src={item.posterUrl} alt={item.title} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">

@@ -18,6 +18,35 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "about", label: "About", icon: Info },
 ];
 
+/** Every row label Settings renders, across all its sections. Each section's workspace sizes its label column from this
+ *  one list, so the column stays put as the rail moves from section to section. A new row's label is added here. */
+export const SETTINGS_LABELS: readonly string[] = [
+  "Theme",
+  "Reduce motion",
+  "Accent",
+  "UI zoom",
+  "Autoplay",
+  "Resume",
+  "Mark as watched",
+  "On open",
+  "Default view",
+  "Default sort",
+  "Continue watching",
+  "Pause history",
+  "History",
+  "Collections",
+  "Rescan on startup",
+  "Address",
+  "Connection",
+  "Revision",
+  "Channels read",
+  "Error",
+  "Version and build",
+  "Runtime mode",
+  "Licences",
+  "TMDB",
+];
+
 /** UI zoom: 0.5 to 3 in steps of one decimal (`03` section 3.2, `06` section 6.2). `Ctrl+0` resets it to 1 (the shell). */
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 3;
@@ -27,9 +56,6 @@ export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
 
 /** Why a row that reads the fileserver or the admin backend cannot be used right now. */
 export const NEEDS_FILESERVER = "The fileserver is not connected.";
-
-/** Why the licences button is disabled: no licence text is bundled with this build to open. */
-export const NO_LICENCE_TEXT = "No licence text is bundled with this build.";
 
 /** A fact the fileserver has not supplied yet, drawn in place of its value. */
 export const FACT_UNKNOWN = "—";
