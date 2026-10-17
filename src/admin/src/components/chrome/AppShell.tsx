@@ -19,7 +19,7 @@ import { useAppStore } from "@/store/app-store";
 import { usePaneOpen, useSurface, useWorkSurfaceOpen } from "@/store/selectors";
 import { isLive } from "@/types/job";
 import type { PaneSide } from "@/types/shell";
-import { EventsDrawer } from "./EventsDrawer";
+import { EventsDrawer } from "@giga/ui/shell/EventsDrawer";
 
 const TABS = SURFACE_ORDER.map((id) => ({ id, label: SURFACES[id].label }));
 
@@ -38,6 +38,8 @@ export function AppShell() {
   const setSurface = useAppStore((state) => state.setSurface);
   const eventsOpen = useAppStore((state) => state.eventsOpen);
   const toggleEvents = useAppStore((state) => state.toggleEvents);
+  const events = useAppStore((state) => state.events);
+  const clearEvents = useAppStore((state) => state.clearEvents);
   const openOverlay = useAppStore((state) => state.openOverlay);
   const notice = useAppStore((state) => state.notice);
   const say = useAppStore((state) => state.say);
@@ -82,7 +84,7 @@ export function AppShell() {
           right={toggle("right")}
         />
       }
-      drawer={<EventsDrawer />}
+      drawer={<EventsDrawer open={eventsOpen} rows={events} onClear={clearEvents} />}
       statusbar={
         <Statusbar
           running={<RunningWork running={running === null ? null : { label: running.label, percent }} liveCount={live.length} onStop={stop} />}

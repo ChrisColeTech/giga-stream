@@ -1,5 +1,6 @@
 import { Eye, HardDrive, Info, Library, Play } from "lucide-react";
 import type { ComponentType } from "react";
+import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "@giga/ui/lib/settings-zoom";
 
 export type SettingsSectionId = "appearance" | "playback" | "library" | "admin" | "about";
 
@@ -48,9 +49,7 @@ export const SETTINGS_LABELS: readonly string[] = [
 ];
 
 /** UI zoom: 0.5 to 3 in steps of one decimal (`03` section 3.2, `06` section 6.2). `Ctrl+0` resets it to 1 (the shell). */
-export const ZOOM_MIN = 0.5;
-export const ZOOM_MAX = 3;
-export const ZOOM_STEP = 0.1;
+export { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP };
 export const ZOOM_AT_MIN = `The smallest zoom is ${ZOOM_MIN}.`;
 export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
 

@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
         '@giga/http': fileURLToPath(new URL('../shared/http/src', import.meta.url)),
       },
       /* One copy of each runtime package, whichever folder a file sits in: the library's imports resolve to this app's. */
-      dedupe: ['react', 'react-dom', 'framer-motion', 'zustand', 'lucide-react'],
+      dedupe: ['react', 'react-dom', 'framer-motion', 'zustand', 'lucide-react', 'zod'],
     },
     build: {
       outDir: 'dist',

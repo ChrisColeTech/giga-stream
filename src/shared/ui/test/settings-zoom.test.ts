@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canStepZoom, formatZoom, stepZoom } from "@/lib/settings-zoom";
+import { canStepZoom, clampZoom, formatZoom, stepZoom } from "../src/lib/settings-zoom";
 
 describe("the UI zoom stepper", () => {
+  it("holds any zoom inside 0.5 to 3", () => {
+    assert.equal(clampZoom(9), 3);
+    assert.equal(clampZoom(0.1), 0.5);
+    assert.equal(clampZoom(1.5), 1.5);
+  });
+
   it("moves one decimal at a time and keeps to one decimal", () => {
     assert.equal(stepZoom(1, 1), 1.1);
     assert.equal(stepZoom(1.1, 1), 1.2);
