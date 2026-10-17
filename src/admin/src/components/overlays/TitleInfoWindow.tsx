@@ -3,7 +3,7 @@ import { Button } from "@giga/ui/controls/Button";
 import { Actions } from "@giga/ui/form/Actions";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
-import { workSpec } from "@/constants/child-window";
+import { workSpec } from "@giga/ui/lib/child-metrics";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";
 import { changeFavourite, playRef } from "@/components/library/library-service";
 import { TITLE_INFO_LABELS, TitleInfoBody } from "@/components/library/TitleInfoBody";
@@ -13,7 +13,7 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import { NO_HISTORY, resolveItem, type ResolvedItem } from "@/lib/library-marks";
 import { useAppStore } from "@/store/app-store";
 import type { TitleDetail } from "@/types/title";
-import { ChildWindow } from "./ChildWindow";
+import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
 const SPEC = workSpec("title-info", "Title information", { width: 640, body: 480 });
 

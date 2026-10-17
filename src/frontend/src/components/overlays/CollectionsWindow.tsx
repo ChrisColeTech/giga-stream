@@ -7,7 +7,7 @@ import { LIST_LABEL } from "@/lib/collections-copy";
 import { collectionRow } from "@/lib/collections-model";
 import { alphabetical } from "@/lib/collections-order";
 import { useAppStore } from "@/store/app-store";
-import { ChildWindow } from "./ChildWindow";
+import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
 const SPEC = workSpec("collections", "Collections");
 

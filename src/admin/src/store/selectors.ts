@@ -1,7 +1,11 @@
 import { isPopupOverlay } from "@/constants/popups";
-import { paneKey } from "@/constants/surfaces";
+import { STAGE_MIN_HEIGHT, SURFACES, paneKey } from "@/constants/surfaces";
 import type { PaneSide, Surface } from "@/types/shell";
+import type { PaneEngine } from "@giga/ui/panes/pane-types";
 import { useAppStore } from "./app-store";
+
+/** What the admin gives the family pane engine (`@giga/ui/panes/WorkspaceSplit`): its store and its surfaces' limits. */
+export const PANE_ENGINE: PaneEngine = { host: useAppStore, table: SURFACES, stageMin: STAGE_MIN_HEIGHT };
 
 export const useSurface = (): Surface => useAppStore((state) => state.surface);
 

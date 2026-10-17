@@ -29,7 +29,8 @@
 }
 
 @import "../../shared/ui/src/styles/base.css";
-/* Giga Stream delta (docs/23 section 3.1): the pane layout keeps its own classes. */
+/* The family pane layout, then the interface's delta over it (Theatre's spotlight and idle bars). */
+@import "../../shared/ui/src/styles/pane.css";
 @import "./styles/workspace.css";
 @import "../../shared/ui/src/styles/video.css";
 @import "../../shared/ui/src/styles/keyframes.css";

@@ -8,8 +8,8 @@
 @import "../../shared/ui/src/styles/tokens.css";
 
 @import "../../shared/ui/src/styles/base.css";
-/* Giga Stream delta (docs/23 section 3.1): the pane layout keeps its own classes. */
-@import "./styles/workspace.css";
+/* The family pane layout (docs/27 step 8); the admin's own copy of it is gone. */
+@import "../../shared/ui/src/styles/pane.css";
 @import "../../shared/ui/src/styles/video.css";
 @import "../../shared/ui/src/styles/keyframes.css";
 

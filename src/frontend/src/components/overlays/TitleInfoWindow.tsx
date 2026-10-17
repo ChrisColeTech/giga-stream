@@ -14,7 +14,7 @@ import { NO_HISTORY, resolveItem, type ResolvedItem } from "@/lib/library-marks"
 import { readTitle } from "@/services/titles";
 import { useAppStore } from "@/store/app-store";
 import type { TitleDetail } from "@/types/title";
-import { ChildWindow } from "./ChildWindow";
+import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
 const SPEC = workSpec("title-info", "Title information", { width: 640, body: 480 });
 const NO_SOURCE = "No stream source is set up for titles.";
