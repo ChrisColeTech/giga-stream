@@ -1,5 +1,7 @@
 import { buildApp } from "../src/app.js";
 import { send, signIn } from "../test/test-app.js";
+import { EMBED_PROVIDER_CATALOG } from "../src/constants/embed-providers.js";
+import { STREAM_PROVIDER_CATALOG } from "../src/constants/stream-providers.js";
 
 import path from "node:path";
 import { mkdtempSync } from "node:fs";
@@ -7,6 +9,9 @@ import os from "node:os";
 
 const OWNER_EMAIL = "owner@example.test";
 const OWNER_PASSWORD = "owner-password-123";
+
+/** The whole catalog (docs/18 section 2's embed hosts, then the CinePro stream rows). */
+const CATALOG = [...EMBED_PROVIDER_CATALOG, ...STREAM_PROVIDER_CATALOG];
 
 async function seedProviders() {
   const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : mkdtempSync(path.join(os.tmpdir(), "giga-seed-"));
@@ -37,33 +42,12 @@ async function seedProviders() {
     return;
   }
 
-  const providers = [
-    { id: "vidsrc", name: "VidSrc", source: "vidsrc", apiKey: "" },
-    { id: "vixsrc", name: "VixSrc", source: "vixsrc", apiKey: "" },
-    { id: "vidzee", name: "VidZee", source: "vidzee", apiKey: "" },
-    { id: "cinesu", name: "CineSu", source: "cinepro", apiKey: "" },
-    { id: "fsharetv", name: "FshareTV", source: "cinepro", apiKey: "" },
-    { id: "icefy", name: "Icefy", source: "cinepro", apiKey: "" },
-    { id: "peachify", name: "Peachify", source: "cinepro", apiKey: "" },
-    { id: "popr", name: "Popr", source: "cinepro", apiKey: "" },
-    { id: "streammafia", name: "MafiaEmbed", source: "cinepro", apiKey: "" },
-    { id: "tulnex", name: "Tulnex", source: "cinepro", apiKey: "" },
-    { id: "vidapi", name: "VidApi", source: "cinepro", apiKey: "" },
-    { id: "videasy", name: "Videasy", source: "cinepro", apiKey: "" },
-    { id: "vidnest", name: "VidNest", source: "cinepro", apiKey: "" },
-    { id: "vidrock", name: "VidRock", source: "cinepro", apiKey: "" },
-  ];
-
-  for (const p of providers) {
-    const result = await send(app, "POST", "/api/providers", {
-      name: p.name,
-      source: p.source,
-      api_key: p.apiKey,
-    }, access);
-    if (result.status === 422) {
-      console.log(`${p.id}: ${result.status} - ${JSON.stringify(result.body)}`);
+  for (const provider of CATALOG) {
+    const result = await send(app, "POST", "/api/providers", provider, access);
+    if (result.status !== 201) {
+      console.log(`${provider.source}: ${result.status} - ${JSON.stringify(result.body)}`);
     } else {
-      console.log(`${p.id}: ${result.status}`);
+      console.log(`${provider.source}: ${result.status}`);
     }
   }
 
