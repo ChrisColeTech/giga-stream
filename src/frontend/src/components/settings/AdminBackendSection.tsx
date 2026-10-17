@@ -1,27 +1,45 @@
+import { useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
 import { Group } from "@/components/ui/Group";
 import { Row } from "@/components/ui/Row";
 import { TextField } from "@/components/ui/TextField";
 import { FACT_UNKNOWN, NEEDS_FILESERVER } from "@/constants/settings-sections";
+import { addressToSend } from "@/lib/settings-address";
 
 export interface AdminBackendSectionProps {
-  /** The admin backend's address as the settings fixture holds it: empty in phase 1. Shown, never contacted. */
+  /** The saved admin backend address. The interface shows it and never contacts the backend (`01` section 4.4). */
   readonly adminUrl: string;
+  /** Saves the address; called on Enter or when the field is left, with the trimmed draft. */
+  readonly onCommit: (address: string) => void;
 }
 
-/** Admin backend: the address field, disabled, and the backend's state as disabled facts. The interface never contacts
- *  the backend (`01` section 4.4), so nothing here sends a request. */
-export function AdminBackendSection({ adminUrl }: AdminBackendSectionProps) {
+/** Admin backend: the address, which saves through the fileserver, and the backend's state as disabled facts. The state
+ *  has nothing to act on yet, so its rows stay disabled with their reason. */
+export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionProps) {
+  const [draft, setDraft] = useState(adminUrl);
+  const [sent, setSent] = useState(adminUrl);
+
+  const commit = () => {
+    const next = addressToSend(draft, sent);
+    if (next === null) return;
+    setSent(next);
+    setDraft(next);
+    onCommit(next);
+  };
+
   return (
     <>
       <Group id="settings.admin" title="Admin backend" icon={HardDrive}>
-        <Row label="Address" tip="The admin backend's address, saved with the other settings.">
+        <Row label="Address" tip="The admin backend's address. Press Enter or leave the field to save it.">
           <TextField
             aria-label="Admin backend address"
-            value={adminUrl}
-            readOnly
-            disabled
-            title={NEEDS_FILESERVER}
+            mono
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) commit();
+            }}
           />
         </Row>
       </Group>
