@@ -8,7 +8,6 @@ const PROGRAM_DIRS = {
   frontend: "src/frontend",
   fileserver: "src/fileserver",
   backend: "src/backend",
-  "live-server": "src/live-server",
 };
 
 function programOf(rel) {
@@ -22,7 +21,7 @@ const ELECTRON_HOMES = ["src/fileserver/src/app/"];
 const IO_IN_ROUTES = /^(node:)?(fs|fs\/promises|child_process|sqlite|net|http|https)$/;
 
 function inRoutes(file) {
-  return /^src\/fileserver\/src\/routes\//.test(file.rel) || /^src\/(backend|live-server)\/src\/api\//.test(file.rel);
+  return /^src\/fileserver\/src\/routes\//.test(file.rel) || /^src\/backend\/src\/api\//.test(file.rel);
 }
 
 export const importBoundaries = {

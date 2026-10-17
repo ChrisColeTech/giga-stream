@@ -27,8 +27,8 @@ person's changes.
 ## Layout
 
 - `src/frontend` the React interface (Vite). `src/fileserver` the application server and Electron host;
-  it serves the built interface. `src/backend` the optional admin backend. `src/live-server` the live
-  server (`docs/10`): channels of real videos as live HLS, on its own SQLite. `src/mockup` the provider
+  it serves the built interface. `src/backend` the optional admin backend; it also serves the live
+  channels (`src/backend/src/live`, the `/live` and `/logos` routes; `docs/10`, `docs/26`). `src/mockup` the provider
   playback proof of concept (`docs/14`): plain HTML, CSS and JS, never packaged.
 - **Ports: development and production never share one** (owner, 2026-10-17; `docs/03` section 1), so the
   installed app runs beside the dev stack. `NODE_ENV=production` selects production: the packaged app sets
@@ -39,7 +39,6 @@ person's changes.
   | Interface | 5171 (Vite) | 5271 (`npm run preview`); the packaged app is served by its fileserver |
   | Fileserver | 8090 | 8190 (the packaged app) |
   | Admin backend | 8091 (3001 where the local `src/backend/.env` sets it) | 8191 |
-  | Live server | 8097 | 8197 |
 - `src/shared/<domain>` libraries any program or tool may import (`docs/01` section 4.2); not programs.
   `src/shared/media` finds and runs the bundled FFmpeg and scans folders for video files.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
@@ -58,7 +57,7 @@ section 4):
 - To keep it running across automation-shell calls on Windows, launch that command through
   `Win32_Process.Create` exactly as documented in `07` section 4. Do not add alternate stack-launcher
   npm scripts; `Start-Process` is still killed with the automation shell's Windows job.
-- `npm run kill-ports` — frees the development ports (5171, 8090, 8091, 3001, 8097) by port; never a
+- `npm run kill-ports` — frees the development ports (5171, 8090, 8091, 3001) by port; never a
   production one, so an installed app the owner is testing keeps running.
 - `node scripts/check/gate.mjs` — every typecheck, the lint, the rule checker and every program's tests.
 - `npm run dist:win` — builds the interface and the fileserver and packages the Windows app with
