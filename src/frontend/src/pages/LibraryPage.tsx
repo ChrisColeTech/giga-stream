@@ -3,6 +3,7 @@ import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
+import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
 import { COLLECTION_ROWS, MEMBERSHIP } from "@/fixtures/collections";
 import { LIBRARY_ITEMS } from "@/fixtures/titles";
@@ -26,16 +27,20 @@ import {
   type Scope,
   type SourceId,
 } from "@/lib/library-query";
+import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
 import { useAppStore } from "@/store/app-store";
 
 const GENRES = genreChoices(LIBRARY_ITEMS);
 const YEARS = yearChoices(LIBRARY_ITEMS);
 
+/** The centre's views: the grid or list of the body, or the Rows view of shelves. */
+type CenterView = ListView | "rows";
+
 /** Library: collections on the left, the media body in the centre, filters on the right. The query, the view, the
  *  selection and the watch-history marks are local to the surface; favourites and memberships come from the store. */
 export function LibraryPage({ active }: { active: boolean }) {
   const [query, setQuery] = useState<LibraryQuery>(DEFAULT_QUERY);
-  const [view, setView] = useState<ListView>("grid");
+  const [view, setView] = useState<CenterView>("grid");
   const [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryMarks>(NO_HISTORY);
   const marks = useAppStore((state) => state.marks);
@@ -45,6 +50,14 @@ export function LibraryPage({ active }: { active: boolean }) {
   const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
   const onSource = (source: SourceId): void => patch({ source });
   const onScope = (scope: Scope): void => patch({ scope });
+  /* See all opens the grid with the shelf's group, through the same query setter the rail and the type strip use. */
+  const onSeeAll = useCallback(
+    (group: ShelfGroup): void => {
+      patch(groupQuery(group));
+      setView("grid");
+    },
+    [patch],
+  );
 
   /* A watch entry or the whole History changes only when the fileserver accepts the call. */
   const onRemoveWatch = useCallback((item: ResolvedItem): void => {
@@ -62,21 +75,42 @@ export function LibraryPage({ active }: { active: boolean }) {
       active={active}
       left={<LibraryRail source={query.source} counts={counts} collections={COLLECTION_ROWS} onSource={onSource} />}
       center={
-        <LibraryBody
-          scope={query.scope}
-          inHistory={query.source === "history"}
-          view={view}
-          items={items}
-          shown={shown}
-          collections={COLLECTION_ROWS}
-          selected={selected}
-          onScope={onScope}
-          onSelect={setSelected}
-          onRemoveWatch={onRemoveWatch}
-          onClearHistory={onClearHistory}
+        view === "rows" ? (
+          <LibraryRows
+            items={items}
+            collections={COLLECTION_ROWS}
+            selected={selected}
+            onSelect={setSelected}
+            onRemoveWatch={onRemoveWatch}
+            onSeeAll={onSeeAll}
+          />
+        ) : (
+          <LibraryBody
+            scope={query.scope}
+            inHistory={query.source === "history"}
+            view={view}
+            items={items}
+            shown={shown}
+            collections={COLLECTION_ROWS}
+            selected={selected}
+            onScope={onScope}
+            onSelect={setSelected}
+            onRemoveWatch={onRemoveWatch}
+            onClearHistory={onClearHistory}
+          />
+        )
+      }
+      right={
+        <LibraryFilters
+          query={query}
+          /* Rows has no segment in the switch yet (LibraryFilters owns it): the grid stays marked while Rows shows. */
+          view={view === "rows" ? "grid" : view}
+          genres={GENRES}
+          years={YEARS}
+          onQuery={patch}
+          onView={setView}
         />
       }
-      right={<LibraryFilters query={query} view={view} genres={GENRES} years={YEARS} onQuery={patch} onView={setView} />}
     />
   );
 }
