@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 import type { FileserverApp } from "./app-fixture.js";
+import { gatedScan } from "./fake-scan.js";
 
 // `TEST_FOLDER_ROOT` is read when the app's config module loads, so it must be set before the
 // fixture's import; this file's own process runs one copy of that env (the Node runner isolates files).
@@ -104,11 +105,13 @@ test("the test lane chooses a folder by name and the answer never carries a path
 
 test("attaching queues the scan: the folder answers `scanning` before and after it", async () => {
   makeFolder("AttachLane", ["a.mp4", "b.mp4"]);
-  const t = await makeApp();
+  const gate = gatedScan();
+  const t = await makeApp({ scan: gate.scan });
   const ids = await attach(t, "AttachLane", "Races");
   const folder = await collectionOf(t, ids.collectionId);
   assert.equal(pick(folder, "folders.0.scanning"), true);
   assert.equal(pick(folder, "scanning"), true);
+  gate.release();
   await awaitScansSettled(t);
   const settled = await collectionOf(t, ids.collectionId);
   assert.equal(pick(settled, "folders.0.scanning"), false);
@@ -154,7 +157,8 @@ test("the scan streams NDJSON lines, `found` per file, and ends on `done`", asyn
 
 test("a second scan while one is still queued or running is refused with job.running", async () => {
   makeFolder("CollideLane", []);
-  const t = await makeApp();
+  const gate = gatedScan();
+  const t = await makeApp({ scan: gate.scan });
   const chooser = await send(t.app, "POST", "/api/fs/dialog", { name: "CollideLane" });
   const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Races", type: "local" });
   const token = pick(chooser.body, "data.token");
@@ -162,6 +166,7 @@ test("a second scan while one is still queued or running is refused with job.run
   const folderId = String(pick(attached.body, "data.id"));
   // The attach itself queued the scan, so a rescan right away collides with it.
   assert.equal(pick((await send(t.app, "POST", `/api/folders/${folderId}/rescan`)).body, "error.code"), "job.running");
+  gate.release();
   await awaitScansSettled(t);
   // Terminal catch-up remains until dismissal; dismissing that exact folder scan cleans it up.
   const terminal = await t.app.inject({ method: "GET", url: `/api/folders/${folderId}/scan` });

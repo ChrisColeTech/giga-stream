@@ -1,7 +1,35 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 
+import type { FolderScanner } from "../src/services/scan-service.js";
 import type { ScanEvent, ScannedFile, ScanOptions } from "../../shared/media/dist/types/scan.js";
+
+export interface GatedScan {
+  scan: FolderScanner;
+  /** Lets every scan started with `scan` run to its end; until then each stays in flight. */
+  release: () => void;
+}
+
+/**
+ * A scanner that stays in flight until the test calls `release()`: no event is reported before then, so a
+ * test can look at a queued or running scan. A promise is the gate (no timers); aborting ends it `cancelled`.
+ */
+export function gatedScan(): GatedScan {
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  async function* scan(root: string, options: ScanOptions = {}): AsyncGenerator<ScanEvent> {
+    const { signal } = options;
+    await new Promise<void>((resolve) => {
+      void gate.then(resolve);
+      signal?.addEventListener("abort", () => resolve(), { once: true });
+    });
+    if (signal?.aborted) return yield { type: "cancelled", found: 0, probed: 0 };
+    yield* fakeScan(root, options);
+  }
+  return { scan, release };
+}
 
 /**
  * A scanner standing in for the shared one: every file in the folder is reported as found, then as probed
