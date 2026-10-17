@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { localMediaAddress, readLocalMediaInfo } from "@/services/local-media";
 import { applyOpeningPosition } from "@/lib/player-opening";
+import { nativeAttachmentKey } from "@/components/player/NativePlayer";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
@@ -45,5 +46,11 @@ describe("local Player media", () => {
     await readLocalMediaInfo("local-1");
     await readLocalMediaInfo("local-1");
     assert.equal(calls, 2);
+  });
+
+  it("reattaches the same native address when Retry advances", () => {
+    const address = localMediaAddress("local-1");
+    assert.notEqual(nativeAttachmentKey(address, 1), nativeAttachmentKey(address, 2));
+    assert.equal(nativeAttachmentKey(address, 2), nativeAttachmentKey(address, 2));
   });
 });

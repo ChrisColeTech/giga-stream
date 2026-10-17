@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { hasSourceChoice, playableSources } from "@/lib/player-sources";
+import { hasSourceChoice, playableSources, selectedPlayerSource } from "@/lib/player-sources";
+import { playerStageRender } from "@/lib/player-render-state";
 import type { TitleSource } from "@/services/schemas/source-schema";
 import { useAppStore } from "@/store/app-store";
 
@@ -30,5 +31,32 @@ describe("Player source selection", () => {
     const next = playableSources([provider(4, 1), provider(3, 2)], undefined);
     useAppStore.getState().setPlayerSources(next, next[0]?.id ?? null);
     assert.equal(useAppStore.getState().playerMedia.activeSourceId, "provider:4");
+  });
+
+  it("uses the first source while the store synchronizes its active id", () => {
+    const sources = playableSources([provider(1, 1), provider(2, 2)], undefined);
+    assert.equal(selectedPlayerSource(sources, null)?.id, "provider:1");
+    assert.equal(selectedPlayerSource(sources, "old-item-source")?.id, "provider:1");
+  });
+});
+
+describe("Player stage rendering", () => {
+  const native = playableSources([], "https://stream.example/movie.mp4")[0];
+  const embed = playableSources([provider(1, 1)], undefined)[0];
+
+  it("keeps idle, pending, and source refusal distinct", () => {
+    assert.equal(playerStageRender(false, false, undefined, { kind: "idle" }), "idle");
+    assert.equal(playerStageRender(true, true, undefined, { kind: "loading" }), "loading");
+    assert.equal(playerStageRender(true, false, undefined, { kind: "idle" }, true), "awaiting-resume");
+    assert.equal(playerStageRender(true, false, undefined, { kind: "idle" }, false, false), "choose-episode");
+    assert.equal(playerStageRender(true, false, undefined, { kind: "idle" }, false, true, false), "unavailable");
+    assert.equal(playerStageRender(true, false, undefined, { kind: "failed", reason: "No source" }), "no-source");
+  });
+
+  it("mounts only the host selected by a playable source", () => {
+    assert.equal(playerStageRender(true, false, native, { kind: "ready" }), "native");
+    assert.equal(playerStageRender(true, false, embed, { kind: "ready" }), "embed");
+    assert.equal(playerStageRender(true, false, native, { kind: "failed", reason: "Failed" }), "native-failed");
+    assert.equal(playerStageRender(true, false, embed, { kind: "failed", reason: "Failed" }), "embed-failed");
   });
 });

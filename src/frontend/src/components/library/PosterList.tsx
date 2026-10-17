@@ -15,7 +15,7 @@ export interface PosterListProps {
   readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
-/** The list view: one row per title, in the same order as the grid. Loading and empty draw row skeletons. */
+/** The list view: one row per title, in the same order as the grid. Loading and settled empty use row skeletons. */
 export function PosterList({ items, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterListProps) {
   if (items.length === 0) return <SkeletonRows count={SKELETON_ROWS} />;
   const ids = items.map((item) => item.ref.id);

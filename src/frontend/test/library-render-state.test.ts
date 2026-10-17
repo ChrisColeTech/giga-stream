@@ -20,7 +20,7 @@ const collection = { id: "c1", name: "One", type: "movie" as const, total: 1, ma
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 
 describe("backend-down Library rendering", () => {
-  it("keeps local rows and marks title regions as loading", () => {
+  it("keeps local rows and skeletonizes unavailable title regions", () => {
     assert.deepEqual(libraryRenderState([movie, local], false, "all"), {
       items: [local], titleRegionsLoading: true,
     });
@@ -35,9 +35,10 @@ describe("backend-down Library rendering", () => {
 });
 
 describe("Rows paging grammar", () => {
-  it("keeps the pager beside an empty-page skeleton when another cursor exists", () => {
+  it("keeps established skeletons for pending and settled empty Rows", () => {
     assert.deepEqual(rowsRenderState(0, true, false), { showSkeleton: true, showPager: true });
     assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: true, showPager: false });
+    assert.equal(libraryRenderState([], false, "all").titleRegionsLoading, true);
   });
 
   it("requests a visible cursor only once until the active request clears", () => {

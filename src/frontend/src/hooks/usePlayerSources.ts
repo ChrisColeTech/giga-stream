@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { LoadedPlayerData } from "@/hooks/usePlayerData";
 import type { PlayerSession } from "@/lib/player-session";
-import { localSource, playableSources, type PlayerSource } from "@/lib/player-sources";
+import { localSource, playableSources, selectedPlayerSource, type PlayerSource } from "@/lib/player-sources";
 import { localMediaAddress } from "@/services/local-media";
 import { useAppStore } from "@/store/app-store";
 
@@ -20,9 +20,7 @@ export function usePlayerSources(session: PlayerSession, data: LoadedPlayerData)
   }, [data.detail, data.localInfo, data.playingEpisode, session.current]);
 
   useEffect(() => {
-    const selected = sources.some((source) => source.id === activeSourceId)
-      ? activeSourceId
-      : sources[0]?.id ?? null;
+    const selected = selectedPlayerSource(sources, activeSourceId)?.id ?? null;
     setSources(sources, selected);
   }, [sources]);
   return sources;

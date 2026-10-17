@@ -20,7 +20,19 @@ const MAX_W = 320
 
 type Pos = { left: number; top: number; below: boolean }
 
-export function Tooltip({ text, children, className }: { text: string; children: ReactNode; className?: string }) {
+export function Tooltip({
+  text,
+  children,
+  className,
+  focusable = false,
+  label,
+}: {
+  text: string;
+  children: ReactNode;
+  className?: string;
+  focusable?: boolean;
+  label?: string;
+}) {
   const id = useId()
   const anchor = useRef<HTMLSpanElement | null>(null)
   const bubble = useRef<HTMLSpanElement | null>(null)
@@ -62,6 +74,9 @@ export function Tooltip({ text, children, className }: { text: string; children:
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
       aria-describedby={id}
+      aria-label={label}
+      role={focusable ? 'group' : undefined}
+      tabIndex={focusable ? 0 : undefined}
     >
       {children}
       {open &&

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { detailRows } from "@/lib/live-details";
+import { channelListRender } from "@/lib/live-channels";
 import { EMPTY_VALUE } from "@/lib/live-constants";
 import { objectFitOf, PICTURE_FIT_OPTIONS } from "@/lib/live-picture";
 import { statusBar, statusWord } from "@/lib/live-status";
@@ -41,6 +42,14 @@ describe("stage state", () => {
     assert.equal(channelListUnavailable({ connected: false }, false), true);
     assert.equal(channelListUnavailable({ connected: false }, true), false);
     assert.equal(channelListUnavailable({ connected: true }, false), false);
+  });
+});
+
+describe("channel list rendering", () => {
+  it("uses established skeletons for pending, unavailable and no-match lists", () => {
+    assert.equal(channelListRender(true, 0), "skeleton");
+    assert.equal(channelListRender(false, 0), "skeleton");
+    assert.equal(channelListRender(false, 2), "rows");
   });
 });
 

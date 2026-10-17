@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from "react";
 import { useRef } from "react";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-import { keyTarget, tabStopId } from "@/lib/live-channels";
+import { channelListRender, keyTarget, tabStopId } from "@/lib/live-channels";
 import { CHANNEL_LIST_LABEL, LIST_SKELETON_ROWS } from "@/lib/live-constants";
 import type { Channel } from "@/types/channel";
 import { ChannelRow } from "./ChannelRow";
@@ -18,12 +18,11 @@ export interface ChannelListProps {
   readonly onActivate: (id: string) => void;
 }
 
-/** The channel rows as one listbox with a single tab stop. Loading, an empty list and a search with no match all draw
- *  skeleton rows (`06` section 3.2). */
+/** The channel rows as one listbox with a single tab stop. Pending and settled empty views use the row skeleton. */
 export function ChannelList({ rows, loading, selectedId, playingId, onSelect, onActivate }: ChannelListProps) {
   const elements = useRef(new Map<string, HTMLLIElement>());
 
-  if (loading || rows.length === 0) return <SkeletonRows count={LIST_SKELETON_ROWS} />;
+  if (channelListRender(loading, rows.length) === "skeleton") return <SkeletonRows count={LIST_SKELETON_ROWS} />;
 
   const ids = rows.map((row) => row.id);
   const stop = tabStopId(ids, selectedId);
