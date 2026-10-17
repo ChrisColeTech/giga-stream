@@ -51,7 +51,7 @@ export function CollectionsWindow() {
                 <CollectionsTable rows={SORTED} onSelect={setSelected} />
               </>
             ) : (
-              <CollectionDetail key={chosen.id} collection={chosen} />
+              <CollectionDetail key={chosen.id} collection={chosen} onRemoved={() => setSelected(ALL)} />
             )}
           </Workspace>
         </section>
