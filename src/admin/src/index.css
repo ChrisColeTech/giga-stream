@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Tailwind scans only under the Vite root; the family UI library's classes must be scanned too (docs/27 section 3). */
+@source "../../shared/ui/src";
 
 @import "./styles/fonts.css";
 

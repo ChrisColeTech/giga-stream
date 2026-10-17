@@ -30,12 +30,15 @@ const UI = [
   "Tooltip",
 ];
 
-const ROOT = "src/frontend/src/";
+/*
+ * The admin's copies of the same files (the template's clone, docs/27 section 6.3) are family files too until the
+ * step that deletes each one. The list shrinks as steps move files into src/shared/ui; step 3 retires it.
+ */
+const ROOTS = ["src/frontend/src/", "src/admin/src/"];
 
 export const FAMILY_FILES = new Set([
-  `${ROOT}constants/motion.ts`,
-  `${ROOT}types/menu.ts`,
-  ...UI.map((name) => `${ROOT}components/ui/${name}.tsx`),
+  ...ROOTS.flatMap((root) => [`${root}constants/motion.ts`, `${root}types/menu.ts`]),
+  ...ROOTS.flatMap((root) => UI.map((name) => `${root}components/ui/${name}.tsx`)),
 ]);
 
 /** True when a repo-relative path is a family-verbatim file. */

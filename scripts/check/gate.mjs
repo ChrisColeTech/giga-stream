@@ -22,12 +22,22 @@ const root =
 
 const STEP_TIMEOUT_MS = 180_000;
 
+/*
+ * `needs` names a folder the step cannot run without: the family library and the request layer are scaffolds
+ * until their code lands (docs/27 step 0), so their steps report "not built yet" until that folder exists.
+ */
 const STEPS = [
   { name: "typecheck shared/media", cwd: "src/shared/media", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
+  { name: "typecheck shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
   { name: "typecheck backend", cwd: "src/backend", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck fileserver", cwd: "src/fileserver", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck admin", cwd: "src/admin", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "lint shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "lint"], needs: "src" },
+  { name: "lint shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "lint"], needs: "src" },
   { name: "lint frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "lint"] },
+  { name: "lint admin", cwd: "src/admin", cmd: "npm", args: ["run", "lint"] },
   {
     name: "rules",
     cwd: ".",
@@ -35,10 +45,13 @@ const STEPS = [
     args: ["scripts/check-rules.mjs"],
   },
   { name: "test checker", cwd: ".", cmd: "node", args: ["--test", "scripts/check-rules/test/*.test.mjs"] },
+  { name: "test shared-http", cwd: "src/shared/http", cmd: "npm", args: ["test"], needs: "src" },
+  { name: "test shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["test"], needs: "src" },
   { name: "test shared/media", cwd: "src/shared/media", cmd: "npm", args: ["test"] },
   { name: "test backend", cwd: "src/backend", cmd: "npm", args: ["test"] },
   { name: "test fileserver", cwd: "src/fileserver", cmd: "npm", args: ["test"] },
   { name: "test frontend", cwd: "src/frontend", cmd: "npm", args: ["test"] },
+  { name: "test admin", cwd: "src/admin", cmd: "npm", args: ["test"] },
   // Last: against a stack that is already running, every enabled channel must really play. No stack = SKIPPED.
   { name: "live smoke", cwd: ".", cmd: "node", args: ["scripts/check/live-smoke.mjs", "--optional"], skipMarker: "SKIPPED" },
 ];
@@ -75,7 +88,11 @@ let tests = 0;
 const notBuilt = new Set();
 
 for (const step of STEPS) {
-  if (step.cwd !== "." && !existsSync(path.join(root, step.cwd, "package.json"))) {
+  const built =
+    step.cwd === "." ||
+    (existsSync(path.join(root, step.cwd, "package.json")) &&
+      (step.needs === undefined || existsSync(path.join(root, step.cwd, step.needs))));
+  if (!built) {
     notBuilt.add(step.cwd);
     console.log(`${step.name.padEnd(22)} SKIP  (${step.cwd} not built yet)`);
     continue;

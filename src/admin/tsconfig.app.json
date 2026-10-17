@@ -27,7 +27,9 @@
 
     /* Path alias */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@giga/ui/*": ["../shared/ui/src/*"],
+      "@giga/http/*": ["../shared/http/src/*"]
     }
   },
   "include": ["src"]

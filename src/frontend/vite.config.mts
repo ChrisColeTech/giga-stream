@@ -8,12 +8,19 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      /* The family UI library and the request layer are consumed as source (docs/27 section 3), never built. */
+      '@giga/ui': fileURLToPath(new URL('../shared/ui/src', import.meta.url)),
+      '@giga/http': fileURLToPath(new URL('../shared/http/src', import.meta.url)),
     },
+    /* One copy of each runtime package, whichever folder a file sits in: the library's imports resolve to this app's. */
+    dedupe: ['react', 'react-dom', 'framer-motion', 'zustand', 'lucide-react'],
   },
   server: {
     host: '127.0.0.1',
     port: 5171,
     strictPort: true,
+    /* The repository root has no workspaces, so Vite would answer 403 for ../shared (docs/27 section 3). */
+    fs: { allow: [fileURLToPath(new URL('../..', import.meta.url))] },
     /* Polling file watch, so edits show up on a network or synced drive too; hot module reload pushes each change into
      * the open page without a full reload. Development only. */
     watch: {
