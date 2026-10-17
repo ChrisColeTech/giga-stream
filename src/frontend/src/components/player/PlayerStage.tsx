@@ -4,7 +4,7 @@ import { NativePlayer } from "@/components/player/NativePlayer";
 import { PlayerSourceControl } from "@/components/player/PlayerSourceControl";
 import { StageNote } from "@/components/player/StageNote";
 import { collectionsSubmenu } from "@/lib/collection-menu";
-import type { EmbedPlaybackEvent } from "@/lib/embed-messages";
+import { applyEmbedPlayback } from "@/lib/embed-playback";
 import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { LOCAL_MEDIA_FAILURE, STREAM_FAILURE } from "@/lib/player-copy";
@@ -81,21 +81,12 @@ export function PlayerStage(props: PlayerStageProps) {
       onClose: props.commands.close,
     }));
   };
-  const embedPlayback = (event: EmbedPlaybackEvent) => {
-    if (event.positionMs !== undefined) props.onProgress(event.positionMs, event.durationMs);
-    if (event.event === "play" || event.event === "playing") {
-      props.onPausedChange(false);
-      props.onPlaying(true);
-    }
-    if (event.event === "pause") {
-      props.onPausedChange(true);
-      props.onPlaying(false);
-    }
-    if (event.event === "ended") {
-      props.onPausedChange(true);
-      props.onBoundary();
-    }
-  };
+  const embedPlayback = (event: Parameters<typeof applyEmbedPlayback>[0]) => applyEmbedPlayback(event, {
+    progress: props.onProgress,
+    paused: props.onPausedChange,
+    playing: props.onPlaying,
+    checkpoint: props.onBoundary,
+  });
 
   return (
     <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}

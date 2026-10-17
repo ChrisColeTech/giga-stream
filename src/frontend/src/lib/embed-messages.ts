@@ -32,23 +32,24 @@ function parsed(value: unknown): unknown {
 
 /** The PoC decode table. Callers must first establish the exact origin and frame window. */
 export function decodeEmbedMessage(source: TitleSource, value: unknown): EmbedPlaybackEvent | null {
+  if (source.messageShape === undefined) return null;
   const data = record(parsed(value));
   if (data === null) return null;
+  if (source.messageShape === "vidsrc-status") {
+    const payload = data.type === "PLAYER_EVENT" ? record(data.data) : null;
+    return payload === null
+      ? null
+      : result(payload.player_status, payload.player_progress, payload.player_duration);
+  }
   if (data.type === "MEDIA_DATA") {
-    const payload = record(data.data) ?? data;
-    return result("media-data", payload.currentTime ?? payload.position, payload.duration);
+    const media = record(data.data) ?? data;
+    return result("media-data", media.currentTime ?? media.position, media.duration);
   }
   if (data.type !== "PLAYER_EVENT") return null;
-  const payload = record(data.data);
-  if (source.messageShape === "vidsrc-status" && payload !== null) {
-    return result(payload.player_status, payload.player_progress, payload.player_duration);
-  }
   const observed = record(data.event);
   if (observed !== null) return result(observed.event, observed.currentTime, observed.duration);
-  if (source.messageShape === "player-event" && payload !== null) {
-    return result(payload.event, payload.currentTime, payload.duration);
-  }
-  return null;
+  const payload = record(data.data);
+  return payload === null ? null : result(payload.event, payload.currentTime, payload.duration);
 }
 
 export function decodeAllowedEmbedMessage(

@@ -11,30 +11,26 @@ import { collectionRow } from "@/lib/collections-model";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { LOCAL_MEDIA_FAILURE, NO_TITLE_SOURCE_REASON } from "@/lib/player-copy";
 import { openingPosition } from "@/lib/player-opening";
+import { PlayerNavigation, settleLatestNavigation } from "@/lib/player-navigation";
 import { settleFinalProgress } from "@/lib/player-progress";
-import { createPlayerSession, isOpen, itemFromLibrary, reducePlayerSession } from "@/lib/player-session";
+import {
+  createPlayerSession, fallbackPlayerItem, isOpen, itemFromLibrary, playerPlaybackKey,
+  playingEpisodeOf, reducePlayerSession,
+} from "@/lib/player-session";
 import { localSource, playableSources } from "@/lib/player-sources";
 import { resumeOf, viewOf } from "@/lib/player-view";
 import { localMediaAddress } from "@/services/local-media";
 import { removeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
-import type { LibraryItem, ItemRef } from "@/types/library";
-
-const fallbackItem = (ref: ItemRef): LibraryItem => ({
-  ref,
-  kind: ref.kind === "local" ? "local" : ref.id.startsWith("tv-") ? "tv" : "movie",
-  title: ref.id,
-  genres: [], favorite: false,
-});
+import type { LibraryItem } from "@/types/library";
 
 export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
   const [paused, setPaused] = useState(true);
-  const [retry, setRetry] = useState(0);
-  const [dataRetry, setDataRetry] = useState(0);
+  const [retry, setRetry] = useState(0); const [dataRetry, setDataRetry] = useState(0);
   const [choice, setChoice] = useState<"ask" | "resume" | "restart">("ask");
   const [userInitiated, setUserInitiated] = useState(false);
-  const handled = useRef(0);
+  const handled = useRef(0); const navigation = useRef(new PlayerNavigation());
   const currentPosition = useRef(0);
   const [sourcePosition, setSourcePosition] = useState(0);
   const data = usePlayerData(session, dataRetry);
@@ -59,26 +55,30 @@ export function PlayerPage({ active }: { active: boolean }) {
     collections,
     stage: media.stage,
   });
-  const episode = data.episodes.find((row) => row.episode === view.episode);
+  const playing = playingEpisodeOf(session);
   const sources = useMemo(() => {
     if (session.current?.kind === "local") {
       return data.localInfo?.playable === true ? [localSource(localMediaAddress(session.current.ref.id))] : [];
     }
-    if (session.current?.kind === "tv") return playableSources(episode?.sources, episode?.streamUrl);
+    if (session.current?.kind === "tv") {
+      return playableSources(data.playingEpisode?.sources, data.playingEpisode?.streamUrl);
+    }
     return playableSources(data.detail?.sources, data.detail?.streamUrl);
-  }, [data.detail, data.localInfo, episode, session.current]);
+  }, [data.detail, data.localInfo, data.playingEpisode, session.current]);
   const activeSource = sources.find((source) => source.id === media.activeSourceId);
   const resume = resumeOf(view);
   const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
   const startPositionMs = choice === "resume" ? sourcePosition : 0;
-  const playbackKey = session.current === null
-    ? "idle"
-    : `${session.current.ref.kind}:${session.current.ref.id}:${view.season ?? 0}:${view.episode ?? 0}`;
+  const playbackKey = playerPlaybackKey(session);
 
   const openItem = async (item: LibraryItem) => {
+    const generation = navigation.current.next();
     if (isOpen(session, item.ref)) return;
-    progress.playing(false);
-    await progress.flush();
+    progress.suspend();
+    const latest = await settleLatestNavigation(navigation.current, generation, progress.flush(false), (error) => {
+      useAppStore.getState().say(error instanceof Error ? error.message : "Watch progress could not be saved.", "warn");
+    });
+    if (!latest) return;
     const next = itemFromLibrary(item);
     dispatch({ type: "open", item: next });
     setPlayerItem(next);
@@ -91,7 +91,7 @@ export function PlayerPage({ active }: { active: boolean }) {
     if (playRequest === null || playRequest.serial === handled.current) return;
     handled.current = playRequest.serial;
     const item = libraryItems.find((row) => row.ref.kind === playRequest.ref.kind && row.ref.id === playRequest.ref.id);
-    void openItem(item ?? fallbackItem(playRequest.ref));
+    void openItem(item ?? fallbackPlayerItem(playRequest.ref));
   }, [playRequest, libraryItems]);
 
   useEffect(() => {
@@ -107,19 +107,18 @@ export function PlayerPage({ active }: { active: boolean }) {
     setSourcePosition(opening);
     setSources(sources, sources[0]?.id ?? null);
     setPaused(true);
-    if (session.current === null || (session.current.kind === "tv" && view.episode === undefined)) return;
+    if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
     void progress.begin({
       item: session.current.ref,
-      ...(view.season === undefined ? {} : { season: view.season }),
-      ...(view.episode === undefined ? {} : { episode: view.episode }),
+      ...(playing === undefined ? {} : { season: playing.season, episode: playing.episode }),
     });
   }, [playbackKey, sources]);
 
   useEffect(() => {
-    if (session.current === null || (session.current.kind === "tv" && view.episode === undefined)) return;
+    if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
     const ready = session.current.kind === "local"
       ? data.localInfo !== undefined
-      : session.current.kind === "tv" ? episode !== undefined : data.detail !== undefined;
+      : session.current.kind === "tv" ? data.playingEpisode !== undefined : data.detail !== undefined;
     if (!ready) return;
     if (sources.length === 0) {
       const reason = data.localInfo?.error?.message ?? (
@@ -127,10 +126,11 @@ export function PlayerPage({ active }: { active: boolean }) {
       );
       setStage({ kind: "failed", reason });
     }
-  }, [data.detail, data.localInfo, episode, playbackKey, sources.length]);
+  }, [data.detail, data.localInfo, data.playingEpisode, playbackKey, sources.length]);
 
   const close = async () => {
-    progress.playing(false);
+    navigation.current.next();
+    progress.suspend();
     await settleFinalProgress(progress.flush());
     dispatch({ type: "close" });
     setPlayerItem(null);

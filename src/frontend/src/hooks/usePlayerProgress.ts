@@ -7,8 +7,9 @@ export interface PlayerProgressControls {
   readonly begin: (identity: ProgressIdentity) => Promise<void>;
   readonly update: (positionMs: number, durationMs?: number) => void;
   readonly playing: (value: boolean) => void;
+  readonly suspend: () => void;
   readonly checkpoint: () => Promise<void>;
-  readonly flush: () => Promise<void>;
+  readonly flush: (reportFailure?: boolean) => Promise<void>;
 }
 
 /** Owns the 30-second cadence; media callbacks only report facts and lifecycle boundaries. */
@@ -23,11 +24,15 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
     if (timer.current !== null) clearInterval(timer.current);
     timer.current = null;
   };
-  const writeNow = async () => {
+  const writeNow = async (reportFailure = true) => {
     try {
       await session.current?.flush();
     } catch (error: unknown) {
-      useAppStore.getState().say(error instanceof Error ? error.message : "Watch progress could not be saved.", "warn");
+      if (reportFailure) {
+        useAppStore.getState().say(error instanceof Error ? error.message : "Watch progress could not be saved.", "warn");
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -59,10 +64,14 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
       if (value && isActive.current) timer.current = setInterval(() => void writeNow(), PROGRESS_INTERVAL_MS);
       else if (!value) void writeNow();
     },
-    checkpoint: writeNow,
-    flush: async () => {
+    suspend: () => {
+      isPlaying.current = false;
       stopTimer();
-      await writeNow();
+    },
+    checkpoint: writeNow,
+    flush: async (reportFailure = true) => {
+      stopTimer();
+      await writeNow(reportFailure);
     },
   };
 }

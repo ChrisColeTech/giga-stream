@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
-import { decodeAllowedEmbedMessage, type EmbedPlaybackEvent } from "@/lib/embed-messages";
-import { embedFramePolicy, stopEmbed } from "@/lib/embed-policy";
+import { useCallback, useRef } from "react";
+import { mountEmbedLifecycle } from "@/lib/embed-lifecycle";
+import type { EmbedPlaybackEvent } from "@/lib/embed-messages";
+import { embedFramePolicy } from "@/lib/embed-policy";
 import { embedUrl } from "@/lib/embed-url";
-import { installFrameGuard } from "@/lib/frame-guard";
+import { clearPlayerPolicy, setPlayerPolicy } from "@/services/player-policy";
 import type { TitleSource } from "@/services/schemas/source-schema";
 
 export interface EmbedHostProps {
@@ -15,31 +16,31 @@ export interface EmbedHostProps {
   readonly onReady: () => void;
 }
 
-/** The PoC host: exact-origin messages, browser sandbox, Electron host guards, and destructive cleanup. */
+/** Browser sandbox or Electron's named main-process policy owns containment for exactly one frame. */
 export function EmbedHost(props: EmbedHostProps) {
-  const frame = useRef<HTMLIFrameElement>(null);
+  const playback = useRef(props.onPlayback);
+  playback.current = props.onPlayback;
+  const policy = embedFramePolicy(props.electron);
   const address = embedUrl(props.source, props.positionMs, props.subtitleLanguage);
 
-  useEffect(() => {
-    const receive = (event: MessageEvent<unknown>) => {
-      const decoded = decodeAllowedEmbedMessage(
-        props.source,
-        event.origin,
-        event.source === frame.current?.contentWindow,
-        event.data,
-      );
-      if (decoded !== null) props.onPlayback(decoded);
-    };
-    window.addEventListener("message", receive);
-    return () => window.removeEventListener("message", receive);
-  }, [props.source, props.onPlayback]);
-
-  useEffect(() => () => {
-    const node = frame.current;
-    if (node !== null) stopEmbed(node);
-  }, [address, props.retry]);
-
-  const policy = embedFramePolicy(props.electron);
+  const mount = useCallback((frame: HTMLIFrameElement | null) => {
+    if (frame === null) return undefined;
+    if (props.electron && !setPlayerPolicy({
+      origin: props.source.origin,
+      frameOrigins: props.source.frameOrigins ?? [],
+    })) {
+      return undefined;
+    }
+    const dispose = mountEmbedLifecycle(
+      frame,
+      props.source,
+      window,
+      (event) => playback.current(event),
+      props.electron ? clearPlayerPolicy : () => undefined,
+    );
+    frame.src = address;
+    return dispose;
+  }, [address, props.electron, props.source]);
 
   return (
     <>
@@ -48,21 +49,10 @@ export function EmbedHost(props: EmbedHostProps) {
           unprotected
         </span>
       )}
-      <iframe
-        key={`${address}:${props.retry}`}
-        ref={frame}
-        src={address}
-        title={`${props.source.name} player`}
-        allow={policy.allow}
-        allowFullScreen
-        referrerPolicy={policy.referrerPolicy}
-        sandbox={policy.sandbox}
+      <iframe key={`${address}:${props.retry}`} ref={mount} src="about:blank" title={`${props.source.name} player`}
+        allow={policy.allow} allowFullScreen referrerPolicy={policy.referrerPolicy} sandbox={policy.sandbox}
         className="size-full border-0 bg-stage"
-        onLoad={() => {
-          if (frame.current !== null) installFrameGuard(frame.current, props.source.frameOrigins ?? []);
-          props.onReady();
-        }}
-      />
+        onLoad={(event) => { if (event.currentTarget.src !== "about:blank") props.onReady(); }} />
     </>
   );
 }

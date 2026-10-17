@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseEpisodeCode } from "@/lib/player-format";
 import type { PlayerSession } from "@/lib/player-session";
 import { readLocalMediaInfo, type LocalMediaInfo } from "@/services/local-media";
 import { readRelated, readSeason, readTitle } from "@/services/titles";
@@ -10,12 +11,13 @@ export interface LoadedPlayerData {
   readonly item?: LibraryItem;
   readonly detail?: TitleDetail;
   readonly localInfo?: LocalMediaInfo;
+  readonly playingEpisode?: Episode;
   readonly episodes: readonly Episode[];
   readonly related: readonly LibraryItem[];
 }
 
 const EMPTY: LoadedPlayerData = { episodes: [], related: [] };
-interface LoadedState extends LoadedPlayerData { readonly key: string; }
+interface LoadedState extends LoadedPlayerData { readonly key: string; readonly playingKey?: string; }
 const EMPTY_STATE: LoadedState = { ...EMPTY, key: "idle" };
 const sentence = (error: unknown, fallback: string): string => error instanceof Error ? error.message : fallback;
 
@@ -25,7 +27,10 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
   const [loaded, setLoaded] = useState<LoadedState>(EMPTY_STATE);
   const tab = session.current;
   const key = tab === null ? "idle" : `${tab.ref.kind}:${tab.ref.id}`;
-  const known = knownItems.find((item) => tab !== null && item.ref.kind === tab.ref.kind && item.ref.id === tab.ref.id);
+  const queried = knownItems.find((item) => tab !== null && item.ref.kind === tab.ref.kind && item.ref.id === tab.ref.id);
+  const known = tab?.libraryItem ?? queried;
+  const playing = parseEpisodeCode(tab?.subtitle);
+  const playingKey = playing === undefined ? undefined : `${playing.season}:${playing.episode}`;
 
   useEffect(() => {
     if (tab === null) {
@@ -36,6 +41,7 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     setLoaded({ ...EMPTY, key, ...(known === undefined ? {} : { item: known }) });
     if (tab.ref.kind === "local") {
       void readLocalMediaInfo(tab.ref.id, controller.signal).then((info) => {
+        if (controller.signal.aborted) return;
         const item = known ?? {
           ref: tab.ref, kind: "local" as const, title: info.title, genres: [], favorite: false,
         };
@@ -46,6 +52,7 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     } else {
       void readTitle(tab.ref.id, controller.signal)
         .then((detail) => {
+          if (controller.signal.aborted) return;
           const item = known ?? {
             ref: tab.ref, kind: detail.kind, title: detail.title, year: detail.year,
             posterUrl: detail.posterUrl, genres: detail.genres, favorite: false,
@@ -56,6 +63,7 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
           if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Title information could not be read."), "warn");
         });
       void readRelated(tab.ref.id, controller.signal).then((answer) => {
+        if (controller.signal.aborted) return;
         setLoaded((current) => ({ ...current, related: answer.items }));
       }).catch((error: unknown) => {
         if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Related titles could not be read."), "warn");
@@ -69,6 +77,7 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     const controller = new AbortController();
     setLoaded((current) => ({ ...current, episodes: [] }));
     void readSeason(tab.ref.id, session.season, controller.signal).then((answer) => {
+      if (controller.signal.aborted) return;
       setLoaded((current) => ({ ...current, episodes: answer.episodes }));
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Episodes could not be read."), "warn");
@@ -76,6 +85,20 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     return () => controller.abort();
   }, [session.season, tab?.kind, tab?.ref.kind, tab?.ref.id]);
 
+  useEffect(() => {
+    if (tab?.ref.kind !== "title" || tab.kind !== "tv" || playing === undefined) return undefined;
+    const controller = new AbortController();
+    setLoaded((current) => ({ ...current, playingEpisode: undefined, playingKey }));
+    void readSeason(tab.ref.id, playing.season, controller.signal).then((answer) => {
+      if (controller.signal.aborted) return;
+      const playingEpisode = answer.episodes.find((episode) => episode.episode === playing.episode);
+      setLoaded((current) => ({ ...current, playingEpisode, playingKey }));
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Episode could not be read."), "warn");
+    });
+    return () => controller.abort();
+  }, [playing?.episode, playing?.season, tab?.kind, tab?.ref.kind, tab?.ref.id]);
+
   if (loaded.key !== key) return EMPTY;
-  return loaded;
+  return loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
 }

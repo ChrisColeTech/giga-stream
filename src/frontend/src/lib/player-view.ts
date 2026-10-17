@@ -57,7 +57,10 @@ export function resumeOf(view: PlayerView): Progress | undefined {
   const progress = view.item?.progress;
   if (progress?.state !== "watching") return undefined;
   if (view.tab?.kind !== "tv") return progress;
-  return progress.season === view.season && progress.episode === view.episode ? progress : undefined;
+  const playing = parseEpisodeCode(view.tab.subtitle);
+  return playing !== undefined && progress.season === playing.season && progress.episode === playing.episode
+    ? progress
+    : undefined;
 }
 
 export function viewOf(session: PlayerSession, marks: Marks, data: PlayerData = {}): PlayerView {
@@ -68,15 +71,15 @@ export function viewOf(session: PlayerSession, marks: Marks, data: PlayerData = 
   const key = tab === undefined ? undefined : itemKey(tab.ref);
   return {
     tab,
-    item: data.item,
+    item: data.item ?? tab?.libraryItem,
     detail: data.detail,
     local: data.local,
     stage: data.stage ?? { kind: "idle" },
-    favorite: key === undefined ? false : (marks.favourites[key] ?? data.item?.favorite ?? false),
+    favorite: key === undefined ? false : (marks.favourites[key] ?? data.item?.favorite ?? tab?.libraryItem?.favorite ?? false),
     memberIds: key === undefined ? [] : (marks.memberships[key] ?? data.local?.info?.collectionIds ?? []),
     collections: data.collections ?? [],
     season,
-    episode: tab?.kind === "tv" ? chosen?.episode : undefined,
+    episode: tab?.kind === "tv" && chosen !== undefined && chosen.season === season ? chosen.episode : undefined,
     seasons,
     episodes: data.episodes ?? [],
     related: data.related ?? [],

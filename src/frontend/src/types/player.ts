@@ -1,4 +1,4 @@
-import type { ItemRef } from "./library";
+import type { ItemRef, LibraryItem } from "./library";
 import type { LocalMediaInfo } from "@/services/local-media";
 import type { PlayerSource } from "@/lib/player-sources";
 
@@ -8,6 +8,8 @@ export interface PlayerTab {
   readonly ref: ItemRef;
   readonly kind: "movie" | "tv" | "local";
   readonly title: string;
+  /** The opening row, including progress even when it came from Related rather than the current query. */
+  readonly libraryItem?: LibraryItem;
   /** For a series, the exact episode: `S01 E02`. */
   readonly subtitle?: string;
 }
