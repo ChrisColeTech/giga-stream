@@ -11,6 +11,8 @@ export const ADDRESS_MAX = 2048;
 export const PROVIDER_NAME_MAX = 120;
 export const SOURCE_MAX = 60;
 export const API_KEY_MAX = 256;
+export const PARAM_MAX = 60;
+export const FRAME_ORIGINS_MAX = 8;
 
 // Accounts and sign-in (docs/03 sections 7.11 and 7.12).
 export const ACCOUNT_NAME_MAX = 80;
