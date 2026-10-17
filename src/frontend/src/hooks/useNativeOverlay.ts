@@ -1,15 +1,16 @@
 import { useEffect } from "react";
 import { TITLEBAR_HEIGHT } from "@/constants/child-window";
+import { overlayColors, type OverlayColors } from "@/lib/overlay-colors";
 import { useAppStore } from "@/store/app-store";
 
 /** The overlay palette read back from the tokens themselves, so a retheme or Theatre's remap needs no second
  *  palette here: the strip wears the panel tone with the faint text tone on it, whatever the theme says. */
-function palette(): { color: string; symbolColor: string } {
+function palette(idle: boolean): OverlayColors {
   const style = getComputedStyle(document.documentElement);
-  return {
-    color: style.getPropertyValue("--color-panel").trim(),
-    symbolColor: style.getPropertyValue("--color-faint").trim(),
-  };
+  return overlayColors(
+    { panel: style.getPropertyValue("--color-panel").trim(), faint: style.getPropertyValue("--color-faint").trim() },
+    idle,
+  );
 }
 
 /** The native caption strip (Windows' titleBarOverlay) is painted by the OS, so the page must tell it what to
@@ -22,13 +23,15 @@ export function useNativeOverlay(): void {
   const theme = useAppStore((state) => state.theme);
   const theatre = useAppStore((state) => state.theatre);
   const uiZoom = useAppStore((state) => state.uiZoom);
+  const chromeIdle = useAppStore((state) => state.chromeIdle);
 
   useEffect(() => {
     const host = typeof window === "undefined" ? undefined : window.pocHost;
     if (host?.runtime !== "electron" || typeof host.setOverlay !== "function") return undefined;
 
     const push = (): void => {
-      const { color, symbolColor } = palette();
+      /* While the bars are idle the caption symbols wear the strip's own colour, which hides what CSS cannot reach. */
+      const { color, symbolColor } = palette(chromeIdle);
       void host.setOverlay({ color, symbolColor, height: Math.round((TITLEBAR_HEIGHT - 1) * uiZoom) });
     };
 
@@ -37,5 +40,5 @@ export function useNativeOverlay(): void {
     const watched = theme === "system" ? window.matchMedia("(prefers-color-scheme: light)") : null;
     watched?.addEventListener("change", push);
     return () => watched?.removeEventListener("change", push);
-  }, [theme, theatre, uiZoom]);
+  }, [theme, theatre, uiZoom, chromeIdle]);
 }

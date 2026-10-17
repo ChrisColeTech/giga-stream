@@ -6,6 +6,7 @@ import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { useSettingsWriteback } from "@/hooks/useSettingsWriteback";
 import { useShellKeyboard } from "@/hooks/useShellKeyboard";
 import { useShellWriteback } from "@/hooks/useShellWriteback";
+import { useTheatreIdle } from "@/hooks/useTheatreIdle";
 import { useTheme } from "@/hooks/useTheme";
 import { installGuardEvents } from "@/services/guard-events";
 import { useAppStore } from "@/store/app-store";
@@ -19,6 +20,7 @@ export function App() {
   useShellWriteback();
   useSettingsWriteback();
   useTheme();
+  useTheatreIdle();
   useNativeOverlay();
   useShellKeyboard();
   useEffect(() => installGuardEvents(), []);

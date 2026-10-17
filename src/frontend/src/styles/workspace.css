@@ -91,3 +91,30 @@
     );
   }
 }
+
+/* Theatre idle (owner, 2026-10-17): after 5 s with no input the title and status bar CONTENTS fade out; the bars
+ * stay, so nothing shifts. useTheme stamps data-chrome-idle (only ever with data-theatre). The wake is the quicker
+ * --duration-fast; the fade out is --duration-move, then visibility flips so hidden buttons leave the tab order.
+ * Reduce motion zeroes every transition (motion-reduce.css, loaded last), so there the change is instant. */
+/* This unlayered rule beats the Tailwind transition utilities on the bars' direct children, so it repeats the
+ * colour transitions the buttons carry (the family's hover fade) beside the opacity one. */
+.chrome-bar > * {
+  transition:
+    opacity var(--duration-fast) linear,
+    visibility 0s linear,
+    background-color var(--duration-fade) linear,
+    color var(--duration-fade) linear;
+}
+:root[data-chrome-idle] .chrome-bar > * {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--duration-move) linear,
+    visibility 0s linear var(--duration-move);
+}
+/* The cursor goes with them; the first move restores it. */
+:root[data-chrome-idle],
+:root[data-chrome-idle] * {
+  cursor: none !important;
+}

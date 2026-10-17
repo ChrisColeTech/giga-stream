@@ -32,7 +32,7 @@ export function Statusbar() {
   const theatre = useAppStore((state) => state.theatre);
 
   return (
-    <footer className={cn(BAR, barTone(theatre))}>
+    <footer className={cn("chrome-bar", BAR, barTone(theatre))}>
       <RunningWork />
       {notice !== null && (
         <span key={notice.serial} role="status" title={notice.sentence} className="flex min-w-0 items-center gap-1.5 text-xs text-text">

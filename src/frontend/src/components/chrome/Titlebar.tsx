@@ -71,7 +71,7 @@ export function Titlebar() {
   };
 
   return (
-    <header className={cn(TITLEBAR, barTone(theatre))}>
+    <header className={cn("chrome-bar", TITLEBAR, barTone(theatre))}>
       {toggle("left")}
       <Brand />
       {/* Absolutely centred on the TITLEBAR, not flex-centred among siblings, so showing or disabling a pane toggle
@@ -83,7 +83,7 @@ export function Titlebar() {
       <Button
         size="sm"
         variant="ghost"
-        title={theatre ? "Theatre mode is on. Press to bring the panes and chrome back." : "Theatre mode"}
+        title={theatre ? "Theatre mode is on. Press to leave it; reopen panes with their toggles." : "Theatre mode"}
         aria-label="Theatre mode"
         aria-pressed={theatre}
         on={theatre}
