@@ -126,9 +126,9 @@ export function createAppServices(options: ServiceOptions) {
   const media: LocalMediaService = createLocalMediaService({ files: filesRepo, collections: collectionsRepo });
   const favorites: FavoritesService = createFavoritesService(favoritesRepo, options.now);
   const watches: WatchService = createWatchService({
-    watches: watchRepo,
+    watches: watchRepo, now: options.now,
     watchedPercent: () => settings.get().watchedPercent,
-    now: options.now,
+    paused: () => settings.get().pauseHistory,
   });
   const libraryRepo = createLibraryRepository(database);
   const libraryItems = createLibraryItems({

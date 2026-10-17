@@ -7,6 +7,9 @@ import type { WatchRepository } from "../store/watch-repository.js";
 
 const kinds: readonly ItemKind[] = ["title", "local"];
 
+/** How many playbacks' last seq the service remembers; far more than a person has open at once. */
+const PLAYBACKS_REMEMBERED = 512;
+
 const notFound = (): AppError => new AppError("watch.not_found", 404, "There is no such watch entry.");
 
 const isKind = (value: string): value is ItemRef["kind"] => kinds.includes(value as ItemRef["kind"]);
@@ -48,9 +51,11 @@ export function createWatchService(deps: {
   watches: WatchRepository;
   /** The `watchedPercent` setting, read at each write (03 section 3.2; the table's default is 90). */
   watchedPercent: () => 90 | 95 | 100;
+  /** The `pauseHistory` setting: while true no write changes anything (03 section 3.2). */
+  paused: () => boolean;
   now: () => number;
 }): WatchService {
-  const { watches, watchedPercent, now } = deps;
+  const { watches, watchedPercent, paused, now } = deps;
   /** The last applied seq of each playback, in memory only (03 section 3.13's ordering rule). */
   const lastSeqByPlayback = new Map<string, number>();
 
@@ -69,24 +74,27 @@ export function createWatchService(deps: {
     write(input) {
       const playback = input.playbackId;
       const done = lastSeqByPlayback.get(playback) ?? 0;
-      if (input.seq <= done) {
-        const row = watches.findByIdentity({
-          kind: input.item.kind,
-          itemId: input.item.id,
-          season: input.season,
-          episode: input.episode,
-        });
-        return { applied: false, entry: row === null ? null : entryOf(row) };
-      }
-      lastSeqByPlayback.set(playback, input.seq);
       const existing = watches.findByIdentity({
         kind: input.item.kind,
         itemId: input.item.id,
         season: input.season,
         episode: input.episode,
       });
-      const over =
-        input.durationMs !== undefined && input.positionMs >= (input.durationMs * watchedPercent()) / 100;
+      // Paused history and a late write both answer the entry as it stands and change nothing.
+      if (paused() || input.seq <= done) {
+        return { applied: false, entry: existing === null ? null : entryOf(existing) };
+      }
+      // Re-inserting moves the playback to the newest end, so the oldest one is the one dropped.
+      lastSeqByPlayback.delete(playback);
+      lastSeqByPlayback.set(playback, input.seq);
+      if (lastSeqByPlayback.size > PLAYBACKS_REMEMBERED) {
+        const oldest = lastSeqByPlayback.keys().next();
+        if (!oldest.done) lastSeqByPlayback.delete(oldest.value);
+      }
+      // A position past a known end is the end (a player's last tick can overshoot by a frame).
+      const position =
+        input.durationMs === undefined ? input.positionMs : Math.min(input.positionMs, input.durationMs);
+      const over = input.durationMs !== undefined && position >= (input.durationMs * watchedPercent()) / 100;
       const state = existing?.state === "watched" || over ? "watched" : "watching";
       const row = watches.upsert({
         id: existing?.id ?? randomId(),
@@ -94,7 +102,7 @@ export function createWatchService(deps: {
         itemId: input.item.id,
         season: input.season,
         episode: input.episode,
-        positionMs: Math.max(0, input.positionMs),
+        positionMs: position,
         durationMs: input.durationMs,
         state,
         at: now(),
