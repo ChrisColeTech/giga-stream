@@ -8,7 +8,11 @@ export const SETTINGS_VALUES: Settings = {
   reducedMotion: "system",
   uiZoom: 1,
   autoplay: false,
+  videoQuality: "auto",
+  audioLanguage: null,
   subtitleLanguage: null,
+  lowLatency: false,
+  pictureFit: "fit",
   libraryView: "grid",
   adminUrl: "",
 };

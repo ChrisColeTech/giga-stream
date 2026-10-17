@@ -189,26 +189,28 @@ published elsewhere.
 
 ### 3.3 Playback settings (left)
 
-Five collapsible sections (§2.8). Each row is a mono label in a fixed column with its control beside it.
+Five collapsible sections (§2.8). Each row is a mono label in a fixed column with its control beside it, and
+every choice is a rail select, never chips.
 
-| Section | Row | Control | Behaviour |
-|---|---|---|---|
-| Video | quality | select: Auto and the stream's levels | switches the level; Auto adapts |
-| Video | resolution | readout | the picture's size |
-| Video | bitrate | readout | the current level's bitrate |
-| Display | fit | Fit / Fill / Original | how the picture sits in the stage; always usable |
-| Display | aspect | readout | the picture's ratio |
-| Audio | track | select | the stream's audio tracks |
-| Audio | language | readout | the current track's language |
-| Captions | captions | select: Off and the stream's tracks | shows a caption track |
-| Playback | latency | Normal / Low | low latency, where the stream offers it |
-| Playback | live edge | readout | seconds behind the live edge |
+**The selects are preferences, not a remote for the stream** (owner, 2026-10-16: *"why would my settings
+constantly change. thats not how youtube or netflix settings work"*). Each is a standing choice, saved as a
+setting (`03` section 3.2) and applied to whatever plays, on Live and in Player alike. They are always usable;
+a stream that cannot honor one plays its nearest offer, and nothing about the choice changes.
 
-A row the stream cannot serve is disabled in place and its reason is its tooltip: `Available once a channel
-is playing.`, `This stream offers one quality.`, `This stream has no alternate audio tracks.`, `This channel
-has no caption tracks.`, `This stream does not offer low latency.`, or `This browser plays the stream itself
-and does not let the app control it.` Volume, mute and fullscreen are on the player and are not repeated
-here.
+| Section | Row | Control | Setting | Behaviour |
+|---|---|---|---|---|
+| Video | quality | Auto / Higher picture quality / Data saver | `videoQuality` | Auto adapts; Higher picks the best level offered, Data saver the lowest |
+| Video | resolution | readout | | the picture's size |
+| Video | bitrate | readout | | the current level's bitrate |
+| Display | fit | Fit / Fill / Original | `pictureFit` | how the picture sits in the stage |
+| Display | aspect | readout | | the picture's ratio |
+| Audio | language | Stream default and the languages | `audioLanguage` | picks that language's track when the stream has one |
+| Captions | captions | Off and the languages | `subtitleLanguage` | shows that language's track when the stream has one |
+| Playback | latency | Normal / Low | `lowLatency` | low latency, where the stream offers it |
+| Playback | live edge | readout | | seconds behind the live edge |
+
+A readout is a fact of the stream on screen: a dash, with `Available once a channel is playing.` as its
+tooltip, until one plays. Volume, mute and fullscreen are on the player and are not repeated here.
 
 ---
 
@@ -510,7 +512,7 @@ Cancel.
 | Section | Rows |
 |---|---|
 | Appearance | Theme (Dark / Light / System), Reduce motion (Follow system / Off / On), Accent (Amber, Blue, Green, Violet, Rose), UI zoom (0.5 to 3, `Ctrl+0` resets) |
-| Playback | Autoplay, Subtitle language |
+| Playback | Autoplay. The stream preferences (quality, fit, audio and caption languages, latency) have one home, Live's playback rail (§3.3) |
 | Library | Default view (Grid / List), **Collections** (opens that window), **Open History** (closes Settings and selects History) |
 | Admin backend | Address (the `adminUrl` setting, saved like any other row), State (connected or not, the backend's revision, when the channels were last read, the error if any) |
 | About | Version and build, runtime mode, links through safe external navigation, licenses, the TMDB logo and notice (`11` section 6) |

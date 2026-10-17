@@ -7,11 +7,12 @@ import { CHANNEL_LIST } from "@/fixtures/channels";
 import { useLiveActions } from "@/hooks/useLiveActions";
 import { filterChannels } from "@/lib/live-channels";
 import { ALL_CATEGORY } from "@/lib/live-constants";
-import { type PictureFit } from "@/lib/live-picture";
 import { stageStateFor } from "@/lib/live-stage";
+import { useAppStore } from "@/store/app-store";
 
 /** Live: playback settings on the left, the video stage in the centre, channels on the right. The page composes the
- *  panes and keeps the local selection, playing marker, search, category and picture fit; its calls live in the hook. */
+ *  panes and keeps the local selection, playing marker, search and category; the picture fit is a playback preference
+ *  in the store. Its calls live in the hook. */
 export function LivePage({ active }: { active: boolean }) {
   const channels = CHANNEL_LIST.items;
   const actions = useLiveActions();
@@ -19,7 +20,7 @@ export function LivePage({ active }: { active: boolean }) {
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [selectedId, setSelectedId] = useState<string | null>(channels[0]?.id ?? null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [fit, setFit] = useState<PictureFit>("fit");
+  const fit = useAppStore((state) => state.playback.pictureFit);
 
   const rows = filterChannels(channels, query, category);
   const selected = channels.find((channel) => channel.id === selectedId) ?? null;
@@ -28,7 +29,7 @@ export function LivePage({ active }: { active: boolean }) {
     <WorkspaceSplit
       surface="live"
       active={active}
-      left={<LiveSettingsPane fit={fit} onFitChange={setFit} />}
+      left={<LiveSettingsPane />}
       center={
         <LiveStage
           state={stageStateFor(channels.length)}

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
+import { SETTINGS_VALUES } from "@/fixtures/settings";
 import type { Box } from "@/types/child-window";
+import type { PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import type { OverlayId, PopupAnchor } from "@/types/overlays";
@@ -43,6 +45,9 @@ export interface AppState {
   theme: ThemeMode;
   accent: Accent;
   motion: MotionPreference;
+  /** The playback preferences (`03` section 3.2): standing choices that apply to every stream. Phase 1a keeps them
+   *  here, applied at once like the theme; phase 2 reads and saves them through the fileserver (`22`). */
+  playback: PlaybackPrefs;
   /** Favourites and collection memberships, by item key (`kind:id`). Phase 1a keeps the changes here, so every surface
    *  reads the same marks; phase 2 reads them from the fileserver (`22` section 3.3). */
   marks: {
@@ -65,6 +70,7 @@ export interface AppState {
   setTheme: (theme: ThemeMode) => void;
   setAccent: (accent: Accent) => void;
   setMotion: (motion: MotionPreference) => void;
+  setPlayback: (change: Partial<PlaybackPrefs>) => void;
 }
 
 function initialPanes(): Pick<AppState, "open" | "sizes"> {
@@ -97,6 +103,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   theme: "dark",
   accent: "amber",
   motion: "system",
+  playback: {
+    autoplay: SETTINGS_VALUES.autoplay,
+    videoQuality: SETTINGS_VALUES.videoQuality,
+    audioLanguage: SETTINGS_VALUES.audioLanguage,
+    subtitleLanguage: SETTINGS_VALUES.subtitleLanguage,
+    lowLatency: SETTINGS_VALUES.lowLatency,
+    pictureFit: SETTINGS_VALUES.pictureFit,
+  },
   marks: { favourites: {}, memberships: {} },
 
   setSurface: (surface) => set({ surface }),
@@ -122,6 +136,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setTheme: (theme) => set({ theme }),
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),
+  setPlayback: (change) => set({ playback: { ...get().playback, ...change } }),
   setFavourite: (key, favourite) => {
     const { marks } = get();
     set({ marks: { ...marks, favourites: { ...marks.favourites, [key]: favourite } } });

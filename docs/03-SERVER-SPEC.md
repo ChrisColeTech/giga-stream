@@ -113,7 +113,11 @@ A stored value that no longer validates reads as its default; an unknown stored 
 | `reducedMotion` | `system`, `off`, `on` | `system` |
 | `uiZoom` | 0.5 to 3 | `1` |
 | `autoplay` | boolean | `false` |
-| `subtitleLanguage` | a BCP-47 tag or `null` | `null` |
+| `videoQuality` | `auto`, `higher`, `saver` | `auto` |
+| `audioLanguage` | a BCP-47 tag or `null` (the stream's own default track) | `null` |
+| `subtitleLanguage` | a BCP-47 tag or `null` (captions off) | `null` |
+| `lowLatency` | boolean | `false` |
+| `pictureFit` | `fit`, `fill`, `original` | `fit` |
 | `libraryView` | `grid`, `list` | `grid` |
 | `adminUrl` | an `http` or `https` URL | `http://127.0.0.1:8091` |
 

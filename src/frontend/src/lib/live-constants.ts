@@ -30,7 +30,7 @@ export const RETRY_LABEL = "Retry";
 export const NO_CHANNELS_TITLE = "No channels";
 export const NO_CHANNELS_SENTENCE = "The channel list is empty.";
 
-/** The `06` section 3.3 reason shown on each playback row that has no playing stream to act on. */
+/** The `06` section 3.3 tooltip of a stream readout (resolution, bitrate, aspect, live edge) while nothing plays. */
 export const REASON_NEEDS_PLAYING = "Available once a channel is playing.";
 
 export const PLAYBACK_SECTION_TITLES = {

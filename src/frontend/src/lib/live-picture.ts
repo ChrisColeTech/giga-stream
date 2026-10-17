@@ -1,6 +1,7 @@
-/** How the picture sits in the stage (`06` section 3.3, Display): Fit shows the whole picture, Fill crops it to the stage,
- *  Original keeps its own pixel size. It changes only the element's object-fit, never the stream. */
-export type PictureFit = "fit" | "fill" | "original";
+import type { PictureFit } from "@/types/settings";
+
+/* How the picture sits in the stage changes only the element's object-fit, never the stream (`06` section 3.3). */
+export type { PictureFit };
 
 export interface PictureFitOption {
   readonly value: PictureFit;
