@@ -45,7 +45,7 @@ person's changes.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
 - `scripts/ffmpeg` the FFmpeg build and verifier (`docs/09`); the binaries are in `tools/ffmpeg/bin`
   (gitignored).
-- The programs never import each other's source; they talk over HTTP and WebSocket.
+- The programs never import each other's source; they talk over HTTP. The interface has no application socket.
 
 ## Commands
 
@@ -76,8 +76,7 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   per file.
 - Components `PascalCase.tsx`, hooks `useThing.ts`, everything else kebab-case. No
   `utils`/`util`/`helpers`/`misc`/`common`.
-- One Zustand store, one request layer (`services/api.ts`), one socket (`services/events.ts`). No
-  browser storage, no polling.
+- One Zustand store and one request layer (`services/api.ts`). No application socket, browser storage or polling.
 - Routes: parse, one service call, the standard envelope. SQL only under `store/`. Electron only in the
   fileserver's `src/app`. Providers only in the admin backend.
 - Every route begins `/api`; only `/healthz` and `/ws` are root-level. Error codes are dotted and stable.

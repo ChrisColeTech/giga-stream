@@ -110,7 +110,7 @@ stays; if it is back, they fill.
 | A channel's dot is offline | its stream address did not answer like a playlist at the last probe — Refresh probes it again |
 | A stream fails after Choose | the note names why; **Retry** loads the same address again |
 | `ready` never shows, notice reads "could not be read" | the fileserver and this version of the interface disagree about a message; the notice names which |
-| The statusbar says `reconnecting` | the socket to the fileserver dropped; loaded media keeps playing; a fresh `hello` re-syncs |
+| The notice says the fileserver could not be reached | the last request failed; loaded media keeps playing, and the next interaction tries again |
 | The app opens on the wrong tab | the fileserver was slow and showed defaults; it restores your tab when it answers, and writes nothing until it has |
 | A control is dimmed | nothing for it to act on — hover it for the reason |
 | A local file is missing | its card says unavailable; **Rescan** or remove it; no path is shown |

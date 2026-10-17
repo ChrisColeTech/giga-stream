@@ -29,7 +29,7 @@ acceptance criteria for every pane.
   controls through the preload capabilities. Drag region and caption-button reserve exactly as the old
   `frame.css` and the fileserver shell do it.
 - **Statusbar (24px)**: connection dot + lowercase mono word driven by real health polling
-  (`connecting/ready/reconnecting`, sentence as tooltip) · the notice line as a polite live region with
+  (no connection dot or word) · the notice line as a polite live region with
   info/warn/error tones carrying every outcome and refusal · **Events** toggle (drawer) · **Settings**
   toggle (window). Both light while open.
 - **Panes and sashes** (`06` section 1.3): the exact min/preferred/max table per pane, Allotment-style

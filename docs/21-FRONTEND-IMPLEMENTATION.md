@@ -104,7 +104,7 @@ Each row is a control or behaviour missing from, or only a placeholder in, the t
 | The one context menu host mounted by the shell, rendering `menu:open` requests | `01` section 9; family `AppShell` | missing |
 | Pane collapse below 1000 px work width: the right pane collapses first, then the left; the centre never does | `06` 1.3 | missing |
 | Statusbar notice line shows a sentence from any outcome | `06` 1.2 | slot exists; `say()` has no caller |
-| Statusbar connection word and dot, with the sentence as tooltip | `06` 1.2 | fixture `ready` (preview) |
+| No statusbar connection word or dot; outcomes use the notice line | `06` 1.2 | required |
 | `Ctrl+0` resets zoom; zoom applies to the whole interface | `06` 8, `03` 3.2 | key missing; `uiZoom` in the store |
 | `Ctrl+F` focuses the active surface's search (the element with `data-search` inside the active page) | `06` 8 | missing |
 | Titlebar, surface switch, pane toggles, brand, window controls (native overlay) | `06` 1.1 | done |
@@ -328,7 +328,7 @@ Before the install, `npm view @radix-ui/react-dropdown-menu@2.1.24 time` confirm
 | Create | `src/frontend/src/fixtures/player.ts` | Player tabs and the stage state of each |
 | Create | `src/frontend/src/fixtures/events.ts` | event rows of each area and tone |
 | Create | `src/frontend/src/fixtures/settings.ts` | settings values for the look; the Address field has no value |
-| Keep | `src/frontend/src/fixtures/connection.ts` | the preview connection word |
+| Remove | `src/frontend/src/fixtures/connection.ts` | `06` 1.2 has no connection word |
 
 **Mounted by the shell (Shell owner, `components/chrome/AppShell.tsx`):** `useContextMenu()`, and
 `{menu !== null && <ContextMenu anchor={menu.anchor} items={menu.items} onClose={close} />}`, as the family's
@@ -363,7 +363,7 @@ Each owner adds tests for its pure logic under `src/frontend/test/`, named for t
 - **Updates:** `components/chrome/AppShell.tsx` (mounts `useContextMenu` and `ContextMenu`; applies `uiZoom` to the
   document); `hooks/useWorkspaceSplit.ts` (the 1000 px collapse, right then left); `hooks/useShellKeyboard.ts`
   (`Ctrl+0` calls `setZoom(1)`; `Ctrl+F` focuses `[data-search]` in the active page); `components/chrome/Statusbar.tsx`
-  (the notice line shows `say()` sentences; the connection word stays a fixture).
+  (the notice line shows `say()` sentences; there is no connection word).
 - **Read first:** `docs/02` 1.3, 6; `docs/04` 1, 5; `docs/06` 1, 8; the family's `AppShell.tsx`, `useContextMenu.ts`.
 - **Out of scope:** surface contents and the Events drawer.
 

@@ -150,7 +150,7 @@ disabled, or local, where the row says so.
 |---|---|---|
 | Hydration on mount | `GET /api/state` | the saved surface, pane visibility and sizes are applied once; the interface shows after two animation frames; a 1.5 s fallback shows defaults (`02` section 2.3) |
 | Pane toggles, pane sizes | `PATCH /api/shell-state` | written 400 ms after the last change, never before hydration (`02` section 2.3, item 6) |
-| Statusbar connection | the outcome of the last request | `connecting` while the first state read is in flight, `ready` after a request succeeds, `reconnecting` after one fails (`03` section 4; `06` section 1.2). The word does not exist yet — this wave creates it |
+| Statusbar notice | the outcome of the last request | no connection dot or word (`02` §1.2, `06` §1.2); a refusal replaces the one notice sentence and a later success may replace it with its outcome |
 | Notice line | any refusal or outcome | one sentence, the server's own, or `could not reach the fileserver` (`04` section 6) |
 | `Ctrl+0` and the zoom stepper | `PATCH /api/settings` `uiZoom` | applies at once |
 | Runtime facts (About, and the drawer's guard rows) | `window.pocHost` | `runtime` is `electron` when the capability exists, `browser` otherwise; in a browser the drawer opens with one info row saying the shell guards are absent (`14` §2.3) |
@@ -361,7 +361,7 @@ So `02` section 2.1 is amended first, to add a `library` slice for collections a
 | File | Holds |
 |---|---|
 | `store/app-store.ts` | composes the slices |
-| `store/slices/shell-slice.ts` | surface, pane visibility and sizes, the events drawer, the open flow and its item, theme, accent, motion, zoom, notice, folds, the connection word |
+| `store/slices/shell-slice.ts` | surface, pane visibility and sizes, the events drawer, the open flow and its item, theme, accent, motion, zoom, notice and folds |
 | `store/slices/live-slice.ts` | the channel list as received, search and category, the selected and playing channel, the stage state |
 | `store/slices/playback-slice.ts` | what the player reports, the user's playback choices, the tabs and their stage state, **each tab's `sources` and active source id** |
 | `store/slices/library-slice.ts` | collections, the views' counts, the current library query |
@@ -398,7 +398,7 @@ and packages, but does not implement wave code.
 | A | backend worker | the provider fields, migration, CRUD, the sources fill on detail and season answers, `scripts/seed-providers.ts` upgraded to the full catalog (all of `18` §2's embed hosts + the stream-family rows with their own `source` values), tests | the gate's backend steps; sources on a title answer for every active provider whose template applies, in order; no source without a template; a fresh seeded database lists the whole catalog with distinct sources |
 | B | fileserver worker | the 11 settings keys; `sources` pass-through (schemas, types, service); provider records stop being attached; static whitelist `assets` + SPA entry; scan percent `null`; `watchedPercent`/`liveOnOpen` read their settings; tests | the gate's fileserver steps; settings round trip over HTTP; a built `assets` bundle served; sources on title and episode answers |
 | 2.0 | foundation worker | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, `lib/event-log.ts`, the rule that refuses the admin backend's address in `src/frontend` (`01` §1.1) | `test/api.test.ts`, `test/event-log.test.ts` pass; the rule checker reports the new rule |
-| 2.1 | state worker | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the statusbar connection word, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
+| 2.1 | state worker | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the notice outcomes, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
 | 2.2 | live worker | `services/channels.ts`, `services/stream-player.ts`, the channel search and the stage | Live opens on the last channel; Refresh updates the dots; a test channel plays |
 | 2.3 | collections worker | `services/collections.ts`, `services/folders.ts`, `services/jobs.ts`, `services/desktop.ts`, `services/scan-stream.ts` | settings survive a restart; a collection is created and removed; a folder's scan streams and the indeterminate bar shows |
 | 2.4 | library worker | `services/library.ts`, `services/titles.ts`, `services/favorites.ts`, `services/watch.ts`; the menu's `Collections ▸` wired | the views show their counts; a favourite persists; a collection toggled from the card's menu is listed after a restart |

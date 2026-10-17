@@ -103,7 +103,7 @@ Phases 1 and 2 can run in parallel, one worker each (section 3).
 |---|---|---|
 | Window | titlebar (brand, Live / Library / Player switch, pane toggles, window controls), statusbar (connection, notice, Events, Settings) | compared with a fresh screenshot of Giga Images' shell |
 | Panes | Allotment panes for all three surfaces, collapse with the tween, sizes within the `02` section 1.3 limits | collapse and restore in the browser and Electron |
-| State | the one store, `services/api.ts` (REST answers and the scan's streamed NDJSON body), the state read on mount | the statusbar shows `connecting`, `ready`, `reconnecting` as requests fail and succeed again |
+| State | the one store, `services/api.ts` (REST answers and the scan's streamed NDJSON body), the state read on mount | the one notice sentence reports a refusal or later successful outcome; there is no connection dot or word |
 | Hydration | restore the saved tab and layout from `GET /api/state`, reveal after it settles, never write before restoring | the app reopens on the saved tab and layout with no flash |
 | Building blocks | the `06` section 9 components, each once | used by every later phase |
 | Surface keys | `Ctrl+1/2/3` | they switch surfaces |

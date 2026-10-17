@@ -138,7 +138,7 @@ A stored value that no longer validates reads as its default; an unknown stored 
 | `resumeMode` | `ask`, `resume`, `restart` | `ask` |
 | `watchedPercent` | `90`, `95`, `100` | `90` |
 | `liveOnOpen` | `last`, `none` | `last` |
-| `libraryView` | `grid`, `list` | `grid` |
+| `libraryView` | `grid`, `list`, `rows` | `grid` |
 | `librarySort` | `newest`, `oldest`, `az`, `year` | `newest` |
 | `showContinue` | boolean | `true` |
 | `pauseHistory` | boolean | `false` |
