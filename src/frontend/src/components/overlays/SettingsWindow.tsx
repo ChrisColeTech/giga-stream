@@ -8,7 +8,6 @@ import { SettingsRail } from "@/components/settings/SettingsRail";
 import { workSpec } from "@/constants/child-window";
 import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
-import { saveSetting } from "@/services/settings";
 import { ChildWindow } from "./ChildWindow";
 
 const SPEC = workSpec("settings", "Settings");
@@ -20,23 +19,15 @@ export function SettingsWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
   const openCollections = useAppStore((state) => state.openCollections);
   const requestLibrary = useAppStore((state) => state.requestLibrary);
-  const say = useAppStore((state) => state.say);
   const adminUrl = useAppStore((state) => state.adminUrl);
+  const setAdminUrl = useAppStore((state) => state.setAdminUrl);
+  const backend = useAppStore((state) => state.backend);
+  const appVersion = useAppStore((state) => state.appVersion);
+  const runtime = useAppStore((state) => state.runtime);
   const [section, setSection] = useState<SettingsSectionId>("appearance");
 
   /* Closes Settings and shows the library on its History view (the request closes the window with it). */
   const openHistory = () => requestLibrary({ source: "history" });
-
-  /* A refused save is reported once on the notice line; the section keeps the draft in its field. */
-  const commitAddress = (address: string) => {
-    const revision = useAppStore.getState().settingsRevision;
-    void saveSetting("adminUrl", address)
-      .then((settings) => {
-        useAppStore.getState().applyCommittedSettings(settings, revision);
-        say("The admin address was saved.");
-      })
-      .catch((error: unknown) => say(error instanceof Error ? error.message : "The admin address was not saved.", "warn"));
-  };
 
   return (
     <ChildWindow spec={SPEC} onClose={closeOverlay}>
@@ -51,8 +42,10 @@ export function SettingsWindow() {
           {section === "library" && (
             <LibrarySection onOpenCollections={() => openCollections()} onOpenHistory={openHistory} />
           )}
-          {section === "admin" && <AdminBackendSection adminUrl={adminUrl} onCommit={commitAddress} />}
-          {section === "about" && <AboutSection />}
+          {section === "admin" && (
+            <AdminBackendSection adminUrl={adminUrl} backend={backend} onCommit={setAdminUrl} />
+          )}
+          {section === "about" && <AboutSection version={appVersion} runtime={runtime} />}
         </div>
       </div>
     </ChildWindow>
