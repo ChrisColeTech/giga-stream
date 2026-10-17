@@ -58,7 +58,7 @@ export function PlayerStage({ view, commands }: PlayerStageProps) {
       tabIndex={-1}
       aria-label="Stage"
       onKeyDown={onKeyDown}
-      className="flex min-h-0 flex-1 flex-col bg-surface outline-none fullscreen:bg-black"
+      className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg outline-none fullscreen:bg-black"
     >
       {tab !== undefined && (
         <StageToolbar
@@ -69,13 +69,14 @@ export function PlayerStage({ view, commands }: PlayerStageProps) {
           onFullscreen={toggleFullscreen}
           onRetry={commands.retry}
           onReveal={commands.reveal}
+          onClose={commands.close}
         />
       )}
       {tab !== undefined && resume !== undefined && (
         <ResumeBanner progress={resume} onResume={commands.resume} onStartOver={commands.startOver} />
       )}
-      <div className="relative min-h-0 flex-1 p-4">
-        <video controls playsInline preload="metadata" aria-label={tab?.title ?? "Player"} className="size-full bg-black object-contain" />
+      <div className="relative min-h-0 flex-1">
+        <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"} className="size-full bg-bg object-contain" />
         {stage.kind === "failed" && <StageNote reason={stage.reason} onRetry={commands.retry} />}
       </div>
     </section>

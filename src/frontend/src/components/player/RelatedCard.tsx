@@ -7,7 +7,7 @@ export interface RelatedCardProps {
 }
 
 /** One related title (`06` section 5.5): a 2:3 poster, the title and the year. Sized to the band: at its 140 px the
- *  poster is 51 by 77 px and the card column is 72 px. */
+ *  poster is 48 by 72 px and the card column is 72 px, so a card is 102 px tall inside the 112 px body. */
 export function RelatedCard({ item, onOpen }: RelatedCardProps) {
   return (
     <button
@@ -16,7 +16,7 @@ export function RelatedCard({ item, onOpen }: RelatedCardProps) {
       title={item.title}
       className="flex w-[72px] flex-none cursor-pointer flex-col items-center gap-1 border-0 bg-transparent p-0 text-left font-sans text-muted hover:text-text"
     >
-      <span className="block w-[51px]">
+      <span className="block w-12">
         <PosterImage src={item.posterUrl} alt={item.title} />
       </span>
       <span className="w-full truncate text-center text-[11px] leading-tight text-text">{item.title}</span>

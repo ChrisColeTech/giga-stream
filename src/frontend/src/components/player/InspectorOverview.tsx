@@ -9,8 +9,8 @@ export interface InspectorOverviewProps {
   readonly view: PlayerView;
 }
 
-/** The Overview block (`06` section 5.4): a poster at the pane's width, the identity, the plot, the rating and the top
- *  genres. Quality is drawn only when the library holds a real value. */
+/** The Overview block (`06` section 5.4): a 2:3 poster, capped at 120 px wide so Details and Watch fit beneath it, the
+ *  identity, the plot, the rating and the top genres. Quality is drawn only when the library holds a real value. */
 export function InspectorOverview({ view }: InspectorOverviewProps) {
   const { tab, item, detail } = view;
   if (tab === undefined) return null;
@@ -19,7 +19,9 @@ export function InspectorOverview({ view }: InspectorOverviewProps) {
   const genres = (detail?.genres ?? item?.genres ?? []).slice(0, TOP_GENRES);
   return (
     <div className="flex flex-col gap-2 px-2.5 pt-1">
-      <PosterImage src={detail?.posterUrl ?? item?.posterUrl} alt={tab.title} />
+      <div className="w-[120px] max-w-full">
+        <PosterImage src={detail?.posterUrl ?? item?.posterUrl} alt={tab.title} />
+      </div>
       <span className="text-[15px] leading-tight font-semibold text-text">{tab.title}</span>
       <div className="flex flex-col">
         {year !== undefined && <PlayerFact label="Year" value={String(year)} />}

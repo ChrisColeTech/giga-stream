@@ -3,28 +3,31 @@ import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
-import { PlayerTabs } from "@/components/player/PlayerTabs";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { ACTIVE_TAB_ID, PLAYER_TABS } from "@/fixtures/player";
 import { MEMBERSHIP } from "@/fixtures/collections";
 import type { PlayerCommands } from "@/lib/player-commands";
-import { createPlayerSession, reducePlayerSession, tabFromItem } from "@/lib/player-session";
+import { createPlayerSession, itemFromLibrary, reducePlayerSession } from "@/lib/player-session";
 import { viewOf } from "@/lib/player-view";
 import { retryStream } from "@/services/channels";
 import { playItem, removeHistoryEntry, setFavourite, setMembership } from "@/services/library";
 import type { ServiceResult } from "@/services/not-connected";
 import { useAppStore } from "@/store/app-store";
 
-const INITIAL_SESSION = createPlayerSession(PLAYER_TABS, ACTIVE_TAB_ID, MEMBERSHIP);
+/** The fixture's active item is the one playing when the Player opens (`06` section 5.1: one item at a time). */
+const INITIAL_SESSION = createPlayerSession(
+  PLAYER_TABS.find((item) => item.id === ACTIVE_TAB_ID) ?? null,
+  MEMBERSHIP,
+);
 
 /** A refused press reports its sentence once on the notice line, and changes nothing else. */
 function reportRefusal(result: ServiceResult, say: (sentence: string, tone: "warn") => void): void {
   if (!result.ok) say(result.message, "warn");
 }
 
-/** Player: the browser on the left, the tabs and the stage in the centre, the inspector on the right, and the related band
- *  along the bottom. Local presses change the session here; fileserver presses call the service and change the session
- *  only when it accepts. With no tab open the panes are skeletons and the stage is the player alone. */
+/** Player: the browser on the left, the stage in the centre, the inspector on the right, and the related band along the
+ *  bottom. One title or file at a time. Local presses change the session here; fileserver presses call the service and
+ *  change the session only when it accepts. With nothing open the panes are skeletons and the stage is the player alone. */
 export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, INITIAL_SESSION);
   const say = useAppStore((state) => state.say);
@@ -36,6 +39,7 @@ export function PlayerPage({ active }: { active: boolean }) {
   const commands: PlayerCommands = {
     retry: () => refuse(retryStream()),
     reveal: () => setSurface("library"),
+    close: () => dispatch({ type: "close" }),
     resume: () => {
       if (ref !== undefined) refuse(playItem(ref));
     },
@@ -57,7 +61,7 @@ export function PlayerPage({ active }: { active: boolean }) {
     removeHistory: (watchId) => refuse(removeHistoryEntry(watchId)),
     openRelated: (item) => {
       const result = playItem(item.ref);
-      if (result.ok) dispatch({ type: "open", tab: tabFromItem(item) });
+      if (result.ok) dispatch({ type: "open", item: itemFromLibrary(item) });
       else refuse(result);
     },
   };
@@ -69,27 +73,11 @@ export function PlayerPage({ active }: { active: boolean }) {
       left={
         <PlayerBrowser
           view={view}
-          onSeason={(season) => {
-            if (view.tab !== undefined) dispatch({ type: "season", id: view.tab.id, season });
-          }}
-          onEpisode={(season, episode) => {
-            if (view.tab !== undefined) dispatch({ type: "episode", id: view.tab.id, season, episode });
-          }}
+          onSeason={(season) => dispatch({ type: "season", season })}
+          onEpisode={(season, episode) => dispatch({ type: "episode", season, episode })}
         />
       }
-      center={
-        <div className="flex min-h-0 flex-1 flex-col">
-          <PlayerTabs
-            tabs={session.tabs}
-            activeId={session.activeId}
-            onActivate={(id) => dispatch({ type: "activate", id })}
-            onClose={(id) => dispatch({ type: "close", id })}
-            onCloseOthers={(id) => dispatch({ type: "closeOthers", id })}
-            onReveal={commands.reveal}
-          />
-          <PlayerStage view={view} commands={commands} />
-        </div>
-      }
+      center={<PlayerStage view={view} commands={commands} />}
       right={<PlayerInspector view={view} commands={commands} />}
       bottom={
         <PlayerRelated
