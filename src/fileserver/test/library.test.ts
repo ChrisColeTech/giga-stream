@@ -121,7 +121,7 @@ test("view=favorites lists the tables' rows; without the backend a title degrade
 
 test("view=collection answers members and folder files; unknown is 404, a missing id is 422", async () => {
   const t = await closedApp();
-  const made = await send(t.app, "POST", "/api/collections", { name: "Lane" });
+  const made = await send(t.app, "POST", "/api/collections", { name: "Lane", type: "local" });
   const collectionId = String(pick(made.body, "data.id"));
   await send(t.app, "PUT", `/api/collections/${collectionId}/items`, { kind: "title", id: "movie-603" });
   localFile(t, "Reel.mkv", { height: 720, collectionId });

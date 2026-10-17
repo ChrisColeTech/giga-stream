@@ -5,6 +5,7 @@
  * fileserver unchanged; a local item is a keyed row in `local_files`.
  */
 export type ItemRef = { kind: "title" | "local"; id: string };
+export type CollectionType = "movie" | "tv" | "local";
 
 /** An attached folder: what Library shows about it. `path` never appears anywhere (001 header). */
 export interface Folder {
@@ -24,6 +25,7 @@ export interface Folder {
 export interface Collection {
   id: string;
   name: string;
+  type: CollectionType;
   /** Manual members plus the file rows of its folders. */
   itemCount: number;
   folders: Folder[];

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import { openDatabase } from "../src/store/database.js";
 import { createCollectionRepository } from "../src/store/collection-repository.js";
@@ -24,7 +25,16 @@ function makeFolder(name: string): void {
   writeFileSync(path.join(folder, "one.mp4"), "bytes");
 }
 
-function jobsOf(answer: { body: unknown }): Array<{ id: string; kind: string; state: string; label: string; error?: { code: string } }> {
+interface JobAnswer {
+  id: string;
+  kind: string;
+  state: string;
+  label: string;
+  folderId?: string;
+  error?: { code: string };
+}
+
+function jobsOf(answer: { body: unknown }): JobAnswer[] {
   assert.ok(Array.isArray(pick(answer.body, "data")));
   return pick(answer.body, "data") as never;
 }
@@ -42,7 +52,7 @@ async function settled(t: AppRef, jobId: string): Promise<void> {
 async function queuedScanJob(t: AppRef): Promise<string> {
   makeFolder("JobsLane");
   const chooser = await send(t.app, "POST", "/api/fs/dialog", { name: "JobsLane" });
-  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Races" });
+  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Races", type: "local" });
   await send(t.app, "POST", `/api/collections/${pick(makeCollection.body, "data.id")}/folders`, {
     token: pick(chooser.body, "data.token"),
   });
@@ -63,6 +73,27 @@ test("a job row answers with the shape of docs/03 section 3.9 and never a path",
   assert.equal(job?.label, "Scanning JobsLane");
   assert.equal(job?.state, "done");
   assert.ok(!String(job?.label).includes("\\")); // a Windows path would show a backslash anywhere
+  await t.dispose();
+});
+
+test("folder scan identity comes from its stored request on list and cancel only", async () => {
+  const t = await makeApp();
+  const db = new DatabaseSync(path.join(t.dataDir, "giga-stream.db"));
+  const insert = db.prepare(
+    "INSERT INTO jobs (id, kind, label, state, request, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  );
+  insert.run("scan-known", "folder-scan", "Scanning Known", "running", JSON.stringify({ folderId: "folder-exact" }), 3);
+  insert.run("poster-known", "poster-fetch", "Capturing one", "done", JSON.stringify({ localFileId: "file-1" }), 2);
+  insert.run("scan-old", "folder-scan", "Old scan", "done", "null", 1);
+  db.close();
+
+  const listed = jobsOf(await send(t.app, "GET", "/api/jobs"));
+  assert.equal(listed.find((job) => job.id === "scan-known")?.folderId, "folder-exact");
+  assert.ok(!("folderId" in (listed.find((job) => job.id === "poster-known") ?? {})));
+  assert.ok(!("folderId" in (listed.find((job) => job.id === "scan-old") ?? {})));
+  const cancelled = await send(t.app, "POST", "/api/jobs/scan-known/cancel");
+  assert.equal(pick(cancelled.body, "data.folderId"), "folder-exact");
+  assert.equal(pick(cancelled.body, "data.state"), "cancelling");
   await t.dispose();
 });
 
@@ -97,6 +128,8 @@ test("a restart marks every job left behind as interrupted, with none resumed", 
   assert.equal(states.get("job-cancelling")?.state, "interrupted");
   assert.equal(states.get("job-done")?.state, "done");
   assert.equal(states.get("job-queued")?.error?.code, "job.interrupted");
+  assert.equal(states.get("job-queued")?.folderId, "any");
+  assert.equal(states.get("job-done")?.folderId, undefined);
   await second.dispose();
   rmSync(dataDir, { recursive: true, force: true });
 });
@@ -107,7 +140,7 @@ test("a scan job stays indeterminate while the walk finds files, then climbs to 
   // Real stores on an in-memory database; only the stills lane is a stub.
   const db = openDatabase(":memory:");
   const folders = createCollectionRepository(db);
-  folders.insertCollection("col-1", "Percent", 0);
+  folders.insertCollection("col-1", "Percent", "local", 0);
   folders.addFolder("folder-1", "col-1", root, "PercentLane", 0);
   const stills: string[] = [];
   const scans = createScanService({

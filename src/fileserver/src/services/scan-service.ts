@@ -1,42 +1,36 @@
 import { scanFolder } from "../../../shared/media/dist/scan/folder-scan.js";
-import type { ScanEvent } from "../../../shared/media/dist/types/scan.js";
 import { SCAN_EVENT_BUFFER } from "../constants/media-files.js";
 import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository, FolderRow } from "../store/collection-repository.js";
 import type { LocalFileRepository } from "../store/local-file-repository.js";
+import { publicScanEvent, type PublicScanEvent } from "../types/scan-event.js";
 import type { JobRunner, JobService } from "./job-service.js";
 import type { PosterFetchService } from "./poster-fetch.js";
 
-/** The events of one running scan and every reader below it (the NDJSON route's hold). */
 interface ScanRun {
-  events: ScanEvent[];
-  readers: Map<number, { onEvent: (event: ScanEvent) => void; onEnd: () => void }>;
+  jobId: string;
+  events: PublicScanEvent[];
+  readers: Map<number, { onEvent: Reader; onEnd: () => void }>;
+  ended: boolean;
+  found: number;
+  probed: number;
 }
 
-type Reader = (event: ScanEvent) => void;
+type Reader = (event: PublicScanEvent) => void;
 
 export interface ScanStream {
-  /** A fixed snapshot for the catch-up of a reader that attaches late (bounded, the brief). */
-  snapshot: readonly ScanEvent[];
-  /** Subscribes to the live stream; `onEnd` arrives when the scan stops without a last event. */
+  snapshot: readonly PublicScanEvent[];
   subscribe: (onEvent: Reader, onEnd: () => void) => () => void;
 }
 
 export interface ScanService {
-  /** One scan per folder at a time: a second while one is queued or running is `409 job.running`. */
   queueScan: (folderId: string) => void;
-  /** The runner one registers for kind `folder-scan` (3.9). */
   runner: JobRunner;
-  /** `true` while a scan for the folder is queued or running — a queued one is still going. */
   scanning: (folderId: string) => boolean;
-  /**
-   * A late NDJSON reader for a folder that exists — a missing one is `404 collection.not_found`,
-   * exactly like every other folder route (03 sections 3.7 and 3.8) — or `undefined` when no scan
-   * is running for it, which the route answers `409 job.not_running` (3.8).
-   */
   readStream: (folderId: string) => ScanStream | undefined;
-  /** Folder removal cancels the folder's scan; a settled job is left alone. */
   cancel: (folderId: string) => void;
+  /** Ends and forgets a folder's process-local channel before its persisted folder is removed. */
+  discard: (folderId: string) => void;
 }
 
 const notFound = (): AppError =>
@@ -48,6 +42,15 @@ function displayTitle(relativePath: string): string {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
+const newRun = (jobId: string): ScanRun => ({
+  jobId,
+  events: [],
+  readers: new Map(),
+  ended: false,
+  found: 0,
+  probed: 0,
+});
+
 export function createScanService(deps: {
   jobs: JobService;
   folders: CollectionRepository;
@@ -56,94 +59,109 @@ export function createScanService(deps: {
   now: () => number;
 }): ScanService {
   const { jobs, folders, files, posters, now } = deps;
-  /** folder id -> its live scan; a late client catches up from the bounded buffer. */
-  const running = new Map<string, ScanRun>();
-  /** folder id -> the job id of a queued or running scan (one scan per folder, 3.8). */
-  const activeJobs = new Map<string, string>();
+  const runs = new Map<string, ScanRun>();
   let readerId = 0;
 
-  const queuedId = (folderId: string): string | undefined => {
-    const jobId = activeJobs.get(folderId);
-    if (jobId === undefined) return undefined;
-    let state: string | undefined;
-    try {
-      state = jobs.get(jobId).state;
-    } catch {
-      state = undefined; // The job row was dismissed; the folder is free again.
-    }
-    if (state === "queued" || state === "running" || state === "cancelling") return jobId;
-    activeJobs.delete(folderId);
-    return undefined;
-  };
-
-  function announce(run: ScanRun, event: ScanEvent): void {
+  function announce(run: ScanRun, event: PublicScanEvent): void {
     run.events.push(event);
     if (run.events.length > SCAN_EVENT_BUFFER) run.events.shift();
-    for (const reader of run.readers.values()) reader.onEvent(event);
+    if (event.type === "found") run.found += 1;
+    if (event.type === "probed") run.probed += 1;
+    for (const reader of [...run.readers.values()]) reader.onEvent(event);
   }
 
-  function titleOf(folder: FolderRow): string {
-    return `Scanning ${folder.name}`;
+  function end(run: ScanRun): void {
+    if (run.ended) return;
+    run.ended = true;
+    for (const reader of run.readers.values()) reader.onEnd();
+    run.readers.clear();
   }
 
-  return {
+  jobs.observe(({ type, job }) => {
+    if (job.kind !== "folder-scan" || job.folderId === undefined) return;
+    const run = runs.get(job.folderId);
+    if (run === undefined || run.jobId !== job.id) return;
+    if (type === "dismissed") {
+      runs.delete(job.folderId);
+      return;
+    }
+    if (job.state === "cancelled" && !run.events.some((event) => event.type === "cancelled")) {
+      announce(run, { type: "cancelled", found: run.found, probed: run.probed });
+    }
+    end(run);
+    if (job.state !== "done" && job.state !== "cancelled") runs.delete(job.folderId);
+  });
+
+  const requireFolder = (folderId: string): FolderRow => {
+    const folder = folders.findFolder(folderId);
+    if (folder === null) throw notFound();
+    return folder;
+  };
+
+  const titleOf = (folder: FolderRow): string => `Scanning ${folder.name}`;
+
+  const service: ScanService = {
     queueScan(folderId) {
-      const folder = folders.findFolder(folderId);
-      if (folder === null) throw notFound();
-      if (running.has(folderId) || queuedId(folderId) !== undefined) {
+      const folder = requireFolder(folderId);
+      const previous = runs.get(folderId);
+      if (previous !== undefined && !previous.ended) {
         throw new AppError("job.running", 409, "That folder is already being scanned.");
       }
       const jobId = jobs.enqueue("folder-scan", titleOf(folder), { folderId });
-      activeJobs.set(folderId, jobId);
+      runs.set(folderId, newRun(jobId));
     },
 
-    scanning(folderId) {
-      return running.has(folderId) || queuedId(folderId) !== undefined;
-    },
+    scanning: (folderId) => runs.get(folderId)?.ended === false,
 
     readStream(folderId) {
-      // Existence first (03 sections 3.7 and 3.8): a folder that is not there is 404 on every
-      // folder route, and `job.not_running` describes a folder that exists but is not scanning.
-      if (folders.findFolder(folderId) === null) throw notFound();
-      const run = running.get(folderId);
+      requireFolder(folderId);
+      const run = runs.get(folderId);
       if (run === undefined) return undefined;
-      const snapshot = run.events.slice();
-      const map = run.readers;
+      if (run.ended && !run.events.some((event) => event.type === "done" || event.type === "cancelled")) {
+        runs.delete(folderId);
+        return undefined;
+      }
       return {
-        snapshot,
+        snapshot: run.events.slice(),
         subscribe(onEvent, onEnd) {
+          if (run.ended) {
+            onEnd();
+            return () => undefined;
+          }
           const id = ++readerId;
-          map.set(id, { onEvent, onEnd });
-          return () => void map.delete(id);
+          run.readers.set(id, { onEvent, onEnd });
+          return () => void run.readers.delete(id);
         },
       };
     },
 
     cancel(folderId) {
-      const jobId = queuedId(folderId);
-      if (jobId === undefined) return;
+      const run = runs.get(folderId);
+      if (run === undefined || run.ended) return;
       try {
-        jobs.cancel(jobId);
+        jobs.cancel(run.jobId);
       } catch {
-        // The job settled in between (for example by cancel route); nothing hangs on it.
+        end(run);
       }
-      activeJobs.delete(folderId);
+    },
+
+    discard(folderId) {
+      const run = runs.get(folderId);
+      if (run !== undefined) end(run);
+      runs.delete(folderId);
     },
 
     runner: async (context): Promise<void> => {
       if (!("folderId" in context.request)) {
         throw new AppError("internal.failure", 500, "A scan job needs a folder id.");
       }
-      const folderId = context.request.folderId;
-      const folder = folders.findFolder(folderId);
-      if (folder === null) throw notFound();
-      const run: ScanRun = { events: [], readers: new Map() };
-      activeJobs.delete(folderId);
-      running.set(folderId, run);
+      const folder = requireFolder(context.request.folderId);
+      const run = runs.get(folder.id) ?? newRun(context.jobId);
+      if (run.jobId !== context.jobId) return;
+      runs.set(folder.id, run);
       const keepPaths: string[] = [];
       try {
         for await (const event of scanFolder(folder.path, { signal: context.signal })) {
-          announce(run, event);
           if (event.type === "found") {
             keepPaths.push(event.file.path);
             const row = files.recordFileInfo({
@@ -158,27 +176,24 @@ export function createScanService(deps: {
             if (row.isNewOrChanged) posters.queue(row.id, row.title);
           } else if (event.type === "probed") {
             const row = files.findByPath(folder.id, event.file.path);
-            if (row !== null) {
-              // The unplayable rows carry the marker code so the client can name the problem (3.8).
-              files.writeFacts({
-                id: row.id,
-                facts: event.facts,
-                ...(event.facts.playable ? {} : { errorCode: "media.unplayable" }),
-              });
-            }
+            if (row !== null) files.writeFacts({
+              id: row.id,
+              facts: event.facts,
+              ...(event.facts.playable ? {} : { errorCode: "media.unplayable" }),
+            });
           } else if (event.type === "progress") {
-            // While the walk is still discovering files the total is unknown: report indeterminate
-            // (22 section 7a), never a false 0; the job's percent simply stays unset (3.9).
             context.report(event.total === null ? null : Math.round((event.probed / event.total) * 100));
           } else if (event.type === "done") {
             folders.setFolderScannedAt(folder.id, now());
             files.deleteMissing(folder.id, keepPaths);
           }
+          // A terminal success is public only after its database consequences have committed.
+          announce(run, publicScanEvent(event));
         }
       } finally {
-        for (const reader of run.readers.values()) reader.onEnd();
-        running.delete(folderId);
+        end(run);
       }
     },
   };
+  return service;
 }

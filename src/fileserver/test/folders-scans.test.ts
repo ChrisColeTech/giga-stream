@@ -60,7 +60,7 @@ async function collectionOf(t: FileserverApp, collectionId: string): Promise<Rec
 /** Attaches one folder from the test root under a fresh collection and answers the two ids. */
 async function attach(t: FileserverApp, name: string, collectionName: string): Promise<{ collectionId: string; folderId: string }> {
   const chooser = await send(t.app, "POST", "/api/fs/dialog", { name });
-  const makeCollection = await send(t.app, "POST", "/api/collections", { name: collectionName });
+  const makeCollection = await send(t.app, "POST", "/api/collections", { name: collectionName, type: "local" });
   const attached = await send(t.app, "POST", `/api/collections/${pick(makeCollection.body, "data.id")}/folders`, {
     token: pick(chooser.body, "data.token"),
   });
@@ -69,6 +69,22 @@ async function attach(t: FileserverApp, name: string, collectionName: string): P
     collectionId: String(pick(makeCollection.body, "data.id")),
     folderId: String(pick(attached.body, "data.id")),
   };
+}
+
+function assertPathFree(value: unknown, forbidden: string): void {
+  if (typeof value === "string") {
+    assert.ok(!value.includes(forbidden), `scan output exposed ${forbidden}`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) assertPathFree(item, forbidden);
+    return;
+  }
+  if (typeof value !== "object" || value === null) return;
+  for (const [key, item] of Object.entries(value)) {
+    assert.notEqual(key, "absolutePath");
+    assertPathFree(item, forbidden);
+  }
 }
 
 test("the test lane chooses a folder by name and the answer never carries a path", async () => {
@@ -108,11 +124,13 @@ test("the scan streams NDJSON lines, `found` per file, and ends on `done`", asyn
   const lines = body
     .split("\n")
     .filter((line) => line !== "")
-    .map((line) => JSON.parse(line) as { type: string });
+    .map((line) => JSON.parse(line) as Record<string, unknown> & { type: string });
   const kinds = lines.map((line) => line.type);
   assert.ok(kinds.filter((one) => one === "found").length >= 2);
   assert.equal(kinds.at(-1), "done");
   assert.ok(kinds.every((one) => ["found", "probed", "progress", "done", "cancelled"].includes(one)));
+  assert.deepEqual(Object.keys(lines.at(-1) ?? {}).sort(), ["found", "probed", "type", "unplayable"]);
+  assertPathFree(lines, folderRoot);
   await awaitScansSettled(t);
   await t.dispose();
 });
@@ -121,14 +139,24 @@ test("a second scan while one is still queued or running is refused with job.run
   makeFolder("CollideLane", []);
   const t = await makeApp();
   const chooser = await send(t.app, "POST", "/api/fs/dialog", { name: "CollideLane" });
-  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Races" });
+  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Races", type: "local" });
   const token = pick(chooser.body, "data.token");
   const attached = await send(t.app, "POST", `/api/collections/${pick(makeCollection.body, "data.id")}/folders`, { token });
   const folderId = String(pick(attached.body, "data.id"));
   // The attach itself queued the scan, so a rescan right away collides with it.
   assert.equal(pick((await send(t.app, "POST", `/api/folders/${folderId}/rescan`)).body, "error.code"), "job.running");
   await awaitScansSettled(t);
-  // After settling, the stream route answers 409 job.not_running and a rescan queues again.
+  // Terminal catch-up remains until dismissal; dismissing that exact folder scan cleans it up.
+  const terminal = await t.app.inject({ method: "GET", url: `/api/folders/${folderId}/scan` });
+  assert.equal(terminal.statusCode, 200);
+  assert.equal(JSON.parse(terminal.body.trim()).type, "done");
+  const jobs = pick((await send(t.app, "GET", "/api/jobs")).body, "data") as Array<{
+    id: string;
+    folderId?: string;
+  }>;
+  const scan = jobs.find((job) => job.folderId === folderId);
+  assert.ok(scan !== undefined);
+  await send(t.app, "DELETE", `/api/jobs/${scan.id}`);
   assert.equal(pick((await send(t.app, "GET", `/api/folders/${folderId}/scan`)).body, "error.code"), "job.not_running");
   assert.equal((await send(t.app, "POST", `/api/folders/${folderId}/rescan`)).status, 202);
   await awaitScansSettled(t);
@@ -171,6 +199,23 @@ test("an unknown folder is 404 collection.not_found on every folder route", asyn
   assert.equal((await send(t.app, "DELETE", "/api/folders/no-such-folder")).status, 404);
   assert.equal((await send(t.app, "PUT", "/api/folders/no-such-folder", { token: "x" })).status, 404);
   await t.dispose();
+});
+
+test("terminal catch-up is process-local and is not reconstructed after restart", async () => {
+  makeFolder("RestartLane", []);
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-scan-restart-"));
+  const first = await makeApp({ dataDir });
+  const ids = await attach(first, "RestartLane", "Restart collection");
+  await awaitScansSettled(first);
+  assert.equal((await first.app.inject({ method: "GET", url: `/api/folders/${ids.folderId}/scan` })).statusCode, 200);
+  await first.dispose();
+
+  const second = await makeApp({ dataDir });
+  const answer = await send(second.app, "GET", `/api/folders/${ids.folderId}/scan`);
+  assert.equal(answer.status, 409);
+  assert.equal(pick(answer.body, "error.code"), "job.not_running");
+  await second.dispose();
+  rmSync(dataDir, { recursive: true, force: true });
 });
 
 after(async () => {

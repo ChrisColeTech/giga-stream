@@ -25,7 +25,7 @@ test("the state answer is the complete picture in one request (docs/03 section 4
 
 test("a collection and its settled jobs show up fresh in the state answer", async () => {
   const t = await makeApp();
-  const made = await send(t.app, "POST", "/api/collections", { name: "State lane" });
+  const made = await send(t.app, "POST", "/api/collections", { name: "State lane", type: "local" });
   assert.equal(made.status, 201);
   const state = await send(t.app, "GET", "/api/state");
   const collections = pick(state.body, "data.collections") as Array<{ name: string; itemCount: number }>;

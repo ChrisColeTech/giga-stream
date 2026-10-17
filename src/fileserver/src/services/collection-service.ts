@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { Collection, Folder, ItemRef } from "../types/collection.js";
+import type { Collection, CollectionType, Folder, ItemRef } from "../types/collection.js";
 import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository, FolderRow } from "../store/collection-repository.js";
 import type { FsDialogService } from "./fs-dialog-service.js";
@@ -19,6 +19,12 @@ export function readName(name: unknown): string {
 }
 
 const kinds = new Set(["title", "local"]);
+const collectionTypes = new Set<unknown>(["movie", "tv", "local"]);
+
+function readType(type: unknown): CollectionType {
+  if (!collectionTypes.has(type)) throw invalid();
+  return type as CollectionType;
+}
 
 function readKind(kind: string): ItemRef["kind"] {
   if (!kinds.has(kind)) throw invalid();
@@ -26,9 +32,9 @@ function readKind(kind: string): ItemRef["kind"] {
 }
 
 export interface CollectionService {
-  create: (name: unknown) => Collection;
+  create: (name: unknown, type: unknown) => Collection;
   list: () => Collection[];
-  rename: (collectionId: string, name: unknown) => Collection;
+  update: (collectionId: string, patch: { name?: unknown; type?: unknown }) => Collection;
   /** Removes it and its folders' records; disk is never touched; answers what the route tells (3.7). */
   remove: (collectionId: string) => { removed: string };
   addItem: (collectionId: string, kind: string, itemId: string) => Collection;
@@ -71,6 +77,7 @@ export function createCollectionService(deps: {
     return {
       id: row.id,
       name: row.name,
+      type: row.type,
       itemCount: collections.itemCount(id),
       folders,
       scanning: folders.some((folder) => folder.scanning),
@@ -86,28 +93,33 @@ export function createCollectionService(deps: {
   };
 
   return {
-    create(name) {
+    create(name, type) {
       const ready = readName(name);
       if (collections.nameTaken(ready) !== null) throw invalid();
       const id = randomUUID();
-      collections.insertCollection(id, ready, now());
+      collections.insertCollection(id, ready, readType(type), now());
       return collectionOf(id);
     },
 
     list: () => collections.listCollections().map((row) => collectionOf(row.id)),
 
-    rename(collectionId, name) {
+    update(collectionId, patch) {
       collectionOf(collectionId);
-      const ready = readName(name);
-      const other = collections.nameTaken(ready);
+      if (patch.name === undefined && patch.type === undefined) throw invalid();
+      const name = patch.name === undefined ? undefined : readName(patch.name);
+      const type = patch.type === undefined ? undefined : readType(patch.type);
+      const other = name === undefined ? null : collections.nameTaken(name);
       if (other !== null && other !== collectionId) throw invalid();
-      collections.renameCollection(collectionId, ready, now());
+      collections.updateCollection(collectionId, { ...(name !== undefined && { name }), ...(type !== undefined && { type }) }, now());
       return collectionOf(collectionId);
     },
 
     remove(collectionId) {
       collectionOf(collectionId);
-      for (const folder of collections.listFolders(collectionId)) scans.cancel(folder.id);
+      for (const folder of collections.listFolders(collectionId)) {
+        scans.cancel(folder.id);
+        scans.discard(folder.id);
+      }
       collections.deleteCollection(collectionId);
       return { removed: collectionId };
     },
@@ -154,6 +166,7 @@ export function createCollectionService(deps: {
     detachFolder(folderId) {
       requireFolder(folderId);
       scans.cancel(folderId);
+      scans.discard(folderId);
       collections.deleteFolder(folderId);
       return { removed: folderId };
     },

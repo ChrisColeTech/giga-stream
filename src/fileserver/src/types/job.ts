@@ -27,6 +27,8 @@ export interface Job {
   kind: JobKind;
   /** A short sentence such as "Scanning Music" — never a path (3.9). */
   label: string;
+  /** Present for folder scans only, derived from the persisted identifier-only request. */
+  folderId?: string;
   state: JobState;
   percent?: number;
   error?: { code: string; message: string };

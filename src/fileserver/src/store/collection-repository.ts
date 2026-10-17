@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import type { CollectionType } from "../types/collection.js";
 import type { Database } from "./database.js";
 
 /** Rows of the user's own data tables. `path` is private and never crosses into a DTO (001 header). */
 export interface CollectionRow {
   id: string;
   name: string;
+  type: CollectionType;
   createdAt: number;
   updatedAt: number;
 }
@@ -22,6 +24,7 @@ export interface FolderRow {
 const CollectionRowZ = z.object({
   id: z.string(),
   name: z.string(),
+  type: z.enum(["movie", "tv", "local"]),
   created_at: z.coerce.number(),
   updated_at: z.coerce.number(),
 });
@@ -36,27 +39,22 @@ const FolderRowZ = z.object({
 });
 
 export type ItemKind = "title" | "local";
-
 export interface CollectionRepository {
-  /** Alphabetical ignoring case (docs/03 section 3.7). */
   listCollections(): CollectionRow[];
   findCollection(id: string): CollectionRow | null;
-  /** The id of another collection with the same name ignoring case, or `null`. */
   nameTaken(name: string): string | null;
-  insertCollection(id: string, name: string, at: number): void;
-  renameCollection(id: string, name: string, at: number): void;
+  insertCollection(id: string, name: string, type: CollectionType, at: number): void;
+  updateCollection(id: string, patch: { name?: string; type?: CollectionType }, at: number): void;
   deleteCollection(id: string): void;
 
   addMember(collectionId: string, kind: ItemKind, itemId: string, at: number): void;
   removeMember(collectionId: string, kind: ItemKind, itemId: string): void;
-  /** The collection ids an item is in: manual members, or through a folder's file (3.7). */
   collectionsOfItem(kind: ItemKind, itemId: string): string[];
   itemCount(collectionId: string): number;
 
   listFolders(collectionId: string): FolderRow[];
   findFolder(folderId: string): FolderRow | null;
   addFolder(id: string, collectionId: string, path: string, name: string, at: number): void;
-  /** `PUT /api/folders/:folderId`: the folder moves; the name follows the new location. */
   setFolderLocation(folderId: string, path: string, name: string): void;
   setFolderScannedAt(folderId: string, at: number): void;
   deleteFolder(folderId: string): void;
@@ -64,11 +62,13 @@ export interface CollectionRepository {
 }
 
 export function createCollectionRepository(db: Database): CollectionRepository {
-  const listAll = db.prepare("SELECT id, name, created_at, updated_at FROM collections ORDER BY name COLLATE NOCASE");
-  const selectOne = db.prepare("SELECT id, name, created_at, updated_at FROM collections WHERE id = ?");
+  const listAll = db.prepare("SELECT id, name, type, created_at, updated_at FROM collections ORDER BY name COLLATE NOCASE");
+  const selectOne = db.prepare("SELECT id, name, type, created_at, updated_at FROM collections WHERE id = ?");
   const byName = db.prepare("SELECT id FROM collections WHERE name = ? COLLATE NOCASE");
-  const insertCollection = db.prepare("INSERT INTO collections (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)");
-  const rename = db.prepare("UPDATE collections SET name = ?, updated_at = ? WHERE id = ?");
+  const insertCollection = db.prepare(
+    "INSERT INTO collections (id, name, type, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+  );
+  const update = db.prepare("UPDATE collections SET name = COALESCE(?, name), type = COALESCE(?, type), updated_at = ? WHERE id = ?");
   const dropCollection = db.prepare("DELETE FROM collections WHERE id = ?");
 
   const addMember = db.prepare(
@@ -102,7 +102,7 @@ export function createCollectionRepository(db: Database): CollectionRepository {
   const collectionRow = (raw: unknown): CollectionRow | null => {
     const row = CollectionRowZ.safeParse(raw);
     return row.success
-      ? { id: row.data.id, name: row.data.name, createdAt: row.data.created_at, updatedAt: row.data.updated_at }
+      ? { id: row.data.id, name: row.data.name, type: row.data.type, createdAt: row.data.created_at, updatedAt: row.data.updated_at }
       : null;
   };
 
@@ -134,11 +134,11 @@ export function createCollectionRepository(db: Database): CollectionRepository {
       const row = byName.get(name) as { id?: string } | undefined;
       return row?.id ?? null;
     },
-    insertCollection(id, name, at) {
-      insertCollection.run(id, name, at, at);
+    insertCollection(id, name, type, at) {
+      insertCollection.run(id, name, type, at, at);
     },
-    renameCollection(id, name, at) {
-      rename.run(name, at, id);
+    updateCollection(id, patch, at) {
+      update.run(patch.name ?? null, patch.type ?? null, at, id);
     },
     deleteCollection(id) {
       dropCollection.run(id);

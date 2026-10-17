@@ -4,14 +4,14 @@ import { z } from "zod";
 import { AppError } from "../lib/app-error.js";
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
-import type { ScanEvent } from "../../../shared/media/dist/types/scan.js";
 import type { AppServices } from "../services/app-services.js";
+import type { PublicScanEvent } from "../types/scan-event.js";
 
 const CollectionParams = z.object({ collectionId: z.string() });
 const FolderParams = z.object({ folderId: z.string() });
 const TokenBody = z.object({ token: z.unknown().optional() }).passthrough();
 
-const asLine = (event: ScanEvent): string => `${JSON.stringify(event)}\n`;
+const asLine = (event: PublicScanEvent): string => `${JSON.stringify(event)}\n`;
 
 /** Folders: attach, move, rescan, detach, and the streamed NDJSON scan (docs/03 section 3.8). */
 export function registerFoldersRoutes(app: FastifyInstance, services: AppServices): void {
@@ -51,14 +51,14 @@ export function registerFoldersRoutes(app: FastifyInstance, services: AppService
 }
 
 /** One NDJSON line per event: the snapshot first, then everything the scan still yields. */
-function streamScan(
+export function streamScan(
   stream: NonNullable<ReturnType<AppServices["scans"]["readStream"]>>,
   raw: FastifyReply["raw"],
 ): void {
   raw.setHeader("content-type", "application/x-ndjson");
   raw.setHeader("cache-control", "no-store");
   let live = false;
-  const pending: Array<ScanEvent | null> = [];
+  const pending: Array<PublicScanEvent | null> = [];
   const unsubscribe = stream.subscribe(
     (event) => {
       if (live) raw.write(asLine(event));

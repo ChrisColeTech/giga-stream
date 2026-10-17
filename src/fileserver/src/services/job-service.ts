@@ -17,6 +17,7 @@ export interface JobContext {
 }
 
 export type JobRunner = (context: JobContext) => Promise<void>;
+export type JobLifecycleEvent = { type: "settled" | "dismissed"; job: Job };
 
 /** A runner that throws an `AppError` has chosen a safe code and sentence for the job row. */
 export interface JobService {
@@ -32,6 +33,8 @@ export interface JobService {
   cancel: (jobId: string) => Job;
   /** Settled only (3.9); answers the removed id. */
   dismiss: (jobId: string) => { removed: string };
+  /** Process-local lifecycle observation lets scan streams retain and clean their terminal channel. */
+  observe: (listener: (event: JobLifecycleEvent) => void) => () => void;
   /** Start recovery: every left-behind queued/running/cancelling row is `interrupted`; none resumes. */
   atStart: () => void;
   /** Stops accepting work and abandons runners; the database keeps their rows for the next start. */
@@ -63,6 +66,7 @@ export function createJobService(deps: { repository: JobRepository; now: () => n
   const requests = new Map<string, JobContext["request"]>();
   const waiting: string[] = [];
   const active = new Map<string, Promise<void>>();
+  const observers = new Set<(event: JobLifecycleEvent) => void>();
   let closed = false;
 
   const summaryOf = (jobId: string): Job => {
@@ -81,6 +85,8 @@ export function createJobService(deps: { repository: JobRepository; now: () => n
     });
     controllers.delete(jobId);
     requests.delete(jobId);
+    const job = repository.find(jobId);
+    if (job !== null) for (const observer of observers) observer({ type: "settled", job });
   }
 
   async function execute(jobId: string, kind: JobKind): Promise<void> {
@@ -168,7 +174,13 @@ export function createJobService(deps: { repository: JobRepository; now: () => n
         throw new AppError("job.not_settled", 409, "That job is still in progress.");
       }
       repository.remove(jobId);
+      for (const observer of observers) observer({ type: "dismissed", job });
       return { removed: jobId };
+    },
+
+    observe(listener) {
+      observers.add(listener);
+      return () => void observers.delete(listener);
     },
 
     atStart() {
