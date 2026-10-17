@@ -21,4 +21,5 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = {
   pauseHistory: false,
   rescanOnStartup: true,
   adminUrl: "",
+  defaultSource: null,
 };

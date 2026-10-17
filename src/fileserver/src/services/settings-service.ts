@@ -58,6 +58,7 @@ export function createSettingsService(deps: {
       pauseHistory: pick("pauseHistory"),
       rescanOnStartup: pick("rescanOnStartup"),
       adminUrl,
+      defaultSource: pick("defaultSource"),
     };
   }
 

@@ -60,3 +60,29 @@ describe("Player stage rendering", () => {
     assert.equal(playerStageRender(true, false, embed, { kind: "failed", reason: "Failed" }), "embed-failed");
   });
 });
+
+describe("the saved default source", () => {
+  const sources = playableSources([provider(1, 1), provider(2, 2)], "https://stream.example/a.m3u8");
+
+  it("is selected when the item offers it, whatever its position", () => {
+    assert.equal(selectedPlayerSource(sources, "provider:2")?.id, "provider:2");
+    assert.equal(selectedPlayerSource(sources, "app")?.id, "app");
+  });
+
+  it("falls back to the first source when the item does not offer it, or none is saved", () => {
+    assert.equal(selectedPlayerSource(sources, "provider:9")?.id, "provider:1");
+    assert.equal(selectedPlayerSource(sources, null)?.id, "provider:1");
+    assert.equal(selectedPlayerSource([], "provider:2"), undefined);
+  });
+
+  it("is saved by a pick and left alone by an item that lacks it", () => {
+    const store = useAppStore.getState();
+    assert.equal(store.playback.defaultSource, null);
+    store.setPlayback({ defaultSource: "provider:2" });
+    const other = playableSources([provider(1, 1)], undefined);
+    store.setPlayerSources(other, selectedPlayerSource(other, useAppStore.getState().playback.defaultSource)?.id ?? null);
+    assert.equal(useAppStore.getState().playerMedia.activeSourceId, "provider:1");
+    assert.equal(useAppStore.getState().playback.defaultSource, "provider:2");
+    assert.ok(useAppStore.getState().settingsRevision > 0, "the pick marks settings changed so the write-back saves it");
+  });
+});

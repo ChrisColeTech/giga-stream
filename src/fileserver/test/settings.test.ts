@@ -43,8 +43,23 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
       pauseHistory: false,
       rescanOnStartup: true,
       adminUrl: "http://127.0.0.1:8091",
+      defaultSource: null,
     },
   });
+  await t.dispose();
+});
+
+test("the default source saves, survives a read, resets with null and refuses nonsense", async () => {
+  const t = await makeApp();
+  const saved = await send(t.app, "PATCH", "/api/settings", { defaultSource: "provider:3" });
+  assert.equal(saved.status, 200);
+  assert.equal(pick(saved.body, "data.defaultSource"), "provider:3");
+  assert.equal(pick((await send(t.app, "GET", "/api/settings")).body, "data.defaultSource"), "provider:3");
+  const reset = await send(t.app, "PATCH", "/api/settings", { defaultSource: null });
+  assert.equal(pick(reset.body, "data.defaultSource"), null);
+  for (const bad of ["", 7, "x".repeat(201)]) {
+    assert.equal((await send(t.app, "PATCH", "/api/settings", { defaultSource: bad })).status, 422);
+  }
   await t.dispose();
 });
 

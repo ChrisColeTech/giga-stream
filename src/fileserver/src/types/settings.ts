@@ -25,6 +25,8 @@ export interface Settings {
   pauseHistory: boolean;
   rescanOnStartup: boolean;
   adminUrl: string;
+  /** The Player's source the person last chose (`provider:<id>` or `app`); null plays an item's first source. */
+  defaultSource: string | null;
 }
 
 export type SettingKey = keyof Settings;
@@ -50,6 +52,7 @@ export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   pauseHistory: z.boolean(),
   rescanOnStartup: z.boolean(),
   adminUrl: z.string().min(1).max(2048),
+  defaultSource: z.string().min(1).max(200).nullable(),
 };
 
 export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
@@ -72,6 +75,7 @@ export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
   pauseHistory: false,
   rescanOnStartup: true,
   adminUrl: "http://127.0.0.1:8091",
+  defaultSource: null,
 });
 
 export const SETTING_KEYS = Object.keys(SETTING_SCHEMAS) as SettingKey[];
@@ -96,4 +100,5 @@ export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   pauseHistory: "Pause history must be on or off.",
   rescanOnStartup: "Rescan on startup must be on or off.",
   adminUrl: "The admin address must be a full http(s) URL.",
+  defaultSource: "The default source must be a source name or empty.",
 };

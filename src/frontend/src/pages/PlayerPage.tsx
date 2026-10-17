@@ -41,6 +41,8 @@ export function PlayerPage({ active }: { active: boolean }) {
   const setPlayerItem = useAppStore((state) => state.setPlayerItem);
   const setSources = useAppStore((state) => state.setPlayerSources);
   const setSource = useAppStore((state) => state.setPlayerSource);
+  const setPlayback = useAppStore((state) => state.setPlayback);
+  const defaultSource = useAppStore((state) => state.playback.defaultSource);
   const setStage = useAppStore((state) => state.setPlayerStage);
   const setSurface = useAppStore((state) => state.setSurface);
   const requestLibrary = useAppStore((state) => state.requestLibrary);
@@ -56,7 +58,7 @@ export function PlayerPage({ active }: { active: boolean }) {
   });
   const playing = playingEpisodeOf(session);
   const sources = usePlayerSources(session, data);
-  const activeSource = selectedPlayerSource(sources, media.activeSourceId);
+  const activeSource = selectedPlayerSource(sources, defaultSource);
   const stageView = activeSource?.id === media.activeSourceId ? view : { ...view, stage: { kind: "loading" } as const };
   const playbackKey = playerPlaybackKey(session);
   const liveResume = resumeOf(view);
@@ -183,6 +185,7 @@ export function PlayerPage({ active }: { active: boolean }) {
         void progress.flush();
         resume.hold();
         setSource(id);
+        setPlayback({ defaultSource: id }); // the choice is the saved default (docs/31)
         setUserInitiated(true);
       }}
       loading={data.basePending && data.detail === undefined && data.localInfo === undefined} />}
