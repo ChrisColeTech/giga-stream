@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { CollectionSource } from "../types/collection.js";
 import type { ItemKind } from "./collection-repository.js";
 import type { Database } from "./database.js";
+import { localDisplayTitle } from "./local-file-repository.js";
 
 /** A watch entry as the library lists it (docs/03 section 3.5: history is the watch entries). */
 export interface LibraryWatchRow {
@@ -49,6 +50,7 @@ const WatchRowZ = z.object({
 });
 const FileRowZ = z.object({
   id: z.string(),
+  path: z.string(),
   title: z.string(),
   added_at: z.coerce.number(),
   poster_id: z.string().nullable(),
@@ -78,7 +80,7 @@ export function createLibraryRepository(db: Database): LibraryRepository {
     `SELECT ${watchColumns} FROM watch_entries WHERE item_kind = ? AND item_id = ? ORDER BY updated_at DESC, rowid DESC LIMIT 1`,
   );
   const selectFavorites = db.prepare("SELECT item_kind, item_id FROM favorites ORDER BY added_at DESC, rowid DESC");
-  const fileColumns = "id, title, added_at, poster_id, height";
+  const fileColumns = "id, path, title, added_at, poster_id, height";
   const selectFilesAll = db.prepare(`SELECT ${fileColumns} FROM local_files ORDER BY added_at DESC, rowid DESC`);
   const selectMembers = db.prepare(
     `SELECT item_kind, item_id, source FROM (
@@ -115,7 +117,7 @@ export function createLibraryRepository(db: Database): LibraryRepository {
     if (!row.success) return null;
     return {
       id: row.data.id,
-      title: row.data.title,
+      title: localDisplayTitle(row.data.title, row.data.path),
       addedAt: row.data.added_at,
       ...(row.data.poster_id !== null && { posterId: row.data.poster_id }),
       ...(row.data.height !== null && { height: row.data.height }),

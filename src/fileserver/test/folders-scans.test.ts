@@ -1,6 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 import type { FileserverApp } from "./app-fixture.js";
@@ -113,6 +114,22 @@ test("attaching queues the scan: the folder answers `scanning` before and after 
   assert.equal(pick(settled, "folders.0.scanning"), false);
   assert.equal(pick(settled, "itemCount"), 2);
   assert.ok(pick(settled, "folders.0.lastScannedAt") !== undefined);
+  await t.dispose();
+});
+
+test("a new scan stores the nonempty file basename as its library display title", async () => {
+  makeFolder("TitleLane", ["Feature Film.2026.mkv"]);
+  const t = await makeApp();
+  await attach(t, "TitleLane", "Features");
+  await awaitScansSettled(t);
+  const page = await send(t.app, "GET", "/api/library?type=local&q=feature&sort=az");
+  assert.equal(pick(page.body, "data.items.0.title"), "Feature Film.2026.mkv");
+  const fileId = String(pick(page.body, "data.items.0.ref.id"));
+  const db = new DatabaseSync(path.join(t.dataDir, "giga-stream.db"));
+  const stored = db.prepare("SELECT title FROM local_files WHERE id = ?").get(fileId) as { title: string };
+  assert.equal(stored.title, "Feature Film.2026.mkv");
+  db.close();
+  assert.ok(!JSON.stringify(page.body).includes(folderRoot));
   await t.dispose();
 });
 

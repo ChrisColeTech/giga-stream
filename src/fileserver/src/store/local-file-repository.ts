@@ -38,6 +38,18 @@ const RowSchema = z.object({
   added_at: z.coerce.number(),
 });
 
+/** Reduces stored metadata or a private path to one safe, nonempty display basename. */
+export function localDisplayTitle(storedTitle: string, privatePath: string): string {
+  for (const source of [storedTitle, privatePath]) {
+    const normalized = source.trim().replaceAll("\\", "/");
+    const basename = normalized.split("/").at(-1)?.trim();
+    if (basename !== undefined && basename !== "" && basename !== "." && basename !== "..") {
+      return /^[a-z]:$/i.test(basename) ? "Local media" : basename;
+    }
+  }
+  return "Local media";
+}
+
 export interface LocalFileRepository {
   find(id: string): LocalFileRow | null;
   findByPath(folderId: string, path: string): LocalFileRow | null;
@@ -91,7 +103,7 @@ export function createLocalFileRepository(db: Database): LocalFileRepository {
       folderId: row.data.folder_id,
       collectionId: row.data.collection_id,
       path: row.data.path,
-      title: row.data.title,
+      title: localDisplayTitle(row.data.title, row.data.path),
       ...(row.data.size_bytes !== null && { sizeBytes: row.data.size_bytes }),
       ...(row.data.mtime_ms !== null && { mtimeMs: row.data.mtime_ms }),
       addedAt: row.data.added_at,
@@ -122,17 +134,18 @@ export function createLocalFileRepository(db: Database): LocalFileRepository {
       const existing = toRow(selectByPath.get(input.folderId, input.path));
       if (existing === null) {
         const id = crypto.randomUUID();
+        const title = localDisplayTitle(input.title, input.path);
         insert.run(
           id,
           input.folderId,
           input.collectionId,
           input.path,
-          input.title,
+          title,
           input.sizeBytes,
           input.mtimeMs,
           input.at,
         );
-        return { id, title: input.title, isNewOrChanged: true };
+        return { id, title, isNewOrChanged: true };
       }
       if (existing.sizeBytes === input.sizeBytes && existing.mtimeMs === input.mtimeMs) {
         return { id: existing.id, title: existing.title, isNewOrChanged: false };

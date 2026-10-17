@@ -2,7 +2,7 @@ import { scanFolder } from "../../../shared/media/dist/scan/folder-scan.js";
 import { SCAN_EVENT_BUFFER } from "../constants/media-files.js";
 import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository, FolderRow } from "../store/collection-repository.js";
-import type { LocalFileRepository } from "../store/local-file-repository.js";
+import { localDisplayTitle, type LocalFileRepository } from "../store/local-file-repository.js";
 import { publicScanEvent, type PublicScanEvent } from "../types/scan-event.js";
 import type { JobRunner, JobService } from "./job-service.js";
 import type { PosterFetchService } from "./poster-fetch.js";
@@ -35,12 +35,6 @@ export interface ScanService {
 
 const notFound = (): AppError =>
   new AppError("collection.not_found", 404, "There is no such collection.");
-
-function displayTitle(relativePath: string): string {
-  const base = relativePath.split("/").at(-1) ?? relativePath;
-  const dot = base.lastIndexOf(".");
-  return dot > 0 ? base.slice(0, dot) : base;
-}
 
 const newRun = (jobId: string): ScanRun => ({
   jobId,
@@ -168,7 +162,7 @@ export function createScanService(deps: {
               folderId: folder.id,
               collectionId: folder.collectionId,
               path: event.file.path,
-              title: displayTitle(event.file.path),
+              title: localDisplayTitle(event.file.path, event.file.absolutePath),
               sizeBytes: event.file.sizeBytes,
               mtimeMs: event.file.modifiedMs,
               at: now(),
