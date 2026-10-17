@@ -32,6 +32,7 @@ export function CollectionRename({ collectionId, name }: { readonly collectionId
       </Row>
       <Strip>
         <Button
+          size="sm"
           variant="primary"
           disabled={block !== undefined}
           title={block === undefined ? undefined : NAME_BLOCK_REASON[block]}

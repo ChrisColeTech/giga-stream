@@ -38,11 +38,11 @@ export function CollectionRemove({
     >
       <Strip>
         {armed && (
-          <span role="status" className="text-xs text-muted">
+          <span role="status" className="text-[13px] text-muted">
             {CONSEQUENCE}
           </span>
         )}
-        <Button variant="danger" onClick={onPress} onBlur={disarm}>
+        <Button size="sm" variant="danger" onClick={onPress} onBlur={disarm}>
           {armed ? ARMED_LABEL : "Remove collection"}
         </Button>
       </Strip>

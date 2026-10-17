@@ -21,7 +21,7 @@ export function CollectionDetail({
   const folders = COLLECTION_FOLDERS[collection.id] ?? [];
   return (
     <div className="flex min-w-0 flex-col">
-      <h3 className="m-0 truncate pt-3 font-sans text-base font-semibold text-text">{collection.name}</h3>
+      <h3 className="m-0 truncate pt-3 font-sans text-[15px] font-semibold text-text">{collection.name}</h3>
       <CollectionRename collectionId={collection.id} name={collection.name} />
       <CollectionMembers collectionId={collection.id} rows={memberRows(refs, LIBRARY_ITEMS)} />
       <CollectionFolders collectionId={collection.id} folders={folders} />

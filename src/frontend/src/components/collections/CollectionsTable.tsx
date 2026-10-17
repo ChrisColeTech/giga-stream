@@ -20,7 +20,7 @@ function collectionColumns(onSelect: (id: string) => void): ReadonlyArray<Column
           onClick={() => onSelect(row.id)}
           className={
             "w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left font-sans text-[13px] " +
-            "text-text hover:text-accent-text"
+            "text-text hover:underline underline-offset-2"
           }
         >
           {row.name}
