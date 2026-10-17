@@ -15,7 +15,8 @@ export interface DetailsPopoverProps {
   readonly belongs: (node: Node) => boolean;
 }
 
-/** A title's details, hung from its card's Details glyph (`06` section 4.2): rating, then year, kind and runtime, the
+/** A title's details, hung from its card's Details glyph like a tooltip (`06` section 4.2). It mounts when the hover
+ *  opens it, so the detail read starts then and is abandoned if it closes first. Rating, then year, kind and runtime, the
  *  genres as name chips and the plot's opening lines. The card already knows the rating and genres; the kind line,
  *  runtime and plot come from the title's detail and are shimmer lines until it is read. */
 export function DetailsPopover({ item, anchor, onClose, belongs }: DetailsPopoverProps) {
