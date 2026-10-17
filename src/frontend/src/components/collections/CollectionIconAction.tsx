@@ -17,7 +17,7 @@ export interface CollectionIconActionProps {
 export function CollectionIconAction({ icon: Icon, label, title, reason, onPress, onBlur }: CollectionIconActionProps) {
   return (
     <span title={reason ?? title ?? label} className="inline-flex">
-      <IconButton aria-label={label} disabled={reason !== undefined} onClick={onPress} onBlur={onBlur}>
+      <IconButton size="sm" aria-label={label} disabled={reason !== undefined} onClick={onPress} onBlur={onBlur}>
         <Icon className="size-3.5" />
       </IconButton>
     </span>

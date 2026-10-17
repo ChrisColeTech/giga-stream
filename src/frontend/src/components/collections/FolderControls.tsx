@@ -22,7 +22,7 @@ export function FolderControls({ folder }: { readonly folder: CollectionFolder }
   if (armed) {
     return (
       <span className="inline-flex items-center justify-end gap-2">
-        <span role="status" className="text-right text-xs leading-4 whitespace-normal text-muted">
+        <span role="status" className="text-right text-[13px] leading-4 whitespace-normal text-muted">
           {FOLDER_CONSEQUENCE}
         </span>
         <CollectionIconAction

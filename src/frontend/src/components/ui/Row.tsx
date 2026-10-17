@@ -11,7 +11,7 @@ export interface RowProps {
   readonly children: ReactNode;
 }
 
-/** THE PAGE GRAMMAR'S ROW: an 11px sentence-case label in a fixed 252px column with its info glyph, the control
+/** THE PAGE GRAMMAR'S ROW: a 12px muted control label in a fixed 252px column with its info glyph, the control
  *  spanning the rest of the cell, 8px between them and 24px tall. The label goes above the control when the room is
  *  under the label column, the gutter and the least control (160px). The form is one column: every row is one
  *  full-width cell. */
@@ -24,7 +24,7 @@ export function Row({ label, tip, reason, children }: RowProps) {
     >
       <span
         className={cn(
-          "inline-flex min-w-0 items-center gap-1 font-sans text-xs leading-4 font-normal text-text",
+          "inline-flex min-w-0 items-center gap-1 font-sans text-xs leading-4 font-normal text-muted",
           reason !== undefined && "opacity-45",
         )}
       >

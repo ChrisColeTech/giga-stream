@@ -43,7 +43,7 @@ export function CollectionFolders({
         <DataTable label="Folders" columns={COLUMNS} rows={folders} rowKey={(folder) => folder.id} />
       )}
       <Strip>
-        <Button onClick={() => verbs.attach(collectionId)}>
+        <Button size="sm" onClick={() => verbs.attach(collectionId)}>
           <FolderPlus className="size-3.5" />
           Attach folder
         </Button>

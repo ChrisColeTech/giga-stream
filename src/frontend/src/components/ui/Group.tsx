@@ -16,11 +16,12 @@ export interface GroupProps {
   readonly children: ReactNode;
 }
 
-/* THE PAGE GRAMMAR'S GROUP: the family heading, an icon tile, a mono title, the info glyph at the right of the title and
- * the fold chevron at the far right, at the app's density (a 32px tile, a 16px mono title), a body laid out as the
- * responsive form grid, and the accent-cored rule the group draws itself between one section and the next. The heading
- * button is the one keyboard and assistive control; the chevron is a second mouse target for it. Fold state is the
- * store's, and the body folds with framer-motion. */
+/* THE PAGE GRAMMAR'S GROUP: a collapsible heading in the one section-header style (11px semibold, faint, sans, as
+ * `Section` draws it), a neutral icon tile, the info glyph beside the title and the fold chevron at the far right, a
+ * body laid out as the responsive form grid, and the accent-cored rule the group draws itself between one section and
+ * the next. The heading button is the one keyboard and assistive control; the chevron is a second mouse target for it.
+ * The tile is decorative, so it is muted and never takes the accent. Fold state is the store's; the body folds with
+ * framer-motion. */
 export function Group({ id, title, icon: Icon, tip, last = false, children }: GroupProps) {
   const folded = useAppStore((state) => state.folded[id] === true);
   const toggle = useAppStore((state) => state.toggleFold);
@@ -28,20 +29,19 @@ export function Group({ id, title, icon: Icon, tip, last = false, children }: Gr
   return (
     <section data-group={id} className="flex min-w-0 flex-col pt-3">
       <div className="flex min-w-0 items-center gap-2 pb-2.5">
-        <button
-          type="button"
-          aria-expanded={!folded}
-          onClick={() => toggle(id)}
-          className="group/heading flex min-w-0 cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-left text-text"
-        >
-          <span
-            aria-hidden
-            className="grid size-8 flex-none place-items-center rounded-card border border-hair bg-accent-tint text-accent-text"
+        <h2 className="m-0 flex min-w-0 font-sans text-[11px] leading-4 font-semibold text-faint">
+          <button
+            type="button"
+            aria-expanded={!folded}
+            onClick={() => toggle(id)}
+            className="flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left text-faint transition-colors duration-fade ease-linear hover:text-text focus-visible:outline-none"
           >
-            <Icon className="size-4" />
-          </span>
-          <h2 className="m-0 font-mono text-base leading-[22px] font-semibold group-hover/heading:text-accent-text">{title}</h2>
-        </button>
+            <span aria-hidden className="grid size-6 flex-none place-items-center rounded-ctl border border-ctl-edge bg-ctl text-muted">
+              <Icon className="size-3.5" />
+            </span>
+            <span className="min-w-0 truncate">{title}</span>
+          </button>
+        </h2>
         {tip !== undefined && <Tip text={tip} />}
         <span className="min-w-0 flex-1" />
         <span aria-hidden className="grid size-7 flex-none cursor-pointer place-items-center text-muted" onClick={() => toggle(id)}>

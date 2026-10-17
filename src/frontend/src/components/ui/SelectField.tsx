@@ -30,7 +30,7 @@ export function SelectField({ label, value, options, onChange, disabled = false,
       title={reason}
       onChange={(event) => onChange(event.target.value)}
       className={cn(
-        "h-ctl-md w-full min-w-0 cursor-pointer rounded-ctl border border-ctl-edge bg-surface px-2 font-sans text-xs text-text",
+        "h-ctl-sm w-full min-w-0 cursor-pointer rounded-ctl border border-ctl-edge bg-surface px-2 font-sans text-xs text-text",
         "transition-[border-color] duration-fade ease-linear hover:border-dim focus-visible:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-45",
         className,
