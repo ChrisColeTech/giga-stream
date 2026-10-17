@@ -81,6 +81,26 @@ export function createLibraryLists(deps: {
     });
   }
 
+  /** Items whose newest watch entry is in `state`, one row each: the history-backed `watched` answer set. */
+  async function stateRows(state: "watching" | "watched"): Promise<Row[]> {
+    const seen = new Set<string>();
+    const entries = repo.listWatchEntries().filter((entry) => {
+      const key = `${entry.itemKind}:${entry.itemId}`;
+      return !seen.has(key) && seen.add(key) && entry.state === state;
+    });
+    const files = filesById();
+    const facts = await titleRows([...new Set(entries.filter((e) => e.itemKind === "title").map((e) => e.itemId))]);
+    return entries.flatMap((entry) => {
+      const order = { watchedAt: entry.updatedAt };
+      if (entry.itemKind === "local") {
+        const file = files.get(entry.itemId);
+        return file === undefined ? [] : [{ item: items.localItem(file), order }];
+      }
+      const row = facts.get(entry.itemId);
+      return [{ item: row?.item ?? items.skeletonTitle(entry.itemId, entry), order: { ...row?.order, ...order } }];
+    });
+  }
+
   /** `favorites`: the favorited items, locals and titles alike. */
   async function favoriteRows(): Promise<Row[]> {
     const members = repo.listFavorites();
@@ -131,6 +151,23 @@ export function createLibraryLists(deps: {
     history: (query: LibraryQuery) => view(query, historyRows),
     favorites: (query: LibraryQuery) => view(query, favoriteRows),
     collection: (query: LibraryQuery) => view(query, () => collectionRows(query.collectionId ?? "")),
+
+    /** `view=all&watched=watching|watched` over the history only: locals first, then titles; `total` is whole. */
+    async watchedSet(query: LibraryQuery, state: "watching" | "watched"): Promise<Omit<ListPage, "facets">> {
+      const kept = (await stateRows(state)).filter((row) => inList(row.item, query) && matchesFilters(row.item, query));
+      const sortedOf = (rows: Row[]): LibraryItem[] =>
+        orderRows(rows, query.sort, (row) => row.order, (row) => row.item.title).map((row) => row.item);
+      const sorted = [
+        ...sortedOf(kept.filter((row) => row.item.kind === "local")),
+        ...sortedOf(kept.filter((row) => row.item.kind !== "local")),
+      ];
+      const paged = pageOf(sorted, query.cursor === undefined ? undefined : decodeCursor(query.cursor));
+      return {
+        items: paged.items,
+        ...(paged.nextCursor !== undefined && { nextCursor: paged.nextCursor }),
+        total: kept.length,
+      };
+    },
 
     /** `GET /api/library/continue` (03 section 3.5): the watching rows, newest first, at most ten. */
     async continueItems(): Promise<LibraryItem[]> {
