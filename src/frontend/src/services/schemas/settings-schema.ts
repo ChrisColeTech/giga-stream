@@ -14,7 +14,7 @@ export const SettingsSchema = z.object({
   resumeMode: z.enum(["ask", "resume", "restart"]),
   watchedPercent: z.union([z.literal(90), z.literal(95), z.literal(100)]),
   liveOnOpen: z.enum(["last", "none"]),
-  libraryView: z.enum(["grid", "list"]),
+  libraryView: z.enum(["grid", "list", "rows"]),
   librarySort: z.enum(["newest", "oldest", "az", "year"]),
   showContinue: z.boolean(),
   pauseHistory: z.boolean(),

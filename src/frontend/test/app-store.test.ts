@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { SURFACES, SURFACE_ORDER, limitsOf, limitsOfKey, paneKey } from "@/constants/surfaces";
 import { resolveReduceMotion } from "@/hooks/useReduceMotion";
+import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { useAppStore } from "@/store/app-store";
+import { decodeState } from "@/services/state";
 
 const state = () => useAppStore.getState();
 
@@ -69,5 +71,71 @@ describe("reduced motion", () => {
   it("On always skips, Off never skips", () => {
     assert.equal(resolveReduceMotion("on"), true);
     assert.equal(resolveReduceMotion("off"), false);
+  });
+});
+
+describe("store slices and hydration", () => {
+  it("restores saved shell and settings once, including after fallback reveal", () => {
+    state().revealShell();
+    assert.equal(state().shellWriteEnabled, false);
+    assert.equal(state().settingsWriteEnabled, false);
+    state().applySnapshot({
+      shell: {
+        activeSurface: "player",
+        paneVisibility: { "player.browser": false },
+        paneSizes: { "player.browser": [300] },
+      },
+      settings: { ...DEFAULT_SETTINGS, libraryView: "rows", theme: "light" },
+      unreadable: [],
+    });
+    assert.equal(state().surface, "player");
+    assert.equal(state().open["player.left"], false);
+    assert.equal(state().sizes["player.left"], 300);
+    assert.equal(state().library.libraryView, "rows");
+    assert.equal(state().theme, "light");
+    assert.equal(state().hydrationVersion, 1);
+    assert.equal(state().shellWriteEnabled, true);
+    assert.equal(state().settingsWriteEnabled, true);
+
+    state().setSurface("live");
+    state().setTheme("dark");
+    state().applySnapshot({
+      shell: { activeSurface: "library", paneVisibility: {}, paneSizes: {} },
+      settings: { ...DEFAULT_SETTINGS, theme: "system" },
+      unreadable: [],
+    });
+    assert.equal(state().surface, "live");
+    assert.equal(state().theme, "dark");
+    assert.equal(state().hydrationVersion, 1);
+  });
+
+  it("does not enable persistence for absent or unreadable snapshot parts", () => {
+    const malformed = decodeState({
+      shell: { activeSurface: "future", paneVisibility: {}, paneSizes: {} },
+      settings: { theme: "future" },
+    });
+    state().applySnapshot(malformed);
+    assert.ok(malformed.unreadable.includes("shell"));
+    assert.ok(malformed.unreadable.includes("settings"));
+    assert.equal(state().hydrationApplied, true);
+    assert.equal(state().shellWriteEnabled, false);
+    assert.equal(state().settingsWriteEnabled, false);
+    state().setSurface("player");
+    state().setTheme("light");
+    assert.equal(state().shellWriteEnabled, false);
+    assert.equal(state().settingsWriteEnabled, false);
+  });
+
+  it("provides live, playback and library state for later surface waves", () => {
+    state().setChannels({ items: [], categories: [], revision: 4 });
+    state().setChannelQuery("news");
+    state().setLiveStage("loading");
+    state().setLibraryCounts({ all: 8, history: 2, favorites: 1, collections: {} });
+    state().setPlayerTabs([]);
+    assert.equal(state().channels?.revision, 4);
+    assert.equal(state().channelQuery, "news");
+    assert.equal(state().liveStage, "loading");
+    assert.equal(state().libraryCounts.all, 8);
+    assert.deepEqual(state().playerTabs, []);
   });
 });

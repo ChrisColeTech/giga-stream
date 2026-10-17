@@ -1,6 +1,7 @@
+import { limitsOfKey } from "@/constants/surfaces";
 import type { PaneKey, Surface } from "@/types/shell";
 import { api } from "./api";
-import { ShellStateSchema } from "./schemas/state-schema";
+import { ShellStateSchema, type ShellStateAnswer } from "./schemas/state-schema";
 
 const PANES = [
   ["live.left", "live.settings"],
@@ -18,19 +19,22 @@ export interface ShellLayout {
   readonly sizes: Partial<Record<PaneKey, number>>;
 }
 
-export function fromWireShell(wire: typeof ShellStateSchema._output): ShellLayout {
+export function fromWireShell(wire: ShellStateAnswer): ShellLayout {
   const open: Partial<Record<PaneKey, boolean>> = {};
   const sizes: Partial<Record<PaneKey, number>> = {};
   for (const [pane, wireId] of PANES) {
     const visible = wire.paneVisibility[wireId];
     const size = wire.paneSizes[wireId]?.[0];
     if (visible !== undefined) open[pane] = visible;
-    if (size !== undefined) sizes[pane] = size;
+    if (size !== undefined && size > 0) {
+      const limits = limitsOfKey(pane);
+      sizes[pane] = Math.min(limits.max, Math.max(limits.min, size));
+    }
   }
   return { surface: wire.activeSurface, open, sizes };
 }
 
-export function toWireShell(layout: ShellLayout): typeof ShellStateSchema._input {
+export function toWireShell(layout: ShellLayout): ShellStateAnswer {
   const paneVisibility: Record<string, boolean> = {};
   const paneSizes: Record<string, number[]> = {};
   for (const [pane, wireId] of PANES) {

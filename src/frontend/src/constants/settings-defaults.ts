@@ -1,8 +1,7 @@
 import type { Settings } from "@/types/settings";
 
-/** PHASE 1 FIXTURE: the settings the Settings window draws, with the defaults of `03` section 3.2. The admin backend
- *  address is left empty: the interface shows the field and never sends a request to it. */
-export const SETTINGS_VALUES: Settings = {
+/** The fileserver defaults (`03` section 3.2), used until its saved settings arrive. */
+export const DEFAULT_SETTINGS: Readonly<Settings> = {
   theme: "dark",
   themeAccent: "amber",
   reducedMotion: "system",

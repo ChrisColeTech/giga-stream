@@ -23,6 +23,7 @@ export interface NavigationSlice {
 /** What the slice needs of the rest of the store: the surface and the open window it changes. */
 interface Host {
   surface: Surface;
+  shellRevision: number;
   overlay: OverlayId | null;
   overlayAnchor: PopupAnchor;
   overlayItem: ItemRef | null;
@@ -38,10 +39,20 @@ export function navigationSlice(set: Set, get: Get): NavigationSlice {
   return {
     playRequest: null,
     requestPlay: (ref) =>
-      set({ ...closed, surface: "player", playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 } }),
+      set({
+        ...closed,
+        surface: "player",
+        shellRevision: get().shellRevision + 1,
+        playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 },
+      }),
     libraryRequest: null,
     requestLibrary: (request) =>
-      set({ ...closed, surface: "library", libraryRequest: { ...request, serial: (get().libraryRequest?.serial ?? 0) + 1 } }),
+      set({
+        ...closed,
+        surface: "library",
+        shellRevision: get().shellRevision + 1,
+        libraryRequest: { ...request, serial: (get().libraryRequest?.serial ?? 0) + 1 },
+      }),
     collectionsFocus: null,
     openCollections: (collectionId) =>
       set({ overlay: "collections", overlayAnchor: null, overlayItem: null, collectionsFocus: collectionId ?? null }),

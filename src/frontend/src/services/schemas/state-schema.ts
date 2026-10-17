@@ -7,7 +7,7 @@ import { SettingsSchema } from "./settings-schema";
 export const ShellStateSchema = z.object({
   activeSurface: z.enum(["live", "library", "player"]),
   paneVisibility: z.record(z.string(), z.boolean()),
-  paneSizes: z.record(z.string(), z.array(z.number().finite()).min(1).max(8)),
+  paneSizes: z.record(z.string(), z.array(z.number().finite().nonnegative()).min(1).max(8)),
   window: z
     .object({
       x: z.number().finite(),
@@ -26,6 +26,7 @@ export const StatePartSchemas = {
   settings: SettingsSchema,
   shell: ShellStateSchema,
   backend: z.object({
+    url: z.string().min(1),
     connected: z.boolean(),
     revision: z.number().int().optional(),
     readAt: z.number().int().nonnegative().optional(),
@@ -36,3 +37,5 @@ export const StatePartSchemas = {
   collections: CollectionListSchema,
   jobs: JobListSchema,
 } as const;
+
+export type ShellStateAnswer = z.infer<typeof ShellStateSchema>;
