@@ -15,6 +15,10 @@ export interface ChannelSearchSeams {
   readonly cancel: (handle: number) => void;
 }
 
+export interface LastChannelSeams {
+  readonly write: typeof rememberLastChannel;
+}
+
 const SEARCH_SEAMS: ChannelSearchSeams = {
   read: readChannels,
   schedule: (callback, delay) => window.setTimeout(callback, delay),
@@ -76,6 +80,43 @@ export class ChannelSearchSession {
   }
 }
 
+/** Serializes last-channel writes so the newest activation is always the final persisted value. */
+export class LastChannelSession {
+  private desired: string | null = null;
+  private running = false;
+  private controller: AbortController | null = null;
+  private readonly onRefusal: (error: unknown) => void;
+  private readonly seams: LastChannelSeams;
+
+  constructor(onRefusal: (error: unknown) => void, seams: LastChannelSeams = { write: rememberLastChannel }) {
+    this.onRefusal = onRefusal;
+    this.seams = seams;
+  }
+
+  remember(channelId: string): void {
+    this.desired = channelId;
+    if (!this.running) this.write(channelId);
+  }
+
+  cancel(): void {
+    this.desired = null;
+    this.controller?.abort();
+  }
+
+  private write(channelId: string): void {
+    this.running = true;
+    const controller = new AbortController();
+    this.controller = controller;
+    void this.seams.write(channelId, controller.signal).catch((error: unknown) => {
+      if (this.desired === channelId && !controller.signal.aborted) this.onRefusal(error);
+    }).finally(() => {
+      this.running = false;
+      this.controller = null;
+      if (this.desired !== null && this.desired !== channelId) this.write(this.desired);
+    });
+  }
+}
+
 /** Reads the live view. Empty query values are omitted because the route rejects blank parameters. */
 export function readChannels(query: ChannelQuery = {}, signal?: AbortSignal) {
   const params = new URLSearchParams();
@@ -89,6 +130,12 @@ export function readChannels(query: ChannelQuery = {}, signal?: AbortSignal) {
 /** Re-reads the backend and probes every published stream. */
 export function refreshChannels(signal?: AbortSignal) {
   return api("/api/channels/refresh", ChannelListSchema, { method: "POST", signal, area: "Media" });
+}
+
+/** Refreshes/probes the full view, then returns the server-filtered rows for the controls still on screen. */
+export async function refreshFilteredChannels(query: ChannelQuery, signal?: AbortSignal) {
+  await refreshChannels(signal);
+  return readChannels(query, signal);
 }
 
 /** Persists the channel Live should attach on the next launch. */

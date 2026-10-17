@@ -21,16 +21,6 @@ export function openingChannel(
   return { selected: mode === "last" ? last ?? first : first, playing: mode === "last" ? last : null };
 }
 
-/** The channels whose name contains the query (case-insensitive, trimmed) in the chosen category. Published order is kept. */
-export function filterChannels(items: readonly Channel[], query: string, category: string): readonly Channel[] {
-  const needle = query.trim().toLowerCase();
-  return items.filter(
-    (channel) =>
-      (category === ALL_CATEGORY || channel.category === category) &&
-      channel.name.toLowerCase().includes(needle),
-  );
-}
-
 /** The category select's options: All first with the total, then each published category with its count. A category
  *  that is selected but no longer published stays listed at zero, so the select never loses its own value. */
 export function categoryOptions(

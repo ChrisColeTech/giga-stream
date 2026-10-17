@@ -4,7 +4,7 @@ import { detailRows } from "@/lib/live-details";
 import { EMPTY_VALUE } from "@/lib/live-constants";
 import { objectFitOf, PICTURE_FIT_OPTIONS } from "@/lib/live-picture";
 import { statusBar, statusWord } from "@/lib/live-status";
-import { stageStateFor } from "@/lib/live-stage";
+import { channelListUnavailable, stageStateFor } from "@/lib/live-stage";
 import type { Channel } from "@/types/channel";
 
 const channel: Channel = {
@@ -35,6 +35,12 @@ describe("stage state", () => {
   it("is ready with channels and no channels when the list is empty", () => {
     assert.equal(stageStateFor(1), "ready");
     assert.equal(stageStateFor(0), "no-channels");
+  });
+
+  it("keeps a hydrated disconnected empty view unavailable until a channel read succeeds", () => {
+    assert.equal(channelListUnavailable({ connected: false }, false), true);
+    assert.equal(channelListUnavailable({ connected: false }, true), false);
+    assert.equal(channelListUnavailable({ connected: true }, false), false);
   });
 });
 

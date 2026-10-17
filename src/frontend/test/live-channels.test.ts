@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { categoryOptions, filterChannels, keyTarget, openingChannel, tabStopId } from "@/lib/live-channels";
-import { ALL_CATEGORY } from "@/lib/live-constants";
+import { categoryOptions, keyTarget, openingChannel, tabStopId } from "@/lib/live-channels";
 import type { Channel } from "@/types/channel";
 
 const items: readonly Channel[] = [
@@ -10,35 +9,10 @@ const items: readonly Channel[] = [
   { id: "desk", name: "Night Desk", category: "News", number: "3", revision: 1, streamUrl: "https://stream.test/desk.m3u8", status: "unknown" },
 ];
 const categories = [{ value: "News", count: 2 }, { value: "Sports", count: 1 }];
-const names = (rows: readonly Channel[]) => rows.map((row) => row.name);
-
-describe("filterChannels", () => {
-  it("keeps every channel in published order when the query is blank and the category is All", () => {
-    assert.deepEqual(filterChannels(items, "", ALL_CATEGORY), items);
-    assert.deepEqual(filterChannels(items, "   ", ALL_CATEGORY), items);
-  });
-
-  it("matches the name case-insensitively and ignores surrounding spaces", () => {
-    assert.deepEqual(names(filterChannels(items, "  NEWS ", ALL_CATEGORY)), ["Fixture News"]);
-  });
-
-  it("narrows to one category, keeping the order", () => {
-    const rows = filterChannels(items, "", "Kids");
-    assert.ok(rows.length > 0);
-    assert.ok(rows.every((row) => row.category === "Kids"));
-    assert.deepEqual(rows.map((row) => row.id), items.filter((row) => row.category === "Kids").map((row) => row.id));
-  });
-
-  it("combines the query and the category", () => {
-    assert.deepEqual(names(filterChannels(items, "news", "Sports")), []);
-    assert.deepEqual(names(filterChannels(items, "desk", "News")), ["Night Desk"]);
-  });
-});
-
 describe("categoryOptions", () => {
   it("puts All first with the total, then each published category with its count", () => {
-    const options = categoryOptions(categories, ALL_CATEGORY, items.length);
-    assert.equal(options[0]?.value, ALL_CATEGORY);
+    const options = categoryOptions(categories, "all", items.length);
+    assert.equal(options[0]?.value, "all");
     assert.equal(options[0]?.count, items.length);
     assert.deepEqual(
       options.slice(1).map((option) => [option.value, option.count]),

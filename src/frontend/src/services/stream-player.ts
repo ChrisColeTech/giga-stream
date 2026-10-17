@@ -32,13 +32,16 @@ export class StreamPlayerController {
     this.callbacks = callbacks;
     this.engines = engines;
     video.addEventListener("loadeddata", this.onFirstFrame);
+    video.addEventListener("loadedmetadata", this.onNativeTracks);
     video.addEventListener("error", this.onNativeError);
     video.addEventListener("timeupdate", this.reportFacts);
+    video.textTracks.addEventListener("addtrack", this.onNativeTracks);
   }
 
   attach(attachment: StreamAttachment): void {
     this.detachMedia();
     this.attachment = attachment;
+    this.callbacks.onFacts({});
     this.callbacks.onState("loading");
     if (this.engines.supported()) {
       this.attachHls(attachment);
@@ -75,8 +78,10 @@ export class StreamPlayerController {
     this.attachment = null;
     this.detachMedia();
     this.video.removeEventListener("loadeddata", this.onFirstFrame);
+    this.video.removeEventListener("loadedmetadata", this.onNativeTracks);
     this.video.removeEventListener("error", this.onNativeError);
     this.video.removeEventListener("timeupdate", this.reportFacts);
+    this.video.textTracks.removeEventListener("addtrack", this.onNativeTracks);
   }
 
   private attachHls(attachment: StreamAttachment): void {
@@ -86,7 +91,6 @@ export class StreamPlayerController {
       this.emit("info", "Stream manifest loaded.");
       this.applyEnginePreferences();
       this.reportFacts();
-      this.attemptPlay(attachment);
     });
     engine.onLevel(() => {
       this.emit("info", "Stream quality changed.");
@@ -119,8 +123,12 @@ export class StreamPlayerController {
 
   private readonly attemptPlay = (attachment: StreamAttachment): void => {
     if (!attachment.userInitiated && !attachment.autoplay) return;
-    void this.video.play().catch(() => undefined);
+    void this.video.play().catch(() => {
+      this.callbacks.onPlayRefused?.("Playback stayed paused because the browser refused to start it.");
+    });
   };
+
+  private readonly onNativeTracks = (): void => this.applyNativeCaptions();
 
   private readonly onFirstFrame = (): void => {
     this.callbacks.onState("ready");

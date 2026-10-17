@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { openingChannel } from "@/lib/live-channels";
-import { ChannelSearchSession, refreshChannels, rememberLastChannel } from "@/services/channels";
+import { ChannelSearchSession, LastChannelSession, refreshFilteredChannels } from "@/services/channels";
+import { requestLiveStream } from "@/services/live-stream-session";
 import { useAppStore } from "@/store/app-store";
 
 export interface LiveActions {
@@ -18,6 +19,7 @@ const aborted = (error: unknown): boolean => error instanceof DOMException && er
 export function useLiveActions(active: boolean): LiveActions {
   const refreshRequest = useRef<AbortController | null>(null);
   const search = useRef<ChannelSearchSession | null>(null);
+  const lastChannel = useRef<LastChannelSession | null>(null);
   const initialized = useRef(false);
   const wasActive = useRef(active);
   const hydrationApplied = useAppStore((state) => state.hydrationApplied);
@@ -38,6 +40,14 @@ export function useLiveActions(active: boolean): LiveActions {
         store.say(error instanceof Error ? error.message : "Channels could not be read.", "warn");
       },
     );
+  }
+  if (lastChannel.current === null) {
+    lastChannel.current = new LastChannelSession((error) => {
+      useAppStore.getState().say(
+        error instanceof Error ? error.message : "The last channel could not be remembered.",
+        "warn",
+      );
+    });
   }
 
   const read = (query: string, category: string, debounce: boolean) => {
@@ -70,6 +80,7 @@ export function useLiveActions(active: boolean): LiveActions {
 
   useEffect(() => () => {
     search.current?.cancel();
+    lastChannel.current?.cancel();
     refreshRequest.current?.abort();
   }, []);
 
@@ -80,7 +91,11 @@ export function useLiveActions(active: boolean): LiveActions {
       const controller = new AbortController();
       refreshRequest.current = controller;
       useAppStore.getState().setChannelsLoading(true);
-      void refreshChannels(controller.signal)
+      const state = useAppStore.getState();
+      void refreshFilteredChannels(
+        { query: state.channelQuery, category: state.channelCategory },
+        controller.signal,
+      )
         .then((answer) => {
           if (refreshRequest.current !== controller) return;
           const store = useAppStore.getState();
@@ -100,7 +115,14 @@ export function useLiveActions(active: boolean): LiveActions {
     retry: () => {
       const store = useAppStore.getState();
       if (store.playingChannelId && store.playingStreamUrl) {
+        const url = store.playingStreamUrl;
         store.playChannel(store.playingChannelId, store.playingStreamUrl, true);
+        const state = useAppStore.getState();
+        requestLiveStream({
+          url,
+          autoplay: state.playback.autoplay,
+          userInitiated: true,
+        }, state.livePlaySerial);
       }
     },
     changeQuery: (query) => {
@@ -120,9 +142,13 @@ export function useLiveActions(active: boolean): LiveActions {
       if (channel === undefined) return;
       store.selectChannel(channelId);
       store.playChannel(channel.id, channel.streamUrl, true);
-      void rememberLastChannel(channelId).catch((error: unknown) => {
-        store.say(error instanceof Error ? error.message : "The last channel could not be remembered.", "warn");
-      });
+      const state = useAppStore.getState();
+      requestLiveStream({
+        url: channel.streamUrl,
+        autoplay: state.playback.autoplay,
+        userInitiated: true,
+      }, state.livePlaySerial);
+      lastChannel.current?.remember(channelId);
     },
   };
 }

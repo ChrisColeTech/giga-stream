@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   ChannelSearchSession,
+  LastChannelSession,
   readChannels,
   refreshChannels,
+  refreshFilteredChannels,
   rememberLastChannel,
   type ChannelQuery,
 } from "@/services/channels";
@@ -54,6 +56,19 @@ describe("channel routes", () => {
     assert.equal(calls[1]?.body, JSON.stringify({ channelId: "news" }));
   });
 
+  it("re-reads the active server filter after refresh", async () => {
+    const calls: string[] = [];
+    globalThis.fetch = async (input) => {
+      calls.push(String(input));
+      return success(list);
+    };
+    assert.deepEqual(await refreshFilteredChannels({ query: "night", category: "News" }), list);
+    assert.deepEqual(calls, [
+      "/api/channels/refresh",
+      "/api/channels?q=night&category=News",
+    ]);
+  });
+
   it("refuses malformed channel data and keeps server refusal sentences", async () => {
     globalThis.fetch = async () => success({ ...list, items: [{ ...list.items[0], status: "future" }] });
     await assert.rejects(readChannels(), { code: "response.invalid" });
@@ -62,6 +77,43 @@ describe("channel routes", () => {
       error: { code: "backend.unreachable", message: "The backend is unavailable." },
     }), { status: 503 });
     await assert.rejects(refreshChannels(), { code: "backend.unreachable", message: "The backend is unavailable." });
+  });
+});
+
+describe("LastChannelSession", () => {
+  it("serializes rapid activations so the newest channel persists last", async () => {
+    const pending: Array<{ id: string; resolve: () => void; reject: (error: Error) => void }> = [];
+    const refusals: unknown[] = [];
+    const session = new LastChannelSession(refusals.push.bind(refusals), {
+      write: (id) => new Promise((resolve, reject) => {
+        pending.push({ id, resolve: () => resolve({ id }), reject });
+      }),
+    });
+    session.remember("a");
+    session.remember("b");
+    assert.deepEqual(pending.map((item) => item.id), ["a"]);
+    pending[0]?.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(pending.map((item) => item.id), ["a", "b"]);
+    pending[1]?.resolve();
+    await Promise.resolve();
+    assert.deepEqual(refusals, []);
+  });
+
+  it("suppresses a stale refusal when a newer activation is waiting", async () => {
+    const pending: Array<{ id: string; reject: (error: Error) => void }> = [];
+    const refusals: unknown[] = [];
+    const session = new LastChannelSession(refusals.push.bind(refusals), {
+      write: (id) => new Promise((_resolve, reject) => pending.push({ id, reject })),
+    });
+    session.remember("a");
+    session.remember("b");
+    pending[0]?.reject(new Error("A failed."));
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(refusals, []);
+    assert.equal(pending[1]?.id, "b");
   });
 });
 

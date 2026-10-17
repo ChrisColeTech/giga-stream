@@ -24,6 +24,7 @@ export interface StreamAttachment {
 export interface StreamPlayerCallbacks {
   readonly onState: (state: StreamStageState, reason?: string) => void;
   readonly onFacts: (facts: StreamFacts) => void;
+  readonly onPlayRefused?: (sentence: string) => void;
   /** Wave 2.6 can feed these already-scrubbed rows into the events drawer. */
   readonly onEvent?: (event: EventInput) => void;
 }

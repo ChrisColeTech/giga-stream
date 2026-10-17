@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
+import { channelListUnavailable } from "@/lib/live-stage";
 import { useAppStore } from "@/store/app-store";
 
 const state = () => useAppStore.getState();
@@ -7,6 +8,17 @@ const state = () => useAppStore.getState();
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 
 describe("live slice", () => {
+  it("keeps a hydrated disconnected empty list unresolved for skeleton rendering", () => {
+    state().applySnapshot({
+      backend: { url: "configured", connected: false, error: { code: "backend.unreachable", message: "Down." } },
+      channels: { items: [], categories: [], revision: 0 },
+      unreadable: [],
+    });
+    assert.equal(state().channels?.items.length, 0);
+    assert.equal(state().channelsResolved, false);
+    assert.equal(channelListUnavailable(state().backend, state().channelsResolved), true);
+  });
+
   it("stores list interactions independently from the active stream", () => {
     state().setChannels({ items: [], categories: [], revision: 1 });
     state().setChannelQuery("news");

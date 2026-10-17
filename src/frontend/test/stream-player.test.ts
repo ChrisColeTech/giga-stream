@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EventInput } from "@/lib/event-log";
+import { registerLiveStreamTarget, requestLiveStream } from "@/services/live-stream-session";
 import type {
   StreamEngine,
   StreamEngineFactory,
@@ -39,19 +40,26 @@ interface FakeVideo {
   readonly emit: (type: string) => void;
   readonly playCalls: () => number;
   readonly loadCalls: () => number;
+  readonly addTextTrack: (language: string) => TextTrack;
 }
 
 function fakeVideo(native = false, rejectPlay = false): FakeVideo {
   const listeners = new Map<string, Set<() => void>>();
   let plays = 0;
   let loads = 0;
+  const tracks: TextTrack[] = [];
+  const trackListeners = new Set<() => void>();
+  const textTracks = Object.assign(tracks, {
+    addEventListener: (_type: string, callback: () => void) => trackListeners.add(callback),
+    removeEventListener: (_type: string, callback: () => void) => trackListeners.delete(callback),
+  });
   const element: HTMLVideoElement = Object.assign(Object.create({}), {
     src: "",
     muted: false,
     currentTime: 5,
     videoWidth: 1920,
     videoHeight: 1080,
-    textTracks: [],
+    textTracks,
     canPlayType: () => native ? "maybe" : "",
     play: () => {
       plays += 1;
@@ -72,6 +80,12 @@ function fakeVideo(native = false, rejectPlay = false): FakeVideo {
     emit: (type) => listeners.get(type)?.forEach((callback) => callback()),
     playCalls: () => plays,
     loadCalls: () => loads,
+    addTextTrack: (language) => {
+      const track: TextTrack = Object.assign(Object.create({}), { language, mode: "hidden" });
+      tracks.push(track);
+      trackListeners.forEach((callback) => callback());
+      return track;
+    },
   };
 }
 
@@ -88,12 +102,14 @@ function harness(video: FakeVideo, supported = true) {
   const states: Array<{ state: StreamStageState; reason?: string }> = [];
   const facts: StreamFacts[] = [];
   const events: EventInput[] = [];
+  const refusals: string[] = [];
   const controller = new StreamPlayerController(video.element, preferences, {
     onState: (state, reason) => states.push({ state, reason }),
     onFacts: (value) => facts.push(value),
     onEvent: (event) => events.push(event),
+    onPlayRefused: (sentence) => refusals.push(sentence),
   }, factory);
-  return { controller, engine, states, facts, events };
+  return { controller, engine, states, facts, events, refusals };
 }
 
 describe("StreamPlayerController", () => {
@@ -128,6 +144,45 @@ describe("StreamPlayerController", () => {
     assert.equal(refusedVideo.playCalls(), 1);
     assert.equal(refusedVideo.element.muted, false);
     assert.notEqual(refused.states.at(-1)?.state, "failed");
+    assert.deepEqual(refused.refusals, ["Playback stayed paused because the browser refused to start it."]);
+  });
+
+  it("clears old stream facts on both a channel switch and Retry", () => {
+    const video = fakeVideo();
+    const test = harness(video);
+    test.controller.attach({ url: "https://media.test/a.m3u8", autoplay: false, userInitiated: false });
+    test.engine.manifest?.();
+    assert.notDeepEqual(test.facts.at(-1), {});
+    test.controller.attach({ url: "https://media.test/b.m3u8", autoplay: false, userInitiated: false });
+    assert.deepEqual(test.facts.at(-1), {});
+    test.controller.retry();
+    assert.deepEqual(test.facts.at(-1), {});
+  });
+
+  it("applies native captions when metadata or tracks become available and removes its listener", () => {
+    const video = fakeVideo(true);
+    const test = harness(video, false);
+    test.controller.attach({ url: "https://native.test/live.m3u8", autoplay: false, userInitiated: false });
+    const english = video.addTextTrack("en");
+    const spanish = video.addTextTrack("es");
+    video.emit("loadedmetadata");
+    assert.equal(english.mode, "showing");
+    assert.equal(spanish.mode, "disabled");
+    test.controller.destroy();
+    const later = video.addTextTrack("en");
+    assert.equal(later.mode, "hidden");
+  });
+
+  it("forwards explicit activation to the mounted player synchronously", () => {
+    const attachments: string[] = [];
+    const unregister = registerLiveStreamTarget({ attach: (attachment) => attachments.push(attachment.url) }, 0);
+    requestLiveStream({
+      url: "https://media.test/gesture.m3u8",
+      autoplay: false,
+      userInitiated: true,
+    }, 10_000);
+    assert.deepEqual(attachments, ["https://media.test/gesture.m3u8"]);
+    unregister();
   });
 
   it("reports failures, retries the same address and destroys cleanly", () => {

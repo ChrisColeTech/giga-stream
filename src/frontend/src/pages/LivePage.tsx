@@ -4,7 +4,7 @@ import { LiveSettingsPane } from "@/components/live/LiveSettingsPane";
 import { LiveStage } from "@/components/live/LiveStage";
 import { useLiveActions } from "@/hooks/useLiveActions";
 import { EMPTY_CHANNEL_LIST } from "@/lib/live-channels";
-import type { LiveStageState } from "@/lib/live-stage";
+import { channelListUnavailable, type LiveStageState } from "@/lib/live-stage";
 import { useAppStore } from "@/store/app-store";
 
 /** Live: playback settings on the left, the video stage in the centre, and the fileserver's channels on the right. */
@@ -13,6 +13,8 @@ export function LivePage({ active }: { active: boolean }) {
   const list = useAppStore((state) => state.channels) ?? EMPTY_CHANNEL_LIST;
   const hasList = useAppStore((state) => state.channels) !== null;
   const loading = useAppStore((state) => state.channelsLoading);
+  const channelsResolved = useAppStore((state) => state.channelsResolved);
+  const backend = useAppStore((state) => state.backend);
   const query = useAppStore((state) => state.channelQuery);
   const category = useAppStore((state) => state.channelCategory);
   const selectedId = useAppStore((state) => state.selectedChannelId);
@@ -24,9 +26,10 @@ export function LivePage({ active }: { active: boolean }) {
 
   const selected = list.items.find((channel) => channel.id === selectedId) ?? null;
   const publishedCount = list.categories.reduce((sum, item) => sum + item.count, 0);
+  const unavailable = channelListUnavailable(backend, channelsResolved);
   const stageState: LiveStageState = streamState === "failed"
     ? "failed"
-    : hasList && publishedCount === 0 && playingUrl === null
+    : hasList && !unavailable && publishedCount === 0 && playingUrl === null
       ? "no-channels"
       : streamState;
 
@@ -48,7 +51,7 @@ export function LivePage({ active }: { active: boolean }) {
         <LiveChannelsPane
           list={list}
           rows={list.items}
-          loading={loading && !hasList}
+          loading={unavailable || (loading && !hasList)}
           query={query}
           category={category}
           selected={selected}

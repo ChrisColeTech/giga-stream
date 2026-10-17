@@ -5,6 +5,7 @@ import type { StreamFacts, StreamStageState } from "@/types/stream-player";
 export interface LiveSlice {
   channels: ChannelListAnswer | null;
   channelsLoading: boolean;
+  channelsResolved: boolean;
   backend: StateSnapshot["backend"];
   lastChannelId: string | null;
   channelQuery: string;
@@ -33,6 +34,7 @@ export function liveSlice(set: Set): LiveSlice {
   return {
     channels: null,
     channelsLoading: false,
+    channelsResolved: false,
     backend: undefined,
     lastChannelId: null,
     channelQuery: "",
@@ -47,6 +49,7 @@ export function liveSlice(set: Set): LiveSlice {
     liveStreamFacts: {},
     setChannels: (channels) => set((state) => ({
       channels,
+      channelsResolved: channels !== null,
       selectedChannelId: channels?.items.some((item) => item.id === state.selectedChannelId)
         ? state.selectedChannelId
         : channels?.items[0]?.id ?? null,
