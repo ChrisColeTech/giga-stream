@@ -47,10 +47,20 @@ describe("pager skeletons", () => {
 });
 
 describe("PosterImage loading", () => {
-  it("keeps the tinted tile and starts the image transparent", () => {
+  it("shows the shimmer, no accent tint, and starts the image transparent", () => {
     const html = renderToStaticMarkup(createElement(PosterImage, { src: "/p.jpg", alt: "Heat" }));
-    assert.match(html, /linear-gradient/);
+    assert.match(html, /animate-skel-shimmer/);
+    assert.doesNotMatch(html, /linear-gradient\(170deg|color-mix|--color-accent|--color-tone/);
     assert.match(html, /<img[^>]*opacity:0/);
     assert.doesNotMatch(html, />Heat</);
+  });
+
+  it("keeps the tint and the title for a title with no poster", () => {
+    for (const src of [undefined, ""]) {
+      const html = renderToStaticMarkup(createElement(PosterImage, { src, alt: "Heat" }));
+      assert.match(html, /linear-gradient\(170deg/);
+      assert.match(html, />Heat</);
+      assert.doesNotMatch(html, /animate-skel-shimmer/);
+    }
   });
 });
