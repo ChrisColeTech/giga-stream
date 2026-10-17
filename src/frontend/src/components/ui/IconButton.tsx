@@ -1,8 +1,12 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
+/* The size is a variant, never an appended class: `cn()` is a plain join, so an appended `size-*` would sit in the same
+ * layer as the base size and lose on stylesheet order. `md` is the toolbar size; `sm` is a window's row control (24px). */
+const SIZES = { md: "size-ctl-md", sm: "size-ctl-sm" } as const;
+
 const BASE =
-  "inline-flex size-ctl-md items-center justify-center rounded-ctl border border-transparent " +
+  "inline-flex items-center justify-center rounded-ctl border border-transparent " +
   "bg-transparent p-0 text-muted cursor-pointer " +
   "transition-[background,border-color,color,box-shadow] duration-fade ease-linear " +
   "hover:bg-hov hover:text-text active:bg-hov active:text-faint " +
@@ -26,10 +30,17 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   on?: boolean;
   /** Give the button the same fill and edge as a button, for standalone actions. */
   bordered?: boolean;
+  /** `md` (28px) for toolbars; `sm` (24px) for a control in a window's row. */
+  size?: keyof typeof SIZES;
 }
 
-export function IconButton({ on = false, bordered = false, className, type = "button", ...rest }: IconButtonProps) {
+export function IconButton({ on = false, bordered = false, size = "md", className, type = "button", ...rest }: IconButtonProps) {
   return (
-    <button type={type} data-on={on ? "" : undefined} className={cn(BASE, bordered && BORDERED, className)} {...rest} />
+    <button
+      type={type}
+      data-on={on ? "" : undefined}
+      className={cn(BASE, SIZES[size], bordered && BORDERED, className)}
+      {...rest}
+    />
   );
 }

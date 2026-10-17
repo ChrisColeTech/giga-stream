@@ -35,7 +35,7 @@ export function RailRow({ label, icon: Icon, count, selected, onSelect, onContex
     >
       {Icon !== undefined && <Icon className="size-3.75 flex-none" />}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {count !== undefined && <span className="font-mono text-[11px] text-dim tabular-nums">{count}</span>}
+      {count !== undefined && <span className="font-mono text-[11px] tabular-nums">{count}</span>}
     </button>
   );
 }

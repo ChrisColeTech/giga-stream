@@ -18,7 +18,7 @@ export function TextField({ className, mono = false, ref, ...input }: TextFieldP
       autoComplete="off"
       spellCheck={false}
       className={cn(
-        "h-5.5 min-w-0 flex-1 rounded-ctl border border-ctl-edge bg-surface px-2 text-[13px] text-text " +
+        "h-ctl-sm min-w-0 flex-1 rounded-ctl border border-ctl-edge bg-surface px-2 text-[13px] text-text " +
           "placeholder:text-dim disabled:cursor-not-allowed disabled:opacity-45",
         mono ? "font-mono" : "font-sans",
         className,

@@ -12,7 +12,7 @@ export function Tip({ text }: { text: string }) {
         role="img"
         aria-label="More information"
         aria-describedby={id}
-        className="inline-flex size-4 items-center justify-center rounded-full text-faint outline-none hover:text-muted focus-visible:text-muted"
+        className="inline-flex size-4 items-center justify-center rounded-full text-muted outline-none hover:text-text focus-visible:text-text"
       >
         <Info className="size-3.75" aria-hidden />
       </span>

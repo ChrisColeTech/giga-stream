@@ -31,7 +31,7 @@ export function PillChoice<T extends string>({ label, options, value, onChange, 
             disabled={disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              "h-5.5 cursor-pointer rounded-full border px-2.5 font-sans text-[13px] transition-[background,border-color,color] " +
+              "h-ctl-sm cursor-pointer rounded-full border px-2.5 font-sans text-xs transition-[background,border-color,color] " +
                 "duration-fade ease-linear disabled:cursor-not-allowed disabled:opacity-45",
               on
                 ? "border-accent-edge bg-accent-tint text-accent-text"

@@ -45,16 +45,16 @@ export function AdminBackendSection({ adminUrl, onCommit }: AdminBackendSectionP
       </Group>
       <Group id="settings.admin.state" title="State" icon={Activity} last>
         <Row label="Connection" tip="Whether the fileserver reaches the admin backend." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Revision" tip="The backend's revision, which moves when its data changes." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Channels read" tip="When the channels were last read from the backend." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Error" tip="The last read's error, if it failed." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
       </Group>
     </>
