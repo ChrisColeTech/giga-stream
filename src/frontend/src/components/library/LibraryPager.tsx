@@ -1,12 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useLibraryPager } from "@/hooks/useLibraryPager";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-
-export function requestVisiblePageOnce(active: { current: boolean }, request: () => void): void {
-  if (active.current) return;
-  active.current = true;
-  request();
-}
 
 export function LibraryPager({
   hasMore,
@@ -17,31 +11,10 @@ export function LibraryPager({
   readonly hasMore: boolean;
   readonly loading: boolean;
   readonly view: "grid" | "list" | "rows";
-  readonly onVisible: () => void;
+  /** Asks for the next page; answers whether one was really requested. */
+  readonly onVisible: () => boolean;
 }) {
-  const sentinel = useRef<HTMLDivElement>(null);
-  const requestActive = useRef(false);
-  const visibleRequest = useRef(onVisible);
-  visibleRequest.current = onVisible;
-  useEffect(() => {
-    const node = sentinel.current;
-    if (node === null || !hasMore || loading) {
-      requestActive.current = true;
-      return;
-    }
-    requestActive.current = false;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        requestVisiblePageOnce(requestActive, () => visibleRequest.current());
-      }
-    }, { rootMargin: "240px" });
-    observer.observe(node);
-    return () => {
-      requestActive.current = true;
-      observer.disconnect();
-    };
-  }, [hasMore, loading]);
-
+  const sentinel = useLibraryPager(hasMore, loading, view, onVisible);
   if (!hasMore && !loading) return null;
   return (
     <div ref={sentinel} aria-label={loading ? "Loading more titles" : undefined}>

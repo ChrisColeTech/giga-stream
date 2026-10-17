@@ -23,6 +23,20 @@
   }
 }
 
+/* The workspace's own box is the ONLY bound of its panes. The Allotment root is pinned to it (absolute, inset 0) rather
+ * than sized by `height: 100%`, so a percentage that resolves against a not-yet-settled flex size can never let a pane
+ * (and the scroller inside it) run past the workspace under the status bar. Unlayered on purpose: Allotment's own
+ * stylesheet is unlayered and would beat a rule in the components layer. */
+.workspace {
+  overflow: hidden;
+}
+.workspace > .split-view {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
 /* Allotment separators, themed from the family's tokens. Allotment reads these custom properties, so this is the one
  * place its chrome meets ours: the pane border is the hairline, the hover/drag indicator the accent, and the sash
  * track the 5px hit area holding it. */

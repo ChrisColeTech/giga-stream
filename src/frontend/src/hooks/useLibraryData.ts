@@ -10,6 +10,7 @@ import {
   readLibrary,
 } from "@/services/library";
 import { listCollections } from "@/services/collections";
+import { logLibraryPage } from "@/services/library-log";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 
@@ -22,7 +23,8 @@ export interface LibraryData {
   readonly loading: boolean;
   readonly paging: boolean;
   readonly hasMore: boolean;
-  readonly loadMore: () => void;
+  /** Requests the next page; answers whether one really was requested. */
+  readonly loadMore: () => boolean;
   readonly refresh: () => void;
 }
 
@@ -38,6 +40,7 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   const pageRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
   const firstPagePending = useRef(true);
+  const pagesLoaded = useRef(0);
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
   const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
@@ -49,6 +52,7 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
         setPage(answer);
         setAcceptedQueryKey(libraryQueryKey(useAppStore.getState().libraryQuery));
         firstPagePending.current = false;
+        pagesLoaded.current = 1;
         setLoading(false);
         const store = useAppStore.getState();
         store.rememberLibraryItems(answer.items);
@@ -109,10 +113,10 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     else session.current?.readNow(query);
   };
 
-  const loadMore = (): void => {
+  const loadMore = (): boolean => {
     const cursor = page?.nextCursor;
     const key = libraryQueryKey(query);
-    if (firstPagePending.current || !canLoadLibraryPage(acceptedQueryKey, key, loading, paging, cursor)) return;
+    if (firstPagePending.current || !canLoadLibraryPage(acceptedQueryKey, key, loading, paging, cursor)) return false;
     const generation = queryGeneration.current;
     const controller = new AbortController();
     pageRequest.current?.abort();
@@ -125,9 +129,12 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
       setPage(merged);
       acceptCount(query, merged);
       useAppStore.getState().rememberLibraryItems(next.items);
+      pagesLoaded.current += 1;
+      logLibraryPage(pagesLoaded.current, merged);
     }).catch((error: unknown) => {
       if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
     }).finally(() => { if (pageRequest.current === controller) setPaging(false); });
+    return true;
   };
 
   useEffect(() => {

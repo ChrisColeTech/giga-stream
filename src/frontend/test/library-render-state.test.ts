@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { requestVisiblePageOnce } from "@/components/library/LibraryPager";
+import { requestVisiblePageOnce } from "@/lib/library-pager";
 import { collectionsSubmenu, FOLDER_MEMBERSHIP_REASON } from "@/lib/collection-menu";
 import { memberRows } from "@/lib/collections-members";
 import { libraryRenderState, rowsRenderState } from "@/lib/library-render-state";
@@ -44,7 +44,7 @@ describe("Rows paging grammar", () => {
   it("requests a visible cursor only once until the active request clears", () => {
     const active = { current: false };
     let requests = 0;
-    const request = () => { requests += 1; };
+    const request = () => { requests += 1; return true; };
     requestVisiblePageOnce(active, request);
     requestVisiblePageOnce(active, request);
     assert.equal(requests, 1);
