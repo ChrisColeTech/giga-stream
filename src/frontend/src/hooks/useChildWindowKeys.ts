@@ -27,6 +27,9 @@ export function useChildWindowKeys(
     const deaf = (event: KeyboardEvent): void => {
       const target = event.target instanceof Node ? event.target : null;
       if (target !== null && frame.current?.contains(target) === true) return;
+      /* A Radix menu (the Collections submenu) renders in a portal on the body, outside the frame, but it is this
+       * window's own control: its keys reach it, and Radix's own Escape handling runs on them. */
+      if (target instanceof Element && target.closest('[role="menu"]') !== null) return;
       event.stopPropagation();
       event.preventDefault();
     };
