@@ -11,6 +11,7 @@ import { createProviderRepository } from "./provider-repository.js";
 import { createRefreshTokenRepository } from "./refresh-token-repository.js";
 import { createRevisionRepository } from "./revision-repository.js";
 import { createTitleRepository } from "./title-repository.js";
+import { createUiStateRepository } from "./ui-state-repository.js";
 
 /** The store composition root: opens and migrates the one database, and hands out its repositories. */
 export function createStore(file: string) {
@@ -31,6 +32,7 @@ export function createStore(file: string) {
     accounts: createAccountRepository(db),
     refreshTokens: createRefreshTokenRepository(db),
     audit: createAuditRepository(db),
+    uiState: createUiStateRepository(db),
     transaction: <T>(work: () => T): T => runInTransaction(db, work),
     close: (): void => db.close(),
   };

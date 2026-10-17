@@ -20,6 +20,7 @@ import { createSyncScheduler } from "./sync-scheduler.js";
 import { seedSyncRecords } from "./sync-seed.js";
 import { createTitleService } from "./title-service.js";
 import { createTmdbClient } from "./tmdb-client.js";
+import { createUiStateService } from "./ui-state-service.js";
 
 export interface ServiceOptions {
   jwtSecret: string;
@@ -108,6 +109,7 @@ export function createServices(store: Store, options: ServiceOptions) {
     scheduler,
     adminStatic: createAdminStatic(options.adminDist),
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
+    uiState: createUiStateService({ store, now, log: options.log }),
     channels: createChannelService({ store, audit, live, allowLoopback: options.allowLoopback, now }),
     providers: createProviderService({ store, audit, now }),
     titles,
