@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Allotment } from "allotment";
 import { STAGE_MIN_HEIGHT, SURFACES, limitsOf } from "@/constants/surfaces";
+import { useVideoRepaint } from "@/hooks/useVideoRepaint";
 import { useWorkspaceSplit } from "@/hooks/useWorkspaceSplit";
 import { cn } from "@/lib/cn";
 import { usePaneOpen } from "@/store/selectors";
@@ -22,6 +23,7 @@ export interface WorkspaceSplitProps {
  *  inactive ones are `hidden`. A closed pane is `inert`: its controls leave the tab order and the accessibility tree. */
 export function WorkspaceSplit({ surface, active, left, center, right, bottom }: WorkspaceSplitProps) {
   const split = useWorkspaceSplit(surface);
+  const videoBox = useVideoRepaint(active);
   const config = SURFACES[surface];
   const leftOpen = usePaneOpen(surface, "left");
   const rightOpen = usePaneOpen(surface, "right");
@@ -62,7 +64,13 @@ export function WorkspaceSplit({ surface, active, left, center, right, bottom }:
   );
 
   return (
-    <div className={cn("workspace", !active && "hidden")} ref={split.boxRef}>
+    <div
+      className={cn("workspace", !active && "hidden")}
+      ref={(node) => {
+        split.boxRef(node);
+        videoBox.current = node;
+      }}
+    >
       {hasBottom ? (
         <Allotment
           ref={split.columnRef}
