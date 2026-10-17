@@ -41,10 +41,13 @@ There is no account, search field, Settings gear or media control in the titleba
 
 | Element | Behaviour |
 |---|---|
-| Connection | a status dot and a lowercase mono word: `connecting`, `ready`, `reconnecting` |
-| Notice | exactly one latest sentence, an outcome or a refusal |
-| Events | opens and closes the events drawer; highlighted while open |
-| Settings | opens and closes the Settings window; highlighted while open |
+| Running work | first, at the left: LoRA Studio's progress bar, `N running · X%` (or `idle`), and **Stop**, which cancels the first running job on one press (an emergency stop takes no confirm) |
+| Notice | exactly one latest sentence, an outcome or a refusal, in the text colour; a warn or error carries a tone-coloured alert glyph before it, so the tone is not colour alone |
+| Events | opens and closes the events drawer; tinted while open |
+| Settings | opens the Settings window. Not a toggle: the window's scrim covers the statusbar, so its `X` and Escape close it |
+
+There is no connection dot or word: dots are not used for state, and the outcome of a request is the notice
+line's sentence.
 
 ### 1.3 Panes
 
@@ -66,19 +69,32 @@ absorb the remaining space and never collapse.
 
 Allotment owns the sashes and the sizes. Collapsing commits the new visibility at once, then a short
 tween paints the travel by writing each frame into Allotment, so the pane visibly slides out and the
-centre follows. Reduced motion makes it instant.
+centre follows. Reduced motion makes it instant. A closed pane is `inert`.
+
+The width rule is pure, in `lib/pane-collapse.ts`: as the work width falls below 1000 px the right pane
+collapses, and below the centre's minimum plus the left pane's minimum the left one does; the notice line says
+`The right pane collapsed to fit the window.` A pane the width closed comes back, with `The right pane is back.`,
+when the width crosses its line again, unless the user opened or closed it in between. A pane the user reopens
+under its line stays open.
 
 ## 2. State
 
 ### 2.1 The store
 
-One Zustand store, composed of slices:
+One Zustand store (`store/app-store.ts`), with the navigation slice in its own file and spread into the same
+store. What it holds as built:
 
-| Slice | Holds |
+| Part | Holds |
 |---|---|
-| shell | active surface, pane visibility and sizes, the events drawer, the open window or popup and its anchor, window bounds for the run, folded groups, theme, accent, motion, the notice |
-| live | the channel list as received, the rows on show, search and category, the selected and the playing channel, the stage state, the connection |
-| playback | what the player reports (levels, tracks, size, latency) and the user's playback choices |
+| shell | active surface, pane visibility and sizes, the events drawer, the open window or popup with its anchor and item, window bounds for the run, folded groups, UI zoom, theme, accent, motion, the notice |
+| events | the events log (`06` section 7): the fixture rows, then every warn or error notice as a row, at most 200; `clearEvents` |
+| preferences | `playback` (autoplay, quality, audio and caption language, latency, picture fit, resume mode, watched percent, Live on open) and `library` (default view, default sort, Continue watching, pause history, rescan on startup); each applies at once |
+| marks | favourites and collection memberships by item key, shared by Library, Title information and Player |
+| navigation (`store/navigation-slice.ts`) | `playRequest` / `requestPlay(ref)`: shows the Player and asks it to open an item. `libraryRequest` / `requestLibrary({source?, select?})`: shows Library on a view, optionally with one item selected and scrolled into view. `collectionsFocus` / `openCollections(id?)`: opens the Collections window, on that collection's workspace when an id is given. Each request carries a serial, so asking twice still lands; leaving for another surface closes the open work window |
+
+A surface's own browsing state stays in the page in phase 1: Live's search, category, selected and playing
+channel; Library's query, view, selection and history marks; the Player's session. Phase 2 moves what it must
+(`22`).
 
 The store performs no I/O and holds no promise, timer, DOM node or media element.
 
@@ -121,7 +137,7 @@ The interface never reads or writes browser storage.
 ### 3.1 The player
 
 - A `<video>` fills the stage, with the picture fitted whole inside it by default. It is always there,
-  and nothing is drawn over it while a channel loads.
+  and nothing is drawn over it while a channel loads. The stage is `--color-stage`, dark in every theme.
 - It plays with the browser's own controls.
 - Choosing a channel hands the channel's `streamUrl` to the player. The player loads that address
   directly; nothing resolves or proxies it. hls.js drives playback whenever the browser can run it; the
@@ -139,15 +155,18 @@ The interface never reads or writes browser storage.
   the fileserver reads the channels again and re-probes every stream, and the answer replaces the list.
 - A search field and a category select under it. Search asks `GET /api/channels` after a 250 ms pause;
   a newer keystroke abandons the older request; a failed request keeps the last rows and says why.
-- Rows, each with: a 56px 4:3 logo with a glyph fallback, the number, the name on one line, the
-  category with a status dot before it (live, offline or not yet probed), and a marker on the channel
-  that is playing. Selected is a bar on the row's left edge; selected and playing are different.
+- Rows, each with: the status as the left-edge accent strip (live, offline or not checked), a 56px 4:3
+  logo with a glyph fallback, the number and name on one line, and the category with the status word, or
+  `Playing` in the accent on the channel that is playing. Selected is the control fill alone (the left edge
+  already carries the status); selected and playing are different.
 - A click or Enter plays the channel and remembers it as the last channel
-  (`PATCH /api/channels/last`). The arrow keys, Home and End only move the selection.
+  (`PATCH /api/channels/last`; phase 1 calls the `rememberLastChannel` stub and says its refusal). The arrow
+  keys, Home and End only move the selection.
 - A list that is loading, empty, or whose backend cannot be reached is skeleton rows (at least 14),
   never stale channels and never a sentence.
-- Live opens on the last channel you chose if it is still listed, otherwise the first.
-- At the foot, a collapsible Details section: the selected channel's name, category, number and
+- With the **Live opens** setting at `Last channel`, Live opens on the last channel chosen, already playing,
+  if it is still listed; at `Nothing`, it selects the first row and plays nothing.
+- Pinned at the foot, a Details block headed `Details`: the selected channel's name, category, number and
   revision, a dash where nothing is selected.
 
 ### 3.3 The playback settings pane
@@ -159,14 +178,15 @@ folds it:
 |---|---|
 | Video | quality, resolution, bitrate |
 | Display | fit (Fit, Fill, Original), aspect |
-| Audio | track, language |
+| Audio | language |
 | Captions | captions |
 | Playback | latency (Normal, Low), live edge |
 
-Each row is a mono label beside its control. A row that cannot be used is disabled in place, and its
-reason is its tooltip; no text is printed under any control. Fit, Fill and Original is always usable and
-changes how the picture sits in the stage without touching the stream. Volume, mute and fullscreen are on
-the player, not here.
+Each row is a mono label beside its control, at the rail control height (24px); a readout sits at the row's
+right edge, as the Player inspector's facts do. A readout with no stream is a dash with its reason as the
+tooltip; no text is printed under any control. Fit, Fill and Original is always usable and changes how the
+picture sits in the stage without touching the stream; the same preference fits the Player's stage. Volume,
+mute and fullscreen are on the player, not here.
 
 ## 4. Library and Player
 
@@ -177,7 +197,9 @@ contents are in `06`.
 ## 5. Windows and popups
 
 Settings opens as a modal work window drawn inside the app, from the statusbar or `Ctrl+,`; Collections
-opens the same way from the Library rail's `Manage collections` button, and Title information opens the same way from a card's Info. A work window has a header with
+opens the same way from the Library rail's `Manage collections` button (on its index) or a collection's
+`Rename…` / `Remove…` menu rows (on that collection's workspace), and Title information opens the same way from
+a card's Info or a press on a card's art. A work window has a header with
 its title and an `X` that closes it, a scrim over everything below the titlebar, and a form of groups and
 rows. It is movable by its header and resizable by its edges, opens centred at its content's size (never
 more than 80% of the window, never below 658 x 412), and returns focus to its opener when it closes.
@@ -198,9 +220,12 @@ window so it is never clipped by a pane.
 Global keys yield to text fields, selects and open popups.
 
 Motion is the family's vocabulary (`index.css`, `constants/motion.ts`; `23` decision 3): a colour or border fade 70 ms,
-a pane collapse 100 ms (Giga Cut's ruling, kept in section 1.3), a rail section's fold 100 ms, the events drawer and a window's entrance 200 ms, an overlay's
+a pane collapse and the events drawer 100 ms (Giga Cut's ruling, kept in section 1.3), a rail section's fold 100 ms, a window's entrance 200 ms, an overlay's
 entrance 280 ms. The reduce-motion setting (follow system, off, on) makes every one of them
-instant.
+instant, and `Off` keeps motion even when the desktop asks for less. `useTheme` resolves the setting and stamps
+`data-motion` (`reduce` or `full`) on `<html>`; CSS keys on the stamp (`styles/motion-reduce.css`), framer-motion
+reads it through `MotionConfig`, and an imperative animation (a `Section` fold, the drawer) asks
+`useReduceMotion()`. Until the stamp lands, the desktop's own preference holds.
 
 ## 7. Loading, empty and failure
 

@@ -1,12 +1,13 @@
 # 25 - Visual Gaps and Remediation
 
-**Status: the remediation plan (2026-10-17), on branch `family-port`.** An audit of every surface against the
+**Status: done (2026-10-17), on branch `family-port`.** Every fix has landed and every record decision is written
+into the specs; section 6 gives each finding's status and commit. An audit of every surface against the
 family standard (Sensenova LoRA Trainer, Giga LoRA Studio, Giga Cut's button rules) and the owner's rulings,
 driven in the browser at four widths. Frontend only. Each finding has a decision: **fix**, **record** (the
 behaviour is an owner decision or a deliberate exception; the docs are corrected instead), or **defer**.
 
 When every wave is done, the specs (`01`, `02`, `06`, `21`, `23`) are rewritten to describe the app as written
-(section 4).
+(section 4). The finding tables below keep each finding as it was planned; section 6 is what landed.
 
 ## 1. Findings
 
@@ -105,7 +106,7 @@ Each wave ends with the gate (typecheck, lint, tests, rules) and a look in the b
 5. **Windows:** VG-064, 065, 067 to 071.
 6. **Docs:** the record decisions, then section 4.
 
-Deferred: VG-066, and the enhancements (section 5).
+Deferred: VG-066, and the enhancements (section 7).
 
 ## 3. Heading styles in use (VG-030)
 
@@ -120,9 +121,50 @@ Deferred: VG-066, and the enhancements (section 5).
 ## 4. Docs to the code
 
 After wave 5, `01` §9, `02`, `06`, `21` and `23` are rewritten to the app as written: the standards actually
-implemented, each exception with the case that forces it, and nothing that describes removed behaviour.
+implemented, each exception with the case that forces it, and nothing that describes removed behaviour. Done in wave
+6 (section 6).
 
-## 5. Enhancements (deferred)
+## 5. Where each record decision is written
+
+| Id | Written in |
+|---|---|
+| VG-007 | `01` section 9, Headings: the brand and the surface switch keep the family's radii and spacing |
+| VG-017 | `06` section 2, rule 8: the accordion's grow model, and the space it leaves in a short rail |
+| VG-028 | `06` section 4.2, Poster grid: LoRA's tile; the title is the tooltip |
+| VG-030 | `01` section 9, Headings: the five heading roles (section 3 above) |
+| VG-031 | `01` section 9, Buttons and surfaces: the over-art chevron exception |
+| VG-032 | `06` section 4.1: Sensenova's rail is text, no glyphs |
+| VG-045 | `06` section 5.4: each open block scrolls inside its share (owner) |
+| VG-061 | `23` section 3.1: `NavRail` is Sensenova's build; the `Section`, `motion-reduce.css`, `ContextMenu` and `--color-stage` deltas |
+| VG-082 | `06` section 6.2: preferences apply at once and save in phase 2; only the admin address saves now |
+
+## 6. Status
+
+| Wave | Commit | Findings fixed |
+|---|---|---|
+| 1. Shell and keyboard | `c7ec634` | VG-001, 002, 003, 004, 005, 006, 060, 062, 072 |
+| 2. Library | `2b97573` | VG-020, 021, 022, 023, 024, 025, 026, 027, 029, 033, 034, 035, 041, 063, 081 |
+| 3. Player | `964c8f4` | VG-016, 040, 042, 043, 044, 046, 047, 048, 049, 050, 051, 052, 080 (Player: Picture fit, the Resume footer) |
+| 4. Live | `176872e` | VG-010, 011, 012, 013, 014, 015, 080 (Live: opens on the last channel) |
+| 5. Windows | `0152287` | VG-064, 065, 067, 068, 069, 070, 071 |
+| 6. Docs | the docs commit after `0152287` | VG-007, 017, 028, 030, 031, 032, 045, 061, 082 recorded (section 5); `01`, `02`, `06`, `21`, `23` rewritten to the app |
+
+**Deferred:** VG-066 (form group folds are the family `Form`'s local state), and the enhancements of section 7.
+
+**Deviations from the plan:**
+
+- **VG-016** was planned for wave 4 (Live) and landed in wave 3: the Player's stage note was rebuilt on Live's
+  `LiveNote` while the Player's stage was open for VG-047 and VG-048.
+- **VG-067** planned "a scan word in the row" of the Collections index. It landed as the rail's shimmer count in the
+  videos cell, with the partial count as its tooltip. Earlier in the same session the owner rejected a scan column on
+  that index ("it sounds like a waste of space"), and a scan word would have brought it back in all but name; the
+  shimmer count is the design the rail already uses, so the index and the rail say "scanning" the same way.
+- **Found while verifying wave 2, fixed in it:** a context-menu row that opened a work window left the window deaf to
+  Escape (the menu's focus trap and Radix's timed close-focus pulled focus back to the rail). The menu now runs a row's
+  action after it closes (`01` section 9, `23` section 3.1). The History strip was also missing from the Rows view, and
+  was added there.
+
+## 7. Enhancements (deferred)
 
 Grid density by pane width; real fixture posters to judge tile contrast; hug-content rail sections; the notice
 fading to the Events log; one shared rail-row component; keyboard help; a per-row scan strip on the Collections

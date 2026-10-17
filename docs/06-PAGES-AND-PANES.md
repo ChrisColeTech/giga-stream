@@ -1,7 +1,8 @@
 # 06 - Pages and panes
 
 **Status: the surface specification — every pane, toolbar, control, window and state of the interface.
-2026-10-15.**
+Rewritten to the app as built on 2026-10-17 (after `25`'s remediation waves). Where a row says "phase 1",
+the control is wired to its stub in `services/` and refuses with one sentence until phase 2 (`22`).**
 
 This document says what is inside each surface and what each control does. `02` owns the interface
 architecture (state, services, hydration), `03` the fileserver's wire, `04` movement between surfaces and
@@ -34,13 +35,14 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 
 | Element | Behaviour |
 |---|---|
-| **Connection** | A status dot and a lowercase mono word: `connecting` while the first state read is in flight, `ready` after a request succeeded, `reconnecting` after one failed - the outcome of the last request (`03` section 4), not a live link. The sentence behind it is its tooltip |
-| **Notice line** | One polite live region. Each sentence replaces the last. Tones are info, warn and error. It carries every outcome, refusal and unreadable-answer report |
-| **Events** | An icon and the label "Events". Toggles the drawer; lit while it is open |
-| **Settings** | An icon and the label "Settings". Toggles the Settings window; lit while it is open |
+| **Running work** | First. LoRA Studio's running work: a 112px bar that fills to the first running job's percent (full and pulsing when the job cannot say how far it is, as a scan walking a folder), then `N running · X%` in mono, or `idle` over an empty track, then **Stop**. Stop cancels the first running job on one press (owner: a confirm makes no sense on an emergency stop); with nothing running it is disabled, `Nothing to stop`. The job's label and percent are the tooltip. Phase 1 reads the jobs fixture and Stop calls the `cancelJob` stub |
+| **Notice line** | One polite live region. Each sentence replaces the last, in the text colour; a warn or error has a tone-coloured alert glyph before it, so it stays legible on the light theme and colour is not the only signal. It carries every outcome, refusal and unreadable-answer report. A warn or error is also appended to the events log |
+| **Events** | An icon and the label "Events". Toggles the drawer; tinted while it is open |
+| **Settings** | An icon and the label "Settings". Opens the Settings window. It is not a toggle and is never lit: the window's scrim covers the statusbar, and the window's `X` and Escape close it |
 
-The fileserver's answers also land on the notice line: a refusal's sentence, and any part of an
-answer the interface could not read.
+There is no connection dot or word. A dot is not used for state anywhere, and the outcome of the last request
+is the notice line's sentence. The fileserver's answers land there too: a refusal's sentence, and any part of
+an answer the interface could not read.
 
 ### 1.3 Panes and sashes
 
@@ -62,9 +64,13 @@ answer the interface could not read.
 - A collapse commits visibility at once and then a 100 ms tween paints the travel by writing each frame
   into Allotment, so the pane slides out and the centre follows. A pane's content keeps at least its minimum
   width and hugs the edge that stays put. Reduced motion makes it instant.
-- A closed pane's sash cannot be dragged open; only the toggle reopens it.
-- A pane's size and visibility are saved a moment after they change and restored at launch.
-- Below 1000px of work width the right pane collapses first, then the left; the centre never collapses.
+- A closed pane's sash cannot be dragged open; only the toggle reopens it. A closed pane is `inert`, so its
+  controls leave the tab order and `Ctrl+F` never focuses a search inside it.
+- A pane's size and visibility are saved a moment after they change and restored at launch (phase 2).
+- Below 1000px of work width the right pane collapses first, then the left (below the centre's minimum plus
+  the left pane's minimum); the centre never collapses. The notice line says which pane collapsed. A pane the
+  width closed comes back when the width crosses its line again, and the notice says so, unless the user has
+  opened or closed it since (`lib/pane-collapse.ts`).
 
 ### 1.4 Showing the window
 
@@ -90,9 +96,14 @@ panes to them without a tween, and becomes visible two animation frames later, o
    navigation scrolls the selection into view. Focus rings stay visible.
 7. **Explanations are tooltips** on an info glyph or on the disabled control itself, placed against the
    window so no pane clips them. An info glyph belongs to a form group or row, not to a rail section.
-8. **Rail sections are collapsible**: the family `Section`, a header with a chevron that turns and a title; the
-   whole header row folds the body; the fold state is kept in the store by id and survives a surface switch.
-9. **Destructive actions are an inline two-step**, never a dialog.
+8. **Rail sections are collapsible** on the Live and Player rails: the family `Section`, a header with a chevron
+   that turns and a title; the whole header row folds the body; the fold state is kept in the store by id and
+   survives a surface switch. The fold honours Reduce motion. Open sections share the rail's height and each
+   scrolls inside its own share (the family accordion's grow model); in a short rail that leaves space under
+   the open sections, which is the model working, not a gap to fill. The Library rail is the exception: it is
+   `NavRail` (Sensenova's), whose Views and Collections groups are headed lists that do not fold.
+9. **Destructive actions are an inline two-step** (`ArmedButton`, `01` section 9), never a dialog.
+10. **No dots.** A state is a word, a left-edge accent strip, or a shimmer where a value is still arriving.
 
 > Owner, 2026-10-15: *"why is there a label under the controls"* — and the rail printed a sentence under
 > every section. Reasons are tooltips only.
@@ -116,8 +127,9 @@ panes to them without a tween, and becomes visible two animation frames later, o
 > Owner, 2026-10-15: *"i shouldnt need the admin backend to see a player"* and *"the video player just
 > loads the stream. its not converting titles or channels, or copying anything."*
 
-A `<video>` fills the stage, the picture fitted whole inside it by default, with the browser's own controls
-(play, time, volume, fullscreen). A custom control bar is a later phase. It is always on the stage.
+A `<video>` fills the stage, the picture fitted whole inside it by default (the Picture fit preference), with
+the browser's own controls (play, time, volume, fullscreen), on `--color-stage`, which stays dark in the light
+theme. A custom control bar is a later phase. It is always on the stage.
 
 | State | What the stage shows |
 |---|---|
@@ -145,33 +157,33 @@ A `<video>` fills the stage, the picture fitted whole inside it by default, with
 
 | Control | Behaviour |
 |---|---|
-| `Channels` and the total | readout |
-| **Refresh** icon (`Refresh channels`) | calls `POST /api/channels/refresh`; the whole list, every stream's status and the dots update from the answer; the notice line says `Channels refreshed.` or why not |
+| `Channels` and the total | readout, in mono: LoRA Studio's queue head |
+| **Refresh** icon (`Refresh channels`) | calls `POST /api/channels/refresh`; the whole list and every stream's status update from the answer; the notice line says `Channels refreshed.` or why not (phase 1: the `refreshChannels` stub) |
 
-**When the dots move.** A stream's status and its dot are facts of the last read. They refresh when
+**When the status moves.** A stream's status (its strip and word) is a fact of the last read. It refreshes when
 the list is read — when Live opens, when **Refresh channels** is pressed, or when another action
-re-reads the list — and they do not change on their own in between (`03` section 5.1). A channel that
-goes offline mid-session keeps its `live` dot until the next read.
+re-reads the list — and does not change on its own in between (`03` section 5.1). A channel that
+goes offline mid-session keeps its `Live` status until the next read.
 
-**Search and category**
+**Search and category** — both at the rail control height (24px), the same as the playback pane's selects.
 
 | Control | Behaviour |
 |---|---|
-| Search field | always present; asks `GET /api/channels?q=` after a 250 ms pause; a newer keystroke abandons the older request; a clear control appears when it has text |
-| Category select | the published categories with their counts, All first; a category chosen and since unpublished stays listed |
+| Search field | always present; carries `data-search` for `Ctrl+F`; asks `GET /api/channels?q=` after a 250 ms pause; a newer keystroke abandons the older request; a clear control appears when it has text (phase 1 filters the fixture) |
+| Category select | the published categories with their counts (`All · 16`), All first; a category chosen and since unpublished stays listed |
 
 **Channel row**
 
 | Element | Behaviour |
 |---|---|
+| Status strip | LoRA's queue-row accent bar on the left edge: live (the done colour), offline (the failed colour), not checked (the inactive grey) |
 | Logo | a 56px 4:3 box: the logo, a shimmer while it loads, a glyph if it cannot be shown |
-| Number | the channel number when it has one |
-| Name | one line, ellipsised |
-| Status dot | before the category: live (the done colour), offline (the failed colour), not yet probed (the queued grey); the word is there for assistive technology |
-| Category | a compact subdued label |
-| Playing | an accent `live` marker at the right of the second line on the channel the player has loaded |
-| Selected | an accent bar on the row's left edge and a faint fill |
-| Activation | a click or `Enter` plays the channel and remembers it |
+| Number and name | one mono line, ellipsised |
+| Category | the second line, left, faint |
+| Status word | the second line, right: `Live`, `Offline` or `Not checked`, so the strip's colour is never the only signal |
+| Playing | on the channel the player has loaded, the status word is replaced by `Playing` in the accent (not `live`, which read as the status word) |
+| Selected | the control fill alone. The left edge already carries the status strip, and a second strip there read as one muddled mark |
+| Activation | a click or `Enter` plays the channel and remembers it (phase 1: marks it playing and calls the `rememberLastChannel` stub, whose refusal is said once) |
 
 - Up, Down, Home and End move the selection and focus (one tab stop on the list); they never start a
   channel. The row has no context menu: the interface has no channel verbs.
@@ -181,8 +193,12 @@ goes offline mid-session keeps its `live` dot until the next read.
 14 skeleton rows; the query and category stay visible. A failed search keeps the last rows and says why on
 the notice line.
 
-**Details** — a collapsible section at the foot: the selected channel's `name`, `category`, `number` and
-`revision` as mono key and value, a dash where nothing is selected.
+**Details** — pinned at the foot under the list, as LoRA pins its job details under the queue: the heading
+`Details` (never the channel's name, which is the first row), then the selected channel's `name`, `category`,
+`number` and `revision` as mono key and value, a dash where nothing is selected. It does not scroll with the list.
+
+**Opening.** With Settings > Playback > **On open** at `Last channel`, Live opens on the last channel played,
+selected and already playing; at `Nothing` it selects the first row and plays nothing.
 
 There is no footer, no star, no Manage Channels, no Recents and no Now Playing block. Channels are
 published elsewhere.
@@ -190,7 +206,8 @@ published elsewhere.
 ### 3.3 Playback settings (left)
 
 Five collapsible sections (§2.8). Each row is a mono label in a fixed column with its control beside it, and
-every choice is a rail select, never chips.
+every choice is a rail select, never chips. A readout sits at the row's right edge, as the Player inspector's
+facts do, so a value has one alignment app-wide.
 
 **The selects are preferences, not a remote for the stream** (owner, 2026-10-16: *"why would my settings
 constantly change. thats not how youtube or netflix settings work"*). Each is a standing choice, saved as a
@@ -229,9 +246,10 @@ tooltip, until one plays. Volume, mute and fullscreen are on the player and are 
 
 ### 4.1 Collections (left)
 
-Two collapsible sections (§2.8) of one row style, a flat list and not a tree.
+The family's `NavRail`, as Sensenova has it: two headed groups of one row style, a flat list and not a tree.
+The groups do not fold (§2.8's exception).
 
-| Section | Rows |
+| Group | Rows |
 |---|---|
 | **Views** | All, History, Favorites, in that order |
 | **Collections** | every collection, alphabetical |
@@ -240,84 +258,104 @@ Two collapsible sections (§2.8) of one row style, a flat list and not a tree.
 
 | Element | Behaviour |
 |---|---|
-| Glyph | a distinct icon for All, History, Favorites and a collection |
-| Name | one line, ellipsised |
-| Count | appears once that view or collection has been queried; absent before, and never an indefinite skeleton |
-| Scan dot | a small progress dot when any folder attached to the collection is being scanned |
-| Selected | the accent bar on the row's left edge; selecting a row runs the library query |
-| Context menu | on a collection: **Rename** and **Remove**. All, History and Favorites have none; managing History and Favorites is contextual to the body |
+| Name | one line, ellipsised, text only. There are no glyphs in the rail: Sensenova's rail is text |
+| Count | the view's or collection's item count, mono, at the trailing edge |
+| Scanning | while any folder attached to the collection scans, the count is a shimmer pill the width of a three-digit count (loading is a skeleton, and the edge does not jump when the number lands); the partial count, `Scanning folders · N videos so far`, is the row's tooltip, and `Scanning folders` is announced. Never a dot or a spinner |
+| Selected | the accent bar on the row's left edge and the control fill; selecting a row narrows the body |
+| Context menu | on a collection: **Attach folder…** (acts here, so a folder is one press away), then **Rename…** and **Remove…**, which open the Collections window on that collection's workspace, where the name field and the two-step live. Neither is danger here: nothing is removed until the window's own two-step. All, History and Favorites have none |
 
-- **Footer.** One full-width **Manage collections** button with a folder-cog icon, in a strip under a
-  hairline. It opens the Collections window at once; creating a collection is that window's first group. There
-  is no separate New collection or Add Folder button.
-- **States.** Loading is row skeletons (at least 5). If the list cannot be read, the last rows stay and one
-  notice says why.
-- Removing a collection is a two-step on its own context item, and states `Original files remain untouched.`
+- **Footer.** One full-width ghost **Manage collections** button with a folder-cog icon, pinned in a strip
+  under a hairline. It opens the Collections window on its index; creating a collection is that window's first
+  group. There is no separate New collection or Add Folder button.
+- **States.** With no collections the group draws 5 row skeletons in the row's shape. If the list cannot be
+  read, the last rows stay and one notice says why.
 
 ### 4.2 Body (centre)
 
 **Type strip**
 
-A row of four segments, `All · Movies · TV · Local`, in the shared strip surface. Segments have equal widths
-and no changing count text. The strip is one row and holds no Search, Sort, View, selection count or batch
-verb; those belong to the filters. Existing cards stay while a scope change resolves.
+LoRA Studio's top strip over a gallery grid, holding `All · Movies · TV · Local` as the family's equal-width
+pill choice (`Segmented`). No changing count text. The strip is one row and holds no Search, Sort, View,
+selection count or batch verb; those belong to the filters. It is drawn over the grid, the list and Rows alike.
+Existing cards stay while a scope change resolves.
 
 **Continue Watching**
 
-A horizontal strip above the results, on every view except History, with at most 10 cards. Each card has the
-poster, a label (a movie, or `Series - Sxx Exx`), a progress bar, a remaining or resume fact, and **Play**
-and **Info**. The strip is drawn only when there is progress to show; with none it is absent, since an empty
-band would read as a stray strip, and the grid's own skeletons stand for loading.
-
-**Poster grid**
-
-Cards are at least 144px wide at ratio 2:3, six to eight across at 1600px of body width; the grid is
-virtualized when the result is large.
+A horizontal strip above the results, on every view except History, with at most 10 cards, newest first. It
+narrows the way the results do: by the type strip and by the rail's view (in a collection, only that
+collection's titles in progress). Settings > Library > **Continue watching** off removes it, and the Rows shelf
+with it. The strip is drawn only when there is progress to show; with none it is absent, since an empty band
+would read as a stray strip, and the grid's own skeletons stand for loading.
 
 | Card element | Behaviour |
 |---|---|
-| Poster | the same-origin image, with its own fallback if it cannot be shown |
-| Favorite | a small persistent mark; a press toggles it |
-| Quality | a real value only; never an invented `HD` |
-| Progress | a bar on the bottom edge of the poster for a title being watched |
-| Watched | a check derived from the watch state |
-| Play | an explicit button: a movie or local file plays; a series opens the episode browser |
-| Info | an explicit button: opens the Title information work window without stopping playback |
-| Title | two lines at most |
-| Year | one subdued line |
+| Art | a 16:9 backdrop in the title's colour family, the tile frame of LoRA's gallery; the accent border and ring when selected |
+| Progress | a bar on the art's bottom edge |
+| Label line | the title (or `Series - S01 E02`), then the time left (`26 min left`) or `Watched`, in mono |
+| Verbs | **Play** (**Open** for a series), **Info** and the menu button, as a poster card's |
+| Press | selects the card and opens its Info, as a poster does; the context menu is the poster card's |
 
-- A plain press selects; `Enter` on a selected card opens Info. Play and Info are reachable on keyboard
-  focus and never exist only on hover.
-- Context menu: Play or Open, Info, Favorite or Unfavorite, and `Collections ▸`: a submenu listing every collection with a check mark for its membership. A click toggles membership inline, with no dialog (family standard, Giga Images' `docs/frontend/00`, "Context menu actions").
-- Arrow keys move the selection across the cards and scroll it into view.
+**Poster grid**
+
+LoRA Studio's gallery tile with Giga Stream's 2:3 poster (owner decision). Cards are at least 144px wide
+(`repeat(auto-fill, minmax(144px, 1fr))`, gap 12, padding 12), six to eight across at 1600px of body width.
+
+| Card element | Behaviour |
+|---|---|
+| Art | the poster in one bordered button: the dim border on hover, the accent border and ring when selected. With no image it is drawn as a poster in the title's colour family with the title set large at its foot, which is the content itself, not placeholder copy |
+| Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite |
+| Progress | a bar on the art's bottom edge for a title in progress |
+| Verbs | under the art, on equal ghost tile buttons: **Play** (**Open** for a series), **Info**, and a fixed square menu button |
+| Title | the art's tooltip and accessible name |
+
+- The owner chose LoRA's tile, so a card has no title line, year line, watched check or quality badge under
+  the art: the title is the tooltip, the watch state is the progress bar and Title information, and the quality
+  is in Title information and the list.
+- A press on the art selects the card and opens its Info; `Enter` on a focused card does exactly what the press
+  does. Play and Info are always drawn, never only on hover.
+- Context menu (on the card and from its menu button): the watch line as a heading when there is progress, Play
+  or Open, Info, Favorite or Unfavorite, then `Collections ▸`: a submenu listing every collection with a check mark
+  for its membership. A click toggles membership inline, with no dialog (family standard, Giga Images'
+  `docs/frontend/00`, "Context menu actions"). In History it adds **Remove from History**.
+- Arrow keys, Home and End move the selection and focus across the cards and scroll it into view; they only
+  select.
 
 **List view**
 
-One row per title: thumbnail, title, kind, year, genres, quality, progress, Favorite, Play and Info. The same
-commands as the card. Grid, List and Rows only change presentation, never the query or the selection.
+One row per title: a compact poster thumbnail (the image, or the title's colour alone: a box that small cannot
+set the title, and the row beside it names it), the title, its facts (`2008 · Series · Drama, Crime`), the
+progress bar, the favourite star (lit as the filled accent glyph alone), **Play** or **Open** and **Info** at
+one fixed width so the verbs line up down the list, and the menu button. A press on the row selects it and
+opens Info. The same commands as the card. Grid, List and Rows only change presentation, never the query or
+the selection.
 
-**Rows** (a third presentation, owner decision 2026-10-16). The library is a set of shelves, one per group. Each shelf is a
-heading and a horizontal row of the same cards as the grid. Shelves appear in this fixed order, each only when it has items:
+**Rows** (a third presentation, owner decision 2026-10-16). The library as shelves, one per group, of what the
+grid would show: the rail's view, the type strip, the search, the filters and the sort narrow Rows exactly as
+they narrow the grid. Each shelf is a heading and a horizontal row of the same cards as the grid. Shelves appear
+in this fixed order, each only when it has items:
 
-1. Continue Watching (the strip of §4.2).
+1. Continue Watching (the strip's cards; not in History, and not when the Continue watching setting is off).
 2. Favorites.
 3. Each collection, alphabetical, as the collections rail lists them.
 4. Movies, TV and Local files, by kind.
-5. Genres: each genre the facets report with at least three items, most items first, at most six.
+5. Genres: each genre with at least three items no earlier genre shelf has taken, most items first, at most six.
 
-A shelf's heading shows its count. Its right end holds **See all**, which switches to the grid with that group applied:
-a genre sets the Genre filter; a kind sets the type strip; a collection opens that collection; Favorites opens the
-Favorites view. A row scrolls sideways, with chevron buttons at its edges that show while the pointer is over it.
-Left and Right move across a row's cards, Up and Down move between rows, and Home and End go to the first and last
-card of a row. Selection is single, as in the grid. A shelf whose data is loading shows skeleton cards in its row.
-Trending is not a shelf: it is offered only with a real popularity signal (§4.3). Rows offers no tile-size control.
+A shelf's heading (mono, faint, the count dim) holds **See all** at its right end, which switches to the grid with
+that group applied on a fresh query (the sort stays): a genre sets the Genre filter; a kind sets the type strip; a
+collection opens that collection; Favorites opens the Favorites view. A row scrolls sideways, with raised chevron
+buttons at its edges that show while the row is hovered or focused (`01` section 9's over-art exception). Left and
+Right move across a row's cards, Up and Down move between rows, and Home and End go to the first and last card of a
+row. Selection is single, as in the grid. With no shelf to draw, Rows shows shelves of card skeletons. Trending is
+not a shelf. Rows offers no tile-size control.
 
 **History**
 
-Rows are watch entries and keep their watch id. A row's context menu adds **Remove from History**. A strip
-below the type strip holds **Clear history**, a two-step: the first press arms `Clear all history`, a second
-within four seconds clears it. Neither removes favorites, collections or media. The type strip stays
-`All · Movies · TV · Local` on every view.
+Rows are watch entries and keep their watch id. A row's context menu adds **Remove from History** (phase 1: the
+`removeHistoryEntry` stub; the fixture's titles with progress carry watch ids, so the row is usable). A strip below the
+type strip, in the grid, the list and Rows, holds **Clear history**, an `ArmedButton`: the first press asks
+`Clear all history?`, a second within four seconds clears it; blur or Escape disarms; it is disabled with
+`The history is already empty.` when there is none. Neither removes favorites, collections or media. The type
+strip stays `All · Movies · TV · Local` on every view.
 
 **States**
 
@@ -331,17 +369,18 @@ within four seconds clears it. Neither removes favorites, collections or media. 
 
 ### 4.3 Filters (right)
 
-Two collapsible sections; each setting stacks its label over a 36px control.
+LoRA Studio's gallery filter pane: one scrolling stack of settings, each a 14px label over a 36px control, and
+**Clear filters** pinned under the stack, as the left rail pins Manage collections.
 
-| Section | Filter | Control |
-|---|---|---|
-| Search and view | Search | a field with a search icon and a clear control; combines with the type strip and every filter |
-| Search and view | View | Grid / List / Rows, segmented; Grid is the default |
-| Search and view | Sort | a select: Newest (the default), Oldest, A to Z, Year, and Trending only when the backend supplies a real current popularity signal |
-| Filter | Genre | a populated multi-choice popover of chips, with a search box when there are 12 or more |
-| Filter | Year | a populated select |
-| Filter | Watched | a select: All, Unwatched, Watching, Watched |
-| Filter | Clear filters | clears every filter but keeps the search |
+| Filter | Control |
+|---|---|
+| Search | a field with a search icon and a clear control, `data-search` for `Ctrl+F`; combines with the type strip and every filter |
+| View | Grid / List / Rows, segmented. It opens on the **Default view** setting, and follows that setting when it changes |
+| Sort | a select: Newest, Oldest, A to Z, Year. It opens on the **Default sort** setting and follows it when it changes. Trending is offered only when the backend supplies a real current popularity signal |
+| Genre | a field (the same box and chevron as the selects beside it, not a button) that opens a popover of chips, multi-choice, with a search box when there are 12 or more; Escape or focus leaving closes it |
+| Year | a populated select, `Any year` first |
+| Watched | a select: All, Unwatched, Watching, Watched |
+| **Clear filters** | ghost, full width, always enabled. Returns Genre, Year and Watched to their defaults and the sort to the Default sort setting; keeps the search, the type strip and the rail's view |
 
 - Genre and Year are populated choices and never free text, with no counts. A selected value stays
   listed until it is removed, so no choice disappears.
@@ -350,24 +389,24 @@ Two collapsible sections; each setting stacks its label over a 36px control.
 
 ### 4.4 Title information (a work window)
 
-Opened by a card's Info as a modal work window (`02` section 5): drawn inside the main window over a scrim, centred at its content's size, moved by its header, resized by its edges, closed by its `X` or `Escape`, and focus returns to the Info button.
-Favourite and Collections apply at once, so there is no footer and nothing to cancel.
+Opened by a card's Info, or a press on a card's art, as a modal work window (`02` section 5), 640px wide: drawn
+inside the main window over a scrim, centred at its content's size, moved by its header, resized by its edges,
+closed by its `X` or `Escape`, and focus returns to the opener. Favourite and Collections apply at once, so there
+is nothing to cancel. The body is `Form`'s page grammar with one group.
 
 | Region | Content |
 |---|---|
 | Header | `Title information` and a trailing `X` named `Close Title information` |
-| Artwork | a 180px-wide poster, or its fallback |
-| Identity | title, year, kind, quality, rating, genres |
-| Information | the full plot, cast chips, the runtime or the season and episode counts |
-| Watch | progress, watched state or last episode, when there is one |
-| Action strip | **Favorite**, **Collections**, flexible space, **Play** (**Open in Player** for a series) |
+| Group heading | the title, with the year as its badge. The one group does not fold (`01` section 9's exception) |
+| Artwork and plot | a 180px-wide poster (or its drawn fallback) beside the full plot; three shimmer lines while the detail is not read; a local file has no plot |
+| Rows | Identity (`1999 · Movie · 1080p`), Genres and Cast as hairline name chips (`NAME_CHIP`, the same chips as the Player's Details), Rating, Runtime or Seasons (`2 seasons · 14 episodes`), Progress (the watch block) when there is one |
+| Action strip | pinned at the foot: **Favorite** (the star lights as the accent glyph, no edge) and **Collections** on the left, **Play** (**Open in Player** for a series), the one accent, on the right |
 
-- The body is a readable two-column layout (the poster beside the information) and stacks on a narrow work
-  area. Only the body scrolls; the header and the action strip stay fixed.
+- Only the body scrolls; the header and the action strip stay fixed.
 - Favorite applies immediately, and so does a collection toggled from **Collections**. `Escape` or `X` closes it and keeps
   what was applied. Focus returns to the opener only if it still exists and no newer target owns focus.
 - It holds no video, filmstrip, episode browser, source picker or transport. Only **Play** hands off to
-  Player; current Live or Player playback and Library's panes stay usable.
+  Player, and the window closes with the hand-off; current Live or Player playback and Library's panes stay usable.
 
 ### 4.5 Add to collection (the `Collections ▸` menu, not a popup)
 
@@ -399,46 +438,52 @@ The Player has no tabs. It plays one title or one local file at a time, and the 
 
 | Rule | Behaviour |
 |---|---|
-| Opening | a title or file opens in place, replacing the current one. The current item's final progress write settles first |
-| Reopening | opening the item that is already playing does nothing but show Player |
-| Episodes | choosing another episode of the same series loads it in place; the season select starts nothing |
+| Opening | a title or file opens in place, replacing the current one, and its stream is asked for (phase 1: the `playItem` stub). The current item's final progress write settles first (phase 2) |
+| A series | opens on the episode it was left at, with that season shown and that episode the selected row, and asks for that episode (the `playEpisode` stub). A series with no progress opens on its first season and starts nothing until an episode is chosen |
+| Reopening | opening the item that is already open does nothing but show Player: no second stream request |
+| Episodes | choosing an episode loads it in place and asks for it (`playEpisode`); the season select starts nothing |
 | Closing | **Close** in the stage's context menu empties the Player back to its idle state, after the final progress write settles or a short timeout expires |
-| Context menu | the stage's own menu, on a right click on the picture: **Retry**, **Full screen**, **Reveal in Library**; **Favorite**, **Collections ▸**, **Remove from History** when a watch entry exists; **Close** |
+| Context menu | the stage's own menu, on a right click on the picture: **Retry**, **Full screen**, **Reveal in Library**; **Favorite** or **Unfavorite**, **Collections ▸**, **Remove from History** when a watch entry exists (not danger: it touches no file); **Close**. The idle stage swallows the right click: no menu of its own and never the browser's video menu |
+| Marks | Favorite and collection membership are the store's shared marks: a change made here shows in Library and Title information at once, and the reverse |
 | Not here | no tab strip, no tab limit, no channel: a channel plays in Live |
 
 ### 5.2 Episode browser (left)
 
-**Series** — a season select (`Season 1`, `Season 2`; the title is Overview's), then episode rows.
+No collapsible section wraps the browser; the list is the pane's one scroll container. With nothing open it is
+row skeletons.
+
+**Series** — a season select with no label (every option reads `Season N`, so the select names itself; disabled
+with its reason when the series has no seasons), then episode rows in LoRA Studio's queue-row shape.
 
 | Row element | Behaviour |
 |---|---|
-| Still | a 16:9 image with a fallback |
-| Number | `E1`, `E2`, and so on |
-| Title | the episode's title |
-| Duration or progress | when known |
-| Watch marker | the exact episode's state |
+| Still | a 56px 4:3 image, or a glyph |
+| Title | the episode's title, one mono line |
+| Meta line | `E1`, `E2` (or `E2 · watched`), and the runtime at the right |
+| Watch marker | the exact episode only: a watched episode wears the success strip on its left edge; one partly watched carries a 2px progress hairline |
+| Selected | the accent left border and the control fill |
 | Activation | loads that exact season and episode in place |
 
-Selected and playing are different states. Changing the season does not start anything. The list is
-virtualized and shows 10 row skeletons while it loads.
+Changing the season does not start anything.
 
-**Movie** — a compact chapter: the title, its duration and quality when known, and a `Movie` identity. No
-invented season rows.
-
-**Local file** — its display name, duration, size, codec and dimensions when known, and the collections and
-folder it belongs to. Never a path and never invented chapters.
+**Movie** and **Local file** — one row of the same shape, so the rail reads the same for every kind: the
+picture, the title, and `Movie` or `Local file` with the runtime, selected. It is a static row, not a button: it
+has nothing to choose. A local file's other facts are in Details (§5.4). Never a path and never invented
+chapters or season rows.
 
 ### 5.3 Stage (centre)
 
 There is no toolbar and no banner (owner, 2026-10-16: two toolbars on the canvas were redundant and repeated the
-title). The `<video>` fills the stage on the canvas's dark surface, exactly as on Live (§3.1); the browser's own
-controls appear once media has loaded, since with no source they draw a grey layer over the picture. Loading shows
-the player alone, a stream that fails shows a centred note with the reason and **Retry**, and the picture is fitted
-whole by default. The stage's verbs are its context menu (§5.1).
+title). The `<video>` fills the stage on `--color-stage`, dark in every theme, exactly as on Live (§3.1), and is
+fitted by the Picture fit preference (Fit by default). Chrome's native control layers are made transparent
+(`styles/video.css`), so a stage with no source stays dark instead of a grey sheet. Loading shows the player
+alone. A stream that fails shows Live's stage note (§3.1): an icon, `This stream will not play`, the reason in
+one sentence and **Retry**, clear of the control bar. The stage's verbs are its context menu (§5.1).
 
-- **Resume.** When the title was left partway, **Resume** and **Start over** are pinned at the foot of the
-  details pane while the video is paused, and hidden while it plays; autoplay may choose Resume itself only
-  when that setting is on.
+- **Resume.** With Settings > Playback > **Resume** at `Ask`, a title left partway pins `resume at m:ss`,
+  **Resume** (the one accent) and **Start over** at the foot of the details pane while the video is paused, and
+  hides them while it plays. At `Always resume` or `Always start over` the Player has done that on opening and
+  asks nothing, so the footer is not drawn.
 - **Progress** is written about every 30 seconds while playing (never more often) and immediately on pause,
   ended, seek settle and close. Each playback numbers its writes from 1 and a lower number can
   never replace a higher one.
@@ -453,12 +498,15 @@ whole by default. The stage's verbs are its context menu (§5.1).
 ### 5.4 Details (right)
 
 Two collapsible blocks (§2.8) of mono key and value facts, skeletons with no title open, and Resume pinned at
-the foot while paused (§5.3). Nothing is written twice: the title appears once, in Overview.
+the foot while paused (§5.3). Each open block takes its share of the pane and scrolls inside itself rather than
+squeezing its content (owner: opening the lower block must add a scrollbar, not shrink the art); the footer stays
+on the pane's foot when the blocks close. Nothing is written twice: the title appears once, in Overview. A fact's
+value sits at the row's right edge; the label column is sized to the longest label the inspector draws.
 
 | Block | Contents |
 |---|---|
-| **Overview** | the art at the pane's full width, 16:9 (a poster is cropped from its top), with no words on it; the title, with the episode, year or `Local file` beneath; the year for a series, quality and rating; the plot |
-| **Details** | runtime or the season count, genres and cast chips, a local file's duration, dimensions and codec; revision facts in a tooltip, not as noise |
+| **Overview** | the art at the pane's full width, 16:9 (a poster is cropped from its top), with no words on it; the title, with the episode and its name, the year or `Local file` beneath; the year for a series, quality and rating; the plot |
+| **Details** | a movie's runtime or a series' season count, then genres and cast as name chips. A local file has no catalogue entry, so its Details are the file's own facts: the year, its duration once it has been played, and the collections it is in as name chips |
 
 The read-only Watch block is gone (owner, 2026-10-16). Favorite, Collections and Remove from History are the
 stage's context menu; the episode marker in the browser shows progress.
@@ -472,8 +520,8 @@ A band across the full work area. It is Giga LoRA Studio's bottom rail, `compone
 
 | Part | Behaviour |
 |---|---|
-| Rail | one horizontal row of 4:3 thumbnails that fill the band's height, with no header, no fold, no caption and no tint; the title is each thumbnail's tooltip and accessible name, and the basis (`TMDB`, or `Genre + year`, `Genre`, `Year` over the catalog, `11` section 4) is the rail's accessible label; at most 20 at first |
-| Activation | replaces the current item with that title; a movie loads at once, a series waits for an episode to be chosen |
+| Rail | one horizontal list of 4:3 thumbnails that fill the band's height, with no header, no fold, no caption and no tint; each is a button, reached with Tab (a list of buttons, not a listbox, since there is no selection to move with arrows); the open title's thumbnail wears the accent border and `aria-current`; the title is each thumbnail's tooltip and accessible name, and the list is labelled `Related titles` (in phase 2, with its basis: `TMDB`, or `Genre + year`, `Genre`, `Year` over the catalog, `11` section 4); at most 20 at first |
+| Activation | replaces the current item with that title (the open one does nothing); a movie loads at once, a series opens on its resumable episode or waits for one to be chosen (§5.1) |
 | Loading and empty | the rail's own skeleton (`ThumbnailRailSkeleton`) |
 | Failure | the last thumbnails stay and one notice says why |
 | Local file | the band shows the rail's skeleton; there is nothing related to a local file |
@@ -483,10 +531,10 @@ A band across the full work area. It is Giga LoRA Studio's bottom rail, `compone
 | From | Result |
 |---|---|
 | a movie card's Play | the Player shows that movie in place, and the title's stream address is given to the player; Library is unchanged |
-| a series card's Play or Open | the Player shows the series in place, the episode browser shows the last or resumable season with that episode focused, and **nothing loads** until an exact episode is chosen |
+| a series card's Play or Open | the Player shows the series in place. Left partway, the browser shows that season with that episode selected and the episode is asked for; never watched, it shows the first season and **nothing loads** until an exact episode is chosen |
 | a local card's Play | the Player shows the file in place and it plays through its Range route |
 | a related card | as above, and the current item is replaced |
-| **Reveal in Library** (the stage's context menu) | Library is shown with the item selected, in the current collection if it holds the item, otherwise History, All or a collection that does, and scrolled into view; Player stays loaded |
+| **Reveal in Library** (the stage's context menu) | `requestLibrary({ select })`: Library is shown on All with the type strip, search and filters cleared (the sort kept), the item selected, focused and scrolled into view; Player stays loaded |
 
 A failed load leaves the item in place with a failed stage and **Retry**; it does not bounce back to Library.
 
@@ -498,43 +546,63 @@ A failed load leaves the item in place with a failed stage and **Retry**; it doe
 
 Settings, Collections and Title information are modal work windows drawn inside the app: a frameless panel with its own border,
 a header holding its title and an `X` named `Close <title>` (never a commit action), eight resize grips, a
-scrim over everything below the titlebar (the titlebar slice stays a drag strip), and a body of a 150px icon
-rail and a workspace of groups and rows (one column, at most 760px). It opens centred at its content's size,
+scrim over everything below the titlebar (the titlebar slice stays a drag strip), and a body of a workspace of
+groups and rows, one column at the window's full width. Settings has a rail of its sections beside the
+workspace (150px, 210px on a wide window); a Collections workspace has its own `NavRail`; the Collections index
+and Title information have none. It opens centred at its content's size,
 at most 80% of the window and never below 658 x 412, moves by its header, resizes by its edges, remembers
-its place for the run, and is pulled back inside when the window shrinks. A group has a 32px accent-tint icon
-tile, a 16px mono title, an info glyph and a filled triangle that folds it. A row is a label in a 252px
-column with its info glyph and a 24px control; the label stacks above the control under about 420px. Choices
-are 22px pills and accent swatches 20px. One commit sits at the end of the final group; there is no footer or
-Cancel.
+its place for the run, and is pulled back inside when the window shrinks. The body is the family `Form`: a group
+has a 48px accent-tint icon tile, a 28px mono title, and folds from its heading and the chevron on its readout
+edge; a row is a 14px semibold label in one column with its info glyph, then its control. The label column is
+sized once per window from every label the window can show, so it does not move as the rail changes page.
+Choices are `Segmented` pills and accent swatches. One commit sits at the end of the final group; there is no
+footer or Cancel. Moving between a window's views (the Collections index and a workspace) keeps focus inside the
+window, and a key arriving with focus on the page body returns focus to the frame, so Escape and Tab keep working.
 
 ### 6.2 Settings
 
 | Section | Rows |
 |---|---|
-| Appearance | Theme (Dark / Light / System), Reduce motion (Follow system / Off / On), Accent (Amber, Blue, Green, Violet, Rose), UI zoom (0.5 to 3, `Ctrl+0` resets) |
-| Playback | **Playback** group: Autoplay, Resume (Ask / Always resume / Always start over), Mark as watched (at 90%, at 95%, at the end). **Live** group: On open (Last channel / Nothing). The stream preferences (quality, fit, audio and caption languages, latency) have one home, Live's playback rail (§3.3) |
-| Library | **Library** group: Default view (Grid / List), Default sort, Continue watching (on/off), Pause history (on/off), History (**Open History**, and **Clear history** as an inline two-step), **Collections** (opens that window). **Folders** group: Rescan on startup |
-| Admin backend | Address (the `adminUrl` setting, saved like any other row), State (connected or not, the backend's revision, when the channels were last read, the error if any) |
-| About | Version and build, runtime mode, links through safe external navigation, licenses, the TMDB logo and notice (`11` section 6) |
+| Appearance | Theme (Dark / Light / System), Reduce motion (Follow system / Off / On), Accent (Amber, Blue, Green, Violet, Rose), UI zoom (0.5 to 3, a stepper; `Ctrl+0` resets), and **Restore defaults** at the end of the group |
+| Playback | **Playback** group: Autoplay, Resume (Ask / Always resume / Always start over; read by the Player's Resume footer), Mark as watched (at 90%, at 95%, at the end). **Live** group: On open (Last channel / Nothing; read when Live opens). The stream preferences (quality, fit, audio and caption languages, latency) have one home, Live's playback rail (§3.3), and Fit applies to the Player's stage too |
+| Library | **Library** group: Default view (Grid / List / Rows), Default sort, Continue watching (on/off), Pause history (on/off), History (**Open History**, and **Clear history** as an `ArmedButton`), Collections (**Manage collections** opens that window). **Folders** group: Rescan on startup. Library reads Default view, Default sort and Continue watching at once (§4.2, §4.3) |
+| Admin backend | Address (the `adminUrl` setting, saved through the fileserver on Enter or when the field is left), State (connection, the backend's revision, when the channels were last read, the last error) as read-only facts, a dash with `The fileserver is not connected.` as the tooltip until phase 2 |
+| About | Version and build and runtime mode (dashes until the fileserver supplies them), Licences (**View licences**, enabled, asks the fileserver for the bundled licence texts: phase 1 the `readLicences` stub), and the **Attribution** group with the TMDB notice (`11` section 6) |
 
-There is no credential, admin CRUD or login field, and no provider section: providers are the backend's. A
-row with nothing wired yet is disabled in place and its reason is its tooltip.
+**Open History** is `requestLibrary({ source: "history" })`: it closes Settings and shows Library on its History
+view, whatever view was set before.
+
+The preferences (theme, motion, accent, zoom, playback, library) are the store's and apply at once; they do not
+call `saveSetting` on every change in phase 1, since a refusal on every click would drown the notice line. Phase 2
+saves them through the fileserver (`22`). Only the admin address saves on commit now.
+
+There is no credential, admin CRUD or login field, and no provider section: providers are the backend's.
 
 ### 6.3 Collections
 
-The family's index and workspace flow (owner, 2026-10-16), as Giga LoRA Studio's Datasets and Dataset pages:
+The family's index and workspace flow (owner, 2026-10-16), as Sensenova's dataset index and workspace
+(`pages/datasets/DatasetsIndex.tsx`, `DatasetWorkspace.tsx`). Section headers carry no buttons (owner). The
+window opens on the index from **Manage collections**, and on one collection's workspace from that collection's
+`Rename…` or `Remove…` in Library's rail menu.
 
-- **Index, no rail.** The form on top: **New collection** (a name, an optional **Folder** to start from through
-  the native dialog, **Create**), or **Edit collection** when a tile's pencil fills it (the name, **Cancel**,
-  **Save**). Then the **Collections** group: its first row is search, sort (by name, most items, most folders)
-  and Grid / List; then a tile per collection (its glyph with the counts on it, the name, the folders and scan
-  state), whose pencil edits it in the form and whose trash is the inline **Remove** / **Keep**
-  (`Original files remain untouched.`). A tile opens that collection's workspace.
-- **Workspace, with a rail.** The rail is `← Collections`, the name with its totals, and the sections (Folders,
-  Members) with their counts; a press jumps there and the rail follows the scroll. The page holds the attached
-  folders (name, indexed count, scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**)
-  with **Attach folder** through the native dialog, then the member table (image, title, year, remove).
-  Renaming and removing the collection live on the index.
+- **Index, no rail.** The **New collection** group: Name, Type (Movies / TV / Local, `Segmented`), an optional
+  **Folder** to start from (**Choose** through the native dialog), and **Create**, the one accent, disabled only
+  while the name is blank. Then the **Collections** group: Sensenova's datasets grid, a header row in the folders
+  table's style (`DataTable`: sans 12px semibold, faint, on the panel over a hairline) with the columns `name`,
+  `type`, `videos`, `folders`, then one row per collection. A press on the row opens its workspace; **Remove**
+  beside it is an `ArmedButton` (`Remove Films?`, the original files untouched). While a scan runs, the videos
+  cell is the rail's shimmer pill with the partial count as its tooltip, so the index and the rail say
+  "scanning" the same way and no scan column is spent (owner: a scan column was a waste of space). Columns are
+  rem tracks, so the 12px header and the 14px rows line up. Sensenova's tick column is left out (it picks a
+  context for a forward verb, and this window has none).
+- **Workspace, with a rail.** Sensenova's rail: the way back as one full-width stock button, `← Collections`,
+  then the sections **Details**, **Folders** and **Videos**; a press scrolls the page there and the rail follows
+  the scroll. Details holds Name and Type and **Save details**. Folders is a table (`folder`, `indexed`, `scan`
+  as a coloured word, `last scan` as a short date such as `Sep 21, 10:42 PM` with the full stamp as its tooltip,
+  then the icon actions **Replace**, **Rescan** (disabled while that folder scans), **Cancel scan** (only while
+  scanning) and **Remove**, `01` section 9's icon-row two-step), with **Attach folder** as a ghost action under
+  it. Videos is the member table (picture, `title or file`, `year`, remove). Removing the collection lives on
+  the index, beside its row, never in the workspace.
 
 A token that expires keeps the draft and asks to choose again.
 
@@ -545,10 +613,15 @@ had to find first): **Attach folder…** is also the first row of a collection's
 
 ## 7. Events drawer
 
-A 160px band above the statusbar. A header with `Events`, the row count, a severity filter, **Clear** and
-close; rows of time, a tone icon, an area (Connection, Catalog, Scan, Media, Playback), the normalized sentence
-and an optional short identity. It holds at most 200 rows, shows no secret, path, token or stack trace, and
-**Clear** empties only the list.
+A 160px band above the statusbar, opened and closed by the statusbar's **Events**; it slides (100 ms, the pane
+collapse's duration; instant under Reduce motion), stays mounted so the log keeps appending while closed, and is `inert` while closed. A header
+with `Events`, the row count, and **Clear** (disabled, `The log is empty.`, when there are no rows). The body is a
+`log` region of mono rows: time, the tone as a coloured word (`info`, `warn`, `error`; never a dot or an icon
+alone), an area (Connection, Catalog, Scan, Media, Playback), the normalized sentence and an optional short
+identity. The newest row is at the foot and kept in view. Every warn or error notice is appended as a row; the
+log holds at most 200 rows, shows no secret, path, token or stack trace, and **Clear** empties only the list.
+With no rows the body is shimmer lines. There is no severity filter or close control: the drawer is closed by the
+door that opened it, or Escape.
 
 ---
 
@@ -562,6 +635,8 @@ and an optional short identity. It holds at most 200 rows, shows no secret, path
 | `Ctrl+F` | focus the active surface's search |
 | `Escape` | the order in `04` §5 |
 | Up, Down, Home, End | move the channel selection |
+| Arrows, Home, End | move the selection across Library's cards (and between shelves in Rows); they only select |
+| `Enter` | on a channel, plays it; on a Library card, selects it and opens Info, exactly as a press does |
 | Space, Left, Right, `M`, `F` | the player's play and pause, seek, mute and fullscreen, when it has focus |
 
 Global keys yield to text fields, selects, menus, popups and IME composition.
@@ -571,12 +646,14 @@ Global keys yield to text fields, selects, menus, popups and IME composition.
 ## 9. Building blocks
 
 The ui layer is Giga LoRA Studio's, copied verbatim (`23` section 3.1): `ContextMenu` (the one context menu, summoned
-by `openMenu`, with one level of submenu), `Button`, `IconButton`, `Segmented`, `Field` (`Input`, `Select`,
-`Textarea`), `Toggle`, `StatusDot`, `Section` (a collapsible rail group), `NumberField` (the rail row), `Form`
-(`Workspace`, `Group`, `Row`, `Wide`, `Actions`: a window's page), `NavRail` (`NavGroup`, `NavItem`), `Tooltip`
-(`InfoTip`), `SkeletonRows`, `SkeletonCards`, and the rest of that list. Giga Stream keeps its own `DataTable`,
-`Swatches`, `PosterImage` and `LogoImage`. Each exists once; a surface uses these and does not build its own, and sets
-no arbitrary text size of its own (the `type-scale` rule).
+by `openMenu`, with one level of submenu; a row's action runs after the menu closes), `Button`, `IconButton`,
+`Segmented`, `Field` (`Input`, `Select`, `Textarea`), `Toggle`, `Section` (a collapsible rail group), `NumberField`
+(the rail row), `Form` (`Workspace`, `Group`, `Row`, `Wide`, `Actions`: a window's page), `NavRail` (`NavGroup`,
+`NavItem`; Sensenova's build of it), `Tooltip` (`InfoTip`), `SkeletonRows`, `SkeletonCards`, and the rest of that
+list. LoRA's `StatusDot` is not used: dots are not a state signal here. Giga Stream keeps its own `DataTable`,
+`Swatches`, `PosterImage` (with a `compact` mode for list thumbnails), `LogoImage`, `ArmedButton` (the one inline
+two-step) and `NAME_CHIP` (`components/ui/name-chip.ts`, the read-only name chip). Each exists once; a surface uses
+these and does not build its own, and sets no arbitrary text size of its own (the `type-scale` rule).
 
 ---
 
@@ -599,4 +676,5 @@ whole series presented as an episode; a source or provider control; related titl
 **Windows:** a centred modal card, a backdrop of a feature's own, a focus trap, a footer Cancel button, a
 commit action in a toolbar, a raw path or credential.
 
-**Everywhere:** an empty-state sentence; a sentence under a control; a control that does nothing.
+**Everywhere:** an empty-state sentence; a sentence under a control; a control that does nothing; a dot for
+state; a danger-red control at rest.

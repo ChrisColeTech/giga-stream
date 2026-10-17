@@ -148,7 +148,9 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 ### 4.1 One of each
 
 - One interface request layer (`services/api.ts`); there is no interface WebSocket.
-- One Zustand store.
+- One Zustand store (`store/app-store.ts`). A slice that would push it past the size rule lives in its own file and is
+  spread into the same `create` call, never a second store: `store/navigation-slice.ts` holds the cross-surface requests
+  (`02` section 2.1).
 - One fileserver Fastify instance; one backend Fastify instance per backend process.
 - One owner of each SQLite database.
 - One scan-progress stream shape: the shared library's `ScanEvent`, NDJSON (`03` section 3.8).
@@ -224,7 +226,9 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
   application timers or global listeners, and do no pane math.
 - **Hooks** connect React's lifecycle to services and the store. One hook, one concern.
 - **The store** holds transient UI state and the projections the surfaces share. It performs no I/O
-  and holds no promise, timer, DOM node or media element. Components select the narrowest slice.
+  and holds no promise, timer, DOM node or media element. Components select the narrowest slice. One surface asks
+  another to do something by a request value with a serial (`requestPlay`, `requestLibrary`), which the receiving
+  page reads and acts on; a page never reaches into another page's local state.
 - **Services** own REST, decoding, retries and the streamed scan body, and return typed domain results.
 - **`lib`** is pure: no React, Zustand, services, store or device APIs.
 
@@ -270,28 +274,50 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
 ### Shell
 
 One persistent window: a titlebar (brand, the Live / Library / Player switch, pane toggles, window
-controls), the active surface, an optional events drawer and a statusbar (connection, one notice line,
+controls), the active surface, an optional events drawer and a statusbar (running work, one notice line,
 Events and Settings). Surfaces stay mounted so selection, scroll and playback survive a switch.
 
 ### Surfaces
 
 - Workspaces fill the window. Panes use Allotment and collapse fully to zero; centre stages do not
-  collapse.
-- Pane toolbars use icons, not text buttons. Context actions stay contextual.
+  collapse. A closed pane is `inert`: its controls leave the tab order, and a shell key (`Ctrl+F`) never
+  lands inside it.
+- Pane toolbars use icons, not text buttons. Context actions stay contextual: a verb that could be a
+  toolbar button is a context-menu row first (the Player stage has no toolbar at all).
 - A region that is loading or empty draws skeletons in the shape of its content. No sentence is placed
-  over a skeleton, and there are no separate empty-state compositions.
+  over a skeleton, and there are no separate empty-state compositions. State is never a dot: a state is a
+  word, a left-edge accent strip (the family `ACCENT` bar), or a shimmer where a number is still arriving
+  (a scanning collection's count).
 - No explanatory text under a control. A disabled control stays in place and shows its reason as a
   tooltip.
-- A control either works or is visibly disabled; no control does nothing.
+- A control either works or is visibly disabled; no control does nothing. In phase 1a a control that
+  needs the fileserver is enabled and calls its stub in `services/`, which refuses with one sentence on the
+  notice line (`21` section 1); it is not disabled for want of a server.
 - Colour is never the only signal.
 
 ### Forms
 
-Forms are one column, at most 760px, of groups and rows: a group has a heading and a folding body; a
-row is a label and a control. One primary commit sits at the end of the final group. Destructive
-actions are an inline two-step: the first press arms the same control and names the consequence, the
-second confirms; a timeout, focus loss or Escape disarms. `alert`, `confirm`, `prompt`, ad hoc modals
-and feature-built focus traps are forbidden.
+Forms are one column at the workspace's full width (the family `Form`'s `Workspace`), of groups and rows: a
+group has a heading and a folding body; a row is a label and a control. A window sizes one label column for all its pages (Settings reads
+`SETTINGS_LABELS`), so the column does not move as its rail changes page. One primary commit sits at the
+end of the final group. `alert`, `confirm`, `prompt`, ad hoc modals and feature-built focus traps are
+forbidden.
+
+Exception: a window that holds exactly one group (Title information) does not fold it, since folding it
+would leave only the action strip.
+
+### Two-step
+
+A destructive action is an inline two-step, and it is always `components/ui/ArmedButton` (Giga Stream's
+own; it replaced the family `TwoStep`, which had no blur or Escape disarm, and three hand-rolled copies). At
+rest it is a ghost button naming the verb (`Remove`, `Clear history`); the first press turns it into the
+danger question naming what dies (`Remove Films?`, `Clear all history?`); a second press within
+`TWO_STEP_MS` (4 seconds) confirms; the timeout, focus leaving it, or Escape disarms. A remove that touches
+no file (one watch entry, a collection whose files stay) is not danger at rest anywhere, including a menu row.
+
+Exception: a folder's Remove in the Collections folders table is an icon in a row of icon actions, so it
+arms by swapping the row for the consequence in words beside a check icon (`components/collections/FolderControls.tsx`);
+the same timeout, blur and close disarm it. An icon cannot turn into a question in place.
 
 ### Buttons and surfaces
 
@@ -304,13 +330,35 @@ chrome; at most one filled accent per surface, as a form's commit.**
 |---|---|
 | Ghost (`Button variant="ghost"`, `IconButton` plain); the default | Everywhere in the body: pane content, rails, `Group`/`Row`/`Wide`/`Actions` verbs, row and card verbs, popovers, panel footers, notes over a stage |
 | Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | The titlebar (pane toggles) and window and popup headers (the close `X`). Nothing in a body |
-| Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`), at most one per surface |
-| Danger (`Button variant="danger"`) | Only the armed state of a two-step (`TwoStep`, an armed remove); never resting |
+| Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), at most one per surface |
+| Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
 | Icon-only (`IconButton`) | Toolbars, row ends, panel footers; an `aria-label` and a tooltip always. `bordered` only in the chrome |
 | Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
 
-A lit toggle outside the titlebar is tint and an accent glyph, not an edge. A control that is not a verb (a
-select, a field, the genre picker that opens like one) is a field, not a button, and follows `Field`.
+A lit toggle outside the titlebar is its accent glyph alone (a filled accent star for a favourite), with no
+edge and no `on` raise: the list row's star and Title information's Favorite are plain ghost buttons whose
+glyph lights. The statusbar's Events door is chrome and keeps its tint while the drawer is open; the Settings
+door is not a toggle, since the Settings window's scrim covers it. A control that is not a verb (a select, a
+field, the Genre picker that opens like one) is a field, not a button: it draws `Field`'s box and chevron.
+
+Exception: the Rows shelves' edge chevrons are raised round buttons in the body. They sit over artwork,
+where a ghost button would vanish against the picture, and they appear only while the row is hovered or
+focused.
+
+### Headings
+
+Five heading roles, each one component's, and no surface invents a sixth:
+
+| Role | Style | Where |
+|---|---|---|
+| Page group | `Form` `Group`: 48px icon tile, mono 28 | Settings, Collections, Title information |
+| Rail section | `Section` header: 11px sans semibold, faint, a turning chevron | Live and Player rails |
+| Rail group | `NavRail` heading: 12px sans, dim | the Library rail (Views, Collections) |
+| Strip or shelf | mono 12, faint, the count dim | Continue watching, the Rows shelves, the Live channels head |
+| Filter label | 14px sans semibold over its control | the Library filters pane |
+
+The brand and the surface switch in the titlebar keep the family's own radii and spacing, drawn as the family
+draws them; they are not rebuilt from the token scale.
 
 ### Overlays
 
@@ -319,6 +367,14 @@ authored popup (compact 242px, standard 460px, wide 602px) for bounded informati
 nonmodal and anchored to its opener; a modal work window for a substantial task; a drawer for an
 operational utility. Only one popup or work window is open at a time. A popup is not a focus trap;
 focus returns to its opener only if it still exists.
+
+The context menu runs a chosen row's action after the menu has closed and given focus back to the row's
+opener (`components/ui/ContextMenu.tsx`). A row that opens a work window (a collection's `Rename…`) therefore
+hands focus to that window's frame, and the menu's own close never takes it back; run inside the menu's select,
+the menu's focus trap would pull focus out of the new window and leave it deaf to its own Escape.
+
+The video stage is dark in every theme (`--color-stage`); the light theme lightens the chrome and panes, never
+the picture area.
 
 ## 10. Verification
 

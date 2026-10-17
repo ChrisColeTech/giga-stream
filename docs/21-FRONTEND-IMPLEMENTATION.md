@@ -12,6 +12,22 @@ Phase 2 (wiring to the fileserver) is `22-FRONTEND-WIRING.md`. This document is 
 by Giga LoRA Studio's, copied verbatim (`23-FAMILY-COMPONENT-PORT.md`, section 3). Each retired name below points at
 its replacement; `23` section 3.3 is the full map.
 
+**As built (2026-10-17).** Phase 1 and phase 1a are built on `family-port`, and `25`'s remediation waves are done.
+The surfaces as they are written are `06`; the rules are `01` section 9; the family deltas are `23` section 3. Sections
+3 to 5 below are the original plan and are kept as the decision trail; where a row disagrees with `06`, `06` is the
+app. The plan's items that the owner's reviews changed:
+
+| Planned here | As built | Why |
+|---|---|---|
+| Player tabs, a tab menu, a stage toolbar, a Resume banner, a Watch block | one item at a time; the stage's context menu; Resume and Start over in the inspector's footer while paused (Resume = Ask); no Watch block | owner, 2026-10-16: two toolbars repeated the title, the Watch block was read-only, tabs were not wanted |
+| Statusbar connection word and dot | running work (bar, count, Stop), the notice line with a tone glyph, Events, Settings | dots are banned; LoRA's progress bar shows what runs |
+| Status dots on channel rows and collection rows | a left-edge status strip and a status word on channels; a shimmer count while a collection scans | dots are banned |
+| Collections table with a detail pane, rename on the index | Sensenova's index (create form, rows, `Remove` two-step) and workspace (rail, Details, Folders, Videos) | owner: the family's dataset index and workspace |
+| Events drawer severity filter and close control | header of `Events`, count, Clear; the statusbar door or Escape closes it | the log is short; one way to close |
+| Clear filters disabled at defaults | always enabled, pinned at the pane's foot | owner |
+| Title information's Watch block | a Progress row; genres and cast as name chips; 180px poster; the one group does not fold | `25` VG-050, VG-065 |
+| `TwoStep` for destructive actions | `ArmedButton`, with blur and Escape disarm | `25` VG-033 |
+
 ---
 
 ## 1. Scope and rules
@@ -27,13 +43,17 @@ disabled merely because it needs the fileserver. *Phase 2* replaces the stub bod
   and edited only where Giga Stream's spec differs (`07` section 2, "port from source, not from docs"). The
   sources checked are in section 2.1.
 - **The admin backend is never contacted.** No backend address, port `8091`, TMDB, OMDb or live-server URL appears
-  in `src/frontend` (`01` sections 1.1 and 4.4). The Settings Address field is drawn from a fixture with no value
-  and is disabled.
-- **A control works or is visibly disabled.** A control that needs fileserver data is drawn in place and disabled,
-  with its reason as the tooltip, on the control itself (`06` section 2, rule 3; family rule 16). A control whose
-  behaviour is local (toggles, folds, sashes, selection, menus, popups, theme, accent, zoom, keys) works fully.
-- **Ephemeral surface state is local.** Selection, search text, filter values, folded sections and the active tab
-  of a surface live in component state in phase 1. Phase 2 moves what `02` section 2.1 names into the store (`22` section 4).
+  in `src/frontend` (`01` sections 1.1 and 4.4). The Settings Address field is drawn from a fixture with no value;
+  it is enabled, and a committed address is sent to the fileserver's `saveSetting` stub, never to the backend.
+- **A control works or is visibly disabled.** Since phase 1a a control that needs the fileserver is enabled and calls
+  its stub, which refuses once on the notice line; a control is disabled only for a reason in the app itself (Rescan
+  while that folder scans, Create with a blank name, Clear history with no history), with that reason as its tooltip
+  (`06` section 2, rule 3; family rule 16). A control whose behaviour is local (toggles, folds, sashes, selection,
+  menus, popups, theme, accent, zoom, keys, navigation between surfaces) works fully.
+- **Ephemeral surface state is local.** Selection, search text and filter values of a surface live in component
+  state in phase 1. Folded sections, the preferences, the shared marks (favourites, memberships) and the
+  cross-surface requests (`requestPlay`, `requestLibrary`, `openCollections`) are the store's (`02` section 2.1).
+  Phase 2 moves what it must into the store (`22` section 4).
 - **Owner decisions in force:**
   - one worker per surface (seven workers, section 4), at the owner's direction (`07` section 6.1, as amended);
   - each worker works in its own worktree and branch (`07` section 6.2 and 6.3);

@@ -1,7 +1,9 @@
 # 23 - Family Component Port
 
-**Status: the plan, 2026-10-16, for replacing the interface's component layer with the family's, and rebuilding the
-surfaces on it.** It owns the reason, the scope (every file replaced, kept and deleted), the waves and the visual gate.
+**Status: done on `family-port` (waves 1 to 6, 2026-10-16), then corrected by `25`'s remediation (2026-10-17).
+Section 3 is the as-built record: every file copied, every delta from the family with the case that forces it, and
+what Giga Stream keeps of its own. It is checked against the family's source by a diff that ignores line endings.**
+It owns the reason, the scope (every file replaced, kept and deleted), the waves and the visual gate.
 Where it and `21` disagree, this document wins for the component layer and the surfaces it rebuilds. The product is
 `00`, the screens are `02`, `04`, `05` and `06`, the rules are `01`, and process is `07`.
 
@@ -86,12 +88,18 @@ Paths are under `src/frontend/src/` unless stated.
 | `components/ui/SkeletonRows.tsx` | 54 | same |
 | `components/ui/SliderField.tsx` | 86 | same |
 | `components/ui/SplitList.tsx` | 165 | same |
-| `components/ui/StatusDot.tsx` | 20 | same |
 | `components/ui/Toggle.tsx` | 104 | same |
 | `components/ui/Tooltip.tsx` | 108 | same |
 
+`components/ui/NavRail.tsx` is **Sensenova's build** of the family rail (`N:\sensenova-lora-trainer\src\frontend\src\
+components\ui\NavRail.tsx`), byte for byte, not LoRA's: its way back is the one stock `Button` at full width (Sensenova's
+`Scan system` slot, owner 2026-09-12), it has an `action` slot, and `NavItem.count` takes a node. The owner's family
+screenshots (`docs/reference/family/*.jpg`) are Sensenova, and the Collections workspace follows Sensenova's dataset
+workspace, so Sensenova's rail is the reference for every rail here.
+
 **Not copied:** `LoraRows.tsx` (needs LoRA's model types) and `PathField.tsx` (needs LoRA's studio service). Neither has a
-use in Giga Stream.
+use in Giga Stream. **Copied, then deleted:** `StatusDot.tsx`. Dots are banned as a state signal (owner); every state it
+drew is now a word, a left-edge `ACCENT` strip, or a shimmer.
 
 **Deltas (the only edits allowed to a copied file):**
 
@@ -101,15 +109,35 @@ use in Giga Stream.
   collapse tween) keeps its own classes. LoRA's own `.workspace-split` layer is copied and unused. Its `.pane`
   background is `bg`, as LoRA's panes sit on `bg` (owner, 2026-10-16: the shell was too light for a video app).
 - `index.css`: one `@import "./styles/video.css";`, which makes Chrome's native video-control layers transparent so
-  a stage with no picture stays the canvas's dark surface instead of a grey sheet. LoRA has no video element.
+  a stage with no picture stays dark instead of a grey sheet. LoRA has no video element.
+- `index.css`: one token, `--color-stage` (`#0a0a0b`), set in the dark theme and never overridden by the light theme.
+  The Player's and Live's stages draw on it, so the picture area stays dark in every theme; on `--color-surface` it
+  turned white under the light theme. LoRA has no video stage.
+- `styles/motion-reduce.css`: the kill-switch keys on `:root[data-motion="reduce"]`, the app's resolved Reduce motion
+  that `useTheme` stamps on `<html>`, and the OS media query applies only until the stamp lands
+  (`:root:not([data-motion])`). LoRA follows the OS alone, which made Settings > Reduce motion "Off" do nothing on a
+  desktop that asks for less motion.
+- `components/ui/Section.tsx`: reads `useReduceMotion()`, so the fold's imperative `animate()` and the chevron's turn
+  paint at rest under the app's Reduce motion. An imperative animation does not see `MotionConfig` or the CSS
+  kill-switch on its own, so without this the rail folds kept moving with Reduce motion on.
+- `components/ui/ContextMenu.tsx` and `ContextMenuRow.tsx`: a chosen row's action is deferred until the menu has
+  closed and restored focus to the row's opener (an `onRun` prop on the row; the menu flushes it in
+  `onCloseAutoFocus`, or on unmount, focusing the opener first). The close's own focus restore is skipped when
+  something else has claimed focus. Run inside Radix's `onSelect`, a row that opens a work window (`Rename…`) had its
+  window's focus pulled back by the menu's focus trap, and Radix's timed close-focus then stole it again, so the
+  window ignored Escape.
 
 ### 3.2 Kept (Giga Stream's own; no family equivalent)
 
 | File | Why |
 |---|---|
-| `components/ui/DataTable.tsx` | the Collections tables; restyled to the family's tokens if it differs from `Form` |
+| `components/ui/DataTable.tsx` | the Collections tables; its header (sans 12px semibold, faint, on the panel over a hairline) is also the Collections index's header row |
 | `components/ui/Swatches.tsx` | the accent picker; the family's settings use the same five families |
-| `components/ui/PosterImage.tsx`, `components/ui/LogoImage.tsx` | the poster and logo boxes are Giga Stream's data |
+| `components/ui/PosterImage.tsx`, `components/ui/LogoImage.tsx` | the poster and logo boxes are Giga Stream's data. `PosterImage` has a `compact` mode (the drawn fallback without the title) for list thumbnails, too small to set a title in |
+| `components/ui/ArmedButton.tsx` | the one inline two-step (`01` section 9): ghost at rest, the danger question when armed, confirm within `TWO_STEP_MS`, disarm on timeout, blur or Escape. It replaced `TwoStep.tsx` (Sensenova's, brought in with the Collections window), which had no blur or Escape disarm, and two hand-rolled copies (the History strip, Settings' Clear history) |
+| `components/ui/name-chip.ts` | `NAME_CHIP`, the read-only hairline name chip (genres, cast, collections) shared by the Player's Details and Title information, which drew genres two ways |
+| `styles/video.css` | the transparent native video-control layers (above) |
+| `hooks/useScrollSpy.ts` | Sensenova's, byte for byte: the Collections workspace rail follows the page's scroll, as Sensenova's dataset workspace does |
 | `components/chrome/*`, `components/overlays/*` | the shell, the work-window frame and the overlay host keep their behaviour; they take the family's components |
 | `styles/workspace.css`, `hooks/useWorkspaceSplit.ts`, `hooks/usePaneTween.ts` | the pane layout, which already matches the family's |
 | `store/`, `fixtures/`, `services/`, `lib/`, `types/` (except `types/menu.ts`) | not part of the look |
@@ -136,6 +164,7 @@ use in Giga Stream.
 | `02` section 6 | the motion durations are the family's (decision 3) |
 | `06` section 5.5 | the related band is LoRA's `PastRuns` rail, copied: a row of thumbnails, no header, no fold, no tint; an empty or loading band is the rail's skeleton |
 | `21` section 8a | retired; this document replaces it |
+| `01` section 9, `02`, `06` (2026-10-17) | rewritten to the app as built after `25`'s remediation, with the deltas above and each exception's forcing case |
 
 ## 4. Waves
 
