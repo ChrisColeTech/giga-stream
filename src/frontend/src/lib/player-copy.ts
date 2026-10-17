@@ -8,8 +8,9 @@ export const RELATED_LIMIT = 20;
 export const EPISODE_SKELETON_COUNT = 10;
 export const RELATED_SKELETON_COUNT = 8;
 
-/** The width of a related card at the band's 140 px height: a 2:3 poster is 48 by 72 px, and the card is as wide as it. */
-export const RELATED_CARD_WIDTH = 48;
+/** The width of a related card at the band's 210 px height: a 2:3 poster 92 px wide is 138 px tall, which leaves room for
+ *  the title and year lines beneath it in the band's body. The skeleton cards use the same width. */
+export const RELATED_CARD_WIDTH = 92;
 
 /** `06` section 5.2: the browser's loading and empty rows. */
 export const BROWSER_SKELETON_COUNT = 10;
