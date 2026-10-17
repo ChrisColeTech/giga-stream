@@ -1,6 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import { useState, type KeyboardEvent, type FocusEvent, useRef } from "react";
-import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { FIELD_CONTROL } from "@/components/ui/Form";
 import { cn } from "@/lib/cn";
@@ -39,16 +38,23 @@ export function GenrePopover({ genres, selected, onChange }: GenrePopoverProps) 
 
   return (
     <div ref={wrap} className="relative" onBlur={onBlur} onKeyDown={onKeyDown}>
-      <Button
+      {/* Drawn as a field, the same box and chevron as the Sort, Year and Watched selects beside it. */}
+      <button
         ref={trigger}
-        full
+        type="button"
         aria-expanded={open}
+        aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
-        className="h-9! justify-between! px-3!"
+        className={cn(
+          "flex h-9 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-ctl border bg-surface px-3",
+          "text-left font-[inherit] text-sm leading-5 text-text outline-none transition-[border-color,box-shadow]",
+          "duration-fade ease-linear focus-visible:border-accent focus-visible:shadow-[0_0_0_2px_var(--color-accent-tint)]",
+          open ? "border-accent" : "border-border",
+        )}
       >
-        <span className="min-w-0 truncate text-sm font-normal">{label}</span>
-        <ChevronDown className="size-3.5 flex-none text-muted" aria-hidden />
-      </Button>
+        <span className="min-w-0 truncate">{label}</span>
+        <ChevronDown className="size-3.5 flex-none text-faint" aria-hidden />
+      </button>
       {open && (
         <div
           role="group"

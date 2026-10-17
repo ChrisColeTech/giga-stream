@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
+import { HistoryStrip } from "@/components/library/HistoryStrip";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
@@ -28,6 +29,7 @@ import {
   type SourceId,
 } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
+import { useLibraryRequest } from "@/hooks/useLibraryRequest";
 import { useAppStore } from "@/store/app-store";
 
 const GENRES = genreChoices(LIBRARY_ITEMS);
@@ -36,8 +38,9 @@ const YEARS = yearChoices(LIBRARY_ITEMS);
 /** Library: collections on the left, the media body in the centre, filters on the right. The query, the view, the
  *  selection and the watch-history marks are local to the surface; favourites and memberships come from the store. */
 export function LibraryPage({ active }: { active: boolean }) {
-  const [query, setQuery] = useState<LibraryQuery>(DEFAULT_QUERY);
-  const [view, setView] = useState<ListView>("grid");
+  const prefs = useAppStore((state) => state.library);
+  const [query, setQuery] = useState<LibraryQuery>(() => ({ ...DEFAULT_QUERY, sort: prefs.librarySort }));
+  const [view, setView] = useState<ListView>(prefs.libraryView);
   const [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryMarks>(NO_HISTORY);
   const marks = useAppStore((state) => state.marks);
@@ -45,6 +48,7 @@ export function LibraryPage({ active }: { active: boolean }) {
   const shown = useMemo(() => visibleItems(items, query), [items, query]);
   const counts = useMemo(() => viewCounts(items, COLLECTION_ROWS), [items]);
   const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
+  useLibraryRequest({ patch, setView, setSelected });
   const onSource = (source: SourceId): void => patch({ source });
   const onScope = (scope: Scope): void => patch({ scope });
   /* See all opens the grid with the shelf's group, through the same query setter the rail and the type strip use. */
@@ -74,17 +78,26 @@ export function LibraryPage({ active }: { active: boolean }) {
       center={
         view === "rows" ? (
           <LibraryRows
-            items={items}
+            scope={query.scope}
+            items={shown}
             collections={COLLECTION_ROWS}
             selected={selected}
+            showContinue={prefs.showContinue && query.source !== "history"}
+            onScope={onScope}
             onSelect={setSelected}
             onRemoveWatch={onRemoveWatch}
             onSeeAll={onSeeAll}
+            strip={
+              query.source === "history" && (
+                <HistoryStrip empty={!items.some((item) => item.progress !== undefined)} onClear={onClearHistory} />
+              )
+            }
           />
         ) : (
           <LibraryBody
             scope={query.scope}
-            inHistory={query.source === "history"}
+            source={query.source}
+            showContinue={prefs.showContinue}
             view={view}
             items={items}
             shown={shown}

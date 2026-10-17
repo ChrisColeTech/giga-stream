@@ -1,7 +1,7 @@
 import { Library } from "lucide-react";
 import { Group, Wide } from "@/components/ui/Form";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-import { TwoStep } from "@/components/ui/TwoStep";
+import { ArmedButton } from "@/components/ui/ArmedButton";
 import { TYPE_LABEL } from "@/lib/collections-copy";
 import type { CollectionRow } from "@/types/collection";
 
@@ -48,14 +48,13 @@ export function CollectionRows({ rows, onOpen, onDelete }: CollectionRowsProps) 
                   <span className="text-right font-mono text-xs tabular-nums text-muted">{row.folders}</span>
                 </button>
                 <span className="flex justify-end">
-                  <TwoStep
-                    size="sm"
+                  <ArmedButton
                     question={`Delete ${row.name}?`}
                     title="Delete the collection; the original files are untouched"
                     onConfirm={() => onDelete(row.id)}
                   >
                     Delete
-                  </TwoStep>
+                  </ArmedButton>
                 </span>
               </li>
             ))}

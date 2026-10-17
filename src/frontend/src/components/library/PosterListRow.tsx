@@ -1,5 +1,5 @@
 import { Ellipsis, Info, Play, Star } from "lucide-react";
-import { useRef, type KeyboardEvent, type MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { PosterImage } from "@/components/ui/PosterImage";
@@ -8,7 +8,6 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import { identityLine, progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
-import { enterOnCard } from "./card-keys";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { changeFavourite, playRef } from "./library-service";
 import { openTitleInfo } from "./open-title-info";
@@ -54,13 +53,10 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
           onSelect(id);
           openTitleInfo(item.ref, event.currentTarget);
         }}
-        onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) =>
-          enterOnCard(event, selected, () => onSelect(id), () => openTitleInfo(item.ref, infoRef.current))
-        }
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-ctl border-0 bg-transparent p-0 text-left text-text focus-visible:outline-2 focus-visible:outline-accent"
       >
         <span className="w-9 flex-none">
-          <PosterImage alt={item.title} />
+          <PosterImage src={item.posterUrl} alt={item.title} compact className="rounded-ctl" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate text-sm text-text">{item.title}</span>
@@ -81,10 +77,11 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
           aria-hidden
         />
       </IconButton>
-      <Button size="sm" variant="ghost" onClick={() => playRef(item.ref)}>
+      {/* One width for Play and Open, so the verbs line up down the list. */}
+      <Button size="sm" variant="ghost" className="w-[4.5rem] !justify-start" onClick={() => playRef(item.ref)}>
         <Play className="text-muted" aria-hidden /> {item.kind === "tv" ? LIBRARY_COPY.open : LIBRARY_COPY.play}
       </Button>
-      <Button size="sm" variant="ghost" ref={infoRef} onClick={context.onInfo}>
+      <Button size="sm" variant="ghost" className="w-[4.5rem] !justify-start" ref={infoRef} onClick={context.onInfo}>
         <Info className="text-muted" aria-hidden /> {LIBRARY_COPY.info}
       </Button>
       <IconButton

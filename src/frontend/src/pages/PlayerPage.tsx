@@ -35,6 +35,7 @@ export function PlayerPage({ active }: { active: boolean }) {
   const [paused, setPaused] = useState(true);
   const say = useAppStore((state) => state.say);
   const setSurface = useAppStore((state) => state.setSurface);
+  const requestLibrary = useAppStore((state) => state.requestLibrary);
   const view = viewOf(session);
   const ref = view.tab?.ref;
   const refuse = (result: ServiceResult) => reportRefusal(result, say);
@@ -52,7 +53,7 @@ export function PlayerPage({ active }: { active: boolean }) {
 
   const commands: PlayerCommands = {
     retry: () => refuse(retryStream()),
-    reveal: () => setSurface("library"),
+    reveal: () => (ref === undefined ? setSurface("library") : requestLibrary({ select: ref })),
     close: () => dispatch({ type: "close" }),
     resume: () => {
       if (ref !== undefined) refuse(playItem(ref));

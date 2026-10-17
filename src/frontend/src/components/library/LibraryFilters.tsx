@@ -12,6 +12,7 @@ import {
   type SortKey,
   type WatchedFilter,
 } from "@/lib/library-query";
+import { useAppStore } from "@/store/app-store";
 import { FilterSetting } from "./FilterSetting";
 import { GenrePopover } from "./GenrePopover";
 import { SearchField } from "./SearchField";
@@ -97,8 +98,8 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView }: 
         <Button
           variant="ghost"
           full
-          title="Reset search, sort and every filter"
-          onClick={() => onQuery({ ...FILTER_DEFAULTS })}
+          title="Clear every filter and return the sort to your default; the search stays"
+          onClick={() => onQuery({ ...FILTER_DEFAULTS, sort: useAppStore.getState().library.librarySort })}
         >
           Clear filters
         </Button>

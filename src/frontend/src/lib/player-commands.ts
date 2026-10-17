@@ -8,7 +8,7 @@ export interface PlayerCommands {
   /** Resume and Start over: the fileserver's playItem for the open title. */
   readonly resume: () => void;
   readonly startOver: () => void;
-  /** Reveal in Library: shows the Library surface. */
+  /** Reveal in Library: shows the Library with the open item selected and in view. */
   readonly reveal: () => void;
   /** Close: empties the Player back to its idle state. */
   readonly close: () => void;

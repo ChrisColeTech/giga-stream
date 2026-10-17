@@ -78,11 +78,12 @@ describe("the filters", () => {
     assert.deepEqual(titles(visibleItems(ALL, query({ watched: "watching" }))), ["Bravo"]);
   });
 
-  it("clears to the default search, sort and filters, and leaves the type and source alone", () => {
-    const set = query({ scope: "movie", search: "x", sort: "az", genres: ["Drama"], year: "2020", watched: "watched" });
+  it("clears the filters and keeps the search, the type and the source", () => {
+    const set = query({ scope: "movie", search: "x", genres: ["Drama"], year: "2020", watched: "watched" });
     const cleared: LibraryQuery = { ...set, ...FILTER_DEFAULTS };
-    assert.deepEqual({ ...cleared, scope: DEFAULT_QUERY.scope }, DEFAULT_QUERY);
+    assert.deepEqual({ ...cleared, scope: DEFAULT_QUERY.scope, search: "" }, DEFAULT_QUERY);
     assert.equal(cleared.scope, "movie");
+    assert.equal(cleared.search, "x");
   });
 });
 

@@ -3,6 +3,7 @@ import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } fr
 import { EVENT_ROWS } from "@/fixtures/events";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import type { EventRow } from "@/types/events";
+import { navigationSlice, type NavigationSlice } from "./navigation-slice";
 import type { Box } from "@/types/child-window";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";
@@ -20,7 +21,7 @@ export interface Notice {
 
 /** The one store (`01` section 6). Serializable shell state only: no nodes, refs, promises or timers.
  *  Nothing here reads or writes browser storage; persistence arrives with the fileserver's settings rows. */
-export interface AppState {
+export interface AppState extends NavigationSlice {
   surface: Surface;
   /** Committed visibility per pane. A pane a surface does not have is never in this record. */
   open: Partial<Record<PaneKey, boolean>>;
@@ -74,10 +75,6 @@ export interface AppState {
   rememberChild: (key: string, box: Box) => void;
   toggleFold: (id: string) => void;
   say: (sentence: string, tone?: Notice["tone"]) => void;
-  /** The last thing a Play asked the Player to open; the serial lets the same item be asked for twice. */
-  playRequest: { ref: ItemRef; serial: number } | null;
-  /** Shows the Player and asks it to open an item (navigation; the Player starts the stream itself). */
-  requestPlay: (ref: ItemRef) => void;
   setTheme: (theme: ThemeMode) => void;
   setAccent: (accent: Accent) => void;
   setMotion: (motion: MotionPreference) => void;
@@ -163,16 +160,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       tone === "info" ? null : { id: `n-${serial}-${Date.now()}`, at: Date.now(), tone, area: "Connection", sentence };
     set({ notice: { sentence, tone, serial }, ...(row === null ? {} : { events: [...get().events, row].slice(-200) }) });
   },
-  playRequest: null,
-  requestPlay: (ref) =>
-    /* Play hands off to the Player: an open work window (Title information) closes with it (`06` section 4.4). */
-    set({
-      surface: "player",
-      overlay: null,
-      overlayAnchor: null,
-      overlayItem: null,
-      playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 },
-    }),
+  ...navigationSlice(set, get),
   setTheme: (theme) => set({ theme }),
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),

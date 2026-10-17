@@ -4,8 +4,8 @@ import { Select } from "@/components/ui/Field";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { Segmented } from "@/components/ui/Segmented";
 import { Toggle } from "@/components/ui/Toggle";
-import { TwoStep } from "@/components/ui/TwoStep";
-import { SORT_OPTIONS } from "@/lib/library-copy";
+import { ArmedButton } from "@/components/ui/ArmedButton";
+import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";
 import { clearHistory } from "@/services/library";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryPrefs } from "@/types/settings";
@@ -15,6 +15,7 @@ const LABELS = ["Default view", "Default sort", "Continue watching", "Pause hist
 const VIEWS = [
   { value: "grid", label: "Grid" },
   { value: "list", label: "List" },
+  { value: "rows", label: "Rows" },
 ] as const satisfies ReadonlyArray<{ value: LibraryPrefs["libraryView"]; label: string }>;
 
 export interface LibrarySectionProps {
@@ -38,7 +39,7 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
   return (
     <Workspace labels={LABELS}>
       <Group title="Library" icon={Library}>
-        <Row label="Default view" tip="Show the library as a grid of posters or a list.">
+        <Row label="Default view" tip="Show the library as a grid of posters, a list, or rows of shelves.">
           <Segmented
             aria-label="Default view"
             options={VIEWS}
@@ -76,9 +77,9 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
           label="History"
           tip="Show the library's history, or clear it. Clearing never touches your files or collections."
           trailing={
-            <TwoStep size="sm" question="Clear all history?" title="Clear every watch entry" onConfirm={clear}>
-              Clear history
-            </TwoStep>
+            <ArmedButton question={LIBRARY_COPY.clearArmed} title={LIBRARY_COPY.clearTip} onConfirm={clear}>
+              {LIBRARY_COPY.clearIdle}
+            </ArmedButton>
           }
         >
           <Button size="sm" variant="ghost" onClick={onOpenHistory}>

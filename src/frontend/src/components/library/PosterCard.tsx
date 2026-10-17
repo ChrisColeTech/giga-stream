@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import { useRef, type KeyboardEvent, type MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
@@ -7,7 +7,6 @@ import { progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
 import { CardActions } from "./CardActions";
-import { enterOnCard } from "./card-keys";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { openTitleInfo } from "./open-title-info";
 import { ProgressBar } from "./ProgressBar";
@@ -51,9 +50,6 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect, o
           onSelect(id);
           openTitleInfo(item.ref, artRef.current);
         }}
-        onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) =>
-          enterOnCard(event, selected, () => onSelect(id), () => openTitleInfo(item.ref, artRef.current))
-        }
         className={cn(TILE_FRAME, "aspect-[2/3]", selected ? TILE_SELECTED : TILE_IDLE)}
       >
         <PosterImage src={item.posterUrl} alt={item.title} className="rounded-none" />

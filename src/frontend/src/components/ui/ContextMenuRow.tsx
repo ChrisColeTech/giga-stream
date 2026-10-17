@@ -31,9 +31,11 @@ export interface ContextMenuRowProps {
   /** Reserved for the whole panel whenever ANY of its rows is checkable, so
    *  labels do not shift as membership toggles under the pointer. */
   hasTicks: boolean
+  /** Defers the row's action until the menu has closed (`ContextMenu`); absent, it runs at once. */
+  onRun?: (action: () => void) => void
 }
 
-export function ContextMenuRow({ row, hasTicks }: ContextMenuRowProps) {
+export function ContextMenuRow({ row, hasTicks, onRun }: ContextMenuRowProps) {
   if (row.kind === 'separator') {
     return <Menu.Separator className="mx-0.5 my-1 h-px bg-hair" />
   }
@@ -51,7 +53,7 @@ export function ContextMenuRow({ row, hasTicks }: ContextMenuRowProps) {
       data-danger={row.danger === true ? '' : undefined}
       className={MENU_ROW}
       /* Radix closes the menu on select, which is what every row here wants. */
-      onSelect={() => row.onSelect()}
+      onSelect={() => (onRun === undefined ? row.onSelect() : onRun(row.onSelect))}
     >
       {hasTicks ? (
         <span className="grid size-3.5 flex-none place-items-center">{row.checked === true && <Check className="text-accent-text" />}</span>

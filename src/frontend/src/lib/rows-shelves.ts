@@ -43,6 +43,8 @@ export interface ShelfSource {
   readonly collections: readonly CollectionRow[];
   /** The store's marks. A favourite the store holds wins over the fixture's flag, as `resolveItem` reads it. */
   readonly marks: Marks;
+  /** The Continue watching setting: off, the shelf is not drawn. Absent means on. */
+  readonly showContinue?: boolean;
 }
 
 /** Whether an item is a favourite: the store's mark when it has one, else the item's own flag. */
@@ -92,7 +94,7 @@ export function buildShelves(source: ShelfSource): Shelf[] {
       id: "continue",
       name: LIBRARY_COPY.continueHeading,
       group: { kind: "continue" },
-      items: continueItems(items, "all"),
+      items: source.showContinue === false ? [] : continueItems(items, "all"),
     },
     {
       id: "favorites",

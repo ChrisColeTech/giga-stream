@@ -30,7 +30,7 @@ export interface Settings {
   readonly watchedPercent: 90 | 95 | 100;
   /** What Live does when it opens: start the last channel, or nothing. */
   readonly liveOnOpen: "last" | "none";
-  readonly libraryView: "grid" | "list";
+  readonly libraryView: "grid" | "list" | "rows";
   readonly librarySort: "newest" | "oldest" | "az" | "year";
   /** Whether Library shows the Continue watching strip. */
   readonly showContinue: boolean;

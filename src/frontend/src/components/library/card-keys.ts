@@ -1,18 +1,7 @@
 import type { KeyboardEvent } from "react";
 import { cardStep } from "@/lib/library-keys";
 
-/** Enter on a card: a card that is not selected is selected; the selected card opens Info. */
-export function enterOnCard(
-  event: KeyboardEvent<HTMLElement>,
-  selected: boolean,
-  select: () => void,
-  info: () => void,
-): void {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  if (selected) info();
-  else select();
-}
+/* Enter on a card is the button's own click (select and open Info, `06` section 4.2); only the arrows are handled here. */
 
 /** Arrow, Home and End across the cards of a grid or a list. A card's primary button carries `data-primary`; focus and
  *  the selection move together, and the new card scrolls into view. `ids` lists the cards in the same order. */

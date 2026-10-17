@@ -3,9 +3,6 @@
 /** Continue Watching shows at most this many cards. */
 export const CONTINUE_LIMIT = 10;
 
-/** The second press of a two-step Clear history must land within this many milliseconds of the first. */
-export const CLEAR_WINDOW_MS = 4000;
-
 /** Loading and empty draw this many card skeletons (grid) or row skeletons (list). */
 export const SKELETON_CARDS = 12;
 export const SKELETON_ROWS = 10;

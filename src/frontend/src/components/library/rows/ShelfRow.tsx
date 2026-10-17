@@ -80,14 +80,14 @@ export function ShelfRow({
         {items.map((item) => (
           <li key={`${item.ref.kind}:${item.ref.id}`} data-card data-id={item.ref.id} className="min-w-0">
             {continuing ? (
-              <div
-                className={cn(
-                  "w-full rounded-card",
-                  LANDSCAPE_CARD,
-                  selected === item.ref.id && "ring-2 ring-accent",
-                )}
-              >
-                <ContinueCard item={item} />
+              <div className={cn("w-full", LANDSCAPE_CARD)}>
+                <ContinueCard
+                  item={item}
+                  selected={selected === item.ref.id}
+                  collections={collections}
+                  onSelect={onSelect}
+                  onRemoveWatch={onRemoveWatch}
+                />
               </div>
             ) : (
               <PosterCard

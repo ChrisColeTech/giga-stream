@@ -19,17 +19,13 @@ const SPEC = workSpec("settings", "Settings");
  *  Library preferences live in the store and apply at once; phase 2 saves them through the fileserver. */
 export function SettingsWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
-  const openOverlay = useAppStore((state) => state.openOverlay);
-  const setSurface = useAppStore((state) => state.setSurface);
+  const openCollections = useAppStore((state) => state.openCollections);
+  const requestLibrary = useAppStore((state) => state.requestLibrary);
   const say = useAppStore((state) => state.say);
   const [section, setSection] = useState<SettingsSectionId>("appearance");
 
-  /* Phase 1: the library's History view belongs to the Library surface, so this only closes Settings and selects the
-     library. */
-  const openHistory = () => {
-    closeOverlay();
-    setSurface("library");
-  };
+  /* Closes Settings and shows the library on its History view (the request closes the window with it). */
+  const openHistory = () => requestLibrary({ source: "history" });
 
   /* A refused save is reported once on the notice line; the section keeps the draft in its field. */
   const commitAddress = (address: string) => {
@@ -48,7 +44,7 @@ export function SettingsWindow() {
           {section === "appearance" && <AppearanceSection />}
           {section === "playback" && <PlaybackSection />}
           {section === "library" && (
-            <LibrarySection onOpenCollections={() => openOverlay("collections")} onOpenHistory={openHistory} />
+            <LibrarySection onOpenCollections={() => openCollections()} onOpenHistory={openHistory} />
           )}
           {section === "admin" && <AdminBackendSection adminUrl={SETTINGS_VALUES.adminUrl} onCommit={commitAddress} />}
           {section === "about" && <AboutSection />}

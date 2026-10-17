@@ -1,5 +1,5 @@
 import * as Menu from '@radix-ui/react-dropdown-menu'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import type { MenuAnchor, MenuItem } from '@/types/menu'
 import { ContextMenuRow, MENU_PANEL } from './ContextMenuRow'
@@ -37,6 +37,28 @@ export function ContextMenu({ anchor, items, onClose }: ContextMenuProps) {
      card or row the menu was summoned from is where a keyboard user actually
      was, so that is what gets focus back. */
   const opener = useRef(typeof document === 'undefined' ? null : document.activeElement)
+  /* A chosen row's action runs AFTER the menu has closed and given focus back. Run inside Radix's select, a row that
+     opens a window (Rename… opens Collections) has its window's focus pulled back by the menu's focus trap, and the
+     window is then deaf to its own Escape. */
+  const pending = useRef<(() => void) | null>(null)
+  const flush = (): void => {
+    const action = pending.current
+    pending.current = null
+    action?.()
+  }
+  /* Should the menu unmount before Radix reports the close, the chosen action still runs. */
+  useEffect(() => {
+    const queue = pending
+    const from = opener.current
+    return () => {
+      const action = queue.current
+      queue.current = null
+      if (action === null) return
+      /* Focus is on the opener first, so a window the action opens returns focus there when it closes. */
+      if (from instanceof HTMLElement) from.focus()
+      action()
+    }
+  }, [])
 
   return (
     <Menu.Root
@@ -62,11 +84,20 @@ export function ContextMenu({ anchor, items, onClose }: ContextMenuProps) {
           className={MENU_PANEL}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
-            if (opener.current instanceof HTMLElement) opener.current.focus()
+            /* Radix reports this on a timer after the menu unmounts, by when a deferred action may already have opened
+               a window and focused its frame: focus goes back to the opener only if nothing has claimed it. */
+            const active = document.activeElement
+            const claimed = active !== null && active !== document.body && active.closest('[role="menu"]') === null
+            if (!claimed && opener.current instanceof HTMLElement) opener.current.focus()
+            flush()
           }}
         >
           {items.map((item, index) =>
-            item.kind === 'submenu' ? <ContextMenuSubmenu key={index} row={item} /> : <ContextMenuRow key={index} row={item} hasTicks={hasTicks} />,
+            item.kind === 'submenu' ? (
+              <ContextMenuSubmenu key={index} row={item} />
+            ) : (
+              <ContextMenuRow key={index} row={item} hasTicks={hasTicks} onRun={(action) => (pending.current = action)} />
+            ),
           )}
         </Menu.Content>
       </Menu.Portal>

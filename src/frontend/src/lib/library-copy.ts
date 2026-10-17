@@ -1,16 +1,14 @@
 /** The Library's words and option lists (`06` section 4). Reasons are tooltips on the control, never text under it. */
 
 export const LIBRARY_COPY = {
-  renameInManage: "Rename it in Manage collections.",
-  removeInManage: "Remove it in Manage collections. Original files remain untouched.",
   noWatchEntry: "No watch entry is loaded for this title.",
   noItem: "No title is open.",
   favorite: "Favorite",
   unfavorite: "Unfavorite",
   removeWatch: "Remove from History",
   clearIdle: "Clear history",
-  clearArmed: "Clear all history",
-  clearHint: "Press again within four seconds to clear the history.",
+  clearArmed: "Clear all history?",
+  clearTip: "Clear every watch entry; your files and collections are untouched",
   clearEmpty: "The history is already empty.",
   searchClear: "Clear the search",
   searchEmpty: "There is no search to clear.",

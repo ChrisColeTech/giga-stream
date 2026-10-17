@@ -32,9 +32,9 @@ export const DEFAULT_QUERY: LibraryQuery = {
   sort: "newest",
 };
 
-/** The Filter group's values at rest. Clear filters resets to these and keeps the search, the scope and the source. */
-/** What Clear filters restores: everything the right pane sets (search, sort and the filters), never the type or source. */
-export const FILTER_DEFAULTS = { search: "", sort: "newest", genres: [], year: "", watched: "all" } as const;
+/** The filters at rest. Clear filters restores these and the sort to the Default sort setting, and keeps the search, the
+ *  type and the source (`06` section 4.3). */
+export const FILTER_DEFAULTS = { genres: [], year: "", watched: "all" } as const;
 
 const COLLECTION_PREFIX = "collection:";
 
@@ -95,11 +95,13 @@ export function visibleItems(items: readonly ResolvedItem[], query: LibraryQuery
   return sortItems(narrowed, query.sort);
 }
 
-/** Continue Watching: items being watched, in the scope the type strip names, at most the limit. */
-export function continueItems(items: readonly ResolvedItem[], scope: Scope): ResolvedItem[] {
-  return items
-    .filter((item) => (scope === "all" || item.kind === scope) && item.progress?.state === "watching")
-    .slice(0, CONTINUE_LIMIT);
+/** Continue Watching: items being watched in the rail's view and the type strip's scope, newest first, at most the
+ *  limit. One order for the strip and the Rows shelf. */
+export function continueItems(items: readonly ResolvedItem[], scope: Scope, source: SourceId = "all"): ResolvedItem[] {
+  const watching = items.filter(
+    (item) => (scope === "all" || item.kind === scope) && matchesSource(item, source) && item.progress?.state === "watching",
+  );
+  return sortItems(watching, "newest").slice(0, CONTINUE_LIMIT);
 }
 
 export interface ViewCounts {

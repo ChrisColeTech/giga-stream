@@ -28,7 +28,8 @@ export function stageMenuItems(input: StageMenuInput): MenuItem[] {
     input.collections,
   ];
   if (input.onRemoveHistory !== undefined) {
-    items.push({ kind: "action", label: "Remove from History", danger: true, onSelect: input.onRemoveHistory });
+    /* Not danger at rest: removing one watch entry touches no file and is not a destructive verb (`01` section 9). */
+    items.push({ kind: "action", label: "Remove from History", onSelect: input.onRemoveHistory });
   }
   items.push({ kind: "separator" }, { kind: "action", label: "Close", onSelect: input.onClose });
   return items;
