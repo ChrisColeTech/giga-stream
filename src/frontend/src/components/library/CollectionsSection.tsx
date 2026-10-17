@@ -1,6 +1,5 @@
 import { NavGroup, NavItem } from "@/components/ui/NavRail";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { StatusDot } from "@/components/ui/StatusDot";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
@@ -16,9 +15,9 @@ export interface CollectionsSectionProps {
   readonly onSource: (source: SourceId) => void;
 }
 
-/** The Collections group of the rail: every collection, alphabetical, with its count and a scan dot while it scans.
+/** The Collections group of the rail: every collection, alphabetical, with its count, or the word "scanning" in the running color while it scans.
  *  Until there are collections, the group draws shimmer rows in the navigation row's shape. A row's context menu rides
- *  on a `contents` wrapper, because the family NavItem takes no menu handler of its own. */
+ *  on a wrapper, because the family NavItem takes no menu handler of its own. */
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
   const verbs = useCollectionVerbs();
   return (
@@ -34,18 +33,22 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
             return (
               <div
                 key={row.id}
-                className="contents"
+                title={row.scan === "scanning" ? LIBRARY_COPY.scanning : undefined}
                 onContextMenu={(event) => openCollectionMenu(event, () => verbs.attach(row.id))}
               >
-                <NavItem selected={source === id} count={counts.collections[row.id] ?? 0} onClick={() => onSource(id)}>
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{row.name}</span>
-                    {row.scan === "scanning" && (
-                      <span title={LIBRARY_COPY.scanning} className="inline-flex">
-                        <StatusDot state="loading" />
-                      </span>
-                    )}
-                  </span>
+                <NavItem
+                  selected={source === id}
+                  /* Sensenova's NavItem: the count slot carries a coloured state word while one applies. Never a dot. */
+                  count={
+                    row.scan === "scanning" ? (
+                      <span className="animate-pulse-busy text-st-generating">scanning</span>
+                    ) : (
+                      (counts.collections[row.id] ?? 0)
+                    )
+                  }
+                  onClick={() => onSource(id)}
+                >
+                  {row.name}
                 </NavItem>
               </div>
             );
