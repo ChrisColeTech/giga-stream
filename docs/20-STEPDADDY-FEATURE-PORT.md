@@ -43,9 +43,9 @@ Read in full: `src/backend/src` (all of it), `src/fileserver/src` (all of it), `
 |---|---|---|
 | Composition root, start refusals, TLS/CORS policy | `src/backend/src/app.ts`, `network-policy.ts` | done (`03` §1-2) |
 | Sign-in, refresh rotation with reuse detection, lockout, scrypt | `api/auth.ts`, `services/auth-service.ts`, `jwt.ts`, `password.ts`, `sign-in-limiter.ts` | done (`03` §7.12) |
-| Admin accounts, roles, last-owner guard | `api/accounts.ts`, `services/account-service.ts`, `bootstrap-owner.ts` | done (`03` §7.11) |
+| Admin accounts, last-admin guard (no roles: owner, 2026-10-17) | `api/accounts.ts`, `services/account-service.ts`, `bootstrap-admin.ts` | done (`03` §7.11) |
 | Channels CRUD, https address rule, revision bump | `api/channels.ts`, `services/channel-service.ts`, `address-rule.ts` | done (`03` §7.2-7.3). A channel record is `id, name, category, number?, logoUrl?, streamUrl, revision` — there is **no `tvgId` field** (`types/channel.ts`, `03` §7.2) |
-| Providers CRUD — records only (`name, source, api_key, is_active`) | `api/providers.ts`, `services/provider-service.ts` | done (`03` §7.2b); no provider logic exists anywhere, by design (`00` §5) |
+| Providers CRUD — records only (`name, source, is_active`; the unused `api_key` was removed, owner, 2026-10-17) | `api/providers.ts`, `services/provider-service.ts` | done (`03` §7.2b); no provider logic exists anywhere, by design (`00` §5) |
 | Titles: browse/search/genres/detail/seasons/recommendations, OMDb block | `api/titles.ts`, `services/title-*.ts` | done (`03` §7.4). **Title answers carry no `streamUrl`** — see section 8 |
 | TMDB client (paced, backed off, merged), OMDb client (budgeted) | `services/tmdb-client.ts`, `omdb-client.ts` | done (`03` §7.6) |
 | Catalog sync: single-flight job, audited, `TMDB_SYNC_SCHEDULE` | `services/title-sync.ts`, armed in `app.ts` | done (`03` §7.6b). `01` §4.4 and `03` §7.6b both name it the system's **only** background timer |

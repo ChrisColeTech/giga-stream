@@ -41,8 +41,7 @@ to `~/.giga-stream-admin`, with `admin.db` inside it.
 - **Channels are stored stream-address rows:** `id` (`ch_<uuid>`), `name`, `category` (free text), `number` (TEXT),
   `logo_url`, `stream_url`, `revision`, and for playlist-synced rows `tvg_id` and `source`.
 - **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token, a sign-in rate limit and a lockout. Every change
-  writes an audit entry. `api/guard.ts` `signedIn(services, request, roles)` gates writes. Today it also separates an `owner` role from an `editor` role; the
-  owner retired roles (D24), so every signed-in admin is equal and the `roles` argument goes.
+  writes an audit entry. `api/guard.ts` `signedIn(services, request)` gates writes. There are no roles (D24): every signed-in admin is equal.
 - **Network policy** (`network-policy.ts`): refuses to listen off loopback over plain http unless
   `TLS_CERT_FILE`/`TLS_KEY_FILE`, `TRUST_PROXY` or `ALLOW_INSECURE_HTTP` is set. No-store routes: `/api/auth`,
   `/api/admin-accounts`, `/api/audit`.

@@ -72,7 +72,7 @@ button. A reload after exit confirmed the healed layout persisted while Theatre 
   whitelists only `/`, `/index.html` and first segments `html|css|js|data` — **a built React bundle
   (`assets/...`) would be refused**, and there is no SPA fallback. Its `Settings` implements only 8 of the 19
   keys of `03` section 3.2.
-- **Backend.** Providers are a table and CRUD (`7.2b`) with `id, name, source, api_key, is_active, created_at` —
+- **Backend.** Providers are a table and CRUD (`7.2b`) with `id, name, source, is_active, created_at` —
   no templates, no seed. The stream-address rule (`7.5`) fills `streamUrl` from `MOVIE_STREAM_TEMPLATE` /
   `EPISODE_STREAM_TEMPLATE`.
 - **The PoC (`14`, proven in Electron).** The embed is a 16:9 iframe with
@@ -526,8 +526,8 @@ events omit `absolutePath`, and terminal `done` repeats no file inventory; folde
    open auto-selects the first source by order — **Cinezo by seeded order 0, the owner's default for movies and
    TV (2026-10-17)**. A per-title stored preference (`16` §6.3) is user data and waits
    for its own contract change in `03` (fileserver table) — noted, not built here.
-4. **Providers and `api_key`.** The fileserver stops attaching raw provider records; answers carry `sources`
-   (§0.1). The credentials never reach the renderer.
+4. **Providers.** The fileserver stops attaching raw provider records; answers carry `sources`
+   (§0.1). (A provider has no `api_key`: removed, owner, 2026-10-17.)
 5. **Browser-case containment.** Provider embeds have no iframe sandbox in Chrome or Electron; the
    statusbar says `unprotected` in the browser case; no badge covers the stage.
 6. **Autoplay (§3.2a).** The setting governs unattended attaches only; a click always plays. Off: first frame
@@ -537,5 +537,4 @@ events omit `absolutePath`, and terminal `done` repeats no file inventory; folde
    picker as `App player`; with no sources the stream plays as today.
 9. **Source pick is in-session (§3.4).** A stored per-title preference is a `03` contract change (a fileserver
    table, `16` §6.3's shape) — deferred, not forgotten.
-10. **Provider records stop at the fileserver (§0.1).** Answers carry `sources`; `api_key` never reaches the
-    renderer; the fileserver's provider-attachment tests are rewritten in wave B.
+10. **Provider records stop at the fileserver (§0.1).** Answers carry `sources`; the fileserver's provider-attachment tests are rewritten in wave B.

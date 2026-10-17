@@ -323,7 +323,7 @@ genre, then year. A title with neither `streamUrl` nor `sources` keeps Play disa
 
 - **With providers**, the fileserver reads active providers live from the backend (section 7.2b) when
   a title or episode is requested, and attaches the title's **sources** (section 7.5) to the answer —
-  the provider records themselves, and their `api_key`, stop at the fileserver. The client then plays
+  the provider records themselves stop at the fileserver. The client then plays
   through a source's embedded player. The fileserver holds the providers in its in-memory view
   like channels: read on demand, kept for the request, never stored.
 
@@ -627,9 +627,9 @@ interface BackendChannel {
 |---|---|---|
 | `GET /api/channels` | anyone | every channel, ordered by number then name: `{ items: BackendChannel[], revision }` |
 | `GET /api/channels/:channelId` | anyone | one channel |
-| `POST /api/channels` | owner, editor | `{ name, category, number?, logoUrl?, streamUrl }`; answers `201` with the channel |
-| `PATCH /api/channels/:channelId` | owner, editor | changes any of those fields |
-| `DELETE /api/channels/:channelId` | owner, editor | removes it; answers `{ id }` |
+| `POST /api/channels` | signed in | `{ name, category, number?, logoUrl?, streamUrl }`; answers `201` with the channel |
+| `PATCH /api/channels/:channelId` | signed in | changes any of those fields |
+| `DELETE /api/channels/:channelId` | signed in | removes it; answers `{ id }` |
 
 An unknown id is `404 channel.not_found`; an invalid field is `422 channel.invalid`, naming the field.
 Each change raises the revision and writes an audit entry.
@@ -644,7 +644,6 @@ interface BackendProvider {
   id: number;
   name: string;
   source: string;            // string identifying the external service; unique per provider
-  api_key: string;           // the provider's API credential; stops at the backend and fileserver
   is_active: boolean;        // whether the provider should be used
   order: number;             // preference order for auto-selection and the picker's sort
   family: "embed" | "stream";// how it plays (16 section 3)
@@ -663,9 +662,9 @@ interface BackendProvider {
 |---|---|---|
 | `GET /api/providers` | anyone | every provider: `{ items: BackendProvider[] }` |
 | `GET /api/providers/:providerId` | anyone | one provider |
-| `POST /api/providers` | owner, editor | `{ name, source, api_key, order?, family, movieTemplate?, episodeTemplate?, startParam?, subtitlesParam?, origin?, frameOrigins?, messageShape? }`; answers `201` with the provider |
-| `PUT /api/providers/:providerId` | owner, editor | changes any of those fields |
-| `DELETE /api/providers/:providerId` | owner, editor | removes it; answers `{ id }` |
+| `POST /api/providers` | signed in | `{ name, source, order?, family, movieTemplate?, episodeTemplate?, startParam?, subtitlesParam?, origin?, frameOrigins?, messageShape? }`; answers `201` with the provider |
+| `PUT /api/providers/:providerId` | signed in | changes any of those fields |
+| `DELETE /api/providers/:providerId` | signed in | removes it; answers `{ id }` |
 
 An unknown id is `404 provider.not_found`; an invalid field is `422 provider.invalid`, naming the field.
 Each change raises the backend revision by one and writes an audit entry. The fileserver reads providers
@@ -709,8 +708,8 @@ are never updated or removed by it.
 
 | Route | Who | Behaviour |
 |---|---|---|
-| `POST /api/playlist-sync` | owner, editor | body `{ dryRun?: boolean, prune?: boolean }`; a dry run writes nothing. Answers `202` with `{ created, updated, skipped, refused, removed, refusalExamples }` and the ids of the first *(default 10)* created rows |
-| `GET /api/playlist-sync` | owner, editor | `{ running, startedAt, lastRunAt, lastOutcome, counts, schedule, playlists }` |
+| `POST /api/playlist-sync` | signed in | body `{ dryRun?: boolean, prune?: boolean }`; a dry run writes nothing. Answers `202` with `{ created, updated, skipped, refused, removed, refusalExamples }` and the ids of the first *(default 10)* created rows |
+| `GET /api/playlist-sync` | signed in | `{ running, startedAt, lastRunAt, lastOutcome, counts, schedule, playlists }` |
 
 Every run — manual, dry or scheduled — is one audit entry, action `channel.imported`, with the counts and
 each playlist's **host** (never its query, which can carry credentials). A playlist that cannot be
@@ -819,7 +818,7 @@ nobody "adds a title" — the store only ever mirrors TMDB.
 - **Bulk sync (admin).** `POST /api/titles/sync` — body `{ scope: "trending" | "popular", kind:
   "movie" | "tv", pages? }`, or `{ scope: "titles", ids: [...] }` — walks TMDB's trending or popular
   lists for that kind (first `pages`, default 5), storing each title and its popularity, and refetching
-  stale details. Owner and editor only. It runs as one background job: a second start is `409
+  stale details. Signed in only. It runs as one background job: a second start is `409
   sync.busy`, and `GET /api/titles/sync` answers `{ running, startedAt, lastRunAt, lastOutcome,
   titles, stale, schedule }`. The job honours the `7.6` rate limit and backoff.
 - **Schedule hook.** `TMDB_SYNC_SCHEDULE` (default off) accepts an interval such as `6h` or `24h`;
@@ -886,7 +885,6 @@ interface AdminAccount {
   id: string;
   email: string;            // unique, compared without case
   name: string;
-  role: "owner" | "editor"; // an owner also manages accounts and reads the audit log
   disabled: boolean;
   createdAt: number;
   updatedAt: number;
@@ -896,21 +894,23 @@ interface AdminAccount {
 
 | Route | Who | Behaviour |
 |---|---|---|
-| `GET /api/admin-accounts` | owner | every account, by email: `{ items: AdminAccount[] }` |
-| `GET /api/admin-accounts/:accountId` | owner | one account |
-| `POST /api/admin-accounts` | owner | `{ email, name, role, password }`; answers `201` with the account |
-| `PATCH /api/admin-accounts/:accountId` | owner | any of `email`, `name`, `role`, `disabled`, `password` |
-| `DELETE /api/admin-accounts/:accountId` | owner | removes it; answers `{ id }` |
+| `GET /api/admin-accounts` | signed in | every account, by email: `{ items: AdminAccount[] }` |
+| `GET /api/admin-accounts/:accountId` | signed in | one account |
+| `POST /api/admin-accounts` | signed in | `{ email, name, password }`; answers `201` with the account |
+| `PATCH /api/admin-accounts/:accountId` | signed in | any of `email`, `name`, `disabled`, `password` |
+| `DELETE /api/admin-accounts/:accountId` | signed in | removes it; answers `{ id }` |
+
+There are no roles (owner, 2026-10-17): every signed-in account is equal and may call every write and read route.
 
 - A password is at least 12 characters, stored only as a scrypt hash with its own salt.
-- Changing an account's password, role or `disabled`, or deleting it, **revokes all of its sessions at
+- Changing an account's password or `disabled`, or deleting it, **revokes all of its sessions at
   once** (section 7.12).
-- The last enabled owner cannot be demoted, disabled or deleted (`409 account.last_owner`), so the backend
-  always has someone who can manage it.
+- The last enabled account cannot be disabled or deleted (`409 account.last_admin`), so the backend
+  always has someone who can sign in.
 - An email already used is `409 account.email_taken`; an unknown id `404 account.not_found`; an invalid
   field `422 account.invalid`, naming the field.
-- **The first owner.** When the backend starts with no accounts and `ADMIN_BOOTSTRAP_EMAIL` and
-  `ADMIN_BOOTSTRAP_PASSWORD` are set, it creates that owner. With no accounts and neither set, it starts,
+- **The first account.** When the backend starts with no accounts and `ADMIN_BOOTSTRAP_EMAIL` and
+  `ADMIN_BOOTSTRAP_PASSWORD` are set, it creates that account. With no accounts and neither set, it starts,
   serves reads, and logs that nobody can sign in.
 
 ### 7.12 Sign-in and tokens
@@ -935,7 +935,7 @@ interface Session {
 
 - **The access token** is a JWT signed with HS256 and `JWT_SECRET` (at least 32 characters; the backend
   refuses to start without one). It lives 15 minutes and carries `iss` and `aud` (`giga-stream-admin`),
-  `sub` (the account id), `role`, `ver` (the account's session version), `iat` and `exp`. A token with any
+  `sub` (the account id), `ver` (the account's session version), `iat` and `exp`. A token with any
   other algorithm, issuer or audience, a bad signature, or an expired time is refused.
 - **Every request is checked against the account** as it is now: a disabled or deleted account, or a
   `ver` that no longer matches, is refused. That is how a revocation takes effect at once.
@@ -945,8 +945,7 @@ interface Session {
 - **Limits.** Ten sign-in attempts a minute from one address (`429 auth.rate_limited`); five wrong
   passwords in a row lock the account for 15 minutes (`429 auth.locked`). An unknown email and a wrong
   password give the same answer (`401 auth.invalid_credentials`).
-- A missing, malformed, expired or revoked access token is `401 auth.unauthorized`; a valid token whose
-  role may not do this is `403 auth.forbidden`; a refresh token that is unknown, used, expired or revoked
+- A missing, malformed, expired or revoked access token is `401 auth.unauthorized`; a refresh token that is unknown, used, expired or revoked
   is `401 auth.refresh_invalid`.
 - Changing `JWT_SECRET` ends every access token; sessions continue through their refresh tokens.
 
@@ -954,7 +953,7 @@ interface Session {
 
 | Route | Who | Behaviour |
 |---|---|---|
-| `GET /api/audit` | owner | entries newest first: `limit` (1 to 200, default 50) and `before` (an entry id) page through them; `{ items, nextBefore? }` |
+| `GET /api/audit` | signed in | entries newest first: `limit` (1 to 200, default 50) and `before` (an entry id) page through them; `{ items, nextBefore? }` |
 
 An entry is `{ id, at, actorId?, actorEmail?, action, subject?, detail?, address? }`. Actions:
 `auth.login`, `auth.login_failed`, `auth.logout`, `auth.password_changed`, `account.created`,
@@ -974,18 +973,17 @@ job.not_found          job.not_running        job.not_settled        job.running
 media.not_found        playback.range_invalid image.not_found
 backend.unreachable    backend.bad_response   tmdb.unavailable
 store.open             store.newer_schema     store.migrate          store.failed
-auth.unauthorized      auth.invalid_credentials auth.refresh_invalid auth.forbidden
+auth.unauthorized      auth.invalid_credentials auth.refresh_invalid
 auth.rate_limited      auth.locked
-account.not_found      account.invalid        account.email_taken    account.last_owner
+account.not_found      account.invalid        account.email_taken    account.last_admin
 ```
 
 | Status | Used for |
 |---|---|
 | 400 | `request.invalid` |
 | 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid` |
-| 403 | `auth.forbidden` |
 | 404 | the `*.not_found` codes |
-| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.email_taken`, `account.last_owner` |
+| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.email_taken`, `account.last_admin` |
 | 429 | `auth.rate_limited`, `auth.locked` |
 | 416 | `playback.range_invalid` |
 | 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection` |

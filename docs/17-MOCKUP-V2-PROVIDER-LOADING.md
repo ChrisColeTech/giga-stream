@@ -18,7 +18,6 @@ The backend provider record:
   "id": 1,
   "name": "VidSrc",
   "source": "vidsrc",
-  "api_key": "",
   "is_active": true,
   "created_at": "2026-10-16T12:00:00.000Z"
 }
