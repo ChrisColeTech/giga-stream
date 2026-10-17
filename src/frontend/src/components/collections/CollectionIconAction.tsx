@@ -4,15 +4,20 @@ import { IconButton } from "@/components/ui/IconButton";
 export interface CollectionIconActionProps {
   readonly icon: ComponentType<{ className?: string }>;
   readonly label: string;
-  /** Why the action cannot run. It is the tooltip of the wrapper, because a disabled icon button takes no pointer. */
-  readonly reason: string;
+  /** The tooltip when it differs from the label, such as a two-step's armed consequence. */
+  readonly title?: string;
+  /** Why the action cannot run. Given, the action is disabled and the reason is its tooltip. */
+  readonly reason?: string;
+  readonly onPress?: () => void;
+  readonly onBlur?: () => void;
 }
 
-/** A row's icon action, drawn disabled with its reason (`06` section 2, rule 3). Phase 1 has nothing for it to do. */
-export function CollectionIconAction({ icon: Icon, label, reason }: CollectionIconActionProps) {
+/** A row's icon action (`06` section 2, rule 3). Disabled only with a reason; its tooltip is on the wrapper, because a
+ *  disabled icon button takes no pointer. */
+export function CollectionIconAction({ icon: Icon, label, title, reason, onPress, onBlur }: CollectionIconActionProps) {
   return (
-    <span title={reason} className="inline-flex">
-      <IconButton aria-label={label} disabled>
+    <span title={reason ?? title ?? label} className="inline-flex">
+      <IconButton aria-label={label} disabled={reason !== undefined} onClick={onPress} onBlur={onBlur}>
         <Icon className="size-3.5" />
       </IconButton>
     </span>

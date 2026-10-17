@@ -4,15 +4,17 @@ import { LiveChannelsPane } from "@/components/live/LiveChannelsPane";
 import { LiveSettingsPane } from "@/components/live/LiveSettingsPane";
 import { LiveStage } from "@/components/live/LiveStage";
 import { CHANNEL_LIST } from "@/fixtures/channels";
+import { useLiveActions } from "@/hooks/useLiveActions";
 import { filterChannels } from "@/lib/live-channels";
 import { ALL_CATEGORY } from "@/lib/live-constants";
 import { type PictureFit } from "@/lib/live-picture";
 import { stageStateFor } from "@/lib/live-stage";
 
-/** Live: playback settings on the left, the video stage in the centre, channels on the right. Phase 1 keeps the selection,
- *  the playing marker, the search, the category and the picture fit as local state over the fixture list; nothing loads. */
+/** Live: playback settings on the left, the video stage in the centre, channels on the right. The page composes the
+ *  panes and keeps the local selection, playing marker, search, category and picture fit; its calls live in the hook. */
 export function LivePage({ active }: { active: boolean }) {
   const channels = CHANNEL_LIST.items;
+  const actions = useLiveActions();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [selectedId, setSelectedId] = useState<string | null>(channels[0]?.id ?? null);
@@ -27,7 +29,14 @@ export function LivePage({ active }: { active: boolean }) {
       surface="live"
       active={active}
       left={<LiveSettingsPane fit={fit} onFitChange={setFit} />}
-      center={<LiveStage state={stageStateFor(channels.length)} fit={fit} />}
+      center={
+        <LiveStage
+          state={stageStateFor(channels.length)}
+          fit={fit}
+          onRetry={actions.retry}
+          onRefresh={actions.refresh}
+        />
+      }
       right={
         <LiveChannelsPane
           list={CHANNEL_LIST}
@@ -44,6 +53,7 @@ export function LivePage({ active }: { active: boolean }) {
             setSelectedId(id);
             setPlayingId(id);
           }}
+          onRefresh={actions.refresh}
         />
       }
     />

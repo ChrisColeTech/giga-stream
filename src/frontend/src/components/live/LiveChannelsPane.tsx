@@ -1,10 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import {
-  CHANNELS_HEADING,
-  REASON_NEEDS_FILESERVER,
-  REFRESH_LABEL,
-} from "@/lib/live-constants";
+import { CHANNELS_HEADING, REFRESH_LABEL } from "@/lib/live-constants";
 import type { Channel, ChannelList as ChannelData } from "@/types/channel";
 import { ChannelDetails } from "./ChannelDetails";
 import { ChannelList } from "./ChannelList";
@@ -23,6 +19,8 @@ export interface LiveChannelsPaneProps {
   readonly onCategoryChange: (category: string) => void;
   readonly onSelect: (id: string) => void;
   readonly onActivate: (id: string) => void;
+  /** Reads the channel list again (the heading's Refresh icon). */
+  readonly onRefresh: () => void;
 }
 
 /** The right pane: the heading with the total and Refresh, the search and category, the channel rows (the one scroll
@@ -39,17 +37,16 @@ export function LiveChannelsPane({
   onCategoryChange,
   onSelect,
   onActivate,
+  onRefresh,
 }: LiveChannelsPaneProps) {
   return (
     <div className="flex size-full min-h-0 flex-col">
       <div className="flex h-9 flex-none items-center gap-2 px-3">
         <h2 className="font-sans text-[13px] font-semibold text-text">{CHANNELS_HEADING}</h2>
         <span className="font-mono text-[11px] text-dim tabular-nums">{list.items.length}</span>
-        <span title={REASON_NEEDS_FILESERVER} className="ml-auto inline-flex">
-          <IconButton disabled aria-label={REFRESH_LABEL}>
-            <RefreshCw className="size-3.75" aria-hidden />
-          </IconButton>
-        </span>
+        <IconButton className="ml-auto" aria-label={REFRESH_LABEL} title={REFRESH_LABEL} onClick={onRefresh}>
+          <RefreshCw className="size-3.75" aria-hidden />
+        </IconButton>
       </div>
       <ChannelSearch
         query={query}

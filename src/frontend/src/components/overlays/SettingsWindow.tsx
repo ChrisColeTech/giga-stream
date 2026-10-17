@@ -10,17 +10,20 @@ import { workSpec } from "@/constants/child-window";
 import type { SettingsSectionId } from "@/constants/settings-sections";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { useAppStore } from "@/store/app-store";
+import { saveSetting } from "@/services/settings";
 import { ChildWindow } from "./ChildWindow";
 
 const SPEC = workSpec("settings", "Settings");
 
 /** Settings: a Work child window. The header carries the title and the close X; the body is the rail and the workspace
- *  beside it. Autoplay, the subtitle language and the default view are held here, seeded from the fixture, so a section
- *  switch keeps them (phase 1; they are not saved yet). Theme, motion, accent and zoom live in the store. */
+ *  beside it. The admin backend address saves through the fileserver. Autoplay, the subtitle language and the default
+ *  view are held here, seeded from the fixture, so a section switch keeps them; they do not save yet. Theme, motion,
+ *  accent and zoom live in the store and apply at once. */
 export function SettingsWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
   const openOverlay = useAppStore((state) => state.openOverlay);
   const setSurface = useAppStore((state) => state.setSurface);
+  const say = useAppStore((state) => state.say);
   const [section, setSection] = useState<SettingsSectionId>("appearance");
   const [autoplay, setAutoplay] = useState(SETTINGS_VALUES.autoplay);
   const [subtitleLanguage, setSubtitleLanguage] = useState(SETTINGS_VALUES.subtitleLanguage);
@@ -31,6 +34,12 @@ export function SettingsWindow() {
   const openHistory = () => {
     closeOverlay();
     setSurface("library");
+  };
+
+  /* A refused save is reported once on the notice line; the section keeps the draft in its field. */
+  const commitAddress = (address: string) => {
+    const result = saveSetting("adminUrl", address);
+    if (!result.ok) say(result.message, "warn");
   };
 
   return (
@@ -56,7 +65,7 @@ export function SettingsWindow() {
                 onOpenHistory={openHistory}
               />
             )}
-            {section === "admin" && <AdminBackendSection adminUrl={SETTINGS_VALUES.adminUrl} />}
+            {section === "admin" && <AdminBackendSection adminUrl={SETTINGS_VALUES.adminUrl} onCommit={commitAddress} />}
             {section === "about" && <AboutSection />}
           </Workspace>
         </div>
