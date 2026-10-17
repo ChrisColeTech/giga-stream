@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
+import { SHIMMER_TILE } from "@giga/ui/lib/shimmer";
 import { DUR_FAST_MS, EASE_OUT } from "@giga/ui/lib/motion-timing";
 import { posterTone } from "@/lib/poster-tone";
 
@@ -24,13 +25,9 @@ export function PosterImage({
   const showImage = src !== undefined && src !== "" && !failed;
   const frame = `relative aspect-[2/3] w-full overflow-hidden rounded-card ${className ?? ""}`;
 
-  const tone = `var(${posterTone(alt)})`;
-  const background: CSSProperties = {
-    background: `linear-gradient(170deg, color-mix(in srgb, ${tone} 46%, var(--color-surface)) 0%, var(--color-surface) 78%)`,
-  };
-
-  /* The tile stays until the picture has arrived, then the picture fades in over it. A picture already decoded when it
-     mounts (cached) is marked loaded in the ref callback, before the first paint, so it never flashes the tile. */
+  /* The library's one shimmer stays until the picture has arrived, then the picture fades in over it. A picture already
+     decoded when it mounts (cached) is marked loaded in the ref callback, before the first paint, so it never flashes
+     the shimmer. No accent colour is drawn while loading: the tint is only the fallback below. */
   if (showImage) {
     const shown = loadedSrc === src;
     const fade: CSSProperties = {
@@ -38,7 +35,8 @@ export function PosterImage({
       transition: reduceMotion ? "none" : `opacity ${DUR_FAST_MS}ms cubic-bezier(${EASE_OUT.join(",")})`,
     };
     return (
-      <div className={frame} style={background}>
+      <div className={`${frame} bg-surface`}>
+        {!shown && <span aria-hidden className={`${SHIMMER_TILE} absolute inset-0`} />}
         <img
           ref={(img) => { if (img?.complete && img.naturalWidth > 0) setLoadedSrc(src); }}
           src={src}
@@ -54,6 +52,10 @@ export function PosterImage({
     );
   }
 
+  const tone = `var(${posterTone(alt)})`;
+  const background: CSSProperties = {
+    background: `linear-gradient(170deg, color-mix(in srgb, ${tone} 46%, var(--color-surface)) 0%, var(--color-surface) 78%)`,
+  };
   return (
     <div className={frame} style={background} role="img" aria-label={alt}>
       <span
