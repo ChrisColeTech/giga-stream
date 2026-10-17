@@ -64,7 +64,7 @@ export function resumeOf(view: PlayerView): Progress | undefined {
 }
 
 export function viewOf(session: PlayerSession): PlayerView {
-  const tab = session.tabs.find((candidate) => candidate.id === session.activeId);
+  const tab = session.current ?? undefined;
   if (tab === undefined) {
     return {
       tab: undefined,
@@ -86,7 +86,7 @@ export function viewOf(session: PlayerSession): PlayerView {
   const detail = TITLE_DETAILS[tab.ref.id];
   const seasons = detail?.seasons ?? [];
   const chosen = parseEpisodeCode(tab.subtitle);
-  const season = tab.kind === "tv" ? (session.seasonByTab[tab.id] ?? chosen?.season ?? seasons[0]?.season) : undefined;
+  const season = tab.kind === "tv" ? (session.season ?? chosen?.season ?? seasons[0]?.season) : undefined;
   const episodes = (SERIES_EPISODES[tab.ref.id] ?? []).filter((episode) => episode.season === season);
   const related = tab.kind === "local" ? [] : (RELATED_ITEMS[tab.ref.id] ?? []).slice(0, RELATED_LIMIT);
 
