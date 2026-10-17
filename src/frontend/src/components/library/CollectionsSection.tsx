@@ -1,8 +1,6 @@
 import { NavGroup, NavItem } from "@/components/ui/NavRail";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { LoaderCircle } from "lucide-react";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { RAIL_SKELETON_ROWS } from "@/lib/library-limits";
@@ -17,12 +15,11 @@ export interface CollectionsSectionProps {
   readonly onSource: (source: SourceId) => void;
 }
 
-/** The Collections group of the rail: every collection, alphabetical, with its count, and a small turning loader before the count while it scans.
+/** The Collections group of the rail: every collection, alphabetical, with its count; while it scans, the count is a shimmer skeleton and the partial number is in the tooltip.
  *  Until there are collections, the group draws shimmer rows in the navigation row's shape. A row's context menu rides
  *  on a wrapper, because the family NavItem takes no menu handler of its own. */
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
   const verbs = useCollectionVerbs();
-  const reduce = useReduceMotion();
   return (
     <NavGroup heading="Collections">
       {collections.length === 0
@@ -36,19 +33,17 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
             return (
               <div
                 key={row.id}
-                title={row.scan === "scanning" ? LIBRARY_COPY.scanning : undefined}
+                title={row.scan === "scanning" ? LIBRARY_COPY.scanningSoFar(counts.collections[row.id] ?? 0) : undefined}
                 onContextMenu={(event) => openCollectionMenu(event, () => verbs.attach(row.id))}
               >
                 <NavItem
                   selected={source === id}
-                  /* A scan is a small turning loader before the count, in the count's own dim color and size: the row
-                     keeps its name, count and selection bar, and nothing else on it moves. */
+                  /* While a scan runs the count is still arriving, so it is a skeleton (loading is a skeleton) the width
+                     of a three-digit count, so the edge does not jump when the number lands; the partial number is in
+                     the tooltip, which says what it counts. */
                   count={
                     row.scan === "scanning" ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <LoaderCircle className={cn("size-3", !reduce && "animate-spin")} aria-hidden />
-                        {counts.collections[row.id] ?? 0}
-                      </span>
+                      <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />
                     ) : (
                       (counts.collections[row.id] ?? 0)
                     )

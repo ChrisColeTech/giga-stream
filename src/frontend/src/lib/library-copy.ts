@@ -18,6 +18,8 @@ export const LIBRARY_COPY = {
   anyYear: "Any year",
   collectionsWindow: "Manage collections",
   scanning: "Scanning folders",
+  /** The tooltip of a scanning collection: what its partial count is of. */
+  scanningSoFar: (videos: number): string => `Scanning folders · ${videos} ${videos === 1 ? "video" : "videos"} so far`,
   watched: "Watched",
   moreActions: "More actions",
   play: "Play",
