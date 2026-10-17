@@ -15,7 +15,7 @@ export interface CollectionsSectionProps {
   readonly onSource: (source: SourceId) => void;
 }
 
-/** The Collections group of the rail: every collection, alphabetical, with its count, or the word "scanning" in the running color while it scans.
+/** The Collections group of the rail: every collection, alphabetical, with its count, and the left-edge accent strip pulsing while it scans.
  *  Until there are collections, the group draws shimmer rows in the navigation row's shape. A row's context menu rides
  *  on a wrapper, because the family NavItem takes no menu handler of its own. */
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
@@ -33,23 +33,21 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
             return (
               <div
                 key={row.id}
+                className="relative"
                 title={row.scan === "scanning" ? LIBRARY_COPY.scanning : undefined}
                 onContextMenu={(event) => openCollectionMenu(event, () => verbs.attach(row.id))}
               >
-                <NavItem
-                  selected={source === id}
-                  /* Sensenova's NavItem: the count slot carries a coloured state word while one applies. Never a dot. */
-                  count={
-                    row.scan === "scanning" ? (
-                      <span className="animate-pulse-busy text-st-generating">scanning</span>
-                    ) : (
-                      (counts.collections[row.id] ?? 0)
-                    )
-                  }
-                  onClick={() => onSource(id)}
-                >
+                <NavItem selected={source === id} count={counts.collections[row.id] ?? 0} onClick={() => onSource(id)}>
                   {row.name}
+                  {row.scan === "scanning" && <span className="sr-only">, {LIBRARY_COPY.scanning}</span>}
                 </NavItem>
+                {/* The family's left-edge accent strip (state is a strip, never a dot), pulsing while the scan runs. */}
+                {row.scan === "scanning" && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute top-1.5 bottom-1.5 left-0 w-0.75 animate-pulse-busy rounded-full bg-st-generating"
+                  />
+                )}
               </div>
             );
           })}
