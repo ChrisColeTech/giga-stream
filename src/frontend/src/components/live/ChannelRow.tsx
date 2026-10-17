@@ -39,6 +39,7 @@ export function ChannelRow({ channel, selected, playing, tabStop, onActivate, re
       onKeyDown={onKeyDown}
       className={cn(
         "relative flex cursor-pointer items-center gap-2.5 py-2 pr-2.5 pl-3 outline-none",
+        "transition-[background] duration-fade ease-linear",
         "focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent",
         selected ? "bg-hov" : "hover:bg-hov",
       )}
@@ -48,15 +49,17 @@ export function ChannelRow({ channel, selected, playing, tabStop, onActivate, re
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex min-w-0 items-baseline gap-1.5">
           {channel.number !== undefined && (
-            <span className="flex-none font-mono text-[11px] text-dim tabular-nums">{channel.number}</span>
+            <span className="flex-none font-mono text-[11px] text-muted tabular-nums">{channel.number}</span>
           )}
           <span className="min-w-0 truncate font-sans text-[13px] text-text">{channel.name}</span>
         </span>
-        <span className="flex min-w-0 items-center gap-1.5 font-sans text-[11px] text-muted">
+        <span className="flex min-w-0 items-center gap-1.5 font-sans text-xs text-muted">
           <StatusDot state={statusDot(channel.status)} />
           <span className="sr-only">{statusWord(channel.status)}</span>
           <span className="min-w-0 truncate">{channel.category}</span>
-          {playing && <span className="ml-auto flex-none font-mono text-[10px] text-accent-text">{PLAYING_MARKER}</span>}
+          {playing && (
+            <span className="ml-auto flex-none font-mono text-[11px] text-accent-text">{PLAYING_MARKER}</span>
+          )}
         </span>
       </span>
     </li>

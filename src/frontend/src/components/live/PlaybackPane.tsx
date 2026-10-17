@@ -15,8 +15,9 @@ const noChange = () => undefined;
 /** The five playback groups (`06` section 3.3). Every row that needs a playing stream is disabled in place with the
  *  reason as its tooltip; Fit, Fill and Original always work. */
 export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
+  /* A readout is a value with no control: mono 11 px, one control height tall, dim because its row is disabled. */
   const unplayed = (
-    <span title={REASON_NEEDS_PLAYING} className="font-mono text-[11px] text-dim">
+    <span title={REASON_NEEDS_PLAYING} className="flex h-ctl-md items-center font-mono text-[11px] text-dim">
       {EMPTY_VALUE}
     </span>
   );
@@ -24,7 +25,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PlaybackSection id="live.playback.video" title={PLAYBACK_SECTION_TITLES.video}>
-        <PlaybackRow label="quality" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Quality" reason={REASON_NEEDS_PLAYING}>
           <SelectField
             label="Quality"
             value="auto"
@@ -34,25 +35,25 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
             reason={REASON_NEEDS_PLAYING}
           />
         </PlaybackRow>
-        <PlaybackRow label="resolution" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Resolution" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
         </PlaybackRow>
-        <PlaybackRow label="bitrate" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Bitrate" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
         </PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.display" title={PLAYBACK_SECTION_TITLES.display}>
-        <PlaybackRow label="fit">
+        <PlaybackRow label="Fit">
           <Segmented options={PICTURE_FIT_OPTIONS} value={fit} onChange={onFitChange} aria-label={PICTURE_FIT_LABEL} />
         </PlaybackRow>
-        <PlaybackRow label="aspect" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Aspect" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
         </PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.audio" title={PLAYBACK_SECTION_TITLES.audio}>
-        <PlaybackRow label="track" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Track" reason={REASON_NEEDS_PLAYING}>
           <SelectField
             label="Audio track"
             value="default"
@@ -62,13 +63,13 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
             reason={REASON_NEEDS_PLAYING}
           />
         </PlaybackRow>
-        <PlaybackRow label="language" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Language" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
         </PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.captions" title={PLAYBACK_SECTION_TITLES.captions}>
-        <PlaybackRow label="captions" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Captions" reason={REASON_NEEDS_PLAYING}>
           <SelectField
             label="Captions"
             value="off"
@@ -81,7 +82,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.playback" title={PLAYBACK_SECTION_TITLES.playback}>
-        <PlaybackRow label="latency" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Latency" reason={REASON_NEEDS_PLAYING}>
           <Segmented
             aria-label="Latency"
             value="normal"
@@ -92,7 +93,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
             ]}
           />
         </PlaybackRow>
-        <PlaybackRow label="live edge" reason={REASON_NEEDS_PLAYING}>
+        <PlaybackRow label="Live edge" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
         </PlaybackRow>
       </PlaybackSection>

@@ -9,8 +9,9 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   readonly ref?: Ref<HTMLInputElement>;
 }
 
-/** The family's text field: 22px high, a hairline `ctl-edge` border, the recessed surface fill, 13px text, a dim
- *  placeholder that is never the label. It spans the row's control column. */
+/** The family's text field: one control height (28px, the same as a select and a segmented track), a hairline border,
+ *  the recessed surface fill, 13px text, a dim placeholder that is never the label. It spans the row's control
+ *  column. */
 export function TextField({ className, mono = false, ref, ...input }: TextFieldProps) {
   return (
     <input
@@ -18,7 +19,7 @@ export function TextField({ className, mono = false, ref, ...input }: TextFieldP
       autoComplete="off"
       spellCheck={false}
       className={cn(
-        "h-5.5 min-w-0 flex-1 rounded-ctl border border-ctl-edge bg-surface px-2 text-[13px] text-text " +
+        "h-ctl-md min-w-0 flex-1 rounded-ctl border border-ctl-edge bg-surface px-2 text-[13px] text-text " +
           "placeholder:text-dim disabled:cursor-not-allowed disabled:opacity-45",
         mono ? "font-mono" : "font-sans",
         className,
