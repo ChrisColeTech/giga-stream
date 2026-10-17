@@ -22,7 +22,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
   );
 
   return (
-    <div className="flex flex-col gap-1 py-2">
+    <div className="flex min-h-0 flex-1 flex-col">
       <PlaybackSection id="live.playback.video" title={PLAYBACK_SECTION_TITLES.video}>
         <PlaybackRow label="quality" reason={REASON_NEEDS_PLAYING}>
           <SelectField

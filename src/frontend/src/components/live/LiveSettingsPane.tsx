@@ -9,7 +9,7 @@ export interface LiveSettingsPaneProps {
 /** The left pane: the playback settings, in one scroll container. */
 export function LiveSettingsPane({ fit, onFitChange }: LiveSettingsPaneProps) {
   return (
-    <div className="flex size-full min-h-0 flex-col overflow-y-auto">
+    <div className="flex size-full min-h-0 flex-1 flex-col">
       <PlaybackPane fit={fit} onFitChange={onFitChange} />
     </div>
   );
