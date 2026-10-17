@@ -8,7 +8,7 @@ const ProviderRow = z.object({
   id: z.number(),
   name: z.string(),
   source: z.string(),
-  api_key: z.string().nullable(),
+  api_key: z.string(),
   is_active: z.number(),
   created_at: z.string(),
   order: z.number(),
@@ -47,7 +47,7 @@ function toProvider(row: unknown): BackendProvider {
     id: r.id,
     name: r.name,
     source: r.source,
-    api_key: r.api_key ?? "",
+    api_key: r.api_key,
     is_active: r.is_active === 1,
     order: r.order,
     family: familyOf(r.family),
@@ -67,7 +67,7 @@ export interface ProviderRecord {
   id: number;
   name: string;
   source: string;
-  api_key: string | null;
+  api_key: string;
   is_active: number;
   created_at: string;
   order: number;

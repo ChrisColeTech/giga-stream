@@ -125,6 +125,8 @@ test("the template fields round-trip through create and update", async () => {
   const newId = Number(pick(created.body, "data.id"));
   assert.equal(pick(created.body, "data.order"), 2);
   assert.equal(pick(created.body, "data.family"), "embed");
+  // No api_key in the body reads as an empty credential, never a refusal (the column is NOT NULL).
+  assert.equal(pick(created.body, "data.api_key"), "");
   assert.equal(pick(created.body, "data.movieTemplate"), "https://vidsrc.sh/embed/movie/{tmdbId}");
   assert.equal(pick(created.body, "data.episodeTemplate"), "https://vidsrc.sh/embed/tv/{tmdbId}/{season}/{episode}");
   assert.equal(pick(created.body, "data.startParam"), "startAt");
