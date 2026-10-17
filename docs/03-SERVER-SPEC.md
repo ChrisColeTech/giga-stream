@@ -225,6 +225,7 @@ interface LibraryItem {
   quality?: string;          // a real value only: from a local file's height; TMDB titles have none
   genres: string[];
   favorite: boolean;
+  collectionSource?: "manual" | "folder";   // present only for view=collection
   progress?: { positionMs: number; durationMs?: number; state: "watching" | "watched";
                season?: number; episode?: number };
 }
@@ -349,7 +350,7 @@ interface Collection {
 | `DELETE /api/collections/:collectionId` | removes it, its members, its folders and their file records; files on disk are never touched |
 | `PUT /api/collections/:collectionId/items` | body `ItemRef`; adds a manual member (adding one already there is no change) |
 | `DELETE /api/collections/:collectionId/items/:kind/:itemId` | removes a manual member |
-| `GET /api/items/:kind/:itemId/collections` | the ids of the collections an item is in (manual or through a folder) |
+| `GET /api/items/:kind/:itemId/collections` | `{ memberships: Array<{ collectionId, source: "manual" | "folder" }> }`; one row per collection the item appears in, so the interface never mistakes a folder-derived membership for one DELETE can remove |
 
 A name is 1 to 80 characters after trimming *(default)* and unique, ignoring case (`422 collection.invalid`). An
 unknown id is `404 collection.not_found`. Every write answers with the collection and its folders

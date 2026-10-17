@@ -208,7 +208,7 @@ Start over banner, `resume` seeks to the watched position at once, `restart` sta
 | Trending sort | `trending` in the library answer | offered only when `trending` is true (`06` section 4.3) |
 | Continue Watching | `GET /api/library/continue` | drawn only with progress (`06` section 4.2) |
 | Favourite | `PUT` and `DELETE /api/favorites/:kind/:itemId` | applies at once |
-| Card menu, `Collections ▸` | `GET /api/collections`; `GET /api/items/:kind/:id/collections`; `PUT` and `DELETE .../items` | each row is a check toggled at once, inline, with no dialog (`06` section 4.5, family standard) |
+| Card menu, `Collections ▸` | `GET /api/collections`; `GET /api/items/:kind/:id/collections`; `PUT` and `DELETE .../items` | each row reports manual vs folder membership; a manual check toggles at once, while a folder-derived check is disabled with its reason; no dialog (`06` section 4.5, family standard) |
 | Title information | `GET /api/titles/:id`; `.../seasons/:season`; `.../related` | the wide popup reads the detail; Play is enabled when the title has a `streamUrl` or at least one source, and disabled with `No stream source is set up for titles.` otherwise (`03` section 3.6) |
 | Clear history | `DELETE /api/watch` | the two-step's second press clears all history; favourites, collections and files are untouched |
 | Remove from History | `DELETE /api/watch/:watchId` | removes one entry |

@@ -607,8 +607,10 @@ window opens on the index from **Manage collections**, and on one collection's w
   as a coloured word, `last scan` as a short date such as `Sep 21, 10:42 PM` with the full stamp as its tooltip,
   then the icon actions **Replace**, **Rescan** (disabled while that folder scans), **Cancel scan** (only while
   scanning) and **Remove**, `01` section 9's icon-row two-step), with **Attach folder** as a ghost action under
-  it. Videos is the member table (picture, `title or file`, `year`, remove). Removing the collection lives on
-  the index, beside its row, never in the workspace.
+  it. Videos is the member table (picture, `title or file`, `year`, remove). Remove is enabled for manual
+  members; a file included by an attached folder cannot be removed alone and carries the disabled reason
+  `This video comes from an attached folder.` Removing the collection lives on the index, beside its row,
+  never in the workspace.
 
 A token that expires keeps the draft and asks to choose again.
 
