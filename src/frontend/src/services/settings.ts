@@ -1,4 +1,4 @@
-import { notConnected, type ServiceResult } from "./not-connected";
+import { type ServiceResult } from "./not-connected";
 import { api } from "./api";
 import {
   SettingsPatchSchema,
@@ -20,7 +20,8 @@ export function saveSetting(key: string, value: unknown, signal?: AbortSignal): 
   return patchSettings(SettingsPatchSchema.parse({ [key]: value }), signal);
 }
 
-/** Reads the licence texts the fileserver bundles (`03` section 3.2, About), to show in Settings. Phase 1 stub. */
+/** About asks the fileserver for the bundled licence texts (`06` section 6.2); the fileserver registers no
+ *  /api/licences route yet, so the press stays disabled with its truthful reason instead of an invented one. */
 export function readLicences(): ServiceResult {
-  return notConnected();
+  return { ok: false, message: "The fileserver does not serve licences yet." };
 }

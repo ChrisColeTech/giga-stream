@@ -1,6 +1,5 @@
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { DEFAULT_SURFACE, SIDES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
-import { EVENT_ROWS } from "@/fixtures/events";
 import { appendEvent, type EventInput } from "@/lib/event-log";
 import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-schema";
 import type { StateSnapshot } from "@/services/state";
@@ -106,7 +105,7 @@ export function shellSlice(set: Set, get: Get): ShellSlice {
     overlayItem: null,
     childBounds: {},
     notice: null,
-    events: EVENT_ROWS,
+    events: [],
     folded: {},
     theme: DEFAULT_SETTINGS.theme,
     accent: DEFAULT_SETTINGS.themeAccent,

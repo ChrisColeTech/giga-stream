@@ -1,4 +1,3 @@
-import type { EventInput } from "@/lib/event-log";
 import type {
   StreamAttachment,
   StreamFacts,
@@ -6,10 +5,10 @@ import type {
   StreamPreferences,
 } from "@/types/stream-player";
 import { HLS_ENGINE_FACTORY, type StreamEngine, type StreamEngineFactory } from "./stream-player-engine";
+import { StreamRows } from "./stream-player-rows";
 
 const HLS_MIME = "application/vnd.apple.mpegurl";
 
-const hostOf = (url: string): string => new URL(url).host;
 const matchingTrack = (tracks: readonly { readonly lang?: string }[], language: string): number =>
   tracks.findIndex((track) => track.lang?.toLowerCase() === language.toLowerCase());
 
@@ -22,6 +21,7 @@ export class StreamPlayerController {
   private readonly video: HTMLVideoElement;
   private readonly callbacks: StreamPlayerCallbacks;
   private readonly engines: StreamEngineFactory;
+  private readonly rows: StreamRows;
 
   constructor(
     video: HTMLVideoElement,
@@ -33,6 +33,7 @@ export class StreamPlayerController {
     this.preferences = preferences;
     this.callbacks = callbacks;
     this.engines = engines;
+    this.rows = new StreamRows(callbacks.onEvent ?? (() => undefined), () => this.attachment?.url ?? null);
     video.addEventListener("loadeddata", this.onFirstFrame);
     video.addEventListener("loadedmetadata", this.onNativeTracks);
     video.addEventListener("error", this.onNativeError);
@@ -92,16 +93,19 @@ export class StreamPlayerController {
     const engine = this.engines.create(this.preferences.lowLatency);
     this.engine = engine;
     engine.onManifest(() => {
-      this.emit("info", "Stream manifest loaded.");
+      this.rows.manifest();
       this.applyEnginePreferences();
       this.reportFacts();
     });
     engine.onLevel(() => {
-      this.emit("info", "Stream quality changed.");
+      this.rows.quality();
       this.reportFacts();
     });
-    engine.onFragmentError((reason) => this.emit("warn", reason));
-    engine.onFatal((reason) => this.fail(reason));
+    engine.onFragmentError(() => this.rows.fragment());
+    engine.onFatal((reason) => {
+      this.rows.fatal();
+      this.callbacks.onState("failed", reason);
+    });
     engine.attach(this.video);
     engine.load(attachment.url);
     this.attemptPlay(attachment);
@@ -179,13 +183,8 @@ export class StreamPlayerController {
   };
 
   private fail(reason: string): void {
-    this.emit("error", reason);
+    this.rows.fixed("error", reason);
     this.callbacks.onState("failed", reason);
-  }
-
-  private emit(tone: EventInput["tone"], sentence: string): void {
-    const url = this.attachment?.url;
-    this.callbacks.onEvent?.({ tone, area: "Media", sentence, ...(url ? { identity: hostOf(url) } : {}) });
   }
 
   private detachMedia(): void {

@@ -29,6 +29,7 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
       onState: (state, reason) => useAppStore.getState().setLiveStage(state, reason),
       onFacts: (facts) => useAppStore.getState().setLiveStreamFacts(facts),
       onPlayRefused: (sentence) => useAppStore.getState().say(sentence, "warn"),
+      onEvent: (input) => useAppStore.getState().logEvent(input),
     });
     controller.current = player;
     const unregister = registerLiveStreamTarget(player, useAppStore.getState().livePlaySerial);

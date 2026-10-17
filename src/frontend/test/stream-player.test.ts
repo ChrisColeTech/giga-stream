@@ -203,6 +203,28 @@ describe("StreamPlayerController", () => {
     assert.equal(later.mode, "hidden");
   });
 
+  it("feeds host-only manifest, coalesced quality, fragment and fatal rows to the events drawer", () => {
+    const video = fakeVideo();
+    const test = harness(video);
+    test.controller.attach({ url: "https://media.test/live.m3u8", autoplay: false, userInitiated: false });
+    test.engine.manifest?.();
+    assert.equal(test.events[0]?.tone, "info");
+    assert.equal(test.events[0]?.area, "Media");
+    assert.equal(test.events[0]?.sentence, "The stream's manifest loaded (media.test).");
+    assert.equal(test.events[0]?.identity, "media.test");
+    test.engine.level?.();
+    test.engine.level?.();
+    test.engine.level?.();
+    assert.deepEqual(test.events.slice(1).map((event) => event.sentence), ["The stream changed quality."]);
+    test.engine.fragmentError?.("A stream fragment stopped loading.");
+    assert.equal(test.events.at(-1)?.tone, "warn");
+    assert.equal(test.events.at(-1)?.sentence, "A stream fragment stopped loading.");
+    test.engine.fatal?.("The stream stopped responding.");
+    assert.equal(test.events.at(-1)?.tone, "error");
+    assert.equal(test.events.at(-1)?.sentence, "The stream stopped responding.");
+    assert.equal(test.states.at(-1)?.state, "failed");
+  });
+
   it("forwards explicit activation to the mounted player synchronously", () => {
     const attachments: string[] = [];
     const unregister = registerLiveStreamTarget({ attach: (attachment) => attachments.push(attachment.url) }, 0);

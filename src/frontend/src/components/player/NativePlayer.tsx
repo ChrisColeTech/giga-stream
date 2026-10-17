@@ -47,6 +47,7 @@ export function NativePlayer(props: NativePlayerProps) {
         onState: (kind, reason) => props.onState(kind === "failed" ? { kind, reason: reason ?? "The stream could not be loaded." } : { kind }),
         onFacts: () => undefined,
         onPlayRefused: (sentence) => useAppStore.getState().say(sentence, "warn"),
+        onEvent: (input) => useAppStore.getState().logEvent(input),
       });
       controller.attach({ url: props.url, autoplay: props.autoplay, userInitiated: props.userInitiated });
     } else {

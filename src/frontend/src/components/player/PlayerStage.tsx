@@ -80,6 +80,7 @@ export function PlayerStage(props: PlayerStageProps) {
   );
   const hasMediaHost = render === "native" || render === "native-failed"
     || render === "embed" || render === "embed-failed";
+  const embedSource = props.activeSource?.kind === "embed" ? props.activeSource.embed : undefined;
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     if (tab === undefined) return;
@@ -96,12 +97,38 @@ export function PlayerStage(props: PlayerStageProps) {
       onClose: props.commands.close,
     }));
   };
-  const embedPlayback = (event: Parameters<typeof applyEmbedPlayback>[0]) => applyEmbedPlayback(event, {
-    progress: props.onProgress,
-    paused: props.onPausedChange,
-    playing: props.onPlaying,
-    checkpoint: props.onBoundary,
-  });
+  /* One Provider row per decoded message kind, coalesced to at most one per second like a stream quality switch. */
+  const embedRowsAt = useRef(new Map<string, number>());
+  const embedPlayback = (event: Parameters<typeof applyEmbedPlayback>[0]) => {
+    const at = Date.now();
+    if (embedSource !== undefined && at - (embedRowsAt.current.get(event.event) ?? 0) >= 1000) {
+      embedRowsAt.current.set(event.event, at);
+      useAppStore.getState().logEvent({
+        tone: "info",
+        area: "Provider",
+        sentence: `The provider reported ${event.event}.`,
+        identity: embedSource.name,
+      });
+    }
+    applyEmbedPlayback(event, {
+      progress: props.onProgress,
+      paused: props.onPausedChange,
+      playing: props.onPlaying,
+      checkpoint: props.onBoundary,
+    });
+  };
+
+  /* A frame that never answered keeps its own warning row, once per failed attempt. */
+  useEffect(() => {
+    if (render === "embed-failed" && stage.kind === "failed" && embedSource !== undefined) {
+      useAppStore.getState().logEvent({
+        tone: "warn",
+        area: "Provider",
+        sentence: "The provider's player failed to load.",
+        identity: embedSource.name,
+      });
+    }
+  }, [render, stage.kind, props.retry, embedSource]);
 
   return (
     <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}
@@ -110,8 +137,8 @@ export function PlayerStage(props: PlayerStageProps) {
         <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"}
           className="size-full bg-stage" style={{ objectFit: objectFitOf(pictureFit) }} />
       )}
-      {(render === "embed" || render === "embed-failed") && props.activeSource?.kind === "embed" && (
-        <EmbedHost source={props.activeSource.embed} positionMs={props.startPositionMs}
+      {(render === "embed" || render === "embed-failed") && embedSource !== undefined && (
+        <EmbedHost source={embedSource} positionMs={props.startPositionMs}
           subtitleLanguage={subtitleLanguage} electron={electron} retry={props.retry}
           onPlayback={embedPlayback} onReady={() => props.onState({ kind: "ready" })} />
       )}
