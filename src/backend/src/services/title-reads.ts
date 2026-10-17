@@ -2,6 +2,7 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import type { OmdbClient } from "./omdb-client.js";
 import type { TmdbClient } from "./tmdb-client.js";
+import { storedListItems, storeListItems } from "./title-list-cache.js";
 import {
   type BrowseQuery,
   type Kind,
@@ -15,9 +16,9 @@ import {
   num,
   omdbBlockOf,
   parseTitleId,
-  rowOf,
+  rowsOf,
   str,
-  titleIdOf,
+  storedRowOf,
 } from "./title-shapes.js";
 
 /**
@@ -31,7 +32,8 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
   async function ensureTitle(kind: Kind, tmdbId: number, force = false): Promise<Record<string, unknown>> {
     const found = store.titles.find(kind, tmdbId);
     if (!force && found && now() - found.fetchedAt < TITLE_FRESH_MS) {
-      return asRecord(found.payload);
+      const payload = storedRowOf(kind, tmdbId, found.payload, found.popularityReadAt ?? found.fetchedAt);
+      if (payload !== undefined) return payload;
     }
     const answer = asRecord(await tmdb.get(`/${kind}/${tmdbId}`, { append_to_response: "credits,external_ids" }));
     const popularity = num(answer.popularity);
@@ -72,19 +74,15 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
 
   return {
     ensureTitle,
-
     /** The `7.4` browse page: the stored list while fresh, TMDB discover through fill-through. */
     async browse(query: BrowseQuery): Promise<ListAnswer> {
       const key = [query.kind, query.sort, query.genre ?? "-", query.year ?? "-", query.page].join("|");
       const stored = store.titles.findList(key);
       if (stored && now() - stored.fetchedAt < LIST_FRESH_MS && query.sort !== "trending") {
-        const items = stored.ids.map((id) => {
-          const found = store.titles.find(query.kind, id);
-          return found
-            ? asRecord(found.payload)
-            : { id: titleIdOf(query.kind, id), tmdbId: id, kind: query.kind, title: "" };
-        });
-        return { items, page: query.page, totalPages: stored.totalPages, totalResults: stored.totalResults };
+        const items = storedListItems(store, query.kind, stored.ids);
+        if (items !== undefined) {
+          return { items, page: query.page, totalPages: stored.totalPages, totalResults: stored.totalResults };
+        }
       }
       const tmdbSort: Record<BrowseQuery["sort"], string> = {
         newest: "primary_release_date.desc",
@@ -103,9 +101,11 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
             query.sort === "newest" || query.sort === "oldest" || query.sort === "year" ? 50 : undefined,
         }),
       );
-      const results = listOf(answer.results).map((r) => rowOf(query.kind, asRecord(r), now()));
+      const fetchedAt = now();
+      const results = rowsOf(query.kind, listOf(answer.results), fetchedAt);
       const ids = results.map((r) => num(r.tmdbId) ?? 0);
-      store.titles.putList(key, ids, num(answer.total_pages) ?? 1, num(answer.total_results) ?? ids.length, now());
+      storeListItems(store, query.kind, results, fetchedAt);
+      store.titles.putList(key, ids, Math.min(num(answer.total_pages) ?? 1, 500), num(answer.total_results) ?? ids.length, fetchedAt);
       return {
         items: results,
         page: query.page,
@@ -113,12 +113,10 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
         totalResults: num(answer.total_results) ?? ids.length,
       };
     },
-
     async search(kind: Kind, q: string, page: number): Promise<ListAnswer> {
       const answer = asRecord(await tmdb.get(`/search/${kind}`, { query: q, page, include_adult: "false" }));
-      const results = listOf(answer.results)
-        .filter((r) => asRecord(r).media_type !== "person")
-        .map((r) => rowOf(kind, asRecord(r), now()));
+      const candidates = listOf(answer.results).filter((r) => asRecord(r).media_type !== "person");
+      const results = rowsOf(kind, candidates, now());
       return {
         items: results,
         page,
@@ -140,8 +138,9 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
         let payload = await ensureTitle(kind, id);
         if (payload.shape !== "detail") payload = await ensureTitle(kind, id, true);
         await enrichWithOmdb(kind, id, payload);
-        if (str(payload.title) === undefined) throw new AppError(ERRORS.titleNotFound, { titleId });
-        return payload;
+        const output = storedRowOf(kind, id, payload, now());
+        if (output === undefined) throw new AppError(ERRORS.titleNotFound, { titleId });
+        return output;
       } catch (error) {
         return mapTitle404(error, titleId);
       }
@@ -189,7 +188,8 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
       const [kind, id] = parseTitleId(titleId);
       try {
         const answer = asRecord(await tmdb.get(`/${kind}/${id}/recommendations`, { page: 1 }));
-        return { items: listOf(answer.results).map((r) => rowOf(kind, asRecord(r), now())) };
+        const items = rowsOf(kind, listOf(answer.results), now());
+        return { items };
       } catch (error) {
         return mapTitle404(error, titleId);
       }

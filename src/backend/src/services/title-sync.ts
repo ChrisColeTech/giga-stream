@@ -14,6 +14,8 @@ import {
   formatSchedule,
   listOf,
   num,
+  rowOf,
+  storedRowOf,
 } from "./title-shapes.js";
 
 /** An in-flight or most recent sync, kept in memory for the status and the single-flight rule. */
@@ -67,13 +69,16 @@ export function createTitleSync(deps: {
           const record = asRecord(row);
           const id = num(record.id);
           if (id === undefined) continue;
+          const shaped = rowOf(kind, record, now());
+          if (shaped === undefined) continue;
           const existing = store.titles.find(kind, id);
-          const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS;
+          const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS
+            && storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt) !== undefined;
           const popularity = num(record.popularity);
           store.titles.put({
             kind,
             tmdbId: id,
-            payload: fresh ? asRecord(existing.payload) : record,
+            payload: fresh ? asRecord(existing.payload) : shaped,
             popularityScore: popularity ?? existing?.popularityScore ?? null,
             popularityReadAt: popularity !== undefined || popularity === null ? now() : existing?.popularityReadAt ?? null,
             fetchedAt: fresh ? existing.fetchedAt : now(),
