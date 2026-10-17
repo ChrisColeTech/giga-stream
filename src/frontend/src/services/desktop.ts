@@ -29,6 +29,8 @@ declare global {
   interface Window {
     readonly pocHost?: DesktopCapability & {
       readonly onGuard: (callback: (report: unknown) => void) => void;
+      readonly setPlayerPolicy: (policy: { origin: string; frameOrigins: string[] }) => void;
+      readonly clearPlayerPolicy: () => void;
     };
   }
 }

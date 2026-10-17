@@ -1,11 +1,15 @@
-import type { ItemRef } from "./library";
+import type { ItemRef, LibraryItem } from "./library";
+import type { LocalMediaInfo } from "@/services/local-media";
+import type { PlayerSource } from "@/lib/player-sources";
 
-/** What a Player tab holds (`06` section 5.1): one per movie, one per series, one per local file. */
+/** The one item Player holds. Opening another replaces it (`06` section 5.1). */
 export interface PlayerTab {
   readonly id: string;
   readonly ref: ItemRef;
   readonly kind: "movie" | "tv" | "local";
   readonly title: string;
+  /** The opening row, including progress even when it came from Related rather than the current query. */
+  readonly libraryItem?: LibraryItem;
   /** For a series, the exact episode: `S01 E02`. */
   readonly subtitle?: string;
 }
@@ -16,3 +20,13 @@ export type StageState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready" }
   | { readonly kind: "failed"; readonly reason: string };
+
+export interface PlayerMediaState {
+  readonly sources: readonly PlayerSource[];
+  readonly activeSourceId: string | null;
+  readonly stage: StageState;
+}
+
+export interface PlayerLocalState {
+  readonly info?: LocalMediaInfo;
+}

@@ -39,7 +39,13 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
     return (
       <div className="min-h-0 min-w-[180px] flex-1 overflow-y-auto">
         <EpisodeRow
-          episode={{ season: 0, episode: 1, title: tab.title, runtimeMs: detail?.runtimeMs, stillUrl: item?.posterUrl }}
+          episode={{
+            season: 0,
+            episode: 1,
+            title: tab.title,
+            runtimeMs: detail?.runtimeMs ?? view.local?.info?.durationMs,
+            stillUrl: item?.posterUrl,
+          }}
           code={tab.kind === "movie" ? "Movie" : "Local file"}
           selected
           marker={marker}

@@ -1,4 +1,4 @@
-import { formatEpisodeCode } from "@/lib/player-format";
+import { formatEpisodeCode, parseEpisodeCode } from "@/lib/player-format";
 import type { ItemRef, LibraryItem } from "@/types/library";
 import type { PlayerTab } from "@/types/player";
 
@@ -31,11 +31,33 @@ export function itemFromLibrary(item: LibraryItem): PlayerTab {
     item.kind === "tv" && progress?.season !== undefined && progress.episode !== undefined
       ? formatEpisodeCode(progress.season, progress.episode)
       : undefined;
-  return { id: item.ref.id, ref: item.ref, kind: item.kind, title: item.title, subtitle: resumable };
+  return { id: item.ref.id, ref: item.ref, kind: item.kind, title: item.title, subtitle: resumable, libraryItem: item };
+}
+
+export function fallbackPlayerItem(ref: ItemRef): LibraryItem {
+  return {
+    ref,
+    kind: ref.kind === "local" ? "local" : ref.id.startsWith("tv-") ? "tv" : "movie",
+    title: ref.id,
+    genres: [],
+    favorite: false,
+  };
+}
+
+export function playingEpisodeOf(session: PlayerSession): { readonly season: number; readonly episode: number } | undefined {
+  return parseEpisodeCode(session.current?.subtitle);
+}
+
+export function playerPlaybackKey(session: PlayerSession): string {
+  const playing = playingEpisodeOf(session);
+  return session.current === null
+    ? "idle"
+    : `${session.current.ref.kind}:${session.current.ref.id}:${playing?.season ?? 0}:${playing?.episode ?? 0}`;
 }
 
 export function createPlayerSession(current: PlayerTab | null): PlayerSession {
-  return { current, season: undefined };
+  const chosen = current?.subtitle === undefined ? undefined : current.subtitle.match(/^S(\d+) E\d+$/);
+  return { current, season: chosen === undefined || chosen === null ? undefined : Number(chosen[1]) };
 }
 
 /** Whether a session already has this item open: opening it again only shows the Player. */
@@ -46,7 +68,7 @@ export function isOpen(session: PlayerSession, ref: ItemRef): boolean {
 /** Opening the item already playing does nothing but show the Player; opening another replaces the current one. */
 function openItem(session: PlayerSession, item: PlayerTab): PlayerSession {
   if (isOpen(session, item.ref)) return session;
-  return { current: item, season: undefined };
+  return createPlayerSession(item);
 }
 
 /** Choosing an exact episode loads it in place; the season select alone starts nothing. */

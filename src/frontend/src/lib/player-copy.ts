@@ -14,3 +14,6 @@ export const INSPECTOR_SKELETON_COUNT = 8;
 
 /* Every reason names its cause in plain words. A control is disabled only when there is nothing for it to act on. */
 export const NO_SEASONS_REASON = "This title lists no seasons.";
+export const NO_TITLE_SOURCE_REASON = "No stream source is set up for titles.";
+export const LOCAL_MEDIA_FAILURE = "The file could not be read. It may have moved since the last scan.";
+export const STREAM_FAILURE = "The stream could not be loaded.";

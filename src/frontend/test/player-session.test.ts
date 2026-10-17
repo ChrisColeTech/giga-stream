@@ -61,10 +61,11 @@ describe("episode and season choices", () => {
   });
 
   it("changing the season alone starts nothing and changes the item not at all", () => {
-    const session = playing(series);
+    const session = reducePlayerSession(playing(series), { type: "episode", season: 1, episode: 2 });
     const next = reducePlayerSession(session, { type: "season", season: 3 });
     assert.equal(next.season, 3);
-    assert.equal(next.current?.subtitle, undefined);
+    assert.equal(next.current?.subtitle, "S01 E02");
+    assert.equal(viewOf(next, NO_MARKS).episode, undefined);
   });
 
   it("opening a different item resets the season the browser shows", () => {
@@ -76,6 +77,24 @@ describe("episode and season choices", () => {
   it("choosing an episode with nothing open changes nothing", () => {
     const idle = playing(null);
     assert.equal(reducePlayerSession(idle, { type: "episode", season: 1, episode: 1 }).current, null);
+  });
+
+  it("projects the real visible season, exact episode rows, and related titles for the one open item", () => {
+    const session = reducePlayerSession(playing(series), { type: "season", season: 2 });
+    const related: LibraryItem = {
+      ref: { kind: "title", id: "movie-8" }, kind: "movie", title: "Eight", genres: [], favorite: false,
+    };
+    const view = viewOf(session, NO_MARKS, {
+      detail: {
+        id: "tv-1396", kind: "tv", title: "Series", genres: [], cast: [],
+        seasons: [{ season: 1, episodeCount: 2 }, { season: 2, episodeCount: 1 }],
+      },
+      episodes: [{ season: 2, episode: 1, title: "Return" }],
+      related: [related],
+    });
+    assert.equal(view.season, 2);
+    assert.equal(view.episodes[0]?.title, "Return");
+    assert.equal(view.related[0]?.ref.id, "movie-8");
   });
 });
 
@@ -97,6 +116,27 @@ describe("opening where it was left", () => {
   it("a movie carries no episode", () => {
     const entry: LibraryItem = { ref: { kind: "title", id: "movie-7" }, kind: "movie", title: "Seven", genres: [], favorite: false };
     assert.equal(itemFromLibrary(entry).subtitle, undefined);
+  });
+
+  it("keeps related movie progress even when the item is absent from the global query", () => {
+    const entry: LibraryItem = {
+      ref: { kind: "title", id: "movie-related" }, kind: "movie", title: "Related",
+      genres: [], favorite: false, progress: { positionMs: 5_000, durationMs: 20_000, state: "watching" },
+    };
+    const session = reducePlayerSession(playing(null), { type: "open", item: itemFromLibrary(entry) });
+    assert.equal(viewOf(session, NO_MARKS).item?.progress?.positionMs, 5_000);
+  });
+
+  it("keeps a related series' exact resumable episode", () => {
+    const entry: LibraryItem = {
+      ref: { kind: "title", id: "tv-related" }, kind: "tv", title: "Related series",
+      genres: [], favorite: false,
+      progress: { positionMs: 7_000, durationMs: 30_000, state: "watching", season: 4, episode: 3 },
+    };
+    const session = reducePlayerSession(playing(null), { type: "open", item: itemFromLibrary(entry) });
+    const view = viewOf(session, NO_MARKS);
+    assert.equal(view.tab?.subtitle, "S04 E03");
+    assert.equal(view.item?.progress?.positionMs, 7_000);
   });
 });
 

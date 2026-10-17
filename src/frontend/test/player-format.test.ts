@@ -49,6 +49,7 @@ describe("the stage subtitle", () => {
     tab: undefined,
     item: undefined,
     detail: undefined,
+    local: undefined,
     stage: { kind: "idle" },
     favorite: false,
     memberIds: [],

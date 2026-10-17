@@ -212,11 +212,11 @@ describe("store slices and hydration", () => {
     state().setChannelQuery("news");
     state().setLiveStage("loading");
     state().setLibraryCounts({ all: 8, history: 2, favorites: 1, collections: {} });
-    state().setPlayerTabs([]);
+    state().setPlayerItem(null);
     assert.equal(state().channels?.revision, 4);
     assert.equal(state().channelQuery, "news");
     assert.equal(state().liveStage, "loading");
     assert.equal(state().libraryCounts.all, 8);
-    assert.deepEqual(state().playerTabs, []);
+    assert.equal(state().playerItem, null);
   });
 });
