@@ -1,30 +1,26 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { animate, motionValue } from "framer-motion";
 import type { AnimationPlaybackControls } from "framer-motion";
-import { limitsOfKey } from "@/constants/surfaces";
-import { COLLAPSE_S, EASE_P2P } from "@giga/ui/lib/motion-timing";
-import { reduceMotionNow } from "@giga/ui/hooks/useReduceMotion";
-import { useAppStore } from "@/store/app-store";
-import type { ExpectedResize, PaneMotion, PaneTweenApi } from "@/types/panes";
-import type { PaneKey } from "@/types/shell";
-
-const near = (left: readonly number[], right: readonly number[]): boolean =>
-  left.length === right.length && left.every((value, index) => Math.abs(value - (right[index] ?? Number.NaN)) <= 1);
+import { COLLAPSE_S, EASE_P2P } from "../lib/motion-timing";
+import { limitsOfKey } from "../panes/pane-limits";
+import { maxAllowed, minAllowed, near, restingSize } from "../panes/pane-tween-state";
+import type { ExpectedResize, PaneEngine, PaneKey, PaneMotion, PaneTweenApi } from "../panes/pane-types";
+import { reduceMotionNow } from "./useReduceMotion";
 
 /* THE ONE COLLAPSE ENGINE (ported from Giga Cut's usePaneTween). State commits first, only the paint tweens: a
  * framer-motion value per pane travels point-to-point (skipped under reduced motion) and every frame is written
  * into Allotment through `repaint`. A pane's min/max are lifted for the length of a tween so the travelling value
- * is never clamped, in either direction. */
-export function usePaneTween(keys: readonly PaneKey[], repaint: () => void): PaneTweenApi {
+ * is never clamped, in either direction. The program's store and limits table come in as `engine`. */
+export function usePaneTween(engine: PaneEngine, keys: readonly PaneKey[], repaint: () => void): PaneTweenApi {
+  const { host, table } = engine;
   const keysRef = useRef(keys);
   keysRef.current = keys;
   const initial = useRef<Partial<Record<PaneKey, PaneMotion>> | undefined>(undefined);
   if (!initial.current) {
-    const { sizes, open } = useAppStore.getState();
+    const state = host.getState();
     initial.current = Object.fromEntries(
       keys.map((key) => {
-        const committed = sizes[key] ?? limitsOfKey(key).preferred;
-        const value = open[key] ? committed : 0;
+        const { committed, value } = restingSize(state, table, key);
         return [key, { committed, painted: motionValue(value), target: value, control: null, frame: null, animating: false }];
       }),
     );
@@ -106,25 +102,35 @@ export function usePaneTween(keys: readonly PaneKey[], repaint: () => void): Pan
 
   useEffect(
     () =>
-      useAppStore.subscribe((state, previous) => {
+      host.subscribe((state, previous) => {
+        if (state.hydrationVersion !== previous.hydrationVersion) {
+          for (const key of keysRef.current) {
+            const pane = stop(key);
+            const { committed, value } = restingSize(state, table, key);
+            pane.committed = committed;
+            pane.target = value;
+            pane.painted.set(value);
+          }
+          notifyStatus();
+          requestAnimationFrame(() => apply.current());
+          return;
+        }
         if (state.openVersion === previous.openVersion) return;
         for (const key of keysRef.current) {
           if (state.open[key] === previous.open[key]) continue;
-          travel(key, state.open[key] ? (state.sizes[key] ?? limitsOfKey(key).preferred) : 0);
+          travel(key, state.open[key] ? (state.sizes[key] ?? limitsOfKey(table, key).preferred) : 0);
         }
       }),
-    [travel],
+    [host, table, notifyStatus, stop, travel],
   );
 
   return {
     paintOf: (key) => panes[key]?.painted.get() ?? 0,
     minFor: (key) => {
       const pane = panes[key];
-      return useAppStore.getState().open[key] && !pane?.animating && (pane?.painted.get() ?? 0) >= limitsOfKey(key).min
-        ? limitsOfKey(key).min
-        : 0;
+      return minAllowed(limitsOfKey(table, key), host.getState().open[key], pane?.animating ?? false, pane?.painted.get() ?? 0);
     },
-    maxFor: (key) => (useAppStore.getState().open[key] || panes[key]?.animating ? limitsOfKey(key).max : 0),
+    maxFor: (key) => maxAllowed(limitsOfKey(table, key), host.getState().open[key], panes[key]?.animating ?? false),
     expectResize: (sizes) => {
       expected.current.push({ generation: ++generation.current, sizes: [...sizes] });
       if (expected.current.length > 64) expected.current.shift();

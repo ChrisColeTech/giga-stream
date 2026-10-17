@@ -3,7 +3,8 @@ import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
-import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
+import { WorkspaceSplit } from "@giga/ui/panes/WorkspaceSplit";
+import { PANE_ENGINE } from "@/store/selectors";
 import { changeFavourite, changeMembership, reportRefusal } from "@/components/library/library-service";
 import { INITIAL_ITEM } from "@/fixtures/player";
 import { LIBRARY_ITEMS } from "@/fixtures/titles";
@@ -81,6 +82,7 @@ export function PlayerPage({ active }: { active: boolean }) {
 
   return (
     <WorkspaceSplit
+      engine={PANE_ENGINE}
       surface="player"
       active={active}
       left={

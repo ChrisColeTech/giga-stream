@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
+import { WorkspaceSplit } from "@giga/ui/panes/WorkspaceSplit";
+import { PANE_ENGINE } from "@/store/selectors";
 import { HistoryStrip } from "@/components/library/HistoryStrip";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
@@ -72,6 +73,7 @@ export function LibraryPage({ active }: { active: boolean }) {
 
   return (
     <WorkspaceSplit
+      engine={PANE_ENGINE}
       surface="library"
       active={active}
       left={<LibraryRail source={query.source} counts={counts} collections={COLLECTION_ROWS} onSource={onSource} />}

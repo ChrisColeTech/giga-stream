@@ -1,94 +1,9 @@
-/* The workspace: Allotment owns every split. A vertical [row | bottom] whose top pane holds the horizontal
- * [left | centre | right]. The pane table lives in constants/surfaces.ts as Allotment minSize/maxSize.
- * Ported from Giga Cut's index.css. */
-/* In the components layer so Tailwind's utilities (`hidden` on an inactive surface) still win the cascade; an
- * unlayered rule would beat every utility and leave all three surfaces on screen at once. */
+/* The interface's delta over the family pane layout (`@giga/ui` styles/pane.css, docs/27 step 8): Theatre's spotlight on
+ * the centre pane, and Theatre's idle fade of the bars. Imported straight after pane.css, so the cascade is the one the
+ * single file had. */
+
+/* In the components layer, as the pane rules it joins. */
 @layer components {
-  .workspace {
-    position: relative;
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-  }
-  .workspace .split-view-view {
-    /* An Allotment pane's inner host: our .pane child fills it. */
-    display: flex;
-    min-width: 0;
-    min-height: 0;
-  }
-  .workspace .split-view,
-  .workspace .split-view .split-view {
-    background: var(--color-bg);
-  }
-}
-
-/* The workspace's own box is the ONLY bound of its panes. The Allotment root is pinned to it (absolute, inset 0) rather
- * than sized by `height: 100%`, so a percentage that resolves against a not-yet-settled flex size can never let a pane
- * (and the scroller inside it) run past the workspace under the status bar. Unlayered on purpose: Allotment's own
- * stylesheet is unlayered and would beat a rule in the components layer. */
-.workspace {
-  overflow: hidden;
-}
-.workspace > .split-view {
-  position: absolute;
-  inset: 0;
-  width: auto;
-  height: auto;
-}
-
-/* Allotment separators, themed from the family's tokens. Allotment reads these custom properties, so this is the one
- * place its chrome meets ours: the pane border is the hairline, the hover/drag indicator the accent, and the sash
- * track the 5px hit area holding it. */
-:root {
-  --separator-border: var(--color-hair);
-  --focus-border: var(--color-accent);
-  --sash-size: 5px;
-  --sash-hover-size: 2px;
-  --sash-hover-transition-duration: 70ms;
-}
-
-/* The pane wrapper is the ONLY place a pane's edge border is drawn. A panel's own contents never draw one, or two
- * hairlines land on the same pixel and read as a 2px rule on half the seams. */
-@layer components {
-  .pane {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    /* LoRA Studio's side and bottom panes sit on `bg` (#111113), not `panel`: the darker shell a video app wants. */
-    background: var(--color-bg);
-    /* Inside an Allotment pane the .pane fills its host: width/height 100% so the allotment's measurement is the
-     * pane's box. */
-    width: 100%;
-    height: 100%;
-  }
-
-  /* The border belongs to the OPEN pane. A collapsed pane keeps its DOM but must not keep its hairline, or a closed
-   * rail leaves a rule floating against the centre with nothing behind it. */
-  .pane-left[data-open] {
-    border-right: 1px solid var(--color-hair);
-  }
-  .pane-right[data-open] {
-    border-left: 1px solid var(--color-hair);
-  }
-  .pane-bottom[data-open] {
-    border-top: 1px solid var(--color-hair);
-  }
-
-  /* No border: the recessed middle, which never collapses. It is the well the work sits in, so it is `surface`. */
-  .pane-center {
-    background: var(--color-surface);
-  }
-
-  /* The surfaces follow the bars between normal and Theatre at the same tempo, so the shell dims as one. */
-  .workspace .split-view,
-  .workspace .pane {
-    transition: background-color var(--duration-fast) linear;
-  }
-
   /* Theatre (owner, 2026-10-17): the black itself is the root token remap in index.css; this is only the
    * centre's spotlight — a STATIC radial gradient, no animation, no filter, no blend mode, so the compositor
    * rasterizes it once and nothing keeps the GPU awake while it shows. */

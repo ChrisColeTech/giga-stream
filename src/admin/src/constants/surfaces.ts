@@ -1,4 +1,4 @@
-import type { PaneLimits } from "@/types/panes";
+import type { PaneLimits } from "@giga/ui/panes/pane-types";
 import type { PaneKey, PaneSide, Surface } from "@/types/shell";
 
 /** One surface: which side panes it has (`null` = none, its titlebar toggle renders disabled, never hidden) and

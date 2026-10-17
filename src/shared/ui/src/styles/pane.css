@@ -1,6 +1,7 @@
 /* The workspace: Allotment owns every split. A vertical [row | bottom] whose top pane holds the horizontal
- * [left | centre | right]. The pane table lives in constants/surfaces.ts as Allotment minSize/maxSize.
- * Ported from Giga Cut's index.css. */
+ * [left | centre | right]. Each program's pane table (`PaneTable`) supplies Allotment's minSize/maxSize.
+ * Ported from Giga Cut's index.css; the family library's (docs/27 step 8). The interface's Theatre rules follow it in
+ * its own workspace.css. */
 /* In the components layer so Tailwind's utilities (`hidden` on an inactive surface) still win the cascade; an
  * unlayered rule would beat every utility and leave all three surfaces on screen at once. */
 @layer components {
@@ -21,6 +22,20 @@
   .workspace .split-view .split-view {
     background: var(--color-bg);
   }
+}
+
+/* The workspace's own box is the ONLY bound of its panes. The Allotment root is pinned to it (absolute, inset 0) rather
+ * than sized by `height: 100%`, so a percentage that resolves against a not-yet-settled flex size can never let a pane
+ * (and the scroller inside it) run past the workspace under the status bar. Unlayered on purpose: Allotment's own
+ * stylesheet is unlayered and would beat a rule in the components layer. */
+.workspace {
+  overflow: hidden;
+}
+.workspace > .split-view {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
 }
 
 /* Allotment separators, themed from the family's tokens. Allotment reads these custom properties, so this is the one
@@ -67,5 +82,11 @@
   /* No border: the recessed middle, which never collapses. It is the well the work sits in, so it is `surface`. */
   .pane-center {
     background: var(--color-surface);
+  }
+
+  /* The surfaces follow the bars between normal and Theatre at the same tempo, so the shell dims as one. */
+  .workspace .split-view,
+  .workspace .pane {
+    transition: background-color var(--duration-fast) linear;
   }
 }

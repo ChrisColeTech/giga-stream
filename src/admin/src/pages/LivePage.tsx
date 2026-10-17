@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
+import { WorkspaceSplit } from "@giga/ui/panes/WorkspaceSplit";
+import { PANE_ENGINE } from "@/store/selectors";
 import { LiveChannelsPane } from "@/components/live/LiveChannelsPane";
 import { LiveSettingsPane } from "@/components/live/LiveSettingsPane";
 import { LiveStage } from "@/components/live/LiveStage";
@@ -31,6 +32,7 @@ export function LivePage({ active }: { active: boolean }) {
 
   return (
     <WorkspaceSplit
+      engine={PANE_ENGINE}
       surface="live"
       active={active}
       left={<LiveSettingsPane />}
