@@ -3,6 +3,7 @@ import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } fr
 import { EVENT_ROWS } from "@/fixtures/events";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import type { EventRow } from "@/types/events";
+import { appendEvent, type EventInput } from "@/lib/event-log";
 import { navigationSlice, type NavigationSlice } from "./navigation-slice";
 import type { Box } from "@/types/child-window";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
@@ -44,6 +45,7 @@ export interface AppState extends NavigationSlice {
   /** The events drawer's log (`06` section 7), newest last: the fixture's rows, then every warn or error notice. */
   events: readonly EventRow[];
   clearEvents: () => void;
+  logEvent: (event: EventInput) => void;
   /** Every collection, as the library service reports them. Empty until that service is wired. */
   collections: readonly CollectionRow[];
   /** Folded form groups by id; absent means open. Fold state is shell state, kept across openings. */
@@ -109,6 +111,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   notice: null,
   events: EVENT_ROWS,
   clearEvents: () => set({ events: [] }),
+  logEvent: (event) => set({ events: appendEvent(get().events, event) }),
   collections: [],
   folded: {},
   theme: "dark",
@@ -158,7 +161,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     /* A warn or an error is also a row of the events log; an info notice (a zoom reset) is not an event. */
     const row: EventRow | null =
       tone === "info" ? null : { id: `n-${serial}-${Date.now()}`, at: Date.now(), tone, area: "Connection", sentence };
-    set({ notice: { sentence, tone, serial }, ...(row === null ? {} : { events: [...get().events, row].slice(-200) }) });
+    set({ notice: { sentence, tone, serial }, ...(row === null ? {} : { events: appendEvent(get().events, row) }) });
   },
   ...navigationSlice(set, get),
   setTheme: (theme) => set({ theme }),

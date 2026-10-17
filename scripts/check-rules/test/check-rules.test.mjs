@@ -107,6 +107,15 @@ test("the renderer may not fetch outside services, store to browser storage or b
   assert.equal(found.filter((f) => f.rule === "transport-and-routes").length, 3);
 });
 
+test("the renderer contains no admin-backend or metadata-service address", () => {
+  const found = violations({
+    "src/frontend/src/services/api.ts":
+      "export const a = 'http://127.0.0.1:3001/api';\nexport const b = () => fetch(adminUrl);\n",
+    "src/frontend/src/types/settings.ts": "export interface Settings { adminUrl: string }\n",
+  }).filter((finding) => finding.rule === "frontend-fileserver-only");
+  assert.equal(found.length, 2);
+});
+
 test("one component per file, named for the file; named exports only", () => {
   const found = violations({
     "src/frontend/src/components/live/ChannelRow.tsx": "export function ChannelRow() {}\nexport function Other() {}\n",

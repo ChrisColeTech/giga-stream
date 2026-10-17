@@ -1,5 +1,6 @@
 import { bannedCode } from "./rules/banned-code.mjs";
 import { frontendStructure } from "./rules/frontend-structure.mjs";
+import { frontendFileserverOnly } from "./rules/frontend-fileserver-only.mjs";
 import { importBoundaries } from "./rules/import-boundaries.mjs";
 import { sizeAndNaming } from "./rules/size-and-naming.mjs";
 import { transportAndRoutes } from "./rules/transport-and-routes.mjs";
@@ -10,6 +11,7 @@ export const RULES = [
   sizeAndNaming,
   bannedCode,
   importBoundaries,
+  frontendFileserverOnly,
   transportAndRoutes,
   frontendStructure,
   typeScale,
