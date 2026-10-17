@@ -15,6 +15,8 @@ import { ProgressBar } from "./ProgressBar";
 
 export interface PosterListRowProps {
   readonly item: ResolvedItem;
+  /** Its place in the windowed list, for keyboard movement and focus pinning (`docs/32` section 2.4). */
+  readonly index?: number;
   readonly selected: boolean;
   readonly inHistory: boolean;
   readonly collections: readonly CollectionRow[];
@@ -23,7 +25,9 @@ export interface PosterListRowProps {
 }
 
 /** One title in the list view: a thumbnail, its name and facts, and the same commands as a card. */
-export function PosterListRow({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterListRowProps) {
+export function PosterListRow({
+  item, index, selected, inHistory, collections, onSelect, onRemoveWatch,
+}: PosterListRowProps) {
   const infoRef = useRef<HTMLButtonElement>(null);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
@@ -39,6 +43,7 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
   return (
     <div
       data-card-id={id}
+      data-index={index}
       onContextMenu={onMenu}
       className={cn(
         "flex min-w-0 items-center gap-2 rounded-card border px-1.5 py-1.5 transition-[background,border-color] duration-fade ease-linear",

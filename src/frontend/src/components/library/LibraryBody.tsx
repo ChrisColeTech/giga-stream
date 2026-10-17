@@ -6,6 +6,7 @@ import { ContinueStrip } from "./ContinueStrip";
 import { HistoryStrip } from "./HistoryStrip";
 import { PosterGrid } from "./PosterGrid";
 import { PosterList } from "./PosterList";
+import type { Reveal } from "./WindowedRows";
 import { TypeStrip } from "./TypeStrip";
 import { LibraryPager } from "./LibraryPager";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
@@ -37,6 +38,9 @@ export interface LibraryBodyProps {
   readonly hasMore: boolean;
   readonly onLoadMore: () => boolean;
   readonly titleRegionsLoading: boolean;
+  /** A title to bring into the window and focus (Reveal in Library). */
+  readonly reveal?: Reveal | null;
+  readonly onRevealed?: () => void;
 }
 
 /** The centre of Library: the type strip, the History strip when History is open, then Continue Watching and the
@@ -61,6 +65,8 @@ export function LibraryBody({
   hasMore,
   onLoadMore,
   titleRegionsLoading,
+  reveal,
+  onRevealed,
 }: LibraryBodyProps) {
   const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading);
   const inHistory = source === "history";
@@ -84,6 +90,9 @@ export function LibraryBody({
             selected={selected}
             inHistory={inHistory}
             collections={collections}
+            scroller={scroller}
+            reveal={reveal}
+            onRevealed={onRevealed}
             onSelect={onSelect}
             onRemoveWatch={onRemoveWatch}
           />
@@ -93,6 +102,9 @@ export function LibraryBody({
             selected={selected}
             inHistory={inHistory}
             collections={collections}
+            scroller={scroller}
+            reveal={reveal}
+            onRevealed={onRevealed}
             onSelect={onSelect}
             onRemoveWatch={onRemoveWatch}
           />
