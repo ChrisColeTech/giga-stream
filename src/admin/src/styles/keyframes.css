@@ -1,0 +1,22 @@
+/* The whole animation vocabulary (ported from merge-ui). Nothing outside this
+   file defines a @keyframes, and there is no rotate(360deg) anywhere. */
+
+/* Overlay entrance: fade up, then hold. There is no exit counterpart. */
+@keyframes surface-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* The ONLY indeterminate motion in the app, in place of a spinner. */
+@keyframes pulse-busy { 50% { opacity: .3; } }
+
+/* Context menus / floating surfaces. */
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Content landing over its skeleton: opacity only, never height (ui/Reveal). */
+@keyframes fade-in { from { opacity: 0; } }
+
+/* The skeleton sweep. `SkeletonRows`/`SkeletonCards` have asked for
+   `animate-skel-shimmer` since they were written, but neither the keyframe nor
+   the `--animate-skel-shimmer` token existed, so every loading state in the app
+   was a FROZEN gradient (found in the 2026-09-06 scroll audit, plan §6). The
+   blocks are painted at `bg-[length:200%_100%]`, so sliding the position by one
+   full width is the sweep. `styles/motion-reduce.css` stops it, like the rest. */
+@keyframes skel-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
