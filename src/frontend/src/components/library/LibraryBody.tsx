@@ -2,6 +2,7 @@ import { type ListView, type Scope, type SourceId } from "@/lib/library-query";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
 import { useScrollTopWhileLoading } from "@/hooks/useScrollTopWhileLoading";
+import { BackToTop } from "./BackToTop";
 import { ContinueStrip } from "./ContinueStrip";
 import { HistoryStrip } from "./HistoryStrip";
 import { PosterGrid } from "./PosterGrid";
@@ -73,7 +74,7 @@ export function LibraryBody({
   const continueRows = inHistory || !showContinue ? [] : continuing;
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div ref={scroller} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
@@ -114,6 +115,7 @@ export function LibraryBody({
         )}
         <LibraryPager hasMore={hasMore} loading={paging} view={view} scope={scope} onVisible={onLoadMore} />
       </div>
+      <BackToTop scroller={scroller} />
     </div>
   );
 }

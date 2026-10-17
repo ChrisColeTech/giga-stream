@@ -43,6 +43,14 @@ export interface Settings {
   /** The Player source last chosen (`provider:<id>` or `app`), played first wherever an item offers it; null is the
    *  item's first source. */
   readonly defaultSource: string | null;
+  /** The Library as the person last left it: the Type strip, the rail view and the filters. The search is never kept. */
+  readonly libraryScope: "all" | "movie" | "tv" | "local";
+  /** `all`, `history`, `favorites` or `collection:<id>`. */
+  readonly librarySource: string;
+  readonly libraryGenres: string[];
+  /** A four-digit year, or "" for any year. */
+  readonly libraryYear: string;
+  readonly libraryWatched: "all" | "unwatched" | "watching" | "watched";
 }
 
 /** The playback preferences: stable choices that apply to every stream, kept in the store and edited in Live's rail. */
@@ -61,4 +69,16 @@ export type PlaybackPrefs = Pick<
 >;
 
 /** The Library preferences, kept in the store and edited in Settings > Library. */
-export type LibraryPrefs = Pick<Settings, "libraryView" | "librarySort" | "showContinue" | "pauseHistory" | "rescanOnStartup">;
+export type LibraryPrefs = Pick<
+  Settings,
+  | "libraryView"
+  | "librarySort"
+  | "showContinue"
+  | "pauseHistory"
+  | "rescanOnStartup"
+  | "libraryScope"
+  | "librarySource"
+  | "libraryGenres"
+  | "libraryYear"
+  | "libraryWatched"
+>;

@@ -22,4 +22,9 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = {
   rescanOnStartup: true,
   adminUrl: "",
   defaultSource: null,
+  libraryScope: "all",
+  librarySource: "all",
+  libraryGenres: [],
+  libraryYear: "",
+  libraryWatched: "all",
 };

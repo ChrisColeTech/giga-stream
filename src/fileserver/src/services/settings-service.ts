@@ -59,6 +59,11 @@ export function createSettingsService(deps: {
       rescanOnStartup: pick("rescanOnStartup"),
       adminUrl,
       defaultSource: pick("defaultSource"),
+      libraryScope: pick("libraryScope"),
+      librarySource: pick("librarySource"),
+      libraryGenres: pick("libraryGenres"),
+      libraryYear: pick("libraryYear"),
+      libraryWatched: pick("libraryWatched"),
     };
   }
 

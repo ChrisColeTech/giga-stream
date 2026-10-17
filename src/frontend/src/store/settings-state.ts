@@ -36,6 +36,11 @@ export function fieldsOfSettings(settings: SettingsAnswer): SettingsFields {
       showContinue: settings.showContinue,
       pauseHistory: settings.pauseHistory,
       rescanOnStartup: settings.rescanOnStartup,
+      libraryScope: settings.libraryScope,
+      librarySource: settings.librarySource,
+      libraryGenres: settings.libraryGenres,
+      libraryYear: settings.libraryYear,
+      libraryWatched: settings.libraryWatched,
     },
     adminUrl: settings.adminUrl,
   };
@@ -52,6 +57,9 @@ export function settingsOfFields(fields: SettingsFields): SettingsAnswer {
     adminUrl: fields.adminUrl,
   };
 }
+
+export const sameList =(a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((value, at) => value === b[at]);
 
 export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswer): SettingsPatch {
   const value = settingsOfFields(current);
@@ -76,5 +84,10 @@ export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswe
     ...(value.rescanOnStartup === baseline.rescanOnStartup ? {} : { rescanOnStartup: value.rescanOnStartup }),
     ...(value.adminUrl === baseline.adminUrl ? {} : { adminUrl: value.adminUrl }),
     ...(value.defaultSource === baseline.defaultSource ? {} : { defaultSource: value.defaultSource }),
+    ...(value.libraryScope === baseline.libraryScope ? {} : { libraryScope: value.libraryScope }),
+    ...(value.librarySource === baseline.librarySource ? {} : { librarySource: value.librarySource }),
+    ...(sameList(value.libraryGenres, baseline.libraryGenres) ? {} : { libraryGenres: value.libraryGenres }),
+    ...(value.libraryYear === baseline.libraryYear ? {} : { libraryYear: value.libraryYear }),
+    ...(value.libraryWatched === baseline.libraryWatched ? {} : { libraryWatched: value.libraryWatched }),
   };
 }
