@@ -1,7 +1,7 @@
 import { Film } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
-import { Group } from "@/components/ui/Form";
+import { Group } from "@giga/ui/form/Group";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";

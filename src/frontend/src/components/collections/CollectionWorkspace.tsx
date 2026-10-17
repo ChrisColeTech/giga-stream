@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { labelColumn } from "@/components/ui/Form";
+import { labelColumn } from "@giga/ui/lib/label-column";
 import { NavItem, NavRail } from "@/components/ui/NavRail";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { useCollectionMembers } from "@/hooks/useCollectionMembers";

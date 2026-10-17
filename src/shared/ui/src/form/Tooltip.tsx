@@ -1,7 +1,6 @@
-import { Info } from 'lucide-react'
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { cn } from '@giga/ui/lib/cn'
+import { cn } from '../lib/cn'
 
 /* A REAL tooltip (doc 06 §1c): a styled bubble above its anchor on hover and
  * on keyboard focus, wired with aria-describedby, never the browser's yellow
@@ -103,21 +102,5 @@ export function Tooltip({
           document.body,
         )}
     </span>
-  )
-}
-
-/** The info glyph beside a form label. */
-export function InfoTip({ text, label }: { text: string; label: string }) {
-  return (
-    <Tooltip text={text}>
-      <button
-        type="button"
-        tabIndex={0}
-        aria-label={`About ${label}`}
-        className="grid size-5 cursor-help place-items-center rounded-full border-0 bg-transparent p-0 text-dim hover:text-accent-text focus-visible:text-accent-text focus-visible:outline-none"
-      >
-        <Info className="size-4" aria-hidden />
-      </button>
-    </Tooltip>
   )
 }

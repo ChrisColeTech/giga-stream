@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState, type KeyboardEvent, type FocusEvent, useRef } from "react";
 import { Input } from "@giga/ui/controls/Input";
-import { FIELD_CONTROL } from "@/components/ui/Form";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { SEARCH_MIN_GENRES } from "@/lib/library-limits";

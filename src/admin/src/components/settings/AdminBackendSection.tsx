@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
-import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Workspace } from "@giga/ui/form/Workspace";
 import { FACT_UNKNOWN, NEEDS_FILESERVER, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
 import { cn } from "@giga/ui/lib/cn";

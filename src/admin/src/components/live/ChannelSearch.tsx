@@ -2,7 +2,7 @@ import { Search, X } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
 import { Select } from "@giga/ui/controls/Select";
 import { IconButton } from "@giga/ui/controls/IconButton";
-import { FIELD_CONTROL } from "@/components/ui/NumberField";
+import { FIELD_CONTROL } from "@giga/ui/form/NumberField";
 import { cn } from "@giga/ui/lib/cn";
 import { categoryOptions } from "@/lib/live-channels";
 import { CATEGORY_LABEL, CLEAR_SEARCH_LABEL, SEARCH_LABEL } from "@/lib/live-constants";

@@ -6,28 +6,15 @@
 const UI = [
   "ActionList",
   "AppIcon",
-  "Button",
-  "ChipGroup",
-  "ChipsInput",
   "ContextMenu",
   "ContextMenuRow",
   "ContextMenuSubmenu",
-  "Field",
-  "Form",
-  "IconButton",
-  "InlineLink",
   "NavRail",
-  "NumberField",
-  "NumericInput",
   "Reveal",
   "Section",
-  "Segmented",
   "SkeletonCards",
   "SkeletonRows",
-  "SliderField",
   "SplitList",
-  "Toggle",
-  "Tooltip",
 ];
 
 /*

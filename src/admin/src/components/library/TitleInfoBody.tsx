@@ -1,5 +1,7 @@
 import { Clapperboard } from "lucide-react";
-import { Group, Row, Wide } from "@/components/ui/Form";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Wide } from "@giga/ui/form/Wide";
 import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { SHIMMER } from "@/components/ui/SkeletonRows";

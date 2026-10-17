@@ -1,6 +1,6 @@
 import { Search, X } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
-import { FIELD_CONTROL } from "@/components/ui/Form";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";

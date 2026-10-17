@@ -2,7 +2,7 @@ import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { EpisodeRow } from "@/components/player/EpisodeRow";
 import { Select } from "@giga/ui/controls/Select";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Tooltip } from "@giga/ui/form/Tooltip";
 import { progressRatio } from "@/lib/library-facts";
 import {
   BROWSER_SKELETON_COUNT, NO_SEASONS_REASON, PLAYER_LOADING_REASON,

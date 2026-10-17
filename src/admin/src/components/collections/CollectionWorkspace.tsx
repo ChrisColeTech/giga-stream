@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { labelColumn } from "@/components/ui/Form";
+import { labelColumn } from "@giga/ui/lib/label-column";
 import { NavItem, NavRail } from "@/components/ui/NavRail";
 import { COLLECTION_FOLDERS, COLLECTION_MEMBERS } from "@/fixtures/collections";
 import { LIBRARY_ITEMS } from "@/fixtures/titles";

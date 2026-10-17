@@ -1,4 +1,4 @@
-import type { Accent } from "@/components/ui/Form";
+import type { Accent } from "@giga/ui/form/form-classes";
 import type { ChannelStatus } from "@/types/channel";
 
 /** A channel's status is a fact of its last probe (`06` section 3.2), drawn as the left-edge accent bar a queue row wears

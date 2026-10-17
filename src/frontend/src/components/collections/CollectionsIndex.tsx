@@ -1,4 +1,4 @@
-import { Workspace } from "@/components/ui/Form";
+import { Workspace } from "@giga/ui/form/Workspace";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import type { CollectionRow } from "@/types/collection";
 import { CollectionRows } from "./CollectionRows";

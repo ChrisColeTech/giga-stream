@@ -1,6 +1,7 @@
 import { FolderPlus, Play, Star } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
-import { Actions, Workspace } from "@/components/ui/Form";
+import { Actions } from "@giga/ui/form/Actions";
+import { Workspace } from "@giga/ui/form/Workspace";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { workSpec } from "@/constants/child-window";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";

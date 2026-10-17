@@ -1,6 +1,9 @@
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
-import { Actions, Group, Row, Workspace } from "@/components/ui/Form";
+import { Actions } from "@giga/ui/form/Actions";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Workspace } from "@giga/ui/form/Workspace";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { Segmented } from "@giga/ui/controls/Segmented";

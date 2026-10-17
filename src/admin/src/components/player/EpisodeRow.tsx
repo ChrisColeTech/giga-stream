@@ -1,5 +1,5 @@
 import { Clapperboard } from "lucide-react";
-import { ACCENT } from "@/components/ui/Form";
+import { ACCENT } from "@giga/ui/form/form-classes";
 import { cn } from "@giga/ui/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { EpisodeMarker } from "@/lib/player-view";

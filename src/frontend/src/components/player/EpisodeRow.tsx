@@ -1,4 +1,4 @@
-import { ACCENT } from "@/components/ui/Form";
+import { ACCENT } from "@giga/ui/form/form-classes";
 import { EpisodePicture } from "@/components/player/EpisodePicture";
 import { cn } from "@giga/ui/lib/cn";
 import { formatRuntime } from "@/lib/player-format";

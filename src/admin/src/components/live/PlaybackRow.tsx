@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FIELD_LABEL, FIELD_ROW } from "@/components/ui/NumberField";
+import { FIELD_LABEL, FIELD_ROW } from "@giga/ui/form/NumberField";
 import { cn } from "@giga/ui/lib/cn";
 
 export interface PlaybackRowProps {
