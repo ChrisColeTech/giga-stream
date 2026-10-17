@@ -74,6 +74,11 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       showContinue: DEFAULT_SETTINGS.showContinue,
       pauseHistory: DEFAULT_SETTINGS.pauseHistory,
       rescanOnStartup: DEFAULT_SETTINGS.rescanOnStartup,
+      libraryScope: DEFAULT_SETTINGS.libraryScope,
+      librarySource: DEFAULT_SETTINGS.librarySource,
+      libraryGenres: DEFAULT_SETTINGS.libraryGenres,
+      libraryYear: DEFAULT_SETTINGS.libraryYear,
+      libraryWatched: DEFAULT_SETTINGS.libraryWatched,
     },
     setCollections: (collections) => set({ collections, collectionsVersion: get().collectionsVersion + 1 }),
     beginCollectionsRead: () => {

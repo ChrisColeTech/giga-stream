@@ -27,6 +27,13 @@ export interface Settings {
   adminUrl: string;
   /** The Player's source the person last chose (`provider:<id>` or `app`); null plays an item's first source. */
   defaultSource: string | null;
+  /** The Library's Type strip, rail view and filters as the person last left them (the search is never saved). */
+  libraryScope: "all" | "movie" | "tv" | "local";
+  librarySource: string;
+  libraryGenres: string[];
+  /** A four-digit year, or "" for any year. */
+  libraryYear: string;
+  libraryWatched: "all" | "unwatched" | "watching" | "watched";
 }
 
 export type SettingKey = keyof Settings;
@@ -53,6 +60,11 @@ export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   rescanOnStartup: z.boolean(),
   adminUrl: z.string().min(1).max(2048),
   defaultSource: z.string().min(1).max(200).nullable(),
+  libraryScope: z.enum(["all", "movie", "tv", "local"]),
+  librarySource: z.string().regex(/^(all|history|favorites|collection:.{1,100})$/),
+  libraryGenres: z.array(z.string().min(1).max(80)).max(40),
+  libraryYear: z.string().regex(/^(1[89]\d\d|2[01]\d\d)?$/),
+  libraryWatched: z.enum(["all", "unwatched", "watching", "watched"]),
 };
 
 export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
@@ -76,6 +88,11 @@ export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
   rescanOnStartup: true,
   adminUrl: "http://127.0.0.1:8091",
   defaultSource: null,
+  libraryScope: "all",
+  librarySource: "all",
+  libraryGenres: [],
+  libraryYear: "",
+  libraryWatched: "all",
 });
 
 export const SETTING_KEYS = Object.keys(SETTING_SCHEMAS) as SettingKey[];
@@ -101,4 +118,9 @@ export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   rescanOnStartup: "Rescan on startup must be on or off.",
   adminUrl: "The admin address must be a full http(s) URL.",
   defaultSource: "The default source must be a source name or empty.",
+  libraryScope: "Library type must be all, movie, tv or local.",
+  librarySource: "Library source must be all, history, favorites or a collection.",
+  libraryGenres: "Library genres must be a list of genre names.",
+  libraryYear: "Library year must be a four-digit year or empty.",
+  libraryWatched: "Library watched must be all, unwatched, watching or watched.",
 };

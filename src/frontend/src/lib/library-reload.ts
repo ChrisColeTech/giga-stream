@@ -9,6 +9,9 @@ export interface ReloadInput {
   readonly serialChanged: boolean;
   /** An invalidation arrived while the surface was hidden and has not been applied yet. */
   readonly dirty: boolean;
+  /** The saved Library state has been applied (or could not be): until then nothing is read, so the first read already
+   *  uses the restored query and the unfiltered list never shows. Optional so callers that need no gate omit it. */
+  readonly ready?: boolean;
 }
 
 export interface ReloadDecision {
@@ -21,6 +24,7 @@ export interface ReloadDecision {
  *  list and its scroll position are still valid. Only an invalidation is, and one that lands while the surface is hidden
  *  waits (`dirty`) and is applied when it is shown, so the grid never changes out of sight and jumps into view. */
 export function reloadDecision(input: ReloadInput): ReloadDecision {
+  if (input.ready === false) return { reload: false, dirty: input.dirty };
   if (input.initial) return { reload: true, dirty: false };
   const invalidated = input.queryChanged || input.serialChanged || input.dirty;
   if (!input.active) return { reload: false, dirty: invalidated };

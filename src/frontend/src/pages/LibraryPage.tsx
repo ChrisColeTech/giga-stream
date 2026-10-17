@@ -9,6 +9,7 @@ import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
 import { useLibraryData } from "@/hooks/useLibraryData";
 import { useLibraryRequest } from "@/hooks/useLibraryRequest";
+import { useSavedLibraryQuery } from "@/hooks/useSavedLibraryQuery";
 import { collectionRow } from "@/lib/collections-model";
 import {
   NO_HISTORY,
@@ -19,13 +20,7 @@ import {
   type HistoryMarks,
   type ResolvedItem,
 } from "@/lib/library-marks";
-import {
-  DEFAULT_QUERY,
-  type LibraryQuery,
-  type ListView,
-  type Scope,
-  type SourceId,
-} from "@/lib/library-query";
+import type { Scope, SourceId } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
 import { libraryRenderState } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
@@ -35,11 +30,10 @@ export function LibraryPage({ active }: { active: boolean }) {
   const marks = useAppStore((state) => state.marks);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const counts = useAppStore((state) => state.libraryCounts);
-  const [query, setQuery] = useState<LibraryQuery>(() => ({ ...DEFAULT_QUERY, sort: prefs.librarySort }));
-  const [view, setView] = useState<ListView>(prefs.libraryView);
+  const { query, view, ready, patch, setView, changeView } = useSavedLibraryQuery();
   const [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryMarks>(NO_HISTORY);
-  const data = useLibraryData(active, query, prefs.showContinue);
+  const data = useLibraryData(active, query, prefs.showContinue, ready);
   const items = useMemo(() => resolveItems(data.page?.items ?? [], marks, history, {}), [data.page, marks, history]);
   const continuing = useMemo(
     () => resolveItems(data.continuing, marks, history, {}),
@@ -49,7 +43,6 @@ export function LibraryPage({ active }: { active: boolean }) {
   const shown = query.source === "history"
     ? render.items.filter((item) => item.progress !== undefined)
     : query.source === "favorites" ? render.items.filter((item) => item.favorite) : render.items;
-  const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const onRevealed = useCallback(() => setReveal(null), []);
   /* Rows has no windowed list to take the request, and a stale one must not scroll a grid shown later. */
@@ -110,7 +103,7 @@ export function LibraryPage({ active }: { active: boolean }) {
       right={<LibraryFilters query={query} view={view}
         genres={[...new Set([...(data.page?.facets.genres ?? []), ...query.genres])]} years={[
           ...new Set([...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)])]),
-        ].sort((a, b) => b - a)} trending={data.page?.trending ?? false} onQuery={patch} onView={setView} />}
+        ].sort((a, b) => b - a)} trending={data.page?.trending ?? false} onQuery={patch} onView={changeView} />}
     />
   );
 }

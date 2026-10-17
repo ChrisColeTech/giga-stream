@@ -29,7 +29,10 @@ export interface LibraryData {
   readonly refresh: () => void;
 }
 
-export function useLibraryData(active: boolean, query: LibraryQuery, showContinue: boolean): LibraryData {
+/** `ready` holds the first read until the saved Library state has been applied to `query`. */
+export function useLibraryData(
+  active: boolean, query: LibraryQuery, showContinue: boolean, ready: boolean,
+): LibraryData {
   const [page, setPage] = useState<LibraryPage | null>(null);
   const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,13 +163,13 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     previousActive.current = active;
     useAppStore.getState().setLibraryQuery(query);
     const decision = reloadDecision({
-      initial: firstPass.current, active, queryChanged, serialChanged, dirty: dirty.current,
+      initial: firstPass.current, active, queryChanged, serialChanged, dirty: dirty.current, ready,
     });
-    firstPass.current = false;
+    if (ready) firstPass.current = false;
     dirty.current = decision.dirty;
     if (decision.reload) read(searchChanged && !shownNow);
     if (active && (shownNow || serialChanged) && !decision.reload) readSideData();
-  }, [query, refreshSerial, active]);
+  }, [query, refreshSerial, active, ready]);
   useEffect(() => {
     readSideData();
     return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };

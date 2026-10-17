@@ -2,7 +2,7 @@ import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-
 import { fromWireShell } from "@/services/shell-state";
 import type { StateSnapshot } from "@/services/state";
 import type { AppState } from "./app-store";
-import { fieldsOfSettings, settingsOfFields } from "./settings-state";
+import { fieldsOfSettings, sameList, settingsOfFields } from "./settings-state";
 
 type Set = (partial: Partial<AppState>) => void;
 type Get = () => AppState;
@@ -90,5 +90,11 @@ function settledSettings(local: SettingsAnswer, sent: SettingsPatch, answer: Set
     ...(sent.rescanOnStartup === local.rescanOnStartup ? { rescanOnStartup: answer.rescanOnStartup } : {}),
     ...(sent.adminUrl === local.adminUrl ? { adminUrl: answer.adminUrl } : {}),
     ...(sent.defaultSource === local.defaultSource ? { defaultSource: answer.defaultSource } : {}),
+    ...(sent.libraryScope === local.libraryScope ? { libraryScope: answer.libraryScope } : {}),
+    ...(sent.librarySource === local.librarySource ? { librarySource: answer.librarySource } : {}),
+    ...(sent.libraryGenres !== undefined && sameList(sent.libraryGenres, local.libraryGenres)
+      ? { libraryGenres: answer.libraryGenres } : {}),
+    ...(sent.libraryYear === local.libraryYear ? { libraryYear: answer.libraryYear } : {}),
+    ...(sent.libraryWatched === local.libraryWatched ? { libraryWatched: answer.libraryWatched } : {}),
   };
 }
