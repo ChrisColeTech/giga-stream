@@ -94,15 +94,18 @@ export function createLibraryLists(deps: {
   async function collectionRows(collectionId: string): Promise<Row[]> {
     const members = repo.listCollectionMembers(collectionId);
     const files = filesById();
-    const manualLocalIds = new Set(members.flatMap((m) => (m.kind === "local" ? [m.itemId] : [])));
-    const manual = localRows(
-      members.flatMap((m) => (m.kind === "local" ? [files.get(m.itemId) ?? lostFile(m.itemId)] : [])),
-    );
-    const folderFiles = localRows(repo.listCollectionFiles(collectionId)).filter(
-      (row) => !manualLocalIds.has(row.item.ref.id),
-    );
-    const title = [...(await titleRows(members.flatMap((m) => (m.kind === "title" ? [m.itemId] : [])))).values()];
-    return [...manual, ...folderFiles, ...title];
+    const local = members.flatMap((member) => {
+      if (member.kind !== "local") return [];
+      const [row] = localRows([files.get(member.itemId) ?? lostFile(member.itemId)]);
+      return row === undefined ? [] : [{ ...row, item: { ...row.item, collectionSource: member.source } }];
+    });
+    const titleMembers = members.filter((member) => member.kind === "title");
+    const titleById = await titleRows(titleMembers.map((member) => member.itemId));
+    const title = titleMembers.flatMap((member) => {
+      const row = titleById.get(member.itemId);
+      return row === undefined ? [] : [{ ...row, item: { ...row.item, collectionSource: member.source } }];
+    });
+    return [...local, ...title];
   }
 
   async function view(query: LibraryQuery, rowsOf: () => Promise<Row[]>): Promise<ListPage> {

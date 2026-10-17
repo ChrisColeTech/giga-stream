@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { CollectionSource } from "../types/collection.js";
 import type { ItemKind } from "./collection-repository.js";
 import type { Database } from "./database.js";
 
@@ -31,6 +32,10 @@ export interface LibraryMemberRow {
   itemId: string;
 }
 
+export interface CollectionMemberRow extends LibraryMemberRow {
+  source: CollectionSource;
+}
+
 const WatchRowZ = z.object({
   id: z.string(),
   item_kind: z.enum(["title", "local"]),
@@ -50,6 +55,7 @@ const FileRowZ = z.object({
   height: z.coerce.number().nullable(),
 });
 const MemberRowZ = z.object({ item_kind: z.enum(["title", "local"]), item_id: z.string() });
+const CollectionMemberRowZ = MemberRowZ.extend({ source: z.enum(["manual", "folder"]) });
 
 export interface LibraryRepository {
   /** Every watch entry, newest first (03 section 3.5). */
@@ -60,10 +66,8 @@ export interface LibraryRepository {
   listFavorites(): LibraryMemberRow[];
   /** Every found file, the local part of `view=all` (03 section 3.5). */
   listLocalFiles(): LibraryFileRow[];
-  /** The files of one collection's folders (03 section 3.5). */
-  listCollectionFiles(collectionId: string): LibraryFileRow[];
-  /** One collection's manual members (03 section 3.7). */
-  listCollectionMembers(collectionId: string): LibraryMemberRow[];
+  /** One collection's unique manual and folder-derived members, with manual precedence (03 section 3.7). */
+  listCollectionMembers(collectionId: string): CollectionMemberRow[];
 }
 
 /** The library query's own list reads (docs/03 section 3.5); SQL lives here and nowhere else. */
@@ -76,11 +80,18 @@ export function createLibraryRepository(db: Database): LibraryRepository {
   const selectFavorites = db.prepare("SELECT item_kind, item_id FROM favorites ORDER BY added_at DESC, rowid DESC");
   const fileColumns = "id, title, added_at, poster_id, height";
   const selectFilesAll = db.prepare(`SELECT ${fileColumns} FROM local_files ORDER BY added_at DESC, rowid DESC`);
-  const selectFilesOfCollection = db.prepare(
-    `SELECT ${fileColumns} FROM local_files WHERE collection_id = ? ORDER BY added_at DESC, rowid DESC`,
-  );
   const selectMembers = db.prepare(
-    "SELECT item_kind, item_id FROM collection_items WHERE collection_id = ? ORDER BY added_at DESC, rowid DESC",
+    `SELECT item_kind, item_id, source FROM (
+       SELECT item_kind, item_id, 'manual' AS source, added_at
+         FROM collection_items WHERE collection_id = ?
+       UNION ALL
+       SELECT 'local', f.id, 'folder', f.added_at
+         FROM local_files f
+        WHERE f.collection_id = ? AND NOT EXISTS (
+          SELECT 1 FROM collection_items i
+           WHERE i.collection_id = f.collection_id AND i.item_kind = 'local' AND i.item_id = f.id
+        )
+     ) ORDER BY added_at DESC`,
   );
 
   const watchRow = (raw: unknown): LibraryWatchRow | null => {
@@ -116,6 +127,13 @@ export function createLibraryRepository(db: Database): LibraryRepository {
     return row.success ? { kind: row.data.item_kind, itemId: row.data.item_id } : null;
   };
 
+  const collectionMemberRow = (raw: unknown): CollectionMemberRow | null => {
+    const row = CollectionMemberRowZ.safeParse(raw);
+    return row.success
+      ? { kind: row.data.item_kind, itemId: row.data.item_id, source: row.data.source }
+      : null;
+  };
+
   const rowsOf = <T>(raws: unknown[], read: (raw: unknown) => T | null): T[] =>
     raws.reduce<T[]>((rows, raw) => {
       const row = read(raw);
@@ -136,11 +154,8 @@ export function createLibraryRepository(db: Database): LibraryRepository {
     listLocalFiles() {
       return rowsOf(selectFilesAll.all(), fileRow);
     },
-    listCollectionFiles(collectionId) {
-      return rowsOf(selectFilesOfCollection.all(collectionId), fileRow);
-    },
     listCollectionMembers(collectionId) {
-      return rowsOf(selectMembers.all(collectionId), memberRow);
+      return rowsOf(selectMembers.all(collectionId, collectionId), collectionMemberRow);
     },
   };
 }

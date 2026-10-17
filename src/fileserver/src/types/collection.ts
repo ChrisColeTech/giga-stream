@@ -6,6 +6,12 @@
  */
 export type ItemRef = { kind: "title" | "local"; id: string };
 export type CollectionType = "movie" | "tv" | "local";
+export type CollectionSource = "manual" | "folder";
+
+export interface CollectionMembership {
+  collectionId: string;
+  source: CollectionSource;
+}
 
 /** An attached folder: what Library shows about it. `path` never appears anywhere (001 header). */
 export interface Folder {

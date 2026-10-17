@@ -1,5 +1,5 @@
 /** The library query and the titles pass-through (docs/03 sections 3.5 and 3.6). */
-import type { ItemRef } from "./collection.js";
+import type { CollectionSource, ItemRef } from "./collection.js";
 
 /** One playable provider source, filled by the backend (docs/03 sections 3.6 and 7.5). */
 export interface TitleSource {
@@ -91,6 +91,8 @@ export interface LibraryItem {
   quality?: string;
   genres: string[];
   favorite: boolean;
+  /** Required only for `view=collection`; manual wins over a folder-derived occurrence. */
+  collectionSource?: CollectionSource;
   progress?: {
     positionMs: number;
     durationMs?: number;

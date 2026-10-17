@@ -1,12 +1,31 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 
-import { makeApp, pick, send } from "./app-fixture.js";
+import { makeApp, pick, send, type FileserverApp } from "./app-fixture.js";
 
 const createInput = (name: unknown, type: unknown = "local") => ({ name, type });
+
+function addFolderFile(t: FileserverApp, collectionId: string, fileId: string): void {
+  const db = new DatabaseSync(path.join(t.dataDir, "giga-stream.db"));
+  try {
+    const folderId = crypto.randomUUID();
+    const privatePath = path.join(t.dataDir, "private", folderId);
+    db.prepare(
+      "INSERT INTO collection_folders (id, collection_id, path, name, created_at) VALUES (?, ?, ?, ?, ?)",
+    ).run(folderId, collectionId, privatePath, "private", 1);
+    db.prepare(
+      `INSERT INTO local_files
+         (id, folder_id, collection_id, path, title, playable, added_at)
+       VALUES (?, ?, ?, ?, ?, 1, ?)`,
+    ).run(fileId, folderId, collectionId, path.join(privatePath, "clip.mkv"), "clip.mkv", 1);
+  } finally {
+    db.close();
+  }
+}
 
 test("a collection is created, read, renamed and listed", async () => {
   const t = await makeApp();
@@ -72,11 +91,47 @@ test("manual members come and go and count, with the shape of docs/03 section 3.
   assert.equal(pick((await send(t.app, "GET", "/api/state")).body, "data.collections.0.itemCount"), 1);
 
   const memberships = await send(t.app, "GET", "/api/items/title/tt1234567/collections");
-  assert.deepEqual(pick(memberships.body, "data.collectionIds"), [collectionId]);
-  assert.deepEqual(pick((await send(t.app, "GET", "/api/items/local/unknown/collections")).body, "data.collectionIds"), []);
+  assert.deepEqual(pick(memberships.body, "data.memberships"), [{ collectionId, source: "manual" }]);
+  assert.deepEqual(
+    pick((await send(t.app, "GET", "/api/items/local/unknown/collections")).body, "data.memberships"),
+    [],
+  );
 
   const removed = await send(t.app, "DELETE", `/api/collections/${collectionId}/items/title/tt1234567`);
   assert.equal(pick(removed.body, "data.itemCount"), 0);
+  await t.dispose();
+});
+
+test("membership sources prefer manual and deleting it reveals a folder membership", async () => {
+  const t = await makeApp();
+  const alpha = await send(t.app, "POST", "/api/collections", { name: "Alpha", type: "local" });
+  const beta = await send(t.app, "POST", "/api/collections", { name: "Beta", type: "local" });
+  const alphaId = String(pick(alpha.body, "data.id"));
+  const betaId = String(pick(beta.body, "data.id"));
+  const fileId = crypto.randomUUID();
+  addFolderFile(t, alphaId, fileId);
+  await send(t.app, "PUT", `/api/collections/${alphaId}/items`, { kind: "local", id: fileId });
+  await send(t.app, "PUT", `/api/collections/${betaId}/items`, { kind: "local", id: fileId });
+
+  const both = await send(t.app, "GET", `/api/items/local/${fileId}/collections`);
+  assert.deepEqual(both.body, {
+    ok: true,
+    data: {
+      memberships: [
+        { collectionId: alphaId, source: "manual" },
+        { collectionId: betaId, source: "manual" },
+      ],
+    },
+  });
+  assert.ok(!JSON.stringify(both.body).includes(t.dataDir), "the private folder path stays in the store");
+
+  await send(t.app, "DELETE", `/api/collections/${alphaId}/items/local/${fileId}`);
+  const revealed = await send(t.app, "GET", `/api/items/local/${fileId}/collections`);
+  assert.deepEqual(pick(revealed.body, "data.memberships"), [
+    { collectionId: alphaId, source: "folder" },
+    { collectionId: betaId, source: "manual" },
+  ]);
+  assert.equal(pick((await send(t.app, "GET", "/api/collections")).body, "data.0.itemCount"), 1);
   await t.dispose();
 });
 
