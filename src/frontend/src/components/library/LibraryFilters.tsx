@@ -34,7 +34,8 @@ export interface LibraryFiltersProps {
 export function LibraryFilters({ query, view, genres, years, onQuery, onView }: LibraryFiltersProps) {
   const atDefault = filtersAtDefault(query);
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
       <FilterSetting label="Search">
         <SearchField value={query.search} onChange={(search) => onQuery({ search })} />
       </FilterSetting>
@@ -92,15 +93,19 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView }: 
           ))}
         </Select>
       </FilterSetting>
-      <span className="flex-1" />
-      <Button
-        variant="ghost"
-        disabled={atDefault}
-        title={atDefault ? LIBRARY_COPY.noFilter : undefined}
-        onClick={() => onQuery({ ...FILTER_DEFAULTS })}
-      >
-        Clear filters
-      </Button>
+      </div>
+      {/* Pinned under the scroller, as the left rail pins Manage collections. */}
+      <div className="flex-none border-t border-hair p-2">
+        <Button
+          variant="ghost"
+          full
+          disabled={atDefault}
+          title={atDefault ? LIBRARY_COPY.noFilter : undefined}
+          onClick={() => onQuery({ ...FILTER_DEFAULTS })}
+        >
+          Clear filters
+        </Button>
+      </div>
     </div>
   );
 }
