@@ -10,7 +10,7 @@ export interface CollectionsIndexProps {
 }
 
 /** The Collections index, as Sensenova's Datasets index (pages/datasets/DatasetsIndex.tsx): no rail; the create form,
- *  then the stored collections. A row opens its workspace; Delete is beside the row, never inside the workspace. */
+ *  then the stored collections. A row opens its workspace; Remove is beside the row, never inside the workspace. */
 export function CollectionsIndex({ rows, onOpen }: CollectionsIndexProps) {
   const verbs = useCollectionVerbs();
   return (

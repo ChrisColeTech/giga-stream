@@ -147,7 +147,7 @@ implemented, each exception with the case that forces it, and nothing that descr
 | 3. Player | `964c8f4` | VG-016, 040, 042, 043, 044, 046, 047, 048, 049, 050, 051, 052, 080 (Player: Picture fit, the Resume footer) |
 | 4. Live | `176872e` | VG-010, 011, 012, 013, 014, 015, 080 (Live: opens on the last channel) |
 | 5. Windows | `0152287` | VG-064, 065, 067, 068, 069, 070, 071 |
-| 6. Docs | the docs commit after `0152287` | VG-007, 017, 028, 030, 031, 032, 045, 061, 082 recorded (section 5); `01`, `02`, `06`, `21`, `23` rewritten to the app |
+| 6. Docs | `d6b4d0d` | VG-007, 017, 028, 030, 031, 032, 045, 061, 082 recorded (section 5); `01`, `02`, `06`, `21`, `23` rewritten to the app |
 
 **Deferred:** VG-066 (form group folds are the family `Form`'s local state), and the enhancements of section 7.
 

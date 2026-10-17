@@ -4,8 +4,8 @@ import { useAppStore } from "@/store/app-store";
 import { RunningWork } from "./RunningWork";
 
 /* The status bar is for state: the running work (LoRA's progress bar and Stop), the ONE notice line (an outcome or a
- * refusal, as a sentence), then the two doors on the right, Events and Settings. Each door is a toggle: the button that opened a
- * panel is the button that closes it, and it wears the same pressed look while its panel is up. */
+ * refusal, as a sentence), then the two doors on the right, Events and Settings. Events is a toggle: the button that opens
+ * the drawer closes it, and wears the pressed look while it is up. Settings only opens its modal window. */
 const BAR =
   "relative z-20 flex h-6 flex-none items-center gap-2.5 border-t border-border " +
   "bg-panel px-2.5 font-sans text-xs text-muted";
