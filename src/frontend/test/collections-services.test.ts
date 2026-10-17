@@ -36,6 +36,7 @@ const folder = {
 const job = {
   id: "j-1",
   kind: "folder-scan",
+  folderId: "f-1",
   label: "Scanning Films",
   state: "running",
   createdAt: 10,
@@ -145,6 +146,7 @@ describe("folder and job routes", () => {
 
 describe("collection and job schemas", () => {
   it("refuses malformed counts and states and strips private folder fields", () => {
+    assert.equal(CollectionSchema.safeParse({ ...collection, type: undefined }).success, false);
     assert.equal(CollectionSchema.safeParse({ ...collection, itemCount: -1 }).success, false);
     const parsed = CollectionSchema.safeParse({ ...collection, folders: [{ ...folder, path: "private" }] });
     assert.equal(parsed.success, true);

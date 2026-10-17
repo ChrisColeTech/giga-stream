@@ -127,6 +127,7 @@ describe("store slices and hydration", () => {
     const job = {
       id: "j-1",
       kind: "folder-scan" as const,
+      folderId: "f-1",
       label: "Scanning Films",
       state: "running" as const,
       createdAt: 2,
@@ -140,6 +141,46 @@ describe("store slices and hydration", () => {
     state().removeJobState("j-1");
     state().removeCollectionState("c-1");
     assert.deepEqual([state().collections, state().jobs], [[], []]);
+  });
+
+  it("rejects stale collection and job reads after newer mutations or reads", () => {
+    const collectionRead = state().beginCollectionsRead();
+    const jobRead = state().beginJobsRead();
+    const collection = {
+      id: "c-new",
+      name: "New",
+      type: "local" as const,
+      itemCount: 0,
+      folders: [],
+      scanning: false,
+      createdAt: 2,
+      updatedAt: 2,
+    };
+    state().upsertCollection(collection);
+    state().setJobs([]);
+    assert.equal(state().acceptCollectionsRead(collectionRead, []), false);
+    assert.equal(state().acceptJobsRead(jobRead, []), false);
+    assert.equal(state().collections[0]?.id, "c-new");
+
+    const first = state().beginCollectionsRead();
+    const second = state().beginCollectionsRead();
+    assert.equal(state().acceptCollectionsRead(second, [collection]), true);
+    assert.equal(state().acceptCollectionsRead(first, []), false);
+    assert.equal(state().collections[0]?.id, "c-new");
+
+    const oldJobs = state().beginJobsRead();
+    const newJobs = state().beginJobsRead();
+    const job = {
+      id: "j-new",
+      kind: "folder-scan" as const,
+      folderId: "f-new",
+      label: "Scanning New",
+      state: "running" as const,
+      createdAt: 3,
+    };
+    assert.equal(state().acceptJobsRead(newJobs, [job]), true);
+    assert.equal(state().acceptJobsRead(oldJobs, []), false);
+    assert.equal(state().jobs[0]?.id, "j-new");
   });
 
   it("does not enable persistence for absent or unreadable snapshot parts", () => {

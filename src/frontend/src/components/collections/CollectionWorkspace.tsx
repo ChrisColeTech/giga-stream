@@ -47,7 +47,7 @@ export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceP
             <CollectionFolders collectionId={collection.id} folders={folders} />
           </div>
           <div ref={spy.bind("videos")}>
-            <CollectionMembers collectionId={collection.id} rows={[]} />
+            <CollectionMembers collectionId={collection.id} rows={[]} status="not-loaded" />
           </div>
         </div>
       </div>

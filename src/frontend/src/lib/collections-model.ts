@@ -6,7 +6,7 @@ export function collectionRow(collection: CollectionAnswer): CollectionRow {
   return {
     id: collection.id,
     name: collection.name,
-    type: collection.type ?? "local",
+    type: collection.type,
     total: collection.itemCount,
     manual: Math.max(0, collection.itemCount - collection.folders.reduce((sum, folder) => sum + folder.fileCount, 0)),
     folders: collection.folders.length,

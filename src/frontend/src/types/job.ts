@@ -2,6 +2,7 @@
 export interface Job {
   readonly id: string;
   readonly kind: "folder-scan" | "media-probe" | "poster-fetch";
+  readonly folderId?: string;
   /** A short sentence ("Scanning Films"), never a path. */
   readonly label: string;
   readonly state: "queued" | "running" | "cancelling" | "done" | "failed" | "cancelled" | "interrupted";

@@ -29,3 +29,8 @@ export interface ScanProgress {
   readonly total: number | null;
   readonly done: boolean;
 }
+
+export type CreateCollectionResult =
+  | { readonly outcome: "failed" }
+  | { readonly outcome: "created" }
+  | { readonly outcome: "attach-failed"; readonly collectionId: string };

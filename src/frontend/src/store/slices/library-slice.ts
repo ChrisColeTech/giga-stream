@@ -11,16 +11,22 @@ const EMPTY_COUNTS: ViewCounts = { all: 0, history: 0, favorites: 0, collections
 export interface LibrarySlice {
   collections: z.infer<typeof CollectionListSchema>;
   jobs: z.infer<typeof JobListSchema>;
+  collectionsVersion: number;
+  jobsVersion: number;
   scanProgress: Readonly<Record<string, ScanProgress>>;
   libraryCounts: ViewCounts;
   libraryQuery: LibraryQuery;
   library: LibraryPrefs;
   setCollections: (collections: z.infer<typeof CollectionListSchema>) => void;
+  beginCollectionsRead: () => number;
+  acceptCollectionsRead: (version: number, collections: z.infer<typeof CollectionListSchema>) => boolean;
   upsertCollection: (collection: z.infer<typeof CollectionSchema>) => void;
   removeCollectionState: (collectionId: string) => void;
   upsertFolder: (collectionId: string, folder: z.infer<typeof FolderSchema>) => void;
   removeFolderState: (folderId: string) => void;
   setJobs: (jobs: z.infer<typeof JobListSchema>) => void;
+  beginJobsRead: () => number;
+  acceptJobsRead: (version: number, jobs: z.infer<typeof JobListSchema>) => boolean;
   upsertJob: (job: z.infer<typeof JobSchema>) => void;
   removeJobState: (jobId: string) => void;
   setScanProgress: (folderId: string, progress: ScanProgress) => void;
@@ -46,6 +52,8 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
   return {
     collections: [],
     jobs: [],
+    collectionsVersion: 0,
+    jobsVersion: 0,
     scanProgress: {},
     libraryCounts: EMPTY_COUNTS,
     libraryQuery: { ...DEFAULT_QUERY },
@@ -56,10 +64,20 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       pauseHistory: DEFAULT_SETTINGS.pauseHistory,
       rescanOnStartup: DEFAULT_SETTINGS.rescanOnStartup,
     },
-    setCollections: (collections) => set({ collections }),
-    upsertCollection: (collection) => set({ collections: replaceById(get().collections, collection) }),
+    setCollections: (collections) => set({ collections, collectionsVersion: get().collectionsVersion + 1 }),
+    beginCollectionsRead: () => get().collectionsVersion,
+    acceptCollectionsRead: (version, collections) => {
+      if (version !== get().collectionsVersion) return false;
+      set({ collections, collectionsVersion: version + 1 });
+      return true;
+    },
+    upsertCollection: (collection) =>
+      set({ collections: replaceById(get().collections, collection), collectionsVersion: get().collectionsVersion + 1 }),
     removeCollectionState: (collectionId) =>
-      set({ collections: get().collections.filter((collection) => collection.id !== collectionId) }),
+      set({
+        collections: get().collections.filter((collection) => collection.id !== collectionId),
+        collectionsVersion: get().collectionsVersion + 1,
+      }),
     upsertFolder: (collectionId, folder) =>
       set({
         collections: get().collections.map((collection) =>
@@ -71,6 +89,7 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
               }
             : collection,
         ),
+        collectionsVersion: get().collectionsVersion + 1,
       }),
     removeFolderState: (folderId) =>
       set({
@@ -80,10 +99,18 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
             ? collection
             : { ...collection, folders, scanning: folders.some((folder) => folder.scanning) };
         }),
+        collectionsVersion: get().collectionsVersion + 1,
       }),
-    setJobs: (jobs) => set({ jobs }),
-    upsertJob: (job) => set({ jobs: replaceById(get().jobs, job) }),
-    removeJobState: (jobId) => set({ jobs: get().jobs.filter((job) => job.id !== jobId) }),
+    setJobs: (jobs) => set({ jobs, jobsVersion: get().jobsVersion + 1 }),
+    beginJobsRead: () => get().jobsVersion,
+    acceptJobsRead: (version, jobs) => {
+      if (version !== get().jobsVersion) return false;
+      set({ jobs, jobsVersion: version + 1 });
+      return true;
+    },
+    upsertJob: (job) => set({ jobs: replaceById(get().jobs, job), jobsVersion: get().jobsVersion + 1 }),
+    removeJobState: (jobId) =>
+      set({ jobs: get().jobs.filter((job) => job.id !== jobId), jobsVersion: get().jobsVersion + 1 }),
     setScanProgress: (folderId, progress) =>
       set({ scanProgress: { ...get().scanProgress, [folderId]: progress } }),
     setLibraryCounts: (libraryCounts) => set({ libraryCounts }),

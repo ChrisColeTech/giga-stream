@@ -23,14 +23,31 @@ export function NewCollectionForm() {
   const [name, setName] = useState("");
   const [type, setType] = useState<CollectionType>("movie");
   const [selection, setSelection] = useState<FolderSelection>();
+  const [pendingCollectionId, setPendingCollectionId] = useState<string>();
   const desktop = useAppStore((state) => state.runtime === "electron");
   const block = createBlock(name);
   const create = async () => {
-    if (block === undefined && (await verbs.create(name.trim(), type, selection))) {
+    if (pendingCollectionId !== undefined) {
+      if (selection === undefined) return;
+      if (!(await verbs.attachSelection(pendingCollectionId, selection))) return;
+      setName("");
+      setSelection(undefined);
+      setPendingCollectionId(undefined);
+      return;
+    }
+    if (block !== undefined) return;
+    const result = await verbs.create(name.trim(), type, selection);
+    if (result.outcome === "created") {
       setName("");
       setSelection(undefined);
     }
+    if (result.outcome === "attach-failed") {
+      setPendingCollectionId(result.collectionId);
+      setSelection(undefined);
+    }
   };
+  const blocked = pendingCollectionId === undefined ? block !== undefined : selection === undefined;
+  const blockedTitle = pendingCollectionId === undefined ? NAME_BLOCK_REASON[block ?? "blank"] : "Choose the folder again.";
   return (
     <Group icon={FolderInput} title="New collection">
       <Row label="Name" tip="What the collection is called in Library's rail and in Add to collection.">
@@ -68,11 +85,11 @@ export function NewCollectionForm() {
       <Actions>
         <Button
           variant="primary"
-          disabled={block !== undefined}
-          title={block === undefined ? "Create the collection" : NAME_BLOCK_REASON[block]}
+          disabled={blocked}
+          title={blocked ? blockedTitle : pendingCollectionId === undefined ? "Create the collection" : "Attach the folder"}
           onClick={() => void create()}
         >
-          Create
+          {pendingCollectionId === undefined ? "Create" : "Attach folder"}
         </Button>
       </Actions>
     </Group>

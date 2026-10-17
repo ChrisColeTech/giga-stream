@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { z } from "zod";
 import { collectUntilDone, readNdjson } from "@/services/ndjson";
-import { streamFolderScan } from "@/services/scan-stream";
+import { ScanEventSchema, streamFolderScan } from "@/services/scan-stream";
 import type { ScanProgress } from "@/types/collection";
 
 const originalFetch = globalThis.fetch;
@@ -58,7 +58,7 @@ describe("scan streaming", () => {
     const lines = [
       JSON.stringify({
         type: "found",
-        file: { path: "private/video.mp4", absolutePath: "C:/private/video.mp4", sizeBytes: 5, modifiedMs: 6 },
+        file: { path: "video.mp4", sizeBytes: 5, modifiedMs: 6 },
       }),
       JSON.stringify({ type: "progress", found: 1, probed: 0, total: null }),
       JSON.stringify({ type: "progress", found: 1, probed: 1, total: 1 }),
@@ -73,7 +73,30 @@ describe("scan streaming", () => {
     await streamFolderScan("f/1", (next) => progress.push(next));
     assert.equal(progress[1]?.total, null);
     assert.deepEqual(progress.at(-1), { found: 1, probed: 1, total: 1, done: true });
-    assert.doesNotMatch(JSON.stringify(progress), /private|video\.mp4|C:\//);
+    assert.doesNotMatch(JSON.stringify(progress), /video\.mp4/);
+  });
+
+  it("rejects absolutePath at the renderer wire boundary", () => {
+    const parsed = ScanEventSchema.safeParse({
+      type: "found",
+      file: { path: "video.mp4", absolutePath: "C:/private/video.mp4", sizeBytes: 5, modifiedMs: 6 },
+    });
+    assert.equal(parsed.success, false);
+    assert.equal(
+      ScanEventSchema.safeParse({
+        type: "found",
+        file: { path: "C:/private/video.mp4", sizeBytes: 5, modifiedMs: 6 },
+      }).success,
+      false,
+    );
+  });
+
+  it("treats cancelled as a successful terminal event", async () => {
+    globalThis.fetch = async () =>
+      new Response(stream(['{"type":"cancelled","found":2,"probed":1}\n']), { status: 200 });
+    const progress: ScanProgress[] = [];
+    assert.equal(await streamFolderScan("f-1", (next) => progress.push(next)), "cancelled");
+    assert.deepEqual(progress.at(-1), { found: 2, probed: 1, total: 2, done: true });
   });
 
   it("requires a done line from the scan route", async () => {

@@ -24,7 +24,9 @@ export function RunningWork() {
     if (running === null) return;
     try {
       useAppStore.getState().upsertJob(await cancelJob(running.id));
-      useAppStore.getState().setJobs(await listJobs());
+      const version = useAppStore.getState().beginJobsRead();
+      const jobs = await listJobs();
+      useAppStore.getState().acceptJobsRead(version, jobs);
       say("Running work is stopping.");
     } catch (error: unknown) {
       say(error instanceof Error ? error.message : "Could not reach the fileserver.", "warn");
