@@ -1,54 +1,60 @@
+import type { z } from "zod";
 import type { CollectionType } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
-import { notConnected, type ServiceResult } from "./not-connected";
+import { api } from "./api";
+import {
+  CollectionIdsSchema,
+  CollectionListSchema,
+  CollectionSchema,
+  RemovedSchema,
+} from "./schemas/collection-schema";
 
-/** Creates a collection with its name and type (`03` section 3.7). Phase 1 stub. */
-export function createCollection(_name: string, _type: CollectionType): ServiceResult {
-  return notConnected();
+export type CollectionAnswer = z.infer<typeof CollectionSchema>;
+
+const part = (value: string): string => encodeURIComponent(value);
+
+export function listCollections(signal?: AbortSignal): Promise<z.infer<typeof CollectionListSchema>> {
+  return api("/api/collections", CollectionListSchema, { signal, area: "Catalog" });
 }
 
-/** Saves a collection's name and type (`03` section 3.7). Phase 1 stub. */
-export function updateCollection(_collectionId: string, _change: { name: string; type: CollectionType }): ServiceResult {
-  return notConnected();
+export function createCollection(name: string, type: CollectionType): Promise<CollectionAnswer> {
+  return api("/api/collections", CollectionSchema, { method: "POST", body: { name, type }, area: "Catalog" });
 }
 
-/** Removes a collection; files on disk are never touched (`03` section 3.7). Phase 1 stub. */
-export function removeCollection(_collectionId: string): ServiceResult {
-  return notConnected();
+export function updateCollection(
+  collectionId: string,
+  change: { readonly name: string; readonly type: CollectionType },
+): Promise<CollectionAnswer> {
+  return api(`/api/collections/${part(collectionId)}`, CollectionSchema, {
+    method: "PATCH",
+    body: change,
+    area: "Catalog",
+  });
 }
 
-/** Removes a manual member from a collection (`03` section 3.7). Phase 1 stub. */
-export function removeMember(_collectionId: string, _ref: ItemRef): ServiceResult {
-  return notConnected();
+export function removeCollection(collectionId: string): Promise<z.infer<typeof RemovedSchema>> {
+  return api(`/api/collections/${part(collectionId)}`, RemovedSchema, { method: "DELETE", area: "Catalog" });
 }
 
-/** Opens the native folder picker for a collection not created yet; answers the chosen folder's token and name
- *  (`POST /api/fs/dialog`, `03` section 3.8). Phase 1 stub. */
-export function chooseFolder(): ServiceResult {
-  return notConnected();
+export function addMember(collectionId: string, ref: ItemRef): Promise<CollectionAnswer> {
+  return api(`/api/collections/${part(collectionId)}/items`, CollectionSchema, {
+    method: "PUT",
+    body: ref,
+    area: "Catalog",
+  });
 }
 
-/** Attaches a folder chosen with the native picker (`03` section 3.8). Phase 1 stub. */
-export function attachFolder(_collectionId: string): ServiceResult {
-  return notConnected();
+export function removeMember(collectionId: string, ref: ItemRef): Promise<CollectionAnswer> {
+  return api(
+    `/api/collections/${part(collectionId)}/items/${part(ref.kind)}/${part(ref.id)}`,
+    CollectionSchema,
+    { method: "DELETE", area: "Catalog" },
+  );
 }
 
-/** Replaces a folder's location and rescans it (`03` section 3.8). Phase 1 stub. */
-export function replaceFolder(_folderId: string): ServiceResult {
-  return notConnected();
-}
-
-/** Queues a rescan of a folder (`03` section 3.8). Phase 1 stub. */
-export function rescanFolder(_folderId: string): ServiceResult {
-  return notConnected();
-}
-
-/** Cancels a running scan (`03` section 3.9). Phase 1 stub. */
-export function cancelScan(_folderId: string): ServiceResult {
-  return notConnected();
-}
-
-/** Detaches a folder; files on disk are never touched (`03` section 3.8). Phase 1 stub. */
-export function removeFolder(_folderId: string): ServiceResult {
-  return notConnected();
+export function readMemberships(ref: ItemRef, signal?: AbortSignal): Promise<readonly string[]> {
+  return api(`/api/items/${part(ref.kind)}/${part(ref.id)}/collections`, CollectionIdsSchema, {
+    signal,
+    area: "Catalog",
+  }).then((answer) => answer.collectionIds);
 }

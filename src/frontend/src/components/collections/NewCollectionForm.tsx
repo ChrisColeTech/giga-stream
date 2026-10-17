@@ -7,6 +7,8 @@ import { Segmented } from "@/components/ui/Segmented";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";
+import type { FolderSelection } from "@/services/desktop";
+import { useAppStore } from "@/store/app-store";
 import type { CollectionType } from "@/types/collection";
 
 /** The labels the form's rows carry, so the index fixes its label column once. */
@@ -20,9 +22,14 @@ export function NewCollectionForm() {
   const verbs = useCollectionVerbs();
   const [name, setName] = useState("");
   const [type, setType] = useState<CollectionType>("movie");
+  const [selection, setSelection] = useState<FolderSelection>();
+  const desktop = useAppStore((state) => state.runtime === "electron");
   const block = createBlock(name);
-  const create = () => {
-    if (block === undefined && verbs.create(name.trim(), type)) setName("");
+  const create = async () => {
+    if (block === undefined && (await verbs.create(name.trim(), type, selection))) {
+      setName("");
+      setSelection(undefined);
+    }
   };
   return (
     <Group icon={FolderInput} title="New collection">
@@ -35,7 +42,7 @@ export function NewCollectionForm() {
           spellCheck={false}
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.nativeEvent.isComposing) create();
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) void create();
           }}
         />
       </Row>
@@ -46,19 +53,24 @@ export function NewCollectionForm() {
         label="Folder"
         tip="Start the collection from a folder: its videos join as it is scanned. Files on disk are only read, never changed."
         trailing={
-          <Button variant="ghost" onClick={() => verbs.chooseFolder()}>
+          <Button
+            variant="ghost"
+            disabled={!desktop}
+            title={desktop ? "Choose a folder" : "This action is available in the desktop app."}
+            onClick={() => void verbs.chooseFolder().then((chosen) => chosen !== null && setSelection(chosen))}
+          >
             <FolderOpen aria-hidden /> Choose
           </Button>
         }
       >
-        <Input value="" readOnly className={FIELD_CONTROL} aria-label="Source folder" />
+        <Input value={selection?.name ?? ""} readOnly className={FIELD_CONTROL} aria-label="Source folder" />
       </Row>
       <Actions>
         <Button
           variant="primary"
           disabled={block !== undefined}
           title={block === undefined ? "Create the collection" : NAME_BLOCK_REASON[block]}
-          onClick={create}
+          onClick={() => void create()}
         >
           Create
         </Button>

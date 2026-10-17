@@ -109,6 +109,39 @@ describe("store slices and hydration", () => {
     assert.equal(state().hydrationVersion, 1);
   });
 
+  it("applies collection, folder, scan and job actions without replacing sibling state", () => {
+    const first = {
+      id: "c-1",
+      name: "Films",
+      type: "movie" as const,
+      itemCount: 0,
+      folders: [],
+      scanning: false,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    state().setCollections([first]);
+    const folder = { id: "f-1", collectionId: "c-1", name: "Films", fileCount: 0, scanning: true };
+    state().upsertFolder("c-1", folder);
+    state().setScanProgress("f-1", { found: 2, probed: 1, total: null, done: false });
+    const job = {
+      id: "j-1",
+      kind: "folder-scan" as const,
+      label: "Scanning Films",
+      state: "running" as const,
+      createdAt: 2,
+    };
+    state().setJobs([job]);
+    state().upsertJob({ ...job, state: "cancelling" });
+    assert.equal(state().collections[0]?.folders[0]?.id, "f-1");
+    assert.equal(state().scanProgress["f-1"]?.total, null);
+    assert.equal(state().jobs[0]?.state, "cancelling");
+    state().removeFolderState("f-1");
+    state().removeJobState("j-1");
+    state().removeCollectionState("c-1");
+    assert.deepEqual([state().collections, state().jobs], [[], []]);
+  });
+
   it("does not enable persistence for absent or unreadable snapshot parts", () => {
     const malformed = decodeState({
       shell: { activeSurface: "future", paneVisibility: {}, paneSizes: {} },

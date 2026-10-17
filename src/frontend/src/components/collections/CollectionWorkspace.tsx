@@ -1,13 +1,11 @@
 import type { CSSProperties } from "react";
 import { labelColumn } from "@/components/ui/Form";
 import { NavItem, NavRail } from "@/components/ui/NavRail";
-import { COLLECTION_FOLDERS, COLLECTION_MEMBERS } from "@/fixtures/collections";
-import { LIBRARY_ITEMS } from "@/fixtures/titles";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
 import { LIST_LABEL } from "@/lib/collections-copy";
-import { memberRows } from "@/lib/collections-members";
-import type { CollectionRow } from "@/types/collection";
-import type { ItemRef } from "@/types/library";
+import { collectionFolder, collectionRow } from "@/lib/collections-model";
+import type { CollectionAnswer } from "@/services/collections";
+import { useAppStore } from "@/store/app-store";
 import { CollectionDetailsGroup } from "./CollectionDetailsGroup";
 import { CollectionFolders } from "./CollectionFolders";
 import { CollectionMembers } from "./CollectionMembers";
@@ -16,7 +14,7 @@ const SECTIONS = ["details", "folders", "videos"] as const;
 const LABEL: Record<(typeof SECTIONS)[number], string> = { details: "Details", folders: "Folders", videos: "Videos" };
 
 export interface CollectionWorkspaceProps {
-  readonly collection: CollectionRow;
+  readonly collection: CollectionAnswer;
   readonly onBack: () => void;
 }
 
@@ -25,8 +23,9 @@ export interface CollectionWorkspaceProps {
  *  rail scrolls to and follows. No delete here: that belongs on the index beside the row. */
 export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceProps) {
   const spy = useScrollSpy(SECTIONS, SECTIONS[0]);
-  const refs: readonly ItemRef[] = COLLECTION_MEMBERS[collection.id] ?? [];
-  const folders = COLLECTION_FOLDERS[collection.id] ?? [];
+  const progress = useAppStore((state) => state.scanProgress);
+  const row = collectionRow(collection);
+  const folders = collection.folders.map((folder) => collectionFolder(folder, progress[folder.id]));
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -42,13 +41,13 @@ export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceP
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(["Name"]) } as CSSProperties}>
           <div ref={spy.bind("details")}>
-            <CollectionDetailsGroup key={collection.id} collection={collection} />
+            <CollectionDetailsGroup key={collection.id} collection={row} />
           </div>
           <div ref={spy.bind("folders")}>
             <CollectionFolders collectionId={collection.id} folders={folders} />
           </div>
           <div ref={spy.bind("videos")}>
-            <CollectionMembers collectionId={collection.id} rows={memberRows(refs, LIBRARY_ITEMS)} />
+            <CollectionMembers collectionId={collection.id} rows={[]} />
           </div>
         </div>
       </div>

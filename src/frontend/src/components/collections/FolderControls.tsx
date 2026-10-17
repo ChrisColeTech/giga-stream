@@ -8,6 +8,7 @@ import {
   SCANNING_REASON,
 } from "@/lib/collections-copy";
 import type { CollectionFolder } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
 import { CollectionIconAction } from "./CollectionIconAction";
 
 /** One folder's controls in the folders table: Replace, Rescan, Cancel scan (only while scanning) and Remove. Rescan is
@@ -18,6 +19,7 @@ export function FolderControls({ folder }: { readonly folder: CollectionFolder }
   const verbs = useCollectionVerbs();
   const { armed, arm, disarm } = useArmedAction(ARM_TIMEOUT_MS);
   const scanning = folder.scan === "scanning";
+  const desktop = useAppStore((state) => state.runtime === "electron");
 
   if (armed) {
     return (
@@ -30,7 +32,7 @@ export function FolderControls({ folder }: { readonly folder: CollectionFolder }
           label={FOLDER_ARMED_LABEL}
           onPress={() => {
             disarm();
-            verbs.removeFolder(folder.id);
+            void verbs.removeFolder(folder.id);
           }}
           onBlur={disarm}
         />
@@ -40,15 +42,20 @@ export function FolderControls({ folder }: { readonly folder: CollectionFolder }
 
   return (
     <span className="inline-flex items-center justify-end gap-1">
-      <CollectionIconAction icon={FolderSync} label="Replace folder" onPress={() => verbs.replace(folder.id)} />
+      <CollectionIconAction
+        icon={FolderSync}
+        label="Replace folder"
+        reason={desktop ? undefined : "This action is available in the desktop app."}
+        onPress={() => void verbs.replace(folder.id)}
+      />
       <CollectionIconAction
         icon={RefreshCw}
         label="Rescan folder"
         reason={scanning ? SCANNING_REASON : undefined}
-        onPress={() => verbs.rescan(folder.id)}
+        onPress={() => void verbs.rescan(folder.id)}
       />
       {scanning && (
-        <CollectionIconAction icon={CircleStop} label="Cancel scan" onPress={() => verbs.cancelScan(folder.id)} />
+        <CollectionIconAction icon={CircleStop} label="Cancel scan" onPress={() => void verbs.cancelScan(folder.id)} />
       )}
       <CollectionIconAction icon={FolderMinus} label="Remove folder" onPress={arm} />
     </span>

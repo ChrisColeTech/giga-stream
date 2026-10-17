@@ -38,7 +38,7 @@ export function CollectionDetailsGroup({ collection }: { readonly collection: Co
           variant="primary"
           disabled={reason !== undefined}
           title={reason ?? "Save the name and type"}
-          onClick={() => verbs.update(collection.id, name.trim(), type)}
+          onClick={() => void verbs.update(collection.id, name.trim(), type)}
         >
           Save details
         </Button>

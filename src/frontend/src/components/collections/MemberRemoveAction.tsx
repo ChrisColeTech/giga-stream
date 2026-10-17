@@ -15,6 +15,10 @@ export function MemberRemoveAction({
 }) {
   const verbs = useCollectionVerbs();
   return (
-    <CollectionIconAction icon={X} label={`Remove ${title}`} onPress={() => verbs.removeMember(collectionId, memberRef)} />
+    <CollectionIconAction
+      icon={X}
+      label={`Remove ${title}`}
+      onPress={() => void verbs.removeMember(collectionId, memberRef)}
+    />
   );
 }

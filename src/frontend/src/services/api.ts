@@ -24,6 +24,24 @@ export interface ApiOptions {
   readonly area?: EventArea;
 }
 
+async function refusal(response: Response): Promise<ApiError> {
+  let wire: unknown;
+  try {
+    wire = await response.json();
+  } catch {
+    return new ApiError("response.invalid", errorSentence("response.invalid"), response.status);
+  }
+  const parsed = EnvelopeSchema.safeParse(wire);
+  if (!parsed.success || parsed.data.ok) {
+    return new ApiError("response.invalid", errorSentence("response.invalid"), response.status);
+  }
+  return new ApiError(
+    parsed.data.error.code,
+    errorSentence(parsed.data.error.code, parsed.data.error.message),
+    response.status,
+  );
+}
+
 export async function api<T>(path: string, schema: z.ZodType<T>, options: ApiOptions = {}): Promise<T> {
   if (!path.startsWith("/api/")) throw new TypeError("API paths must be relative and begin /api/.");
   const method = options.method ?? "GET";
@@ -59,6 +77,33 @@ export async function api<T>(path: string, schema: z.ZodType<T>, options: ApiOpt
       throw new ApiError("response.invalid", errorSentence("response.invalid"), response.status);
     }
     return parsedData.data;
+  } catch (error: unknown) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      status = "aborted";
+      throw error;
+    }
+    throw new ApiError("fileserver.unreachable", errorSentence("fileserver.unreachable"));
+  } finally {
+    useAppStore.getState().logEvent(restEvent(method, status, performance.now() - started, options.area ?? "Connection"));
+  }
+}
+
+/** The scan is the only route whose successful answer is a streamed body rather than an envelope. */
+export async function apiStream(path: string, options: ApiOptions = {}): Promise<ReadableStream<Uint8Array>> {
+  if (!path.startsWith("/api/")) throw new TypeError("API paths must be relative and begin /api/.");
+  const method = options.method ?? "GET";
+  const started = performance.now();
+  let status: number | "aborted" | "invalid" | "unreachable" = "unreachable";
+  try {
+    const response = await fetch(path, { method, signal: options.signal });
+    status = response.status;
+    if (!response.ok) throw await refusal(response);
+    if (response.body === null) {
+      status = "invalid";
+      throw new ApiError("response.invalid", errorSentence("response.invalid"), response.status);
+    }
+    return response.body;
   } catch (error: unknown) {
     if (error instanceof ApiError) throw error;
     if (error instanceof DOMException && error.name === "AbortError") {
