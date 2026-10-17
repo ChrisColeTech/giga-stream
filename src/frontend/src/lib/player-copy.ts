@@ -22,6 +22,8 @@ export const NO_WATCH_ENTRY_REASON = "No watch entry is recorded for this title.
 export const RELATED_LOCAL_REASON = "No related titles for local files";
 export const ONLY_TAB_REASON = "This is the only tab open.";
 export const NO_SEASONS_REASON = "This title lists no seasons.";
+/** How long an armed Remove from History waits for its second press before it disarms (`06` section 2, rule 9). */
+export const ARM_TIMEOUT_MS = 5000;
 export const REMOVE_HISTORY_LABEL = "Remove from History";
 export const CONFIRM_REMOVE_LABEL = "Confirm removal";
 
