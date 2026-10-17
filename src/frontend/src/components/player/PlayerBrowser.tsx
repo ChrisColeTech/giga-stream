@@ -1,10 +1,10 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
-import { LocalFileFacts } from "@/components/player/LocalFileFacts";
-import { MovieChapter } from "@/components/player/MovieChapter";
+import { EpisodeRow } from "@/components/player/EpisodeRow";
 import { Select } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { progressRatio } from "@/lib/library-facts";
 import { BROWSER_SKELETON_COUNT, NO_SEASONS_REASON } from "@/lib/player-copy";
-import { episodeMarker, type PlayerView } from "@/lib/player-view";
+import { episodeMarker, type EpisodeMarker, type PlayerView } from "@/lib/player-view";
 
 export interface PlayerBrowserProps {
   readonly view: PlayerView;
@@ -12,9 +12,9 @@ export interface PlayerBrowserProps {
   readonly onEpisode: (season: number, episode: number) => void;
 }
 
-/** The left pane (`06` section 5.2): a series' season select over its episode rows, a movie's facts, or a local file's
- *  facts. One thing, so no collapsible section around it; the episode list is the pane's one scroll container. With
- *  nothing open it is skeletons. */
+/** The left pane (`06` section 5.2): a series' season select over its episode rows, or a movie or local file as one row
+ *  of the same shape. No collapsible section around it; the list is the pane's one scroll container. With nothing open
+ *  it is skeletons. */
 export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps) {
   const { tab, item, detail, seasons, season, episode } = view;
   if (tab === undefined) {
@@ -26,10 +26,25 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
   }
 
   if (tab.kind !== "tv") {
+    /* A movie or a local file is one row in the episode row's own shape, so the rail reads the same for every kind:
+       its picture, its title, and "Movie" or "Local file" with the runtime; selected, since it is what is open. */
+    const progress = item?.progress;
+    const ratio = progress === undefined ? undefined : progressRatio(progress);
+    const marker: EpisodeMarker | undefined =
+      progress === undefined
+        ? undefined
+        : progress.state === "watched"
+          ? { watched: true }
+          : { watched: false, fraction: ratio ?? 0 };
     return (
-      <div className="flex min-w-[180px] flex-1 flex-col gap-1.25 overflow-y-auto p-2.5">
-        {tab.kind === "local" && item !== undefined && <LocalFileFacts item={item} />}
-        {tab.kind === "movie" && <MovieChapter runtimeMs={detail?.runtimeMs} quality={item?.quality} />}
+      <div className="min-h-0 min-w-[180px] flex-1 overflow-y-auto">
+        <EpisodeRow
+          episode={{ season: 0, episode: 1, title: tab.title, runtimeMs: detail?.runtimeMs, stillUrl: item?.posterUrl }}
+          code={tab.kind === "movie" ? "Movie" : "Local file"}
+          selected
+          marker={marker}
+          onSelect={() => undefined}
+        />
       </div>
     );
   }

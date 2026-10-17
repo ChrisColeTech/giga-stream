@@ -10,14 +10,16 @@ export interface EpisodeRowProps {
   readonly selected: boolean;
   readonly marker: EpisodeMarker | undefined;
   readonly onSelect: () => void;
+  /** The meta line's code: `E1` by default; "Movie" or "Local file" when the row is a whole title. */
+  readonly code?: string;
 }
 
 /** One episode row (`06` section 5.2) in LoRA Studio's queue row shape (components/generate/QueueRow.tsx), which the
  *  rail's `SkeletonRows` mirrors: a 4:3 still in a 56px column, the title on the primary line, the episode number and
  *  duration on the meta line. A watched episode wears the success bar on its left edge; one part watched carries the
  *  2px progress hairline. Selecting a row marks the exact episode. */
-export function EpisodeRow({ episode, selected, marker, onSelect }: EpisodeRowProps) {
-  const label = `E${episode.episode}`;
+export function EpisodeRow({ episode, selected, marker, onSelect, code }: EpisodeRowProps) {
+  const label = code ?? `E${episode.episode}`;
   const name = episode.title ?? label;
   const watched = marker?.watched === true;
   return (
