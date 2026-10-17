@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useArmedAction } from "@/hooks/useArmedAction";
 import { PlayerRow } from "@/components/player/PlayerRow";
 import { Button } from "@/components/ui/Button";
-import { CONFIRM_REMOVE_LABEL, NO_WATCH_ENTRY_REASON, REMOVE_HISTORY_LABEL } from "@/lib/player-copy";
-import { ARM_TIMEOUT_MS, nextTwoStep, type TwoStepPhase } from "@/lib/collections-two-step";
+import { ARM_TIMEOUT_MS, CONFIRM_REMOVE_LABEL, NO_WATCH_ENTRY_REASON, REMOVE_HISTORY_LABEL } from "@/lib/player-copy";
 
 export interface InspectorHistoryRemoveProps {
   /** The watch entry this title has; absent when the library holds none, which leaves nothing to remove. */
@@ -10,17 +9,11 @@ export interface InspectorHistoryRemoveProps {
   readonly onRemove: (watchId: string) => void;
 }
 
-/** Remove from History (`06` sections 2 and 5.4): an inline two-step. The first press arms the same control; the second
- *  removes the entry. A timeout disarms it. With no watch entry there is nothing to act on, so it is off with its reason. */
+/** Remove from History (`06` sections 2 and 5.4): an inline two-step on the shared armed hook. The first press arms the
+ *  same control; the second removes the entry. A timeout, focus leaving or Escape disarms it. With no watch entry there is
+ *  nothing to act on, so it is off with its reason. */
 export function InspectorHistoryRemove({ watchId, onRemove }: InspectorHistoryRemoveProps) {
-  const [phase, setPhase] = useState<TwoStepPhase>("idle");
-  const armed = phase === "armed" && watchId !== undefined;
-
-  useEffect(() => {
-    if (!armed) return undefined;
-    const timer = window.setTimeout(() => setPhase(nextTwoStep("timeout")), ARM_TIMEOUT_MS);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
+  const { armed, arm, disarm } = useArmedAction(ARM_TIMEOUT_MS);
 
   if (watchId === undefined) {
     return (
@@ -41,17 +34,18 @@ export function InspectorHistoryRemove({ watchId, onRemove }: InspectorHistoryRe
         variant="danger"
         onClick={() => {
           if (!armed) {
-            setPhase(nextTwoStep("press"));
+            arm();
             return;
           }
+          disarm();
           onRemove(watchId);
         }}
-        onBlur={() => setPhase(nextTwoStep("blur"))}
+        onBlur={disarm}
         onKeyDown={(event) => {
           if (event.key !== "Escape" || !armed) return;
           event.preventDefault();
           event.stopPropagation();
-          setPhase(nextTwoStep("escape"));
+          disarm();
         }}
       >
         {armed ? CONFIRM_REMOVE_LABEL : REMOVE_HISTORY_LABEL}
