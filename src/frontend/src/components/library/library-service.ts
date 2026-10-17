@@ -1,4 +1,4 @@
-import { clearHistory, playItem, removeHistoryEntry, setFavourite, setMembership } from "@/services/library";
+import { clearHistory, removeHistoryEntry, setFavourite, setMembership } from "@/services/library";
 import type { ServiceResult } from "@/services/not-connected";
 import { useAppStore } from "@/store/app-store";
 import type { ItemRef } from "@/types/library";
@@ -15,9 +15,10 @@ export function reportRefusal(result: ServiceResult): boolean {
   return false;
 }
 
-/** Starts a title or a local file in the Player. The Player owns what happens next. */
+/** Opens a title or a local file in the Player and shows it. Getting there is navigation and needs no fileserver; the
+ *  Player asks the fileserver to start the stream once it has the item. */
 export function playRef(ref: ItemRef): void {
-  reportRefusal(playItem(ref));
+  useAppStore.getState().requestPlay(ref);
 }
 
 /** Sets a favourite. The store changes only when the fileserver accepts it. */

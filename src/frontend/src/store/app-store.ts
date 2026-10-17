@@ -69,6 +69,10 @@ export interface AppState {
   rememberChild: (key: string, box: Box) => void;
   toggleFold: (id: string) => void;
   say: (sentence: string, tone?: Notice["tone"]) => void;
+  /** The last thing a Play asked the Player to open; the serial lets the same item be asked for twice. */
+  playRequest: { ref: ItemRef; serial: number } | null;
+  /** Shows the Player and asks it to open an item (navigation; the Player starts the stream itself). */
+  requestPlay: (ref: ItemRef) => void;
   setTheme: (theme: ThemeMode) => void;
   setAccent: (accent: Accent) => void;
   setMotion: (motion: MotionPreference) => void;
@@ -146,6 +150,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
   toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
   say: (sentence, tone = "info") => set({ notice: { sentence, tone, serial: (get().notice?.serial ?? 0) + 1 } }),
+  playRequest: null,
+  requestPlay: (ref) =>
+    set({ surface: "player", playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 } }),
   setTheme: (theme) => set({ theme }),
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),

@@ -50,7 +50,10 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
         type="button"
         data-primary
         aria-pressed={selected}
-        onClick={() => onSelect(id)}
+        onClick={(event) => {
+          onSelect(id);
+          openTitleInfo(item.ref, event.currentTarget);
+        }}
         onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) =>
           enterOnCard(event, selected, () => onSelect(id), () => openTitleInfo(item.ref, infoRef.current))
         }

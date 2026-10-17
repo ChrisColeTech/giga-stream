@@ -1,4 +1,4 @@
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
@@ -6,6 +6,7 @@ import { PlayerStage } from "@/components/player/PlayerStage";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { ACTIVE_TAB_ID, PLAYER_TABS } from "@/fixtures/player";
 import { MEMBERSHIP } from "@/fixtures/collections";
+import { LIBRARY_ITEMS } from "@/fixtures/titles";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { createPlayerSession, itemFromLibrary, reducePlayerSession } from "@/lib/player-session";
 import { viewOf } from "@/lib/player-view";
@@ -38,6 +39,17 @@ export function PlayerPage({ active }: { active: boolean }) {
   const ref = view.tab?.ref;
   const refuse = (result: ServiceResult) => reportRefusal(result, say);
 
+  /* A Play from anywhere (Library, Title information) opens the item here at once; then the fileserver is asked to
+     start its stream, and a refusal is said on the notice line without closing the item. */
+  const playRequest = useAppStore((state) => state.playRequest);
+  useEffect(() => {
+    if (playRequest === null) return;
+    const item = LIBRARY_ITEMS.find((entry) => entry.ref.kind === playRequest.ref.kind && entry.ref.id === playRequest.ref.id);
+    if (item === undefined) return;
+    dispatch({ type: "open", item: itemFromLibrary(item) });
+    reportRefusal(playItem(item.ref), useAppStore.getState().say);
+  }, [playRequest]);
+
   const commands: PlayerCommands = {
     retry: () => refuse(retryStream()),
     reveal: () => setSurface("library"),
@@ -62,9 +74,8 @@ export function PlayerPage({ active }: { active: boolean }) {
     },
     removeHistory: (watchId) => refuse(removeHistoryEntry(watchId)),
     openRelated: (item) => {
-      const result = playItem(item.ref);
-      if (result.ok) dispatch({ type: "open", item: itemFromLibrary(item) });
-      else refuse(result);
+      dispatch({ type: "open", item: itemFromLibrary(item) });
+      refuse(playItem(item.ref));
     },
   };
 
