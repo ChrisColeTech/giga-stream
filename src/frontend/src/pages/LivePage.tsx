@@ -51,7 +51,7 @@ export function LivePage({ active }: { active: boolean }) {
         <LiveChannelsPane
           list={list}
           rows={list.items}
-          loading={unavailable || (loading && !hasList)}
+          loading={loading && !hasList}
           query={query}
           category={category}
           selected={selected}

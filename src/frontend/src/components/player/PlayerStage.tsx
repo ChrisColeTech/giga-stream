@@ -2,12 +2,14 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import { EmbedHost } from "@/components/player/EmbedHost";
 import { NativePlayer } from "@/components/player/NativePlayer";
 import { PlayerSourceControl } from "@/components/player/PlayerSourceControl";
+import { PlayerStageStatus } from "@/components/player/PlayerStageStatus";
 import { StageNote } from "@/components/player/StageNote";
 import { collectionsSubmenu } from "@/lib/collection-menu";
 import { applyEmbedPlayback } from "@/lib/embed-playback";
 import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { LOCAL_MEDIA_FAILURE, STREAM_FAILURE } from "@/lib/player-copy";
+import { playerStageRender } from "@/lib/player-render-state";
 import type { PlayerSource } from "@/lib/player-sources";
 import { stageMenuItems } from "@/lib/player-stage-menu";
 import type { PlayerView } from "@/lib/player-view";
@@ -23,6 +25,9 @@ export interface PlayerStageProps {
   readonly startPositionMs: number;
   readonly retry: number;
   readonly userInitiated: boolean;
+  readonly loading: boolean;
+  readonly awaitingResume: boolean;
+  readonly noSourceReason: string;
   readonly onSource: (id: string) => void;
   readonly onState: (state: StageState) => void;
   readonly onProgress: (positionMs: number, durationMs?: number) => void;
@@ -65,6 +70,7 @@ export function PlayerStage(props: PlayerStageProps) {
   };
 
   const { tab, stage, item, favorite, memberIds, collections } = props.view;
+  const render = playerStageRender(tab !== undefined, props.loading, props.activeSource, stage, props.awaitingResume);
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     if (tab === undefined) return;
@@ -92,12 +98,12 @@ export function PlayerStage(props: PlayerStageProps) {
     <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-stage outline-none fullscreen:bg-black">
       <PlayerSourceControl sources={props.sources} activeId={props.selectedSourceId} onSelect={props.onSource} />
-      {props.activeSource?.kind === "embed" && (
+      {render === "embed" && props.activeSource?.kind === "embed" && (
         <EmbedHost source={props.activeSource.embed} positionMs={props.startPositionMs}
           subtitleLanguage={subtitleLanguage} electron={electron} retry={props.retry}
           onPlayback={embedPlayback} onReady={() => props.onState({ kind: "ready" })} />
       )}
-      {props.activeSource?.kind === "stream" && tab !== undefined && (
+      {render === "native" && props.activeSource?.kind === "stream" && tab !== undefined && (
         <NativePlayer url={props.activeSource.url} label={tab.title} positionMs={props.startPositionMs}
           autoplay={autoplay} userInitiated={props.userInitiated} retry={props.retry} pictureFit={pictureFit}
           errorReason={props.activeSource.id === "local" ? LOCAL_MEDIA_FAILURE : STREAM_FAILURE}
@@ -105,10 +111,13 @@ export function PlayerStage(props: PlayerStageProps) {
           onPlaying={(playing) => { props.onPausedChange(!playing); props.onPlaying(playing); }}
           onSeeked={props.onBoundary} onEnded={props.onBoundary} />
       )}
-      {props.activeSource === undefined && (
-        <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"} className="size-full bg-stage" />
+      {render === "idle" && <PlayerStageStatus kind="idle" onAction={props.commands.reveal} />}
+      {render === "no-source" && (
+        <PlayerStageStatus kind="no-source" reason={props.noSourceReason} onAction={props.commands.retry} />
       )}
-      {stage.kind === "failed" && <StageNote reason={stage.reason} onRetry={props.commands.retry} />}
+      {render === "failed" && stage.kind === "failed" && (
+        <StageNote reason={stage.reason} onRetry={props.commands.retry} />
+      )}
     </section>
   );
 }

@@ -20,9 +20,9 @@ const collection = { id: "c1", name: "One", type: "movie" as const, total: 1, ma
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 
 describe("backend-down Library rendering", () => {
-  it("keeps local rows and marks title regions as loading", () => {
+  it("keeps local rows without leaving a settled refusal loading", () => {
     assert.deepEqual(libraryRenderState([movie, local], false, "all"), {
-      items: [local], titleRegionsLoading: true,
+      items: [local], titleRegionsLoading: false,
     });
   });
 
@@ -35,9 +35,14 @@ describe("backend-down Library rendering", () => {
 });
 
 describe("Rows paging grammar", () => {
-  it("keeps the pager beside an empty-page skeleton when another cursor exists", () => {
-    assert.deepEqual(rowsRenderState(0, true, false), { showSkeleton: true, showPager: true });
-    assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: true, showPager: false });
+  it("keeps the pager beside a pending empty-page skeleton when another cursor exists", () => {
+    assert.deepEqual(rowsRenderState(0, true, false, true), { showSkeleton: true, showPager: true });
+    assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: false, showPager: false });
+  });
+
+  it("uses skeletons only while a first-page request is pending", () => {
+    assert.equal(libraryRenderState([], false, "all", true).titleRegionsLoading, true);
+    assert.equal(libraryRenderState([], false, "all", false).titleRegionsLoading, false);
   });
 
   it("requests a visible cursor only once until the active request clears", () => {

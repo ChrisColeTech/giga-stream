@@ -10,7 +10,7 @@ import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { usePlayerSources } from "@/hooks/usePlayerSources";
 import { collectionRow } from "@/lib/collections-model";
 import type { PlayerCommands } from "@/lib/player-commands";
-import { LOCAL_MEDIA_FAILURE, NO_TITLE_SOURCE_REASON } from "@/lib/player-copy";
+import { sourceFailureReason } from "@/lib/player-copy";
 import { openingPosition } from "@/lib/player-opening";
 import { PlayerNavigation, settleLatestNavigation } from "@/lib/player-navigation";
 import { settleFinalProgress } from "@/lib/player-progress";
@@ -59,6 +59,11 @@ export function PlayerPage({ active }: { active: boolean }) {
   const activeSource = sources.find((source) => source.id === media.activeSourceId);
   const resume = resumeOf(view);
   const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
+  const waitingForResume = choice === "ask" && resume !== undefined;
+  const stageLoading = (data.basePending
+    || (session.current?.kind === "tv" && playing !== undefined && data.playingPending)) && sources.length === 0;
+  const browserLoading = data.basePending || data.seasonPending;
+  const noSourceReason = sourceFailureReason(session.current?.kind === "local", data.localInfo?.error?.message);
   const startPositionMs = choice === "resume" ? sourcePosition : 0;
   const playbackKey = playerPlaybackKey(session);
 
@@ -111,9 +116,7 @@ export function PlayerPage({ active }: { active: boolean }) {
       : session.current.kind === "tv" ? data.playingEpisode !== undefined : data.detail !== undefined;
     if (!ready) return;
     if (sources.length === 0) {
-      const reason = data.localInfo?.error?.message ?? (
-        session.current.kind === "local" ? LOCAL_MEDIA_FAILURE : NO_TITLE_SOURCE_REASON
-      );
+      const reason = sourceFailureReason(session.current.kind === "local", data.localInfo?.error?.message);
       setStage({ kind: "failed", reason });
     }
   }, [data.detail, data.localInfo, data.playingEpisode, playbackKey, sources.length]);
@@ -170,10 +173,12 @@ export function PlayerPage({ active }: { active: boolean }) {
   };
 
   return <WorkspaceSplit surface="player" active={active}
-    left={<PlayerBrowser view={view} onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
+    left={<PlayerBrowser view={view} loading={browserLoading}
+      onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
     center={<PlayerStage view={view} commands={commands} sources={sources} activeSource={hostedSource}
       selectedSourceId={media.activeSourceId ?? ""}
       startPositionMs={startPositionMs} retry={retry} userInitiated={userInitiated}
+      loading={stageLoading} awaitingResume={waitingForResume} noSourceReason={noSourceReason}
       onSource={(id) => {
         void progress.flush();
         setSourcePosition(currentPosition.current);
@@ -185,6 +190,7 @@ export function PlayerPage({ active }: { active: boolean }) {
         progress.update(position, duration);
       }} onPlaying={progress.playing} onBoundary={() => void progress.checkpoint()}
       onPausedChange={setPaused} />}
-    right={<PlayerInspector view={view} commands={commands} paused={paused} />}
-    bottom={<PlayerRelated view={view} commands={commands} />} />;
+    right={<PlayerInspector view={view} commands={commands} paused={paused}
+      loading={data.basePending && data.detail === undefined && data.localInfo === undefined} />}
+    bottom={<PlayerRelated view={view} commands={commands} loading={data.relatedPending && data.related.length === 0} />} />;
 }

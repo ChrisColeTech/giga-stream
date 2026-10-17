@@ -44,7 +44,7 @@ export function LibraryPage({ active }: { active: boolean }) {
     () => resolveItems(data.continuing, marks, history, {}),
     [data.continuing, marks, history],
   );
-  const render = libraryRenderState(items, data.page?.titlesAvailable ?? false, query.scope);
+  const render = libraryRenderState(items, data.page?.titlesAvailable ?? false, query.scope, data.loading);
   const shown = query.source === "history"
     ? render.items.filter((item) => item.progress !== undefined)
     : query.source === "favorites" ? render.items.filter((item) => item.favorite) : render.items;

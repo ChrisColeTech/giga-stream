@@ -15,9 +15,15 @@ export interface LoadedPlayerData {
   readonly playingEpisode?: Episode;
   readonly episodes: readonly Episode[];
   readonly related: readonly LibraryItem[];
+  readonly basePending: boolean;
+  readonly seasonPending: boolean;
+  readonly playingPending: boolean;
+  readonly relatedPending: boolean;
 }
 
-const EMPTY: LoadedPlayerData = { episodes: [], related: [] };
+const EMPTY: LoadedPlayerData = {
+  episodes: [], related: [], basePending: false, seasonPending: false, playingPending: false, relatedPending: false,
+};
 interface LoadedState extends LoadedPlayerData { readonly key: string; readonly playingKey?: string; }
 const EMPTY_STATE: LoadedState = { ...EMPTY, key: "idle" };
 const sentence = (error: unknown, fallback: string): string => error instanceof Error ? error.message : fallback;
@@ -42,17 +48,26 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     }
     const controller = new AbortController();
     setLoaded((current) => current.key === key
-      ? current
-      : { ...EMPTY, key, ...(known === undefined ? {} : { item: known }) });
+      ? { ...current, basePending: true, relatedPending: tab.ref.kind !== "local" }
+      : {
+          ...EMPTY,
+          key,
+          basePending: true,
+          relatedPending: tab.ref.kind !== "local",
+          ...(known === undefined ? {} : { item: known }),
+        });
     if (tab.ref.kind === "local") {
       void readLocalMediaInfo(tab.ref.id, controller.signal).then((info) => {
         if (controller.signal.aborted) return;
         const item = known ?? {
           ref: tab.ref, kind: "local" as const, title: info.title, genres: [], favorite: false,
         };
-        setLoaded({ key, item, localInfo: info, episodes: [], related: [] });
+        setLoaded({ ...EMPTY, key, item, localInfo: info });
       }).catch((error: unknown) => {
-        if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Local file information could not be read."), "warn");
+        if (!controller.signal.aborted) {
+          setLoaded((current) => ({ ...current, basePending: false }));
+          useAppStore.getState().say(sentence(error, "Local file information could not be read."), "warn");
+        }
       });
     } else {
       void readTitle(tab.ref.id, controller.signal)
@@ -62,16 +77,22 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
             ref: tab.ref, kind: detail.kind, title: detail.title, year: detail.year,
             posterUrl: detail.posterUrl, genres: detail.genres, favorite: false,
           };
-          setLoaded((current) => ({ ...current, item, detail }));
+          setLoaded((current) => ({ ...current, item, detail, basePending: false }));
         })
         .catch((error: unknown) => {
-          if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Title information could not be read."), "warn");
+          if (!controller.signal.aborted) {
+            setLoaded((current) => ({ ...current, basePending: false }));
+            useAppStore.getState().say(sentence(error, "Title information could not be read."), "warn");
+          }
         });
       void readRelated(tab.ref.id, controller.signal).then((answer) => {
         if (controller.signal.aborted) return;
-        setLoaded((current) => ({ ...current, related: answer.items }));
+        setLoaded((current) => ({ ...current, related: answer.items, relatedPending: false }));
       }).catch((error: unknown) => {
-        if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Related titles could not be read."), "warn");
+        if (!controller.signal.aborted) {
+          setLoaded((current) => ({ ...current, relatedPending: false }));
+          useAppStore.getState().say(sentence(error, "Related titles could not be read."), "warn");
+        }
       });
     }
     return () => controller.abort();
@@ -80,12 +101,15 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
   useEffect(() => {
     if (tab?.ref.kind !== "title" || tab.kind !== "tv" || session.season === undefined) return undefined;
     const controller = new AbortController();
-    setLoaded((current) => ({ ...current, episodes: [] }));
+    setLoaded((current) => ({ ...current, episodes: [], seasonPending: true }));
     void readSeason(tab.ref.id, session.season, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
-      setLoaded((current) => ({ ...current, episodes: answer.episodes }));
+      setLoaded((current) => ({ ...current, episodes: answer.episodes, seasonPending: false }));
     }).catch((error: unknown) => {
-      if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Episodes could not be read."), "warn");
+      if (!controller.signal.aborted) {
+        setLoaded((current) => ({ ...current, seasonPending: false }));
+        useAppStore.getState().say(sentence(error, "Episodes could not be read."), "warn");
+      }
     });
     return () => controller.abort();
   }, [seasonRequest]);
@@ -97,17 +121,25 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
       ...current,
       playingEpisode: episodeDuringRefresh(current.playingKey, playingKey, current.playingEpisode),
       playingKey,
+      playingPending: true,
     }));
     void readSeason(tab.ref.id, playing.season, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
       const playingEpisode = answer.episodes.find((episode) => episode.episode === playing.episode);
-      setLoaded((current) => ({ ...current, playingEpisode, playingKey }));
+      setLoaded((current) => ({ ...current, playingEpisode, playingKey, playingPending: false }));
     }).catch((error: unknown) => {
-      if (!controller.signal.aborted) useAppStore.getState().say(sentence(error, "Episode could not be read."), "warn");
+      if (!controller.signal.aborted) {
+        setLoaded((current) => ({ ...current, playingPending: false }));
+        useAppStore.getState().say(sentence(error, "Episode could not be read."), "warn");
+      }
     });
     return () => controller.abort();
   }, [playingRequest]);
 
-  if (loaded.key !== key) return EMPTY;
+  if (loaded.key !== key) return tab === null ? EMPTY : {
+    ...EMPTY,
+    basePending: true,
+    relatedPending: tab.ref.kind !== "local",
+  };
   return loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
 }

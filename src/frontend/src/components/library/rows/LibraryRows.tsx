@@ -62,7 +62,7 @@ export function LibraryRows({
     () => buildShelves({ items, continuing, collections, marks, showContinue }),
     [items, continuing, collections, marks, showContinue],
   );
-  const render = rowsRenderState(shelves.length, hasMore, paging);
+  const render = rowsRenderState(shelves.length, hasMore, paging, loading || titleRegionsLoading);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />

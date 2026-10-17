@@ -3,27 +3,34 @@ import { EpisodeRow } from "@/components/player/EpisodeRow";
 import { Select } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { progressRatio } from "@/lib/library-facts";
-import { BROWSER_SKELETON_COUNT, NO_SEASONS_REASON } from "@/lib/player-copy";
+import {
+  BROWSER_SKELETON_COUNT, NO_SEASONS_REASON, PLAYER_IDLE_CONTROL_REASON, PLAYER_LOADING_REASON,
+} from "@/lib/player-copy";
 import { episodeMarker, type EpisodeMarker, type PlayerView } from "@/lib/player-view";
 
 export interface PlayerBrowserProps {
   readonly view: PlayerView;
   readonly onSeason: (season: number) => void;
   readonly onEpisode: (season: number, episode: number) => void;
+  readonly loading: boolean;
 }
 
 /** The left pane (`06` section 5.2): a series' season select over its episode rows, or a movie or local file as one row
- *  of the same shape. No collapsible section around it; the list is the pane's one scroll container. With nothing open
- *  it is skeletons. */
-export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps) {
+ *  of the same shape. No collapsible section wraps it; idle keeps the season control visibly disabled. */
+export function PlayerBrowser({ view, onSeason, onEpisode, loading }: PlayerBrowserProps) {
   const { tab, item, detail, seasons, season, episode } = view;
   if (tab === undefined) {
     return (
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <SkeletonRows count={BROWSER_SKELETON_COUNT} />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex-none p-2.5" title={PLAYER_IDLE_CONTROL_REASON}>
+          <Select aria-label="Season" value="" disabled><option value="">Season</option></Select>
+        </div>
+        <div className="min-h-0 flex-1 border-t border-hair" />
       </div>
     );
   }
+
+  if (loading && tab.kind !== "tv") return <SkeletonRows count={BROWSER_SKELETON_COUNT} />;
 
   if (tab.kind !== "tv") {
     /* A movie or a local file is one row in the episode row's own shape, so the rail reads the same for every kind:
@@ -55,14 +62,15 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
   }
 
   const noSeasons = seasons.length === 0;
+  const disabledReason = loading ? PLAYER_LOADING_REASON : noSeasons ? NO_SEASONS_REASON : undefined;
   return (
     <div className="flex min-w-[180px] flex-1 flex-col overflow-hidden">
       {/* No label: every option reads "Season N", so the select names itself. */}
-      <div className="flex-none p-2.5" title={noSeasons ? NO_SEASONS_REASON : undefined}>
+      <div className="flex-none p-2.5" title={disabledReason}>
         <Select
           aria-label="Season"
           value={season === undefined ? "" : String(season)}
-          disabled={noSeasons}
+          disabled={loading || noSeasons}
           onChange={(event) => onSeason(Number(event.target.value))}
         >
           {seasons.map((entry) => (
@@ -73,14 +81,14 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
         </Select>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-hair">
-        <EpisodeBrowser
+        {loading ? <SkeletonRows count={BROWSER_SKELETON_COUNT} /> : <EpisodeBrowser
           episodes={view.episodes}
           selected={episode}
           markerOf={(number) => episodeMarker(item?.progress, season, number)}
           onSelect={(number) => {
             if (season !== undefined) onEpisode(season, number);
           }}
-        />
+        />}
       </div>
     </div>
   );
