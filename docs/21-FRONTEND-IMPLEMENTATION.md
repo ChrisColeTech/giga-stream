@@ -511,8 +511,7 @@ top right. No system or browser button look: the family's `Button` and `IconButt
 
 **Rails and bottom bands.** The Player's related band is a port of Giga LoRA Studio's bottom rail (`components/generate/
 PastRuns.tsx` in `D:\Projects\giga-lora-studio`): the same panel ground, the same thumbnail frame, the same hover and
-selected render, the same row scroll. The differences that stay are the spec's: 2:3 posters (06 §5.5), the band's 210 px
-height (02 §1.3), and eight card skeletons. If a difference is found that is not on that list, it is a defect.
+selected render, the same row scroll. The owner's review (2026-10-16) set the band to match the Studio's image: 140 px high, square thumbnails with no caption, the lowercase mono header with the count. The differences that stay are the spec's: eight card skeletons. Earlier, the band was 2:3 posters at 210 px high; that is retired. If a difference is found that is not on that list, it is a defect.
 
 **Readability.** Text sits on the surface tokens at the scale above. Muted text is the secondary colour, dim is for
 hints and disabled text only. A line never breaks a word; a long title is truncated with an ellipsis and its full text

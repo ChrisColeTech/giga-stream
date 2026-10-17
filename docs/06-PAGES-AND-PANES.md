@@ -55,7 +55,7 @@ answer the interface could not read.
 | Player browser (left) | width | 190 | 236 | 380 | yes |
 | Player stage (centre) | width | 520 | flex | - | no |
 | Player inspector (right) | width | 220 | 280 | 420 | yes |
-| Player related (bottom) | height | 60 | 210 | 280 | yes |
+| Player related (bottom) | height | 60 | 140 | 280 | yes |
 | Events drawer | height | 160 | 160 | 160 | yes |
 
 - Allotment owns the sashes, pointer capture and the committed sizes; the sash is a 1px line.
@@ -471,7 +471,8 @@ A band across the full work area.
 | Part | Behaviour |
 |---|---|
 | Toolbar | `Related`, the basis it was found by (`TMDB`, from TMDB's recommendations, `11` section 4; otherwise `Genre + year`, `Genre` or `Year` over the catalog), and a collapse toggle |
-| Cards | a horizontal row of 2:3 cards with poster, title and year; at most 20 at first; never text-only rows |
+| Cards | a horizontal row of square thumbnails, as Giga LoRA Studio's bottom rail (`components/generate/PastRuns.tsx`): the picture, the frame and the selected render, with no caption; the title is the picture's alt text and its tooltip; at most 20 at first |
+| Header | the word `related`, then the count, in lowercase mono (`related — 8`), with the basis label after it as a value |
 | Activation | replaces the current item with that title; a movie loads at once, a series waits for an episode to be chosen |
 | Loading and empty | 8 card skeletons |
 | Failure | the last cards stay and one notice says why |
