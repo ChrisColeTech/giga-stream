@@ -1,12 +1,10 @@
 import { PanelBottom, Settings } from "lucide-react";
-import { CONNECTION_DOT, PREVIEW_CONNECTION } from "@/fixtures/connection";
-import { StatusDot } from "@/components/ui/StatusDot";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { RunningWork } from "./RunningWork";
 
-/* The status bar is for state: the running work (LoRA's progress bar and Stop), the connection dot and its word, the ONE notice line (an outcome or a refusal, as a
- * sentence), then the two doors on the right, Events and Settings. Each door is a toggle: the button that opened a
+/* The status bar is for state: the running work (LoRA's progress bar and Stop), the ONE notice line (an outcome or a
+ * refusal, as a sentence), then the two doors on the right, Events and Settings. Each door is a toggle: the button that opened a
  * panel is the button that closes it, and it wears the same pressed look while its panel is up. */
 const BAR =
   "relative z-20 flex h-6 flex-none items-center gap-2.5 border-t border-border " +
@@ -34,11 +32,6 @@ export function Statusbar() {
   return (
     <footer className={BAR}>
       <RunningWork />
-      {/* THE DOT IS THE WORD: the sentence survives in the tooltip for the case that matters, the dot going grey. */}
-      <span className="inline-flex items-center gap-1.5" title="The fileserver connection.">
-        <StatusDot state={CONNECTION_DOT[PREVIEW_CONNECTION]} />
-        <span className="font-mono text-xs tabular-nums">{PREVIEW_CONNECTION}</span>
-      </span>
       {notice !== null && (
         <span
           key={notice.serial}

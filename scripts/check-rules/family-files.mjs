@@ -26,7 +26,6 @@ const UI = [
   "SkeletonRows",
   "SliderField",
   "SplitList",
-  "StatusDot",
   "Toggle",
   "Tooltip",
 ];
