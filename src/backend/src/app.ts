@@ -14,6 +14,7 @@ import { registerLiveFaults } from "./api/live-faults.js";
 import { registerLiveStreams } from "./api/live-streams.js";
 import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
+import { registerSyncSettings } from "./api/sync-settings.js";
 import { registerTitles } from "./api/titles.js";
 import { config, type Config } from "./config.js";
 import { DATABASE_FILE_NAME } from "./constants/deployment.js";
@@ -23,7 +24,6 @@ import { corsOrigins, isPrivateRoute, startRefusal, tlsOptions } from "./network
 import { bootstrapOwner } from "./services/bootstrap-owner.js";
 import { createServices, type Services } from "./services/service-registry.js";
 import { seedTestChannels } from "./services/test-channels.js";
-import { parseSchedule } from "./services/title-service.js";
 import { createStore } from "./store/store.js";
 
 /**
@@ -72,6 +72,8 @@ export async function buildApp(
       adminDist: settings.ADMIN_DIST,
       log: (line) => app.log.warn(line),
       live,
+      titleSchedule: settings.TMDB_SYNC_SCHEDULE,
+      playlistSchedule: settings.PLAYLIST_SYNC_SCHEDULE,
       playlistUrls: settings.PLAYLIST_URLS,
       playlistSyncMaxBytes: settings.PLAYLIST_SYNC_MAX_BYTES,
       playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
@@ -91,18 +93,9 @@ export async function buildApp(
     if (settings.SEED_TEST_CHANNELS) seedTestChannels(ready.channels, settings.FIXTURE_DIR);
     ready.purgeExpiredSessions();
 
-    // The catalog-sync schedule (docs/03 section 7.6b): one of the system's two timers (docs/01 section 4.4).
-    const scheduleMs = parseSchedule(settings.TMDB_SYNC_SCHEDULE);
-    if (scheduleMs !== undefined && settings.TMDB_READ_TOKEN !== "") {
-      ready.titles.armSchedule(scheduleMs);
-    }
-
-    // The playlist-sync schedule (docs/03 section 7.2c): armed only when playlists and an interval
-    // are both set; with no playlists the sync has nothing to do and stays unarmed.
-    const playlistScheduleMs = parseSchedule(settings.PLAYLIST_SYNC_SCHEDULE, "PLAYLIST_SYNC_SCHEDULE");
-    if (playlistScheduleMs !== undefined && settings.PLAYLIST_URLS.length > 0) {
-      ready.playlistSchedule.armSchedule(playlistScheduleMs);
-    }
+    // The two schedules - the system's two timers (docs/01 section 4.4) - are armed from the stored sync settings
+    // (docs/26 section 3.11): the catalog sync's when TMDB has a token, the playlist sync's when it has playlists.
+    ready.syncSettings.applySchedules();
 
     if (owner === "none") {
       app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_EMAIL/PASSWORD: nobody can sign in");
@@ -136,6 +129,7 @@ export async function buildApp(
     registerProviders(app, ready);
     registerTitles(app, ready);
     registerPlaylistSync(app, ready);
+    registerSyncSettings(app, ready);
     registerAdminStatic(app, ready);
     return app;
   } catch (error) {

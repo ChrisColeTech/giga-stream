@@ -2,6 +2,7 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import { type Actor, type AuditService } from "./audit-service.js";
 import { type OmdbClient } from "./omdb-client.js";
+import { describeRequest } from "./title-sync-request.js";
 import { type TmdbClient } from "./tmdb-client.js";
 import {
   type Kind,
@@ -14,6 +15,7 @@ import {
   formatSchedule,
   listOf,
   num,
+  parseTitleId,
   rowOf,
   storedRowOf,
 } from "./title-shapes.js";
@@ -32,6 +34,7 @@ export function createTitleSync(deps: {
   tmdb: TmdbClient;
   omdb: OmdbClient;
   now: () => number;
+  scheduleLabel?: () => string; // the stored schedule setting, shown in the status (docs/26 section 3.11)
   /** A full-detail fetch for the explicit-ids scope. */
   ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
 }) {
@@ -52,9 +55,11 @@ export function createTitleSync(deps: {
   async function runSync(request: SyncRequest, triggered: "admin" | "system"): Promise<number> {
     let pulled = 0;
     if (request.scope === "titles") {
-      for (const id of request.ids ?? []) {
+      for (const titleId of request.ids ?? []) {
         if (stopped) return pulled;
-        await deps.ensureTitle("movie", id);
+        const [kind, id] = parseTitleId(titleId);
+        if (store.titles.isDeleted(kind, id)) continue; // an admin deleted it: stays gone until restored
+        await deps.ensureTitle(kind, id);
         pulled += 1;
       }
     } else {
@@ -71,6 +76,7 @@ export function createTitleSync(deps: {
           if (id === undefined) continue;
           const shaped = rowOf(kind, record, now());
           if (shaped === undefined) continue;
+          if (store.titles.isDeleted(kind, id)) continue;
           const existing = store.titles.find(kind, id);
           const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS
             && storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt) !== undefined;
@@ -99,12 +105,6 @@ export function createTitleSync(deps: {
     } catch {
       // a shutdown between the guard and the write; the entry is lost, not the process
     }
-  }
-
-  function describeRequest(request: SyncRequest): Record<string, unknown> {
-    return request.scope === "titles"
-      ? { scope: "titles", ids: (request.ids ?? []).length }
-      : { scope: request.scope, kind: request.kind, pages: request.pages };
   }
 
   /** One observed sync run: audited started/finished/failed, the outcome kept, the slot released. */
@@ -146,7 +146,7 @@ export function createTitleSync(deps: {
         ...(lastRun !== null && { lastRunAt: lastRun.finishedAt, lastOutcome: lastRun.outcome }),
         titles: total,
         stale,
-        schedule: formatSchedule(scheduleMs),
+        schedule: deps.scheduleLabel?.() ?? formatSchedule(scheduleMs),
         omdb: omdb.quota(),
       };
     },
@@ -176,11 +176,15 @@ export function createTitleSync(deps: {
       tick();
     },
 
+    /** Stops the timer only (an admin turning the schedule off); unlike `clearSchedule` it leaves manual syncs free. */
+    disarmSchedule(): void {
+      if (scheduleTimer !== undefined) clearTimeout(scheduleTimer);
+      [scheduleTimer, scheduleMs] = [undefined, undefined];
+    },
+
     clearSchedule(): void {
       stopped = true; // the in-flight runSync checks this between pages and leaves the store alone
-      if (scheduleTimer !== undefined) clearTimeout(scheduleTimer);
-      scheduleTimer = undefined;
-      scheduleMs = undefined;
+      this.disarmSchedule();
     },
 
     /** Test seam: resolves when no sync is running and the scheduled chain has settled. */

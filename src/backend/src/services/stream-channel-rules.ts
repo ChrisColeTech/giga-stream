@@ -29,10 +29,24 @@ export function newStreamRecord(input: StreamChannelInput, id: string, allowLoop
     tvgId: null,
     source: null,
     streamUrl: input.streamUrl,
+    syncName: null,
+    editedFields: [],
     revision: 0,
   };
   checkAddresses(record, allowLoopback);
   return record;
+}
+
+const TRACKED = ["name", "category", "number", "logoUrl", "streamUrl"] as const;
+
+/**
+ * A synced row remembers which fields an admin changed, so the next sync leaves them alone (docs/26 section 3.10,
+ * rule 1). Only fields the change really altered are added; a hand-made row records nothing.
+ */
+export function withEdits(before: StreamRecord, after: StreamRecord): StreamRecord {
+  if (before.source === null) return after;
+  const changed = TRACKED.filter((field) => before[field] !== after[field]);
+  return { ...after, editedFields: [...new Set([...before.editedFields, ...changed])] };
 }
 
 const LIVE_ONLY = ["mode", "captions", "variants", "folder", "videos"] as const;

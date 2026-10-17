@@ -9,7 +9,9 @@ import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
 import { createLogoResolver } from "./logo-resolver.js";
 import { createOmdbClient } from "./omdb-client.js";
+import { createPlaylistIgnored } from "./playlist-ignored-service.js";
 import { createPlaylistSchedule } from "./playlist-schedule.js";
+import { createSyncSettings } from "./sync-settings-service.js";
 import { createPlaylistSyncService } from "./playlist-sync-service.js";
 import { createProviderService } from "./provider-service.js";
 import { createSignInLimiter } from "./sign-in-limiter.js";
@@ -37,6 +39,9 @@ export interface ServiceOptions {
   log: (line: string) => void;
   /** Test seams of the live engine: a fake build, a fake sleep. */
   live?: LiveSeams;
+  /** The environment's sync settings: they seed the stored ones on the first start only (docs/26 section 3.11). */
+  titleSchedule: string;
+  playlistSchedule: string;
   playlistUrls: string[];
   playlistSyncMaxBytes: number;
   playlistSyncMax: number;
@@ -56,7 +61,6 @@ export function createServices(store: Store, options: ServiceOptions) {
     store,
     audit,
     logos,
-    playlistUrls: options.playlistUrls,
     maxBytes: options.playlistSyncMaxBytes,
     maxEntries: options.playlistSyncMax,
     allowLoopback: options.allowLoopback,
@@ -78,6 +82,20 @@ export function createServices(store: Store, options: ServiceOptions) {
     ...(options.live && { seams: options.live }),
   });
   options.live?.onEngine?.(live);
+  const titles = createTitleService({
+    store, audit, tmdb, omdb, streams, now,
+    allowLoopback: options.allowLoopback,
+    scheduleLabel: () => syncSettings.titleSchedule(),
+  });
+  const syncSettings = createSyncSettings({
+    store,
+    audit,
+    now,
+    allowLoopback: options.allowLoopback,
+    tmdbConfigured: options.tmdbToken !== "",
+    seed: { titleSchedule: options.titleSchedule, playlistSchedule: options.playlistSchedule, playlistUrls: options.playlistUrls },
+    targets: { titles, playlists: playlistSchedule },
+  });
   return {
     audit,
     auth,
@@ -88,10 +106,12 @@ export function createServices(store: Store, options: ServiceOptions) {
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
     channels: createChannelService({ store, audit, live, allowLoopback: options.allowLoopback, now }),
     providers: createProviderService({ store, audit, now }),
-    titles: createTitleService({ store, audit, tmdb, omdb, streams, now }),
+    titles,
+    syncSettings,
     playlistSync: {
       run: playlistSyncService.run,
-      status: (): PlaylistSyncStatus => ({ ...playlistSyncService.status(), schedule: playlistSchedule.describe() }),
+      ignored: createPlaylistIgnored({ store, audit }),
+      status: (): PlaylistSyncStatus => ({ ...playlistSyncService.status(), schedule: syncSettings.playlistSchedule() }),
     },
     playlistSchedule,
     hasAccounts: (): boolean => store.accounts.count() > 0,

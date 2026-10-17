@@ -19,14 +19,20 @@ const ChannelRow = z.object({
   live_captions: z.number().int().nullable(),
   live_variants: z.string().nullable(),
   live_folder: z.string().nullable(),
+  edited_fields: z.string().nullable(),
+  sync_name: z.string().nullable(),
 });
+const editedOf = (json: string | null): string[] => {
+  const parsed = json === null ? undefined : z.array(z.string()).safeParse(JSON.parse(json));
+  return parsed?.success ? parsed.data : [];
+};
 const Variants = z.array(z.enum(VARIANT_NAMES));
 const PathRow = z.object({ path: z.string() });
 const IdRow = z.object({ id: z.string() });
 const CountRow = z.object({ n: z.number() });
 
 const COLUMNS = `id, name, category, number, logo_url, tvg_id, source, stream_url, revision, kind,
-  live_mode, live_captions, live_variants, live_folder`;
+  live_mode, live_captions, live_variants, live_folder, edited_fields, sync_name`;
 
 /**
  * The channels table and a live row's listed videos. Ordered by number then name (docs/03 section 7.2):
@@ -43,11 +49,11 @@ export function createChannelRepository(db: DatabaseSync) {
   const videosOf = db.prepare("SELECT path FROM channel_videos WHERE channel_id = ? ORDER BY position");
   const insert = db.prepare(`
     INSERT INTO channels (${COLUMNS}, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const update = db.prepare(`
     UPDATE channels
     SET name = ?, category = ?, number = ?, logo_url = ?, tvg_id = ?, source = ?, stream_url = ?, revision = ?,
-      live_mode = ?, live_captions = ?, live_variants = ?, live_folder = ?
+      live_mode = ?, live_captions = ?, live_variants = ?, live_folder = ?, edited_fields = ?, sync_name = ?
     WHERE id = ?`);
   const clearVideos = db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
   const addVideo = db.prepare("INSERT INTO channel_videos (channel_id, position, path) VALUES (?, ?, ?)");
@@ -58,7 +64,8 @@ export function createChannelRepository(db: DatabaseSync) {
     const core = { id: r.id, name: r.name, category: r.category, number: r.number, logoUrl: r.logo_url, revision: r.revision };
     if (r.kind === "stream") {
       if (r.stream_url === null) throw new Error(`channel ${r.id} is a stream row without an address`);
-      const stream: StreamRecord = { ...core, kind: "stream", streamUrl: r.stream_url, tvgId: r.tvg_id, source: r.source };
+      const stream: StreamRecord = { ...core, kind: "stream", streamUrl: r.stream_url, tvgId: r.tvg_id, source: r.source,
+        syncName: r.sync_name, editedFields: editedOf(r.edited_fields) };
       return stream;
     }
     if (r.live_mode === null || r.live_captions === null || r.live_variants === null) {
@@ -82,6 +89,11 @@ export function createChannelRepository(db: DatabaseSync) {
   function liveColumns(c: ChannelRecord): [string | null, number | null, string | null, string | null] {
     if (c.kind === "stream") return [null, null, null, null];
     return [c.live.mode, c.live.captions ? 1 : 0, JSON.stringify(c.live.variants), c.live.folder];
+  }
+
+  /** A stream row's sync bookkeeping as the statements bind it: edited fields (null = none) and sync name. */
+  function syncColumns(c: StreamRecord | undefined): [string | null, string | null] {
+    return [c && c.editedFields.length > 0 ? JSON.stringify(c.editedFields) : null, c?.syncName ?? null];
   }
 
   function writeVideos(c: ChannelRecord): void {
@@ -109,7 +121,7 @@ export function createChannelRepository(db: DatabaseSync) {
       const stream = c.kind === "stream" ? c : undefined;
       insert.run(
         c.id, c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, stream?.source ?? null,
-        stream?.streamUrl ?? null, c.revision, c.kind, ...liveColumns(c), createdAt,
+        stream?.streamUrl ?? null, c.revision, c.kind, ...liveColumns(c), ...syncColumns(stream), createdAt,
       );
       writeVideos(c);
     },
@@ -117,7 +129,7 @@ export function createChannelRepository(db: DatabaseSync) {
       const stream = c.kind === "stream" ? c : undefined;
       update.run(
         c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, stream?.source ?? null,
-        stream?.streamUrl ?? null, c.revision, ...liveColumns(c), c.id,
+        stream?.streamUrl ?? null, c.revision, ...liveColumns(c), ...syncColumns(stream), c.id,
       );
       writeVideos(c);
     },

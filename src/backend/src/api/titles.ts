@@ -6,6 +6,7 @@ import type { Services } from "../services/service-registry.js";
 import { SORTS } from "../services/title-service.js";
 import { ok } from "./envelope.js";
 import { ANY_ADMIN, actorOf, signedIn } from "./guard.js";
+import { TitleInputSchema, TitlePatchSchema } from "../types/title-input.js";
 import { parseInput } from "./parse-input.js";
 
 const BrowseQuery = z.object({
@@ -14,6 +15,8 @@ const BrowseQuery = z.object({
   genre: z.string().max(60).optional(),
   year: z.coerce.number().int().min(1800).max(2200).optional(),
   page: z.coerce.number().int().min(1).max(500).default(1),
+  // The titles an admin deleted from the sync (owner or editor), instead of the browse.
+  deleted: z.enum(["true", "false"]).optional(),
 });
 
 const SearchQuery = z.object({
@@ -22,15 +25,17 @@ const SearchQuery = z.object({
   page: z.coerce.number().int().min(1).max(500).default(1),
 });
 
-const TitleParams = z.object({ titleId: z.string().min(3).max(30) });
-const SeasonParams = z.object({ titleId: z.string().min(3).max(30), season: z.coerce.number().int().min(0).max(100) });
+// A title made by hand is `custom-<uuid>`: 43 characters.
+const TitleParams = z.object({ titleId: z.string().min(3).max(60) });
+const SeasonParams = z.object({ titleId: z.string().min(3).max(60), season: z.coerce.number().int().min(0).max(100) });
 
 const SyncBody = z
   .object({
     scope: z.enum(["trending", "popular", "titles"]),
     kind: z.enum(["movie", "tv"]).optional(),
     pages: z.coerce.number().int().min(1).max(25).optional(),
-    ids: z.array(z.coerce.number().int().min(1)).min(1).max(500).optional(),
+    // Title ids (`movie-603`, `tv-1399`), so a series is fetched as a series (docs/26 section 3.10, rule 6).
+    ids: z.array(z.string().regex(/^(movie|tv)-[1-9]\d{0,9}$/)).min(1).max(500).optional(),
   })
   .strict()
   .refine((v) => v.scope !== "titles" || (v.ids !== undefined && v.kind === undefined && v.pages === undefined), {
@@ -49,6 +54,10 @@ const SyncBody = z
 export function registerTitles(app: FastifyInstance, services: Services): void {
   app.get("/api/titles", async (request, reply) => {
     const query = parseInput(BrowseQuery, request.query, ERRORS.requestInvalid);
+    if (query.deleted === "true") {
+      signedIn(services, request, ANY_ADMIN);
+      return ok(reply, services.titles.deleted());
+    }
     const kinds: ("movie" | "tv")[] = query.kind === "all" ? ["movie", "tv"] : [query.kind];
     const answers = await Promise.all(
       kinds.map((kind) =>
@@ -85,6 +94,38 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
     const body = parseInput(SyncBody, request.body, ERRORS.syncInvalid);
     services.titles.startSync(body, actorOf(request, principal));
     return ok(reply, { started: true, ...services.titles.status() }, 202);
+  });
+
+  // Full CRUD (docs/26 decision D20): owner or editor, audited, and never the channel revision.
+  app.post("/api/titles", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const input = parseInput(TitleInputSchema, request.body, ERRORS.titleInvalid);
+    return ok(reply, services.titles.create(input, actorOf(request, principal)), 201);
+  });
+
+  app.patch("/api/titles/:titleId", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const { titleId } = parseInput(TitleParams, request.params);
+    const patch = parseInput(TitlePatchSchema, request.body, ERRORS.titleInvalid);
+    return ok(reply, await services.titles.update(titleId, patch, actorOf(request, principal)));
+  });
+
+  app.delete("/api/titles/:titleId", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const { titleId } = parseInput(TitleParams, request.params);
+    return ok(reply, services.titles.remove(titleId, actorOf(request, principal)));
+  });
+
+  app.post("/api/titles/:titleId/revert", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const { titleId } = parseInput(TitleParams, request.params);
+    return ok(reply, await services.titles.revert(titleId, actorOf(request, principal)));
+  });
+
+  app.post("/api/titles/:titleId/restore", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const { titleId } = parseInput(TitleParams, request.params);
+    return ok(reply, services.titles.restore(titleId, actorOf(request, principal)));
   });
 
   app.get("/api/titles/:titleId", async (request, reply) => {

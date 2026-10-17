@@ -47,6 +47,8 @@ export interface LiveSettingsView {
 
 export interface StreamAdminChannel extends BackendChannel {
   kind: "stream";
+  /** The fields an admin edited on a synced row; absent when none. */
+  editedFields?: string[];
 }
 
 export interface LiveAdminChannel extends BackendChannel, LiveSettingsView, LiveStatus {
@@ -85,6 +87,10 @@ export interface StreamRecord extends RecordCore {
   streamUrl: string;
   tvgId: string | null;
   source: string | null;
+  /** The playlist's own name for the entry (a synced row), kept apart from `name` so a rename keeps the match. */
+  syncName: string | null;
+  /** The fields an admin edited on a synced row: a sync never overwrites them (docs/26 section 3.10). */
+  editedFields: string[];
 }
 
 export interface LiveRecord extends RecordCore {

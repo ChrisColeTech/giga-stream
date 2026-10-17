@@ -43,6 +43,9 @@ export const LOCKOUT_MS = 15 * 60 * 1000;
 export const AUDIT_PAGE_DEFAULT = 50;
 export const AUDIT_PAGE_MAX = 200;
 
+// The sync settings (docs/26 section 3.11).
+export const PLAYLISTS_MAX = 20;
+
 // The playlist sync (docs/03 section 7.2c).
 export const PLAYLIST_FETCH_TIMEOUT_MS = 15_000;
 export const TVG_ID_MAX = 128;

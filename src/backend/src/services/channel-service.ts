@@ -16,7 +16,7 @@ import type { ChannelInput, ChannelPatch } from "../types/channel-input.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
-import { invalid, newStreamRecord, patchedStreamRecord } from "./stream-channel-rules.js";
+import { invalid, newStreamRecord, patchedStreamRecord, withEdits } from "./stream-channel-rules.js";
 
 /**
  * The channels of both kinds (docs/03 section 7.2, docs/26 section 3.3). Every change is live as soon as it
@@ -90,7 +90,7 @@ export function createChannelService(deps: {
       }
       let record: ChannelRecord;
       if (current.kind === "stream") {
-        record = patchedStreamRecord(current, patch, allowLoopback);
+        record = withEdits(current, patchedStreamRecord(current, patch, allowLoopback));
       } else {
         const next = patchedLiveRecord(current, patch);
         claimNumber(next);
@@ -111,9 +111,30 @@ export function createChannelService(deps: {
       store.transaction(() => {
         store.channels.remove(id);
         store.revisions.next();
+        // A deleted synced row must not come back with the next sync (docs/26 section 3.10, rule 4).
+        if (current.kind === "stream" && current.source !== null) {
+          store.tombstones.addChannel(
+            { host: current.source, tvgId: current.tvgId, syncName: current.syncName ?? current.name, label: current.name },
+            now(),
+          );
+        }
       });
       audit.record(actor, { action: "channel.deleted", subject: id, detail: { name: current.name, kind: current.kind } });
       return { id };
+    },
+
+    /**
+     * Forgets an admin's edits to a synced row: the next sync supplies the values again (docs/26 section 3.10,
+     * rule 5). Nothing the readers see changes at once, so the revision stays.
+     */
+    revert(id: string, actor: Actor, base: string): AdminChannel {
+      const current = existing(id);
+      if (current.kind !== "stream" || current.source === null) {
+        throw invalid("source", "Only a channel the playlist sync owns can be reverted.");
+      }
+      store.transaction(() => store.channels.update({ ...current, editedFields: [] }));
+      audit.record(actor, { action: "channel.reverted", subject: id, detail: { fields: current.editedFields } });
+      return adminChannel(existing(id), base, live);
     },
 
     /** Re-reads a folder source and rebuilds the channel; the old stream keeps playing until the new is ready. */

@@ -42,7 +42,9 @@ export function publicChannel(record: ChannelRecord, base: string): BackendChann
 /** The admin's full view (docs/26 section 3.3): the public fields, and for a live row its settings and state. */
 export function adminChannel(record: ChannelRecord, base: string, engine: LiveEngine): AdminChannel {
   const view = publicChannel(record, base);
-  if (record.kind === "stream") return { ...view, kind: "stream" };
+  if (record.kind === "stream") {
+    return { ...view, kind: "stream", ...(record.editedFields.length > 0 && { editedFields: record.editedFields }) };
+  }
   const { mode, captions, variants, folder, videos } = record.live;
   return {
     ...view,

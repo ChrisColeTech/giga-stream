@@ -47,6 +47,12 @@ export function registerChannels(app: FastifyInstance, services: Services): void
     return ok(reply, await services.channels.remove(channelId, actorOf(request, principal)));
   });
 
+  app.post("/api/channels/:channelId/revert", async (request, reply) => {
+    const principal = signedIn(services, request, ANY_ADMIN);
+    const { channelId } = parseInput(ChannelParams, request.params);
+    return ok(reply, services.channels.revert(channelId, actorOf(request, principal), baseOf(request)));
+  });
+
   app.post("/api/channels/:channelId/rebuild", async (request, reply) => {
     const principal = signedIn(services, request, ANY_ADMIN);
     const { channelId } = parseInput(ChannelParams, request.params);

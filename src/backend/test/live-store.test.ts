@@ -63,13 +63,15 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
       streamUrl: "https://s.example/o.m3u8",
       tvgId: "tv-1",
       source: "cdn.example",
+      syncName: "Old News", // migration 010 gives a synced row the playlist's name it already had
+      editedFields: [],
     };
     assert.deepEqual(store.channels.find("ch_old"), expected);
     assert.deepEqual(store.channels.listSynced(), [expected]);
     assert.equal(store.channels.countLive(), 0);
     store.close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
-    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 8 });
+    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 10 });
     db.close();
   });
 });
