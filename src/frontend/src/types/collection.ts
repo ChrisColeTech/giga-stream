@@ -22,3 +22,15 @@ export interface CollectionFolder {
   /** Unix milliseconds of the last finished scan, when there was one. */
   readonly lastScanAt?: number;
 }
+
+export interface ScanProgress {
+  readonly found: number;
+  readonly probed: number;
+  readonly total: number | null;
+  readonly done: boolean;
+}
+
+export type CreateCollectionResult =
+  | { readonly outcome: "failed" }
+  | { readonly outcome: "created" }
+  | { readonly outcome: "attach-failed"; readonly collectionId: string };

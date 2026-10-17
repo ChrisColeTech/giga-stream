@@ -12,6 +12,7 @@ export const FolderSchema = z.object({
 export const CollectionSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  type: z.enum(["movie", "tv", "local"]),
   itemCount: z.number().int().nonnegative(),
   folders: z.array(FolderSchema),
   scanning: z.boolean(),
@@ -20,3 +21,7 @@ export const CollectionSchema = z.object({
 });
 
 export const CollectionListSchema = z.array(CollectionSchema);
+
+export const FolderSelectionSchema = z.object({ token: z.string().min(1), name: z.string().min(1) });
+export const CollectionIdsSchema = z.object({ collectionIds: z.array(z.string().min(1)) });
+export const RemovedSchema = z.object({ removed: z.string().min(1) });

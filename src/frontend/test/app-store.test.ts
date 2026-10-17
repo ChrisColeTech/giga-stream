@@ -109,6 +109,87 @@ describe("store slices and hydration", () => {
     assert.equal(state().hydrationVersion, 1);
   });
 
+  it("applies collection, folder, scan and job actions without replacing sibling state", () => {
+    const first = {
+      id: "c-1",
+      name: "Films",
+      type: "movie" as const,
+      itemCount: 0,
+      folders: [],
+      scanning: false,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    state().setCollections([first]);
+    const folder = { id: "f-1", collectionId: "c-1", name: "Films", fileCount: 0, scanning: true };
+    state().upsertFolder("c-1", folder);
+    state().setScanProgress("f-1", { found: 2, probed: 1, total: null, done: false });
+    const job = {
+      id: "j-1",
+      kind: "folder-scan" as const,
+      folderId: "f-1",
+      label: "Scanning Films",
+      state: "running" as const,
+      createdAt: 2,
+    };
+    state().setJobs([job]);
+    state().upsertJob({ ...job, state: "cancelling" });
+    assert.equal(state().collections[0]?.folders[0]?.id, "f-1");
+    assert.equal(state().scanProgress["f-1"]?.total, null);
+    assert.equal(state().jobs[0]?.state, "cancelling");
+    state().upsertFolder("c-1", { ...folder, scanning: false });
+    state().setScanProgress("f-1", { found: 2, probed: 2, total: 2, done: true });
+    state().upsertFolder("c-1", folder);
+    assert.equal(state().scanProgress["f-1"], undefined);
+    assert.equal(state().collections[0]?.folders[0]?.scanning, true);
+    state().removeFolderState("f-1");
+    state().removeJobState("j-1");
+    state().removeCollectionState("c-1");
+    assert.deepEqual([state().collections, state().jobs], [[], []]);
+  });
+
+  it("rejects stale collection and job reads after newer mutations or reads", () => {
+    const collectionRead = state().beginCollectionsRead();
+    const jobRead = state().beginJobsRead();
+    const collection = {
+      id: "c-new",
+      name: "New",
+      type: "local" as const,
+      itemCount: 0,
+      folders: [],
+      scanning: false,
+      createdAt: 2,
+      updatedAt: 2,
+    };
+    state().upsertCollection(collection);
+    state().setJobs([]);
+    assert.equal(state().acceptCollectionsRead(collectionRead, []), false);
+    assert.equal(state().acceptJobsRead(jobRead, []), false);
+    assert.equal(state().collections[0]?.id, "c-new");
+
+    const first = state().beginCollectionsRead();
+    const second = state().beginCollectionsRead();
+    assert.notEqual(first, second);
+    assert.equal(state().acceptCollectionsRead(second, [collection]), true);
+    assert.equal(state().acceptCollectionsRead(first, []), false);
+    assert.equal(state().collections[0]?.id, "c-new");
+
+    const oldJobs = state().beginJobsRead();
+    const newJobs = state().beginJobsRead();
+    assert.notEqual(oldJobs, newJobs);
+    const job = {
+      id: "j-new",
+      kind: "folder-scan" as const,
+      folderId: "f-new",
+      label: "Scanning New",
+      state: "running" as const,
+      createdAt: 3,
+    };
+    assert.equal(state().acceptJobsRead(oldJobs, []), false);
+    assert.equal(state().acceptJobsRead(newJobs, [job]), true);
+    assert.equal(state().jobs[0]?.id, "j-new");
+  });
+
   it("does not enable persistence for absent or unreadable snapshot parts", () => {
     const malformed = decodeState({
       shell: { activeSurface: "future", paneVisibility: {}, paneSizes: {} },

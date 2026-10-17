@@ -8,6 +8,7 @@ import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import { lastScanLabel, lastScanTitle } from "@/lib/collections-scan";
 import type { CollectionFolder } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
 import { FolderControls } from "./FolderControls";
 import { ScanState } from "./ScanState";
 
@@ -35,6 +36,7 @@ export function CollectionFolders({
   readonly folders: readonly CollectionFolder[];
 }) {
   const verbs = useCollectionVerbs();
+  const desktop = useAppStore((state) => state.runtime === "electron");
   return (
     <Group title="Folders" icon={Folder}>
       {folders.length === 0 ? (
@@ -45,8 +47,13 @@ export function CollectionFolders({
       <Actions>
         <Button
           variant="ghost"
-          title="Attach a folder this collection is built from. Files on disk are only read, never changed."
-          onClick={() => verbs.attach(collectionId)}
+          disabled={!desktop}
+          title={
+            desktop
+              ? "Attach a folder this collection is built from. Files on disk are only read, never changed."
+              : "This action is available in the desktop app."
+          }
+          onClick={() => void verbs.attach(collectionId)}
         >
           <FolderPlus aria-hidden /> Attach folder
         </Button>

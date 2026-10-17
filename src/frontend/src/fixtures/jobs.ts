@@ -1,7 +1,14 @@
 import type { Job } from "@/types/job";
 
-/** PHASE 1 FIXTURE: the jobs the status bar shows; the one running scan is the "Films" folder the collections fixture
- *  marks as scanning (`03` section 3.9). */
+/** PHASE 1 FIXTURE: retained until the phase 2.7 fixture cleanup; wired surfaces read the jobs store instead. */
 export const JOBS: readonly Job[] = [
-  { id: "j-scan-films", kind: "folder-scan", label: "Scanning Films", state: "running", percent: 40 },
+  {
+    id: "j-scan-films",
+    kind: "folder-scan",
+    folderId: "f-films",
+    label: "Scanning Films",
+    state: "running",
+    percent: 40,
+    createdAt: 1790000000000,
+  },
 ];

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { z } from "zod";
-import { ApiError, api } from "@/services/api";
+import { ApiError, api, apiStream } from "@/services/api";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
@@ -56,5 +56,19 @@ describe("api", () => {
   it("never accepts an absolute or non-api request target", async () => {
     await assert.rejects(api("http://example.test/api/state", AnswerSchema), /relative/);
     await assert.rejects(api("/healthz", AnswerSchema), /relative/);
+  });
+
+  it("returns the scan response body without decoding it as an envelope", async () => {
+    globalThis.fetch = async () => new Response("one\ntwo\n", { status: 200 });
+    const body = await apiStream("/api/folders/f-1/scan", { area: "Scan" });
+    assert.equal(await new Response(body).text(), "one\ntwo\n");
+  });
+
+  it("decodes a streamed route refusal through the standard envelope", async () => {
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ ok: false, error: { code: "job.not_running", message: "Finished." } }), {
+        status: 409,
+      });
+    await assert.rejects(apiStream("/api/folders/f-1/scan"), { code: "job.not_running", status: 409 });
   });
 });

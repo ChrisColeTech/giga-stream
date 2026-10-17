@@ -2,11 +2,16 @@
 export interface Job {
   readonly id: string;
   readonly kind: "folder-scan" | "media-probe" | "poster-fetch";
+  readonly folderId?: string;
   /** A short sentence ("Scanning Films"), never a path. */
   readonly label: string;
   readonly state: "queued" | "running" | "cancelling" | "done" | "failed" | "cancelled" | "interrupted";
   /** 0 to 100; absent while the work cannot say how far it is (a scan still walking its folder). */
   readonly percent?: number;
+  readonly error?: { readonly code: string; readonly message: string };
+  readonly createdAt: number;
+  readonly startedAt?: number;
+  readonly finishedAt?: number;
 }
 
 /** A job still going: queued, running or being cancelled. */
