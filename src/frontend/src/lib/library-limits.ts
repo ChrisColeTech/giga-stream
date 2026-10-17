@@ -7,6 +7,10 @@ export const CONTINUE_LIMIT = 10;
 export const SKELETON_CARDS = 12;
 export const SKELETON_ROWS = 10;
 
+/** One page of titles holds this many (the fileserver's LIBRARY_PAGE_SIZE, which cuts every page); the pager draws this
+ *  many card skeletons while the next page is on its way. */
+export const LIBRARY_PAGE_SIZE = 20;
+
 /** The rail draws this many row skeletons while its collections are not there. */
 export const RAIL_SKELETON_ROWS = 5;
 

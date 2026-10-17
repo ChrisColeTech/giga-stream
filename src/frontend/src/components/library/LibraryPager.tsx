@@ -1,4 +1,5 @@
 import { useLibraryPager } from "@/hooks/useLibraryPager";
+import { pagerSkeletonCount } from "@/lib/pager-skeleton";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
 import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 
@@ -16,11 +17,10 @@ export function LibraryPager({
 }) {
   const sentinel = useLibraryPager(hasMore, loading, view, onVisible);
   if (!hasMore && !loading) return null;
+  const count = pagerSkeletonCount(view);
   return (
     <div ref={sentinel} aria-label={loading ? "Loading more titles" : undefined}>
-      {loading && (view === "list" ? <SkeletonRows count={3} /> : (
-        <PosterGridSkeleton count={4} />
-      ))}
+      {loading && (view === "list" ? <SkeletonRows count={count} /> : <PosterGridSkeleton count={count} tail />)}
     </div>
   );
 }
