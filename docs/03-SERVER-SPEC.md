@@ -118,7 +118,14 @@ A stored value that no longer validates reads as its default; an unknown stored 
 | `subtitleLanguage` | a BCP-47 tag or `null` (captions off) | `null` |
 | `lowLatency` | boolean | `false` |
 | `pictureFit` | `fit`, `fill`, `original` | `fit` |
+| `resumeMode` | `ask`, `resume`, `restart` | `ask` |
+| `watchedPercent` | `90`, `95`, `100` | `90` |
+| `liveOnOpen` | `last`, `none` | `last` |
 | `libraryView` | `grid`, `list` | `grid` |
+| `librarySort` | `newest`, `oldest`, `az`, `year` | `newest` |
+| `showContinue` | boolean | `true` |
+| `pauseHistory` | boolean | `false` |
+| `rescanOnStartup` | boolean | `true` |
 | `adminUrl` | an `http` or `https` URL | `http://127.0.0.1:8091` |
 
 `adminUrl` is the admin backend's address. It must be `https`, or `http` on `127.0.0.1` or `localhost`,

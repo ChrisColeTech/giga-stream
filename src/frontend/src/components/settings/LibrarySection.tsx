@@ -1,44 +1,103 @@
-import { Library } from "lucide-react";
+import { FolderSync, Library } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Group, Row, Workspace } from "@/components/ui/Form";
+import { Select } from "@/components/ui/Field";
+import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { Segmented } from "@/components/ui/Segmented";
-import type { Settings } from "@/types/settings";
+import { Toggle } from "@/components/ui/Toggle";
+import { TwoStep } from "@/components/ui/TwoStep";
+import { SORT_OPTIONS } from "@/lib/library-copy";
+import { clearHistory } from "@/services/library";
+import { useAppStore } from "@/store/app-store";
+import type { LibraryPrefs } from "@/types/settings";
 
-type LibraryView = Settings["libraryView"];
-
-const LABELS = ["Default view", "Collections", "History"] as const;
+const LABELS = ["Default view", "Default sort", "Continue watching", "Pause history", "Rescan on startup"] as const;
 
 const VIEWS = [
   { value: "grid", label: "Grid" },
   { value: "list", label: "List" },
-] as const satisfies ReadonlyArray<{ value: LibraryView; label: string }>;
+] as const satisfies ReadonlyArray<{ value: LibraryPrefs["libraryView"]; label: string }>;
 
 export interface LibrarySectionProps {
-  readonly libraryView: LibraryView;
-  readonly onLibraryView: (view: LibraryView) => void;
   /** Opens the Collections window (`06` section 6.3). */
   readonly onOpenCollections: () => void;
   /** Closes Settings and shows History in the library (`06` section 6.2). */
   readonly onOpenHistory: () => void;
 }
 
-/** Library: the default view, and the two ways out of Settings into the library's own windows and views. */
-export function LibrarySection({ libraryView, onLibraryView, onOpenCollections, onOpenHistory }: LibrarySectionProps) {
+/** Library: how it opens (view, sort, the Continue watching strip), whether watching is recorded, the way into History
+ *  and Collections, and the folders' scan at startup. The preferences are the store's, applied at once; Clear history
+ *  is a fileserver call and an inline two-step. */
+export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySectionProps) {
+  const prefs = useAppStore((state) => state.library);
+  const setPrefs = useAppStore((state) => state.setLibraryPrefs);
+  const say = useAppStore((state) => state.say);
+  const clear = () => {
+    const result = clearHistory();
+    if (!result.ok) say(result.message, "warn");
+  };
   return (
     <Workspace labels={LABELS}>
-      <Group id="settings.library" title="Library" icon={Library} last>
+      <Group title="Library" icon={Library}>
         <Row label="Default view" tip="Show the library as a grid of posters or a list.">
-          <Segmented aria-label="Default view" options={VIEWS} value={libraryView} onChange={onLibraryView} />
+          <Segmented
+            aria-label="Default view"
+            options={VIEWS}
+            value={prefs.libraryView}
+            onChange={(libraryView) => setPrefs({ libraryView })}
+          />
+        </Row>
+        <Row label="Default sort" tip="The order the library opens in.">
+          <Select
+            aria-label="Default sort"
+            className={FIELD_CONTROL}
+            value={prefs.librarySort}
+            onChange={(event) =>
+              setPrefs({ librarySort: SORT_OPTIONS.find((option) => option.value === event.target.value)?.value ?? "newest" })
+            }
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </Row>
+        <Row label="Continue watching" tip="Show the Continue watching strip at the top of the library.">
+          <Toggle
+            checked={prefs.showContinue}
+            aria-label="Continue watching"
+            onChange={(on) => setPrefs({ showContinue: on })}
+          />
+        </Row>
+        <Row label="Pause history" tip="While on, nothing you play is written to History.">
+          <Toggle checked={prefs.pauseHistory} aria-label="Pause history" onChange={(on) => setPrefs({ pauseHistory: on })} />
+        </Row>
+        <Row
+          label="History"
+          tip="Show the library's history, or clear it. Clearing never touches your files or collections."
+          trailing={
+            <TwoStep size="sm" question="Clear all history?" title="Clear every watch entry" onConfirm={clear}>
+              Clear history
+            </TwoStep>
+          }
+        >
+          <Button size="sm" variant="ghost" onClick={onOpenHistory}>
+            Open History
+          </Button>
         </Row>
         <Row label="Collections" tip="Open the collections window.">
           <Button size="sm" variant="ghost" onClick={onOpenCollections}>
             Manage collections
           </Button>
         </Row>
-        <Row label="History" tip="Close Settings and show the library's history.">
-          <Button size="sm" variant="ghost" onClick={onOpenHistory}>
-            Open History
-          </Button>
+      </Group>
+      <Group title="Folders" icon={FolderSync} last>
+        <Row label="Rescan on startup" tip="Rescan every folder attached to a collection when the app starts.">
+          <Toggle
+            checked={prefs.rescanOnStartup}
+            aria-label="Rescan on startup"
+            onChange={(on) => setPrefs({ rescanOnStartup: on })}
+          />
         </Row>
       </Group>
     </Workspace>

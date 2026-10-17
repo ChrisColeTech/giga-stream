@@ -512,8 +512,8 @@ Cancel.
 | Section | Rows |
 |---|---|
 | Appearance | Theme (Dark / Light / System), Reduce motion (Follow system / Off / On), Accent (Amber, Blue, Green, Violet, Rose), UI zoom (0.5 to 3, `Ctrl+0` resets) |
-| Playback | Autoplay. The stream preferences (quality, fit, audio and caption languages, latency) have one home, Live's playback rail (§3.3) |
-| Library | Default view (Grid / List), **Collections** (opens that window), **Open History** (closes Settings and selects History) |
+| Playback | **Playback** group: Autoplay, Resume (Ask / Always resume / Always start over), Mark as watched (at 90%, at 95%, at the end). **Live** group: On open (Last channel / Nothing). The stream preferences (quality, fit, audio and caption languages, latency) have one home, Live's playback rail (§3.3) |
+| Library | **Library** group: Default view (Grid / List), Default sort, Continue watching (on/off), Pause history (on/off), History (**Open History**, and **Clear history** as an inline two-step), **Collections** (opens that window). **Folders** group: Rescan on startup |
 | Admin backend | Address (the `adminUrl` setting, saved like any other row), State (connected or not, the backend's revision, when the channels were last read, the error if any) |
 | About | Version and build, runtime mode, links through safe external navigation, licenses, the TMDB logo and notice (`11` section 6) |
 

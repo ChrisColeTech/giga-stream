@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import type { Box } from "@/types/child-window";
-import type { PlaybackPrefs } from "@/types/settings";
+import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import type { OverlayId, PopupAnchor } from "@/types/overlays";
@@ -48,6 +48,8 @@ export interface AppState {
   /** The playback preferences (`03` section 3.2): standing choices that apply to every stream. Phase 1a keeps them
    *  here, applied at once like the theme; phase 2 reads and saves them through the fileserver (`22`). */
   playback: PlaybackPrefs;
+  /** The Library preferences (`03` section 3.2), edited in Settings > Library; phase 1a keeps them here. */
+  library: LibraryPrefs;
   /** Favourites and collection memberships, by item key (`kind:id`). Phase 1a keeps the changes here, so every surface
    *  reads the same marks; phase 2 reads them from the fileserver (`22` section 3.3). */
   marks: {
@@ -71,6 +73,7 @@ export interface AppState {
   setAccent: (accent: Accent) => void;
   setMotion: (motion: MotionPreference) => void;
   setPlayback: (change: Partial<PlaybackPrefs>) => void;
+  setLibraryPrefs: (change: Partial<LibraryPrefs>) => void;
 }
 
 function initialPanes(): Pick<AppState, "open" | "sizes"> {
@@ -110,6 +113,16 @@ export const useAppStore = create<AppState>()((set, get) => ({
     subtitleLanguage: SETTINGS_VALUES.subtitleLanguage,
     lowLatency: SETTINGS_VALUES.lowLatency,
     pictureFit: SETTINGS_VALUES.pictureFit,
+    resumeMode: SETTINGS_VALUES.resumeMode,
+    watchedPercent: SETTINGS_VALUES.watchedPercent,
+    liveOnOpen: SETTINGS_VALUES.liveOnOpen,
+  },
+  library: {
+    libraryView: SETTINGS_VALUES.libraryView,
+    librarySort: SETTINGS_VALUES.librarySort,
+    showContinue: SETTINGS_VALUES.showContinue,
+    pauseHistory: SETTINGS_VALUES.pauseHistory,
+    rescanOnStartup: SETTINGS_VALUES.rescanOnStartup,
   },
   marks: { favourites: {}, memberships: {} },
 
@@ -137,6 +150,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),
   setPlayback: (change) => set({ playback: { ...get().playback, ...change } }),
+  setLibraryPrefs: (change) => set({ library: { ...get().library, ...change } }),
   setFavourite: (key, favourite) => {
     const { marks } = get();
     set({ marks: { ...marks, favourites: { ...marks.favourites, [key]: favourite } } });

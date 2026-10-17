@@ -13,6 +13,13 @@ export const SETTINGS_VALUES: Settings = {
   subtitleLanguage: null,
   lowLatency: false,
   pictureFit: "fit",
+  resumeMode: "ask",
+  watchedPercent: 90,
+  liveOnOpen: "last",
   libraryView: "grid",
+  librarySort: "newest",
+  showContinue: true,
+  pauseHistory: false,
+  rescanOnStartup: true,
   adminUrl: "",
 };

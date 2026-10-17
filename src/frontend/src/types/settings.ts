@@ -24,7 +24,20 @@ export interface Settings {
   /** Low latency where the stream offers it. */
   readonly lowLatency: boolean;
   readonly pictureFit: PictureFit;
+  /** Opening a title left partway: ask (Resume and Start over), always resume, or always start over. */
+  readonly resumeMode: "ask" | "resume" | "restart";
+  /** How far in a title counts as watched and leaves Continue watching. */
+  readonly watchedPercent: 90 | 95 | 100;
+  /** What Live does when it opens: start the last channel, or nothing. */
+  readonly liveOnOpen: "last" | "none";
   readonly libraryView: "grid" | "list";
+  readonly librarySort: "newest" | "oldest" | "az" | "year";
+  /** Whether Library shows the Continue watching strip. */
+  readonly showContinue: boolean;
+  /** While on, nothing played is written to History. */
+  readonly pauseHistory: boolean;
+  /** Rescan every attached folder when the app starts. */
+  readonly rescanOnStartup: boolean;
   /** The admin backend's address. The interface only edits it through the fileserver; it never contacts it. */
   readonly adminUrl: string;
 }
@@ -32,5 +45,16 @@ export interface Settings {
 /** The playback preferences: stable choices that apply to every stream, kept in the store and edited in Live's rail. */
 export type PlaybackPrefs = Pick<
   Settings,
-  "autoplay" | "videoQuality" | "audioLanguage" | "subtitleLanguage" | "lowLatency" | "pictureFit"
+  | "autoplay"
+  | "videoQuality"
+  | "audioLanguage"
+  | "subtitleLanguage"
+  | "lowLatency"
+  | "pictureFit"
+  | "resumeMode"
+  | "watchedPercent"
+  | "liveOnOpen"
 >;
+
+/** The Library preferences, kept in the store and edited in Settings > Library. */
+export type LibraryPrefs = Pick<Settings, "libraryView" | "librarySort" | "showContinue" | "pauseHistory" | "rescanOnStartup">;
