@@ -71,6 +71,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
 
   // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file
   // answers index.html when the dist has one; everything else stays the JSON 404 envelope.
+  // `wildcard: false` registers a route per dist file instead of a catch-all, so a static miss is
+  // an ordinary no-route request — the one not-found handler owns it, never a plugin 404.
   const spaEntry = path.join(webDist, "index.html");
   registerErrorHandling(
     app,
@@ -79,6 +81,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
 
   await app.register(fastifyStatic, {
     root: webDist,
+    wildcard: false,
     index: ["index.html"],
     cacheControl: false,
     allowedPath: (pathName) => isServed(pathName),
