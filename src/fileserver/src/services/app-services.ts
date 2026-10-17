@@ -51,7 +51,6 @@ export interface ServiceOptions {
   /** Test seam: `POST /api/fs/dialog` then takes `{ name }` under this root (3.8). */
   testFolderRoot?: string;
 }
-
 /** Every service of the fileserver, built once from the one database (docs/01 section 4.1). */
 export function createAppServices(options: ServiceOptions) {
   const database: Database = openDatabase(path.join(options.dataDir, "giga-stream.db"));
