@@ -24,6 +24,8 @@ export const ARM_TIMEOUT_MS = 5000;
 export const ARMED_LABEL = "Remove collection?";
 export const FOLDER_ARMED_LABEL = "Remove folder?";
 export const CONSEQUENCE = "Original files remain untouched.";
+/** What removing a folder leaves on disk (`03` section 3.8: its files are never touched). */
+export const FOLDER_CONSEQUENCE = "The files on disk stay.";
 
 /** A folder that has never finished a scan. */
 export const NEVER_SCANNED = "Never scanned";
