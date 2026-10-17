@@ -90,6 +90,8 @@ export interface LibraryItem {
   /** A local file only: from its height, for example `1080p`; TMDB titles have none. */
   quality?: string;
   genres: string[];
+  /** TMDB's rating, 0 to 10, unrounded; absent when unknown (a local file never has one). */
+  rating?: number;
   favorite: boolean;
   /** Required only for `view=collection`; manual wins over a folder-derived occurrence. */
   collectionSource?: CollectionSource;

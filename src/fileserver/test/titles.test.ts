@@ -177,6 +177,8 @@ test("the library browses the backend's pages with flags, facets and a cursor", 
   assert.equal(pick(first.body, "data.items.0.ref.id"), "movie-603");
   assert.equal(pick(first.body, "data.items.0.posterUrl"), `/api/images/${imageIdOf(POSTER)}`);
   assert.equal(pick(first.body, "data.items.1.ref.id"), "tv-1399");
+  assert.equal(pick(first.body, "data.items.0.rating"), 8.2, "the card carries the rating, unrounded");
+  assert.equal(pick(first.body, "data.items.1.rating"), 8.4);
   const cursor = pick(first.body, "data.nextCursor");
   assert.ok(typeof cursor === "string");
   const second = await send(t.app, "GET", `/api/library?cursor=${encodeURIComponent(String(cursor))}`);
