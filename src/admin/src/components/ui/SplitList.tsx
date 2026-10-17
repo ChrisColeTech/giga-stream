@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 import { SHIMMER } from './SkeletonRows'
 
 /* THE SPLIT LIST (doc 03 §Frontend Rules, doc 06 §1c): a parent → child →

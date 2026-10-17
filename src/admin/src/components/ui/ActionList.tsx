@@ -1,11 +1,12 @@
 import { Plus, RefreshCw, Search, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { IconButton } from '@/components/ui/IconButton'
-import { Input, Select } from '@/components/ui/Field'
+import { IconButton } from '@giga/ui/controls/IconButton'
+import { Input } from '@giga/ui/controls/Input'
+import { Select } from '@giga/ui/controls/Select'
 import { ACCENT, type Accent } from '@/components/ui/Form'
-import { Segmented } from '@/components/ui/Segmented'
+import { Segmented } from '@giga/ui/controls/Segmented'
 import { SHIMMER } from '@/components/ui/SkeletonRows'
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* THE ACTION LIST (nano-gpt-proxy `action-list.tsx`, ported to the family
  * tokens; doc 06 §2.2 "the models list in the action-list shape"): a header

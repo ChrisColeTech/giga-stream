@@ -1,8 +1,8 @@
 import { LayoutGrid, List, Rows3 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Field";
+import { Button } from "@giga/ui/controls/Button";
+import { Select } from "@giga/ui/controls/Select";
 import { FIELD_CONTROL } from "@/components/ui/Form";
-import { Segmented } from "@/components/ui/Segmented";
+import { Segmented } from "@giga/ui/controls/Segmented";
 import { LIBRARY_COPY, SORT_OPTIONS, WATCHED_OPTIONS } from "@/lib/library-copy";
 import {
   FILTER_DEFAULTS,

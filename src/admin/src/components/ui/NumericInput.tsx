@@ -1,8 +1,8 @@
 import type { InputHTMLAttributes } from 'react'
 import { useState } from 'react'
 
-import { cn } from '@/lib/cn'
-import { Input } from './Field'
+import { cn } from '@giga/ui/lib/cn'
+import { Input } from '@giga/ui/controls/Input'
 
 /* THE numeric entry control (doc 03 §Shared panel primitives). No surface
  * grows its own — a second copy is a second answer to the question below.

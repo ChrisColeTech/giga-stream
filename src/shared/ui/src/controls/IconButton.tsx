@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 const BASE =
   'inline-flex size-ctl-md items-center justify-center rounded-ctl border border-transparent ' +

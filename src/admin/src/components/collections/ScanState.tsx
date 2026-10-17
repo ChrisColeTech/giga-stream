@@ -1,4 +1,4 @@
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { SCAN_LABEL } from "@/lib/collections-copy";
 import type { CollectionRow } from "@/types/collection";
 

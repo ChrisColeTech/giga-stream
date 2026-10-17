@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* THE HAND-OFF FROM SKELETON TO CONTENT (doc 03 §Loading and Empty). A
  * region that is waiting shows its skeleton — the same height as the

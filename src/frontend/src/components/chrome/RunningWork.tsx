@@ -1,5 +1,5 @@
 import { Square } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { useScanObserver } from "@/hooks/useScanObserver";
 import { cancelJob, listJobs } from "@/services/jobs";
 import { useAppStore } from "@/store/app-store";

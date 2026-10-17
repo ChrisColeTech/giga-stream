@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 
 export interface CollectionIconActionProps {
   readonly icon: ComponentType<{ className?: string }>;

@@ -1,4 +1,4 @@
-import { Select } from "@/components/ui/Field";
+import { Select } from "@giga/ui/controls/Select";
 import { hasSourceChoice, type PlayerSource } from "@/lib/player-sources";
 
 export interface PlayerSourceControlProps {

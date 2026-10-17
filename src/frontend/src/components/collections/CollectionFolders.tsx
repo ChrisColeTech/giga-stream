@@ -1,5 +1,5 @@
 import { Folder, FolderPlus } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
 import { Actions, Group } from "@/components/ui/Form";

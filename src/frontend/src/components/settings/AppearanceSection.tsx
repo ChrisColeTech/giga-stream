@@ -1,9 +1,9 @@
 import { Eye, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { Actions, Group, Row, Workspace } from "@/components/ui/Form";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
-import { Segmented } from "@/components/ui/Segmented";
+import { Segmented } from "@giga/ui/controls/Segmented";
 import { Swatches } from "@/components/ui/Swatches";
 import { useAppStore } from "@/store/app-store";
 import type { MotionPreference, ThemeMode } from "@/types/shell";

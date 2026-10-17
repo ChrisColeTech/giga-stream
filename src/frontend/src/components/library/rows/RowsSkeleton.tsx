@@ -1,6 +1,6 @@
 import { SHIMMER as FILL } from "@/components/ui/SkeletonCards";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { POSTER_COLUMNS, ROW_GAP, SKELETON_SHELF_CARDS, SKELETON_SHELVES } from "./rows-constants";
 
 /** The Rows view while it has nothing to show: shelves of card skeletons in the shape of their heading and row, on the

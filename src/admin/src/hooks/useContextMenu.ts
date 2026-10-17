@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { on } from "@/lib/bus";
+import { on } from "@giga/ui/lib/bus";
 import type { MenuAnchor, MenuItem } from "@/types/menu";
 
 interface OpenMenu {

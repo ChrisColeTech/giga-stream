@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 /* A REAL SWITCH for a real boolean (owner, 2026-08-06: "why is on/off a drop
  * down? that makes no sense from a ux").

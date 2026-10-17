@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -24,6 +24,9 @@ interface SegmentedProps<T extends string> {
   dense?: boolean
   /** Every chip the width of the widest (owner, 2026-09-05: labels with counts made the chips "all different widths"). */
   equal?: boolean
+  /** The form's field size (docs/27 step 2a): 36px chips at the body size, equal segments spanning the row, for a one-of
+   *  choice in a labelled form row. Same pills; only the size and the span differ. */
+  field?: boolean
   className?: string
 }
 
@@ -36,6 +39,10 @@ interface SegmentedProps<T extends string> {
  * anywhere else. Counts ride inside the chip's label. `equal` sizes every
  * chip to the widest so a row never re-flows as counts change. */
 const ROW = 'inline-flex flex-none flex-wrap items-center gap-1.5'
+const EQUAL_ROW = 'inline-grid auto-cols-fr grid-flow-col gap-1.5'
+/** The field size spans the row: equal segments that take the row's full width. */
+const FIELD_ROW = 'grid w-full min-w-0 flex-1 auto-cols-fr grid-flow-col gap-1.5'
+const FIELD_CHIP = 'h-9 px-3 text-sm'
 
 const CHIP =
   'inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.25 rounded-full border border-ctl-edge ' +
@@ -48,9 +55,20 @@ const CHIP =
 export const SEG_FULL = 'flex [&>button]:flex-1 [&>button]:justify-center'
 
 /** A one-of control: one home for a small closed set of choices. */
-export function Segmented<T extends string>({ options, value, onChange, dense = false, equal = false, className, ...rest }: SegmentedProps<T>) {
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  dense = false,
+  equal = false,
+  field = false,
+  className,
+  ...rest
+}: SegmentedProps<T>) {
+  const row = field ? FIELD_ROW : equal ? EQUAL_ROW : ROW
+  const size = field ? FIELD_CHIP : dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs'
   return (
-    <div role="group" className={cn(equal ? 'inline-grid auto-cols-fr grid-flow-col gap-1.5' : ROW, className)} {...rest}>
+    <div role="group" className={cn(row, className)} {...rest}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -59,7 +77,7 @@ export function Segmented<T extends string>({ options, value, onChange, dense = 
           data-active={option.value === value ? '' : undefined}
           disabled={option.disabled}
           title={option.disabled ? option.disabledReason : undefined}
-          className={cn(CHIP, dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs')}
+          className={cn(CHIP, size)}
           onClick={() => onChange(option.value)}
         >
           {option.icon}

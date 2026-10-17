@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 import { FIELD_LABEL, FIELD_ROW } from './NumberField'
 import { NumericInput } from './NumericInput'
 

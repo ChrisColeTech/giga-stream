@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 import { NumericInput } from './NumericInput'
 
 /* A labelled row for a value that is SPECIFIED exactly — a seed, a face

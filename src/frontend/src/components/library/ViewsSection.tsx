@@ -1,7 +1,7 @@
 import { NavGroup, NavItem } from "@/components/ui/NavRail";
 import type { SourceId, ViewCounts } from "@/lib/library-query";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 
 const VIEWS = [
   { id: "all", label: "All" },

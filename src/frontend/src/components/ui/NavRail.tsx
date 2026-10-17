@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Button } from './Button'
+import { Button } from '@giga/ui/controls/Button'
 
 /* THE left-pane navigation grammar (family ui/NavRail.tsx): a way back at
  * the top when the page is a drill-in, the item's name, then headed groups

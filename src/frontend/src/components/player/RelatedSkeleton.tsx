@@ -1,5 +1,5 @@
 import { SHIMMER } from "@/components/ui/SkeletonCards";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 
 /** Matches the recommendation image and caption geometry without inventing title text. */
 export function RelatedSkeleton() {

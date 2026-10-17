@@ -1,6 +1,6 @@
 import { ACCENT } from "@/components/ui/Form";
 import { EpisodePicture } from "@/components/player/EpisodePicture";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { EpisodeMarker } from "@/lib/player-view";
 import type { Episode } from "@/types/title";

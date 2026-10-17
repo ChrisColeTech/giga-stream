@@ -1,9 +1,9 @@
 import { Ellipsis, Info, Play, Star } from "lucide-react";
 import { useRef, type MouseEvent } from "react";
-import { Button } from "@/components/ui/Button";
-import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@giga/ui/controls/Button";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { PosterImage } from "@/components/ui/PosterImage";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { identityLine, progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";

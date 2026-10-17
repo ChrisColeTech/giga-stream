@@ -2,11 +2,11 @@ import { ChevronDown, RotateCcw } from 'lucide-react'
 import { animate, motion, type AnimationPlaybackControls } from 'framer-motion'
 import { useId, useLayoutEffect, useRef, type ReactNode } from 'react'
 
-import { Button } from '@/components/ui/Button'
-import { Toggle } from '@/components/ui/Toggle'
+import { Button } from '@giga/ui/controls/Button'
+import { Toggle } from '@giga/ui/controls/Toggle'
 import { DUR_COLLAPSE_MS, EASE_P2P } from '@/constants/motion'
 import { useReduceMotion } from '@/hooks/useReduceMotion'
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* THE ONLY COLLAPSIBLE PANEL BLOCK (doc 03 §Shared panel primitives). A
  * surface does not grow a private copy; the compose rail is the first consumer

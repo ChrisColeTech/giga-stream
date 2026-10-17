@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* Every waiting OR empty region wears these (owner, 2026-08-06: "skeletons
  * everywhere for the empty states, and remove the text labels" — `StateLine`

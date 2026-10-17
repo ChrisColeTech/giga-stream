@@ -1,8 +1,8 @@
 import { Search, X } from "lucide-react";
-import { Input } from "@/components/ui/Field";
+import { Input } from "@giga/ui/controls/Input";
 import { FIELD_CONTROL } from "@/components/ui/Form";
-import { IconButton } from "@/components/ui/IconButton";
-import { cn } from "@/lib/cn";
+import { IconButton } from "@giga/ui/controls/IconButton";
+import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 
 export interface SearchFieldProps {

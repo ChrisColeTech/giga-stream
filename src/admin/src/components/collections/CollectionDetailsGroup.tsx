@@ -1,9 +1,9 @@
 import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
+import { Button } from "@giga/ui/controls/Button";
+import { Input } from "@giga/ui/controls/Input";
 import { Actions, FIELD_CONTROL, Group, Row } from "@/components/ui/Form";
-import { Segmented } from "@/components/ui/Segmented";
+import { Segmented } from "@giga/ui/controls/Segmented";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import type { CollectionRow, CollectionType } from "@/types/collection";

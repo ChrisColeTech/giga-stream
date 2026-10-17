@@ -1,5 +1,5 @@
 import { Database, Info } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { Group, Row, Workspace } from "@/components/ui/Form";
 import { FACT_UNKNOWN, SETTINGS_LABELS, TMDB_NOTICE } from "@/constants/settings-sections";
 import { readLicences } from "@/services/settings";

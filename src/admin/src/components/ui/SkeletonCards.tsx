@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* Mirrors the real gallery card — thumbnail block over two caption lines — so
  * the layout is already correct when the data lands and nothing shifts

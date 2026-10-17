@@ -1,4 +1,4 @@
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import type { Accent } from "@/types/shell";
 
 /** Each swatch always shows its own family, independent of the active accent. */

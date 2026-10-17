@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 /* A MULTI-SELECT in the segmented vocabulary (giga-images merge-ui, verbatim):
  * the same recessed track and raised, accent-text chips as `Segmented`, but

@@ -1,6 +1,6 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { EpisodeRow } from "@/components/player/EpisodeRow";
-import { Select } from "@/components/ui/Field";
+import { Select } from "@giga/ui/controls/Select";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { progressRatio } from "@/lib/library-facts";

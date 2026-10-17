@@ -1,5 +1,5 @@
 import { PanelBottom, PanelLeft, PanelRight } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { SURFACES } from "@/constants/surfaces";
 import { useAppStore } from "@/store/app-store";
 import { usePaneOpen, useSurface, useWorkSurfaceOpen } from "@/store/selectors";

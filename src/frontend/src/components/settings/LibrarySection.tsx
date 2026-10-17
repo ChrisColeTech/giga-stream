@@ -1,9 +1,9 @@
 import { FolderSync, Library } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Field";
+import { Button } from "@giga/ui/controls/Button";
+import { Select } from "@giga/ui/controls/Select";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
-import { Segmented } from "@/components/ui/Segmented";
-import { Toggle } from "@/components/ui/Toggle";
+import { Segmented } from "@giga/ui/controls/Segmented";
+import { Toggle } from "@giga/ui/controls/Toggle";
 import { ArmedButton } from "@/components/ui/ArmedButton";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import type { ReactNode } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatClock } from "@/lib/player-format";

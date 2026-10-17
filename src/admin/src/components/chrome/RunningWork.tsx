@@ -1,6 +1,6 @@
 import { Square } from "lucide-react";
 import { JOBS } from "@/fixtures/jobs";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { cancelJob } from "@/services/jobs";
 import { useAppStore } from "@/store/app-store";
 import { isLive } from "@/types/job";

@@ -1,8 +1,9 @@
 import { Search, X } from "lucide-react";
-import { Input, Select } from "@/components/ui/Field";
-import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@giga/ui/controls/Input";
+import { Select } from "@giga/ui/controls/Select";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { FIELD_CONTROL } from "@/components/ui/NumberField";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { categoryOptions } from "@/lib/live-channels";
 import { CATEGORY_LABEL, CLEAR_SEARCH_LABEL, SEARCH_LABEL } from "@/lib/live-constants";
 import type { ChannelCategory } from "@/types/channel";

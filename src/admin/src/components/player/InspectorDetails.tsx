@@ -1,7 +1,7 @@
 import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PlayerFact } from "@/components/player/PlayerFact";
 import { FIELD_LABEL } from "@/components/ui/NumberField";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { PlayerView } from "@/lib/player-view";
 

@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 /* The token editor for extension lists (docs/02 §6.2): a recessed track
  * holding raised chips; Enter or comma commits the typed token, Backspace on

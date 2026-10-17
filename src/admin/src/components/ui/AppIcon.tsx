@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* The brand mark as inline SVG — the same drawing as resources/icon.svg
  * (tile + down-arrow-to-line), but painted from theme tokens: the tile is

@@ -3,7 +3,7 @@ import { Group, Row, Wide } from "@/components/ui/Form";
 import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { durationLabel, identityLine, ratingLabel, seasonsLabel } from "@/lib/library-facts";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";

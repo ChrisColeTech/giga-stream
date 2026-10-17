@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
-import { Input } from "@/components/ui/Field";
+import { Input } from "@giga/ui/controls/Input";
 import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
 import { FACT_UNKNOWN, NEEDS_FILESERVER, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 
 /* A read-only fact, in LoRA's About pane style. */
 const FACT = "flex h-9 items-center font-mono text-sm text-muted";

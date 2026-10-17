@@ -1,4 +1,4 @@
-import { emit } from "@/lib/bus";
+import { emit } from "@giga/ui/lib/bus";
 import type { MenuItem } from "@/types/menu";
 
 /**

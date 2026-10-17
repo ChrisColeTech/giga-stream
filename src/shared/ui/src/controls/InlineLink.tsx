@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '../lib/cn'
 
 /** A link-styled action inside a sentence (audit F32): Body 14, the accent, underlined on hover — one component, never a hand-drawn underline button. */
 export function InlineLink({ className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {

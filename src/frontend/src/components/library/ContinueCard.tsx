@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { continueLabel, progressRatio, remainingLabel } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { posterTone } from "@/lib/poster-tone";

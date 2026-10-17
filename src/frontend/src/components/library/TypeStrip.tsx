@@ -1,5 +1,5 @@
-import { Segmented } from "@/components/ui/Segmented";
-import { IconButton } from "@/components/ui/IconButton";
+import { Segmented } from "@giga/ui/controls/Segmented";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { SCOPE_OPTIONS } from "@/lib/library-copy";
 import type { Scope } from "@/lib/library-query";
 import { RefreshCw } from "lucide-react";

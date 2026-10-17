@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react'
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { cn } from '@/lib/cn'
+import { cn } from '@giga/ui/lib/cn'
 
 /* A REAL tooltip (doc 06 §1c): a styled bubble above its anchor on hover and
  * on keyboard focus, wired with aria-describedby, never the browser's yellow

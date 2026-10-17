@@ -1,5 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { CHANNELS_HEADING, REFRESH_LABEL } from "@/lib/live-constants";
 import type { Channel, ChannelList as ChannelData } from "@/types/channel";
 import { ChannelDetails } from "./ChannelDetails";
