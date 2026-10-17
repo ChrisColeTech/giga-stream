@@ -24,11 +24,18 @@ afterEach(() => { globalThis.fetch = originalFetch; });
 describe("optimistic favorites", () => {
   it("applies immediately, then rolls back and reports a refusal", async () => {
     let rejectRequest: ((value: Response) => void) | undefined;
-    globalThis.fetch = async () => new Promise((resolve) => { rejectRequest = resolve; });
+    let announceStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => { announceStarted = resolve; });
+    globalThis.fetch = async () => new Promise((resolve) => {
+      rejectRequest = resolve;
+      announceStarted?.();
+    });
     const ref = { kind: "title" as const, id: "favorite-rollback" };
     const pending = changeFavourite(ref, true);
     assert.equal(useAppStore.getState().marks.favourites["title:favorite-rollback"], true);
-    rejectRequest?.(refusal("Favorite refused."));
+    await started;
+    assert.ok(rejectRequest);
+    rejectRequest(refusal("Favorite refused."));
     await pending;
     assert.equal(useAppStore.getState().marks.favourites["title:favorite-rollback"], false);
     assert.equal(useAppStore.getState().notice?.sentence, "Favorite refused.");
@@ -36,17 +43,29 @@ describe("optimistic favorites", () => {
 
   it("serializes rapid toggles so the newest intent is persisted last", async () => {
     const requests: Array<{ method?: string; resolve: (value: Response) => void }> = [];
-    globalThis.fetch = async (_input, init) => new Promise((resolve) => requests.push({ method: init?.method, resolve }));
+    let announceFirst: (() => void) | undefined;
+    let announceSecond: (() => void) | undefined;
+    const firstStarted = new Promise<void>((resolve) => { announceFirst = resolve; });
+    const secondStarted = new Promise<void>((resolve) => { announceSecond = resolve; });
+    globalThis.fetch = async (_input, init) => new Promise((resolve) => {
+      requests.push({ method: init?.method, resolve });
+      if (requests.length === 1) announceFirst?.();
+      else announceSecond?.();
+    });
     const ref = { kind: "title" as const, id: "favorite-race" };
     const first = changeFavourite(ref, true);
     const second = changeFavourite(ref, false);
     assert.equal(useAppStore.getState().marks.favourites["title:favorite-race"], false);
+    await firstStarted;
     assert.deepEqual(requests.map((request) => request.method), ["PUT"]);
-    requests[0]?.resolve(success({ ref, favorite: true }));
-    await Promise.resolve();
-    await Promise.resolve();
+    const firstRequest = requests[0];
+    assert.ok(firstRequest);
+    firstRequest.resolve(success({ ref, favorite: true }));
+    await secondStarted;
     assert.deepEqual(requests.map((request) => request.method), ["PUT", "DELETE"]);
-    requests[1]?.resolve(success({ ref, favorite: false }));
+    const secondRequest = requests[1];
+    assert.ok(secondRequest);
+    secondRequest.resolve(success({ ref, favorite: false }));
     await Promise.all([first, second]);
     assert.equal(useAppStore.getState().marks.favourites["title:favorite-race"], false);
   });
@@ -66,19 +85,26 @@ describe("optimistic memberships", () => {
 
   it("does not let an older membership read overwrite a newer toggle", async () => {
     let resolveRead: ((value: Response) => void) | undefined;
+    let announceRead: (() => void) | undefined;
+    const readStarted = new Promise<void>((resolve) => { announceRead = resolve; });
     let membershipReads = 0;
     globalThis.fetch = async (input) => {
       if (String(input).startsWith("/api/items/")) {
         membershipReads += 1;
-        if (membershipReads === 1) return new Promise((resolve) => { resolveRead = resolve; });
+        if (membershipReads === 1) return new Promise((resolve) => {
+          resolveRead = resolve;
+          announceRead?.();
+        });
         return success({ memberships: [{ collectionId: "c1", source: "manual" }] });
       }
       return success(collection(1));
     };
     const ref = { kind: "title" as const, id: "member-stale" };
     const read = loadMemberships(ref);
+    await readStarted;
     await changeMembership(ref, "c1", true);
-    resolveRead?.(success({ memberships: [] }));
+    assert.ok(resolveRead);
+    resolveRead(success({ memberships: [] }));
     assert.deepEqual(await read, [{ collectionId: "c1", source: "manual" }]);
     assert.deepEqual(useAppStore.getState().marks.memberships["title:member-stale"], ["c1"]);
   });
@@ -95,19 +121,31 @@ describe("optimistic memberships", () => {
 
   it("keeps different collection races independent", async () => {
     const pending = new Map<string, (response: Response) => void>();
+    let announceFirst: (() => void) | undefined;
+    let announceSecond: (() => void) | undefined;
+    const firstStarted = new Promise<void>((resolve) => { announceFirst = resolve; });
+    const secondStarted = new Promise<void>((resolve) => { announceSecond = resolve; });
     globalThis.fetch = async (input) => {
       const path = String(input);
       if (path.startsWith("/api/items/")) {
         return success({ memberships: [{ collectionId: "c2", source: "manual" }] });
       }
-      return new Promise((resolve) => pending.set(path, resolve));
+      return new Promise((resolve) => {
+        pending.set(path, resolve);
+        if (path === "/api/collections/c1/items") announceFirst?.();
+        if (path === "/api/collections/c2/items") announceSecond?.();
+      });
     };
     const ref = { kind: "title" as const, id: "member-independent" };
     const first = changeMembership(ref, "c1", true);
     const second = changeMembership(ref, "c2", true);
-    pending.get("/api/collections/c2/items")?.(success({ ...collection(1), id: "c2" }));
-    await Promise.resolve();
-    pending.get("/api/collections/c1/items")?.(refusal("First refused."));
+    await Promise.all([firstStarted, secondStarted]);
+    const secondRequest = pending.get("/api/collections/c2/items");
+    const firstRequest = pending.get("/api/collections/c1/items");
+    assert.ok(secondRequest);
+    assert.ok(firstRequest);
+    secondRequest(success({ ...collection(1), id: "c2" }));
+    firstRequest(refusal("First refused."));
     await Promise.all([first, second]);
     assert.deepEqual(useAppStore.getState().marks.memberships["title:member-independent"], ["c2"]);
     assert.equal(useAppStore.getState().notice?.sentence, "First refused.");
@@ -134,11 +172,15 @@ describe("optimistic memberships", () => {
     const second = changeMembership(ref, "c2", true);
     await secondStarted;
     assert.equal(snapshots.length, 2);
-    snapshots[1]?.(success({ memberships: [
+    const newerSnapshot = snapshots[1];
+    const olderSnapshot = snapshots[0];
+    assert.ok(newerSnapshot);
+    assert.ok(olderSnapshot);
+    newerSnapshot(success({ memberships: [
       { collectionId: "c1", source: "manual" }, { collectionId: "c2", source: "manual" },
     ] }));
     await Promise.resolve();
-    snapshots[0]?.(success({ memberships: [{ collectionId: "c1", source: "manual" }] }));
+    olderSnapshot(success({ memberships: [{ collectionId: "c1", source: "manual" }] }));
     await Promise.all([first, second]);
     assert.deepEqual(useAppStore.getState().marks.memberships["title:member-snapshot-order"], ["c1", "c2"]);
   });
