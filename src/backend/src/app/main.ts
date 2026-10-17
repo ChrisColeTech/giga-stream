@@ -29,6 +29,8 @@ const BAR = { color: "#18181b", symbolColor: "#a3a3ac", height: 40 } as const;
 
 let backend: BackendHandle | null = null;
 let mainWindow: BrowserWindow | null = null;
+/** What the window loads, kept from startup so a destroyed window can be recreated. */
+let target: { url: string; origin: string } | null = null;
 // Module-level: a Tray that is garbage collected disappears from the notification area.
 let tray: TrayHandle | null = null;
 /** Set once any quit begins (the tray's, `app.quit()`, a system shutdown): from then on a close really closes. */
@@ -45,10 +47,16 @@ function windowSize(): { width: number; height: number; minWidth: number; minHei
   };
 }
 
-/** Shows the same window object again (the page stays loaded): restored when minimised, then focused. */
+/** Shows the same window object again (the page stays loaded): restored when minimised, then focused. A window the
+ *  page itself destroyed (`window.close()` from the renderer) is recreated, so the tray always has a way back. */
 function showWindow(): void {
-  const window = mainWindow;
-  if (window === null || window.isDestroyed()) return;
+  let window = mainWindow;
+  if (window === null || window.isDestroyed()) {
+    if (target === null || quitting) return;
+    window = createWindow(target.url, target.origin); // shown and focused when ready
+    mainWindow = window;
+    return;
+  }
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();
@@ -79,7 +87,16 @@ function createWindow(url: string, origin: string): BrowserWindow {
     dialog.showOpenDialog(window, options),
   );
   installWindowOverlayIpc(window.webContents.ipc, trusted, () => window);
-  window.once("ready-to-show", () => window.show());
+  window.once("ready-to-show", () => {
+    window.show();
+    window.focus();
+  });
+  // A crashed or killed renderer is not a dead window: load the page again.
+  window.webContents.on("render-process-gone", (_event, details) => {
+    if (quitting || details.reason === "clean-exit" || window.isDestroyed()) return;
+    console.warn("[giga-stream-admin] the page's process ended:", details.reason);
+    window.webContents.reload();
+  });
   // Close (the button, Alt+F4) hides while the app runs; a quit lets it through. A logoff or shutdown is a quit too.
   window.on("close", (event) => {
     if (quitting) return;
@@ -89,8 +106,9 @@ function createWindow(url: string, origin: string): BrowserWindow {
   window.on("session-end", () => {
     quitting = true;
   });
+  // Only forgets the window (never quits: `window-all-closed` does nothing); a newer one is left alone.
   window.on("closed", () => {
-    mainWindow = null;
+    if (mainWindow === window) mainWindow = null;
   });
   void window.loadURL(url);
   return window;
@@ -108,6 +126,7 @@ if (!app.requestSingleInstanceLock()) {
       backend = await startOrAttach();
       const url = await resolveAppUrl(backend.origin);
       console.info(`[giga-stream-admin] ${backend.attached ? "attached to" : "started"} ${backend.origin}; window on ${url}`);
+      target = { url, origin: backend.origin };
       mainWindow = createWindow(url, backend.origin);
       tray = createTray({ showWindow, quit: () => app.quit(), address: backend.origin });
     })
