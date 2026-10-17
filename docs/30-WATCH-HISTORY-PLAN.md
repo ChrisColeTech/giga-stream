@@ -148,7 +148,7 @@ move the stage.
 | `lib/player-progress.ts` | `PlayerProgress`: `key`, `open`, `update` (throttle, duration kept, first duration forces a write), `restart`, `flush(keepalive)`; delete the 30 second constant; `ProgressBeginQueue.settled` | <= 150 |
 | `lib/watch-marks.ts` (new) | `WatchMark`, `markOf(entry)`, `withWatchMark(item, mark)` | <= 50 |
 | `lib/player-view.ts` | `resumeOf` requires a real saved position (> 0) | +1 |
-| `lib/player-opening.ts` | `applyOpeningPosition` skips an unknown or live duration | +3 |
+| `lib/player-opening.ts` | `applyOpeningPosition` skips an unknown or live duration; `reportedDuration` (the embed runtime fallback rule) | +20 |
 | `store/slices/watch-slice.ts` (new) | `watchMarks`, `rememberWatch`, `forgetWatch`, `forgetAllWatch` | <= 70 |
 | `store/app-store.ts` | spread the slice | +3 |
 | `hooks/usePlayerProgress.ts` | rewrite without `setInterval`: session, begin/open/update/playing/restart/flush, `pagehide` and `visibilitychange` listeners, one failure notice until a success, library refresh at boundaries | <= 150 |
@@ -175,8 +175,10 @@ leaves existing entries; position clamps to duration; malformed bodies (float, n
 
 Interface (`test/`): `watch-throttle.test.ts` (due/not due, rewind, seek, first write); `player-progress.test.ts` updated
 (open once and idempotent, throttle by media time, duration retained, first duration forces a write, restart writes 0,
-keepalive flag passed, paused enabled flag, begin queue); `watch-marks.test.ts`; `watch-slice` in `app-store` tests
-(remember/forget/forget all); `api.test.ts` (keepalive passed to fetch, quiet adds no row on success and one on failure).
+keepalive flag passed, paused enabled flag, begin queue, opening seek skipped for live media, the embed runtime
+fallback rule); `watch-marks.test.ts` (marks, the Resume read of a mark, `resumeOf` ignoring position 0, and the watch
+slice's remember / forget / forget all); `api.test.ts` (keepalive passed to fetch, quiet adds no row on success and one on
+failure).
 
 ## 7. Failure modes
 

@@ -128,6 +128,7 @@ export async function removeWatchEntry(
   optimistic();
   try {
     await removeWatch(watchId);
+    useAppStore.getState().forgetWatch(watchId);
     useAppStore.getState().requestLibraryRefresh();
     return true;
   } catch (error: unknown) {
@@ -144,6 +145,7 @@ export async function clearWatchHistory(
   optimistic();
   try {
     await clearWatch();
+    useAppStore.getState().forgetAllWatch();
     useAppStore.getState().requestLibraryRefresh();
     return true;
   } catch (error: unknown) {

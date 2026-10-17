@@ -4,14 +4,16 @@ import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
-import { changeFavourite, changeMembership } from "@/components/library/library-service";
+import { changeFavourite, changeMembership, removeWatchEntry } from "@/components/library/library-service";
 import { usePlayerData } from "@/hooks/usePlayerData";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
+import { usePlayerResume } from "@/hooks/usePlayerResume";
 import { usePlayerSources } from "@/hooks/usePlayerSources";
 import { collectionRow } from "@/lib/collections-model";
+import { itemKey } from "@/lib/library-marks";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { sourceFailureReason } from "@/lib/player-copy";
-import { openingPosition } from "@/lib/player-opening";
+import { reportedDuration } from "@/lib/player-opening";
 import { PlayerNavigation, settleLatestNavigation } from "@/lib/player-navigation";
 import { settleFinalProgress } from "@/lib/player-progress";
 import { selectedPlayerSource } from "@/lib/player-sources";
@@ -20,7 +22,7 @@ import {
   playingEpisodeOf, reducePlayerSession,
 } from "@/lib/player-session";
 import { resumeOf, viewOf } from "@/lib/player-view";
-import { removeWatch } from "@/services/watch";
+import { withWatchMark } from "@/lib/watch-marks";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem } from "@/types/library";
 
@@ -28,24 +30,23 @@ export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
   const [paused, setPaused] = useState(true);
   const [retry, setRetry] = useState(0); const [dataRetry, setDataRetry] = useState(0);
-  const [choice, setChoice] = useState<"ask" | "resume" | "restart">("ask");
   const [userInitiated, setUserInitiated] = useState(false);
   const handled = useRef(0); const navigation = useRef(new PlayerNavigation());
-  const currentPosition = useRef(0); const [sourcePosition, setSourcePosition] = useState(0);
   const data = usePlayerData(session, dataRetry); const progress = usePlayerProgress(active);
   const marks = useAppStore((state) => state.marks);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const libraryItems = useAppStore((state) => state.libraryItems);
   const media = useAppStore((state) => state.playerMedia);
-  const resumeMode = useAppStore((state) => state.playback.resumeMode);
+  const mark = useAppStore((state) => session.current === null ? undefined : state.watchMarks[itemKey(session.current.ref)]);
   const setPlayerItem = useAppStore((state) => state.setPlayerItem);
   const setSources = useAppStore((state) => state.setPlayerSources);
   const setSource = useAppStore((state) => state.setPlayerSource);
   const setStage = useAppStore((state) => state.setPlayerStage);
   const setSurface = useAppStore((state) => state.setSurface);
   const requestLibrary = useAppStore((state) => state.requestLibrary);
+  /* What this session wrote or removed is newer than the item's snapshot, so Resume and the markers read it first. */
   const view = viewOf(session, marks, {
-    item: data.item,
+    item: withWatchMark(data.item ?? session.current?.libraryItem, mark),
     detail: data.detail,
     local: data.localInfo === undefined ? undefined : { info: data.localInfo },
     episodes: data.episodes,
@@ -57,9 +58,10 @@ export function PlayerPage({ active }: { active: boolean }) {
   const sources = usePlayerSources(session, data);
   const activeSource = selectedPlayerSource(sources, media.activeSourceId);
   const stageView = activeSource?.id === media.activeSourceId ? view : { ...view, stage: { kind: "loading" } as const };
-  const resume = resumeOf(view);
-  const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
-  const waitingForResume = choice === "ask" && resume !== undefined;
+  const playbackKey = playerPlaybackKey(session);
+  const liveResume = resumeOf(view);
+  const resume = usePlayerResume(playbackKey, liveResume);
+  const hostedSource = resume.waiting ? undefined : activeSource;
   const playableUnitResolved = session.current?.kind === "local"
     ? data.localInfo !== undefined
     : session.current?.kind === "tv" ? data.playingEpisode !== undefined : data.detail !== undefined;
@@ -67,13 +69,11 @@ export function PlayerPage({ active }: { active: boolean }) {
     || (session.current?.kind === "tv" && playing !== undefined && data.playingPending)) && sources.length === 0;
   const browserLoading = data.basePending || data.seasonPending;
   const noSourceReason = sourceFailureReason(session.current?.kind === "local", data.localInfo?.error?.message);
-  const startPositionMs = choice === "resume" ? sourcePosition : 0;
-  const playbackKey = playerPlaybackKey(session);
+  const runtimeMs = session.current?.kind === "tv" ? data.playingEpisode?.runtimeMs : data.detail?.runtimeMs;
 
   const openItem = async (item: LibraryItem) => {
     const generation = navigation.current.next();
     if (isOpen(session, item.ref)) return;
-    progress.suspend();
     const latest = await settleLatestNavigation(navigation.current, generation, progress.flush(false), (error) => {
       useAppStore.getState().say(error instanceof Error ? error.message : "Watch progress could not be saved.", "warn");
     });
@@ -99,18 +99,20 @@ export function PlayerPage({ active }: { active: boolean }) {
     }
   }, [data.detail, session.current, session.season]);
 
+  /* A playback is the open item with its exact episode. It starts recording when it begins, and Play writes the entry
+   * as soon as the item has a source it can play: an item with nothing to play never enters History. */
   useEffect(() => {
-    setChoice(resumeMode === "ask" ? "ask" : resumeMode);
-    const opening = openingPosition(resumeMode, resume);
-    currentPosition.current = opening;
-    setSourcePosition(opening);
     setPaused(true);
     if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
     void progress.begin({
       item: session.current.ref,
       ...(playing === undefined ? {} : { season: playing.season, episode: playing.episode }),
-    });
+    }, playbackKey);
   }, [playbackKey]);
+  const playable = sources.length > 0;
+  useEffect(() => {
+    if (playable) progress.open(playbackKey, resume.openingMs);
+  }, [playbackKey, playable]);
 
   useEffect(() => {
     if (session.current === null || (session.current.kind === "tv" && playing === undefined) || !playableUnitResolved) return;
@@ -122,7 +124,6 @@ export function PlayerPage({ active }: { active: boolean }) {
 
   const close = async () => {
     const generation = navigation.current.next();
-    progress.suspend();
     await settleFinalProgress(progress.flush());
     navigation.current.commitLatest(generation, () => {
       dispatch({ type: "close" });
@@ -138,24 +139,20 @@ export function PlayerPage({ active }: { active: boolean }) {
     retry: () => {
       void progress.checkpoint();
       setDataRetry((value) => value + 1);
-      setSourcePosition(currentPosition.current);
+      resume.hold();
       setUserInitiated(true);
       setRetry((value) => value + 1);
     },
     reveal: () => session.current === null ? setSurface("library") : requestLibrary({ select: session.current.ref }),
     close: () => void close(),
     resume: () => {
-      const position = resume?.positionMs ?? 0;
-      currentPosition.current = position;
-      setSourcePosition(position);
-      setChoice("resume");
+      resume.resume(liveResume?.positionMs ?? 0);
       setUserInitiated(true);
       setRetry((value) => value + 1);
     },
     startOver: () => {
-      currentPosition.current = 0;
-      setSourcePosition(0);
-      setChoice("restart");
+      resume.startOver();
+      progress.restart();
       setUserInitiated(true);
       setRetry((value) => value + 1);
     },
@@ -163,11 +160,7 @@ export function PlayerPage({ active }: { active: boolean }) {
     toggleMember: (id) => {
       if (session.current !== null) changeMembership(session.current.ref, id, !view.memberIds.includes(id), view.memberIds);
     },
-    removeHistory: (id) => {
-      void removeWatch(id).catch((error: unknown) => useAppStore.getState().say(
-        error instanceof Error ? error.message : "History could not be changed.", "warn",
-      ));
-    },
+    removeHistory: (id) => void removeWatchEntry(id),
     openRelated: (item) => { void openItem(item); },
   };
 
@@ -175,20 +168,20 @@ export function PlayerPage({ active }: { active: boolean }) {
     left={<PlayerBrowser view={view} loading={browserLoading}
       onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
     center={<PlayerStage view={stageView} commands={commands} activeSource={hostedSource}
-      startPositionMs={startPositionMs} retry={retry} userInitiated={userInitiated}
-      loading={stageLoading} awaitingResume={waitingForResume}
+      startPositionMs={resume.startPositionMs} retry={retry} userInitiated={userInitiated}
+      loading={stageLoading} awaitingResume={resume.waiting}
       playableUnitSelected={session.current?.kind !== "tv" || playing !== undefined}
       playableUnitResolved={playableUnitResolved} noSourceReason={noSourceReason}
       onState={setStage}
       onProgress={(position, duration) => {
-        currentPosition.current = position;
-        progress.update(position, duration);
+        resume.track(position);
+        progress.update(position, reportedDuration(duration, activeSource, runtimeMs));
       }} onPlaying={progress.playing} onBoundary={() => void progress.checkpoint()}
       onPausedChange={setPaused} />}
     right={<PlayerInspector view={view} commands={commands} paused={paused}
       sources={sources} activeId={activeSource?.id ?? ""} onSelect={(id) => {
         void progress.flush();
-        setSourcePosition(currentPosition.current);
+        resume.hold();
         setSource(id);
         setUserInitiated(true);
       }}

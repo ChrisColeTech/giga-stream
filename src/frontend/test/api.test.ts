@@ -71,4 +71,25 @@ describe("api", () => {
       });
     await assert.rejects(apiStream("/api/folders/f-1/scan"), { code: "job.not_running", status: 409 });
   });
+
+  it("passes keepalive to fetch only when asked", async () => {
+    const seen: Array<boolean | undefined> = [];
+    globalThis.fetch = async (_input, init) => {
+      seen.push(init?.keepalive);
+      return new Response(JSON.stringify({ ok: true, data: { value: "ok" } }), { status: 200 });
+    };
+    await api("/api/example", AnswerSchema, { method: "PUT", body: {}, keepalive: true });
+    await api("/api/example", AnswerSchema, { method: "PUT", body: {} });
+    assert.deepEqual(seen, [true, undefined]);
+  });
+
+  it("logs no Events row for a quiet success but still logs a quiet failure", async () => {
+    globalThis.fetch = async () => new Response(JSON.stringify({ ok: true, data: { value: "ok" } }), { status: 200 });
+    await api("/api/example", AnswerSchema, { quiet: true });
+    assert.equal(useAppStore.getState().events.length, 0);
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ ok: false, error: { code: "x.y", message: "No." } }), { status: 500 });
+    await assert.rejects(api("/api/example", AnswerSchema, { quiet: true }));
+    assert.equal(useAppStore.getState().events.length, 1);
+  });
 });

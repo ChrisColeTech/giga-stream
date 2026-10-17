@@ -55,7 +55,8 @@ export function stageSubtitle(view: PlayerView): string | undefined {
 
 export function resumeOf(view: PlayerView): Progress | undefined {
   const progress = view.item?.progress;
-  if (progress?.state !== "watching") return undefined;
+  // A row opened by Play and not yet played (position 0) has nothing to resume: no `resume at 0:00`.
+  if (progress?.state !== "watching" || progress.positionMs <= 0) return undefined;
   if (view.tab?.kind !== "tv") return progress;
   const playing = parseEpisodeCode(view.tab.subtitle);
   return playing !== undefined && progress.season === playing.season && progress.episode === playing.episode
