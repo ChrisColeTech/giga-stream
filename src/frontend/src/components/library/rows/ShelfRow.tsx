@@ -6,6 +6,7 @@ import type { CollectionRow } from "@/types/collection";
 import { ContinueCard } from "../ContinueCard";
 import { PosterCard } from "../PosterCard";
 import { RowChevron } from "./RowChevron";
+import { LANDSCAPE_COLUMNS, POSTER_COLUMNS, ROW_GAP } from "./rows-constants";
 import { rowEnds, scrollStep, type RowEnds } from "./rows-navigation";
 
 export interface ShelfRowProps {
@@ -19,8 +20,10 @@ export interface ShelfRowProps {
   readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
-/* Each card is a `data-card` carrying its id, so the Rows view can find its keyboard stop and move the selection. */
-const CARD_WIDTH = "w-40";
+/* Each card is a `data-card` carrying its id, so the Rows view can find its keyboard stop and move the selection.
+   The row is a grid of fixed-share columns: the cards fill the rail's width, a short shelf leaves the space to its
+   right, and a long one scrolls. A Continue card's own fixed width is overridden to fill its column. */
+const LANDSCAPE_CARD = "[&>article]:w-full";
 
 /** One shelf's cards in a single horizontal row (`06` section 4, Rows). Two edge chevrons show while the pointer or
  *  focus is over the row, and sit disabled at the ends. */
@@ -67,19 +70,22 @@ export function ShelfRow({
         aria-label={name}
         onScroll={measure}
         className={cn(
-          "m-0 flex list-none gap-3 overflow-x-auto px-3 py-1",
+          "m-0 grid list-none grid-flow-col overflow-x-auto px-3 py-1",
+          ROW_GAP,
+          continuing ? LANDSCAPE_COLUMNS : POSTER_COLUMNS,
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
       >
         {items.map((item) => (
-          <li
-            key={`${item.ref.kind}:${item.ref.id}`}
-            data-card
-            data-id={item.ref.id}
-            className={cn("flex-none", continuing ? "rounded-card" : CARD_WIDTH)}
-          >
+          <li key={`${item.ref.kind}:${item.ref.id}`} data-card data-id={item.ref.id} className="min-w-0">
             {continuing ? (
-              <div className={cn("rounded-card", selected === item.ref.id && "ring-2 ring-accent")}>
+              <div
+                className={cn(
+                  "w-full rounded-card",
+                  LANDSCAPE_CARD,
+                  selected === item.ref.id && "ring-2 ring-accent",
+                )}
+              >
                 <ContinueCard item={item} />
               </div>
             ) : (
