@@ -48,6 +48,26 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
   await t.dispose();
 });
 
+test("library rows patches and reads back while an invalid view is refused", async () => {
+  const t = await makeApp();
+  const patched = await send(t.app, "PATCH", "/api/settings", { libraryView: "rows" });
+  assert.equal(patched.status, 200);
+  assert.equal(pick(patched.body, "data.libraryView"), "rows");
+
+  const read = await send(t.app, "GET", "/api/settings");
+  assert.equal(read.status, 200);
+  assert.equal(pick(read.body, "data.libraryView"), "rows");
+
+  const refused = await send(t.app, "PATCH", "/api/settings", { libraryView: "shelves" });
+  assert.equal(refused.status, 422);
+  assert.equal(pick(refused.body, "error.code"), "settings.invalid");
+  assert.equal(pick(refused.body, "error.message"), "Library view must be grid, list or rows.");
+
+  const after = await send(t.app, "GET", "/api/settings");
+  assert.equal(pick(after.body, "data.libraryView"), "rows");
+  await t.dispose();
+});
+
 test("every key of docs/03 section 3.2's table patches and reads back committed", async () => {
   const t = await makeApp();
   const patched = await send(t.app, "PATCH", "/api/settings", {
