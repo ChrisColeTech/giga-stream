@@ -11,8 +11,8 @@ export function ContinueStrip({ items }: ContinueStripProps) {
   if (items.length === 0) return null;
   return (
     <section aria-label={LIBRARY_COPY.continueHeading} className="flex min-w-0 flex-col gap-2 px-3 pt-3">
-      <h2 className="m-0 font-mono text-[11px] font-semibold text-muted">{LIBRARY_COPY.continueHeading}</h2>
-      <ul className="m-0 flex list-none gap-2 overflow-x-auto p-0 pb-1">
+      <h2 className="m-0 font-sans text-[13px] leading-5 font-bold text-text">{LIBRARY_COPY.continueHeading}</h2>
+      <ul className="m-0 flex list-none gap-3 overflow-x-auto p-0 pb-1">
         {items.map((item) => (
           <li key={`${item.ref.kind}:${item.ref.id}`} className="flex-none">
             <ContinueCard item={item} />
