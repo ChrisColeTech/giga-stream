@@ -9,8 +9,8 @@ import type { Config } from "../src/config.js";
 import type { LiveEngine, LiveSeams } from "../src/live/engine/live-engine.js";
 import { fakeBuild, type FakeTally } from "./live-fake-source.js";
 
-export const OWNER_EMAIL = "owner@example.test";
-export const OWNER_PASSWORD = "owner-password-123";
+export const ADMIN_EMAIL = "admin@example.test";
+export const ADMIN_PASSWORD = "admin-password-123";
 export const JWT_SECRET = "test-secret-that-is-at-least-32-characters";
 
 /** A clock tests move by hand; nothing sleeps. */
@@ -46,7 +46,7 @@ export interface MakeAppOptions {
 
 const created: TestApp[] = [];
 
-/** A fresh app on a fresh temporary data folder, with the bootstrap owner: no shared state, no network. */
+/** A fresh app on a fresh temporary data folder, with the bootstrap admin: no shared state, no network. */
 export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-backend-test-"));
   const clock = testClock();
@@ -73,8 +73,8 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       ADMIN_DIST: path.join(dataDir, "admin-dist"),
       TEST_PAGE: false,
       JWT_SECRET,
-      ADMIN_BOOTSTRAP_EMAIL: OWNER_EMAIL,
-      ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
+      ADMIN_BOOTSTRAP_EMAIL: ADMIN_EMAIL,
+      ADMIN_BOOTSTRAP_PASSWORD: ADMIN_PASSWORD,
       TLS_CERT_FILE: "",
       TLS_KEY_FILE: "",
       TRUST_PROXY: false,
@@ -175,13 +175,13 @@ export function pick(value: unknown, dotted: string): unknown {
 }
 
 /** Signs in and answers the session's two tokens. */
-export async function signIn(app: FastifyInstance, email = OWNER_EMAIL, password = OWNER_PASSWORD) {
+export async function signIn(app: FastifyInstance, email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
   const answer = await send(app, "POST", "/api/auth/login", { email, password });
   if (answer.status !== 200) throw new Error(`sign-in failed: ${JSON.stringify(answer.body)}`);
   return { access: String(pick(answer.body, "data.accessToken")), refresh: String(pick(answer.body, "data.refreshToken")) };
 }
 
-/** A request as the bootstrap owner. */
-export async function asOwner(app: FastifyInstance, method: Method, url: string, body?: unknown): Promise<Answer> {
+/** A request as the bootstrap admin. */
+export async function asAdmin(app: FastifyInstance, method: Method, url: string, body?: unknown): Promise<Answer> {
   return send(app, method, url, body, (await signIn(app)).access);
 }

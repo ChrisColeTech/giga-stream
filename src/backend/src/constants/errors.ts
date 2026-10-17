@@ -37,15 +37,14 @@ export const ERRORS = {
   accountNotFound: { code: "account.not_found", status: 404, message: "That account does not exist." },
   accountInvalid: { code: "account.invalid", status: 422, message: "That account is not valid." },
   accountEmailTaken: { code: "account.email_taken", status: 409, message: "Another account already uses that email." },
-  accountLastOwner: {
-    code: "account.last_owner",
+  accountLastAdmin: {
+    code: "account.last_admin",
     status: 409,
-    message: "This is the last owner; another owner is needed first.",
+    message: "This is the last enabled account; another one is needed first.",
   },
   authUnauthorized: { code: "auth.unauthorized", status: 401, message: "Sign in to do that." },
   authInvalidCredentials: { code: "auth.invalid_credentials", status: 401, message: "The email or password is wrong." },
   authRefreshInvalid: { code: "auth.refresh_invalid", status: 401, message: "That session has ended; sign in again." },
-  authForbidden: { code: "auth.forbidden", status: 403, message: "This account may not do that." },
   authRateLimited: { code: "auth.rate_limited", status: 429, message: "Too many sign-in attempts; wait a minute." },
   authLocked: { code: "auth.locked", status: 429, message: "This account is locked for a while after failed sign-ins." },
   storeNewerSchema: {

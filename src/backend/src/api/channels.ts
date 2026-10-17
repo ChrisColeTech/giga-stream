@@ -6,7 +6,7 @@ import { CHANNEL_BODY_LIMIT_BYTES } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
 import { ChannelInputSchema, ChannelPatchSchema } from "../types/channel-input.js";
 import { ok } from "./envelope.js";
-import { ANY_ADMIN, actorOf, signedIn } from "./guard.js";
+import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
 import { baseOf } from "./request-base.js";
 
@@ -29,32 +29,32 @@ export function registerChannels(app: FastifyInstance, services: Services): void
   });
 
   app.post("/api/channels", WRITE, async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const input = parseInput(ChannelInputSchema, request.body, ERRORS.channelInvalid);
     return ok(reply, services.channels.create(input, actorOf(request, principal), baseOf(request)), 201);
   });
 
   app.patch("/api/channels/:channelId", WRITE, async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     const patch = parseInput(ChannelPatchSchema, request.body, ERRORS.channelInvalid);
     return ok(reply, await services.channels.update(channelId, patch, actorOf(request, principal), baseOf(request)));
   });
 
   app.delete("/api/channels/:channelId", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     return ok(reply, await services.channels.remove(channelId, actorOf(request, principal)));
   });
 
   app.post("/api/channels/:channelId/revert", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     return ok(reply, services.channels.revert(channelId, actorOf(request, principal), baseOf(request)));
   });
 
   app.post("/api/channels/:channelId/rebuild", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     return ok(reply, services.channels.rebuild(channelId, actorOf(request, principal), baseOf(request)));
   });

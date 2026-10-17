@@ -142,5 +142,5 @@ test("live writes raise the revision and write audit entries as stream rows do",
     "channel.deleted", "channel.fault_cleared", "channel.fault_set", "channel.rebuilt", "channel.updated", "channel.created",
   ]);
   const created = (pick(audit.body, "data.items") as Array<Record<string, unknown>>)[5];
-  assert.deepEqual([created?.subject, created?.actorEmail, pick(created, "detail.kind")], ["home", "owner@example.test", "live"]);
+  assert.deepEqual([created?.subject, created?.actorEmail, pick(created, "detail.kind")], ["home", "admin@example.test", "live"]);
 });

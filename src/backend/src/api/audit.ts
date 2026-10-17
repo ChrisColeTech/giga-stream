@@ -4,7 +4,7 @@ import { z } from "zod";
 import { AUDIT_PAGE_MAX } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
 import { ok } from "./envelope.js";
-import { OWNER, signedIn } from "./guard.js";
+import { signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
 
 const AuditQuery = z
@@ -14,10 +14,10 @@ const AuditQuery = z
   })
   .strict();
 
-/** The audit log (docs/03 section 7.13): owners only, newest first. */
+/** The audit log (docs/03 section 7.13): any signed-in admin, newest first. */
 export function registerAudit(app: FastifyInstance, services: Services): void {
   app.get("/api/audit", async (request, reply) => {
-    signedIn(services, request, OWNER);
+    signedIn(services, request);
     const { limit, before } = parseInput(AuditQuery, request.query);
     return ok(reply, services.audit.page(limit, before));
   });

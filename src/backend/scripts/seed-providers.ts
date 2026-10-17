@@ -7,8 +7,8 @@ import path from "node:path";
 import { mkdtempSync } from "node:fs";
 import os from "node:os";
 
-const OWNER_EMAIL = "owner@example.test";
-const OWNER_PASSWORD = "owner-password-123";
+const ADMIN_EMAIL = "admin@example.test";
+const ADMIN_PASSWORD = "admin-password-123";
 
 /** The whole catalog (docs/18 section 2's embed hosts, then the CinePro stream rows). */
 const CATALOG = [...EMBED_PROVIDER_CATALOG, ...STREAM_PROVIDER_CATALOG];
@@ -20,8 +20,8 @@ async function seedProviders() {
     HOST: "127.0.0.1",
     DATA_DIR: dataDir,
     JWT_SECRET: process.env.JWT_SECRET || "test-secret-that-is-at-least-32-characters",
-    ADMIN_BOOTSTRAP_EMAIL: OWNER_EMAIL,
-    ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
+    ADMIN_BOOTSTRAP_EMAIL: ADMIN_EMAIL,
+    ADMIN_BOOTSTRAP_PASSWORD: ADMIN_PASSWORD,
     TLS_CERT_FILE: "",
     TLS_KEY_FILE: "",
     TRUST_PROXY: false,

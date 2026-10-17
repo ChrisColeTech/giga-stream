@@ -37,7 +37,6 @@ export function createAuthService(deps: {
         iss: ISSUER,
         aud: AUDIENCE,
         sub: stored.account.id,
-        role: stored.account.role,
         ver: stored.sessionVersion,
         iat: Math.floor(at / 1000),
         exp: Math.floor(accessExpiresAt / 1000),
@@ -56,7 +55,7 @@ export function createAuthService(deps: {
     store.refreshTokens.revokeAll(accountId, now());
   }
 
-  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, email: a.email, role: a.role });
+  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, email: a.email });
 
   return {
     revokeAll,

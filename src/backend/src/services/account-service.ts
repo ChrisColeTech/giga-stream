@@ -8,8 +8,8 @@ import type { Actor, AuditService } from "./audit-service.js";
 import { hashPassword } from "./password.js";
 
 /**
- * Admin accounts (docs/03 section 7.11). Changing a password, role or `disabled`, or deleting an account,
- * ends all of its sessions; the last enabled owner can never be demoted, disabled or deleted.
+ * Admin accounts (docs/03 section 7.11); every account is equal (docs/26 D22). Changing a password or `disabled`,
+ * or deleting an account, ends all of its sessions; the last enabled account can never be disabled or deleted.
  */
 export function createAccountService(deps: {
   store: Store;
@@ -30,9 +30,8 @@ export function createAccountService(deps: {
     if (holder && holder.account.id !== exceptId) throw new AppError(ERRORS.accountEmailTaken, { field: "email" });
   }
 
-  /** True when this account is an enabled owner and no other enabled owner exists. */
-  const isLastOwner = (a: AdminAccount): boolean =>
-    a.role === "owner" && !a.disabled && store.accounts.enabledOwners() <= 1;
+  /** True when this account is enabled and no other enabled account exists. */
+  const isLastAdmin = (a: AdminAccount): boolean => !a.disabled && store.accounts.enabledCount() <= 1;
 
   return {
     list: (): { items: AdminAccount[] } => ({ items: store.accounts.list().map((s) => s.account) }),
@@ -43,8 +42,8 @@ export function createAccountService(deps: {
       assertEmailFree(input.email);
       const id = `acct_${randomUUID()}`;
       const passwordHash = await hashPassword(input.password);
-      store.accounts.insert({ id, email: input.email, name: input.name, role: input.role, passwordHash, disabled: false }, now());
-      audit.record(actor, { action: "account.created", subject: id, detail: { email: input.email, role: input.role } });
+      store.accounts.insert({ id, email: input.email, name: input.name, passwordHash, disabled: false }, now());
+      audit.record(actor, { action: "account.created", subject: id, detail: { email: input.email } });
       return existing(id).account;
     },
 
@@ -52,19 +51,16 @@ export function createAccountService(deps: {
       const current = existing(id);
       const a = current.account;
       if (patch.email !== undefined) assertEmailFree(patch.email, id);
-      const demoted = patch.role === "editor" && a.role === "owner";
       const disabling = patch.disabled === true && !a.disabled;
-      if ((demoted || disabling) && isLastOwner(a)) throw new AppError(ERRORS.accountLastOwner);
+      if (disabling && isLastAdmin(a)) throw new AppError(ERRORS.accountLastAdmin);
       const passwordHash = patch.password === undefined ? current.passwordHash : await hashPassword(patch.password);
-      const revokes = patch.password !== undefined || (patch.role !== undefined && patch.role !== a.role)
-        || (patch.disabled !== undefined && patch.disabled !== a.disabled);
+      const revokes = patch.password !== undefined || (patch.disabled !== undefined && patch.disabled !== a.disabled);
       store.transaction(() => {
         store.accounts.update(
           {
             id,
             email: patch.email ?? a.email,
             name: patch.name ?? a.name,
-            role: patch.role ?? a.role,
             disabled: patch.disabled ?? a.disabled,
             passwordHash,
           },
@@ -83,7 +79,7 @@ export function createAccountService(deps: {
 
     remove(id: string, actor: Actor): { id: string } {
       const current = existing(id);
-      if (isLastOwner(current.account)) throw new AppError(ERRORS.accountLastOwner);
+      if (isLastAdmin(current.account)) throw new AppError(ERRORS.accountLastAdmin);
       store.accounts.remove(id);
       audit.record(actor, { action: "account.deleted", subject: id, detail: { email: current.account.email } });
       return { id };

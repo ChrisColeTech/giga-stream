@@ -15,7 +15,6 @@ export const ClaimsSchema = z.object({
   iss: z.literal(ISSUER),
   aud: z.literal(AUDIENCE),
   sub: z.string().min(1),
-  role: z.enum(["owner", "editor"]),
   ver: z.number().int().min(1),
   iat: z.number().int(),
   exp: z.number().int(),
