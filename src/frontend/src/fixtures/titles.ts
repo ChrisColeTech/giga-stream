@@ -107,4 +107,18 @@ export const RELATED_ITEMS: Readonly<Record<string, readonly LibraryItem[]>> = {
     { ref: { kind: "title", id: "movie-329865" }, kind: "movie", title: "Arrival", year: 2016, genres: [], favorite: false },
     { ref: { kind: "title", id: "movie-438631" }, kind: "movie", title: "Dune", year: 2021, genres: [], favorite: false },
   ],
+  "movie-27205": [
+    { ref: { kind: "title", id: "movie-603" }, kind: "movie", title: "The Matrix", year: 1999, genres: [], favorite: false },
+    { ref: { kind: "title", id: "movie-335984" }, kind: "movie", title: "Blade Runner 2049", year: 2017, genres: [], favorite: false },
+    { ref: { kind: "title", id: "movie-62" }, kind: "movie", title: "2001: A Space Odyssey", year: 1968, genres: [], favorite: false },
+  ],
+  "tv-1396": [
+    { ref: { kind: "title", id: "tv-95396" }, kind: "tv", title: "Severance", year: 2022, genres: [], favorite: false },
+    { ref: { kind: "title", id: "tv-70523" }, kind: "tv", title: "Dark", year: 2017, genres: [], favorite: false },
+    { ref: { kind: "title", id: "tv-87108" }, kind: "tv", title: "Chernobyl", year: 2019, genres: [], favorite: false },
+  ],
+  "tv-95396": [
+    { ref: { kind: "title", id: "tv-1396" }, kind: "tv", title: "Breaking Bad", year: 2008, genres: [], favorite: false },
+    { ref: { kind: "title", id: "tv-70523" }, kind: "tv", title: "Dark", year: 2017, genres: [], favorite: false },
+  ],
 };
