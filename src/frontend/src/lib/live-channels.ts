@@ -1,4 +1,4 @@
-import type { Channel, ChannelCategory } from "@/types/channel";
+import type { Channel, ChannelCategory, ChannelList } from "@/types/channel";
 import { ALL_CATEGORY, ALL_CATEGORY_LABEL } from "./live-constants";
 
 /** One option of the category select: the label, and the count shown in brackets. */
@@ -8,14 +8,17 @@ export interface CategoryOption {
   readonly count: number;
 }
 
-/** The channels whose name contains the query (case-insensitive, trimmed) in the chosen category. Published order is kept. */
-export function filterChannels(items: readonly Channel[], query: string, category: string): readonly Channel[] {
-  const needle = query.trim().toLowerCase();
-  return items.filter(
-    (channel) =>
-      (category === ALL_CATEGORY || channel.category === category) &&
-      channel.name.toLowerCase().includes(needle),
-  );
+export const EMPTY_CHANNEL_LIST: ChannelList = { items: [], categories: [], revision: 0 };
+
+/** Resolves the initial selection and optional unattended attachment after state hydration. */
+export function openingChannel(
+  list: ChannelList | null,
+  lastChannelId: string | null,
+  mode: "last" | "none",
+): { readonly selected: Channel | null; readonly playing: Channel | null } {
+  const first = list?.items[0] ?? null;
+  const last = list?.items.find((channel) => channel.id === lastChannelId) ?? null;
+  return { selected: mode === "last" ? last ?? first : first, playing: mode === "last" ? last : null };
 }
 
 /** The category select's options: All first with the total, then each published category with its count. A category

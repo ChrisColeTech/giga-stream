@@ -53,7 +53,7 @@ export function LiveChannelsPane({
         onQueryChange={onQueryChange}
         category={category}
         categories={list.categories}
-        total={list.items.length}
+        total={list.categories.reduce((sum, item) => sum + item.count, 0)}
         onCategoryChange={onCategoryChange}
       />
       <ChannelList

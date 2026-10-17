@@ -3,6 +3,7 @@
 
 /** Skeleton rows drawn while the channel list loads or has nothing to show (`06` section 3.2). */
 export const LIST_SKELETON_ROWS = 14;
+export const SEARCH_DEBOUNCE_MS = 250;
 
 /** The category value that means every channel. */
 export const ALL_CATEGORY = "all";
