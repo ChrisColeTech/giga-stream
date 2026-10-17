@@ -8,7 +8,7 @@ import type { Channel } from "@/types/channel";
 
 export interface ChannelRowProps {
   readonly channel: Channel;
-  /** The row the selection is on (the accent left border). */
+  /** The row the selection is on (the control fill). */
   readonly selected: boolean;
   /** The channel the player has loaded (the marker). Selected and playing are different states. */
   readonly playing: boolean;
@@ -41,10 +41,12 @@ export function ChannelRow({ channel, selected, playing, tabStop, onActivate, re
       onKeyDown={onKeyDown}
       className={cn(
         "relative grid w-full cursor-pointer grid-cols-[56px_minmax(0,1fr)] items-start gap-x-2.5 outline-none",
-        "border-b border-l-2 border-hair px-2.75 py-2",
+        "border-b border-hair px-2.75 py-2",
         "transition-colors duration-fade ease-linear hover:bg-hov",
         "focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent",
-        selected ? "border-l-accent bg-ctl" : "border-l-transparent",
+        /* Selected is the fill alone: the left edge already carries the status bar, and two strips there read as one
+           muddled mark. */
+        selected && "bg-ctl",
       )}
     >
       <span className={cn("absolute top-2 bottom-2 left-0 w-1 rounded-full", ACCENT[statusBar(channel.status)])} aria-hidden />

@@ -11,7 +11,7 @@ export const ALL_CATEGORY = "all";
 export const EMPTY_VALUE = "—";
 
 /** The marker on the channel the player has loaded (`06` section 3.2). */
-export const PLAYING_MARKER = "live";
+export const PLAYING_MARKER = "Playing";
 
 export const CHANNELS_HEADING = "Channels";
 export const SEARCH_LABEL = "Search channels";

@@ -29,3 +29,7 @@ export const CHANNEL_LIST: ChannelList = {
     { id: "ch-robots", name: "Tiny Robots", category: "Kids", number: "16", revision: 1, streamUrl: "", status: "offline" },
   ],
 };
+
+/** PHASE 1 FIXTURE: the state answer's `lastChannelId` (`03` section 4): the channel Live opens on when the Live opens
+ *  setting is "Last channel". */
+export const LAST_CHANNEL_ID = "fx-music";

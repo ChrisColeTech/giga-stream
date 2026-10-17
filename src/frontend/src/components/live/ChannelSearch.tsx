@@ -1,6 +1,8 @@
 import { Search, X } from "lucide-react";
 import { Input, Select } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
+import { FIELD_CONTROL } from "@/components/ui/NumberField";
+import { cn } from "@/lib/cn";
 import { categoryOptions } from "@/lib/live-channels";
 import { CATEGORY_LABEL, CLEAR_SEARCH_LABEL, SEARCH_LABEL } from "@/lib/live-constants";
 import type { ChannelCategory } from "@/types/channel";
@@ -14,8 +16,8 @@ export interface ChannelSearchProps {
   readonly onCategoryChange: (category: string) => void;
 }
 
-/** The search field and the category select at the head of the channels pane. The field carries `data-search`, so
- *  Ctrl+F lands on it (`06` section 8). */
+/** The search field and the category select at the head of the channels pane, at the rail control height the playback
+ *  pane's selects use. The field carries `data-search`, so Ctrl+F lands on it (`06` section 8). */
 export function ChannelSearch({
   query,
   onQueryChange,
@@ -33,20 +35,20 @@ export function ChannelSearch({
           value={query}
           data-search=""
           onChange={(event) => onQueryChange(event.target.value)}
-          className="pr-8! pl-7!"
+          className={cn(FIELD_CONTROL, "pr-7! pl-7!")}
         />
         {query !== "" && (
           <IconButton
             aria-label={CLEAR_SEARCH_LABEL}
             title={CLEAR_SEARCH_LABEL}
             onClick={() => onQueryChange("")}
-            className="absolute right-0"
+            className="absolute right-0 size-ctl-sm!"
           >
             <X className="size-3.5" aria-hidden />
           </IconButton>
         )}
       </div>
-      <Select aria-label={CATEGORY_LABEL} value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+      <Select aria-label={CATEGORY_LABEL} className={FIELD_CONTROL} value={category} onChange={(event) => onCategoryChange(event.target.value)}>
         {categoryOptions(categories, category, total).map((option) => (
           <option key={option.value} value={option.value}>
             {`${option.label} · ${option.count}`}
