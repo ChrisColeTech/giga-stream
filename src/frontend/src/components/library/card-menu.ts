@@ -1,4 +1,5 @@
 import { collectionsSubmenu } from "@/lib/collection-menu";
+import { watchLine } from "@/lib/library-facts";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { openMenu } from "@/lib/menu";
@@ -40,6 +41,7 @@ export interface CardMenuContext {
 /** A card's context menu: Play or Open, Info, Favorite, Collections, and in History the removal of the watch entry. */
 export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: CardMenuContext): void {
   openMenu(event, [
+    item.progress !== undefined && { kind: "heading", label: watchLine(item.progress) },
     { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => playRef(item.ref) },
     { kind: "action", label: "Info", onSelect: context.onInfo },
     {
