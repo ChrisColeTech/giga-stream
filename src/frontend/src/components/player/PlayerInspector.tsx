@@ -31,12 +31,15 @@ export function PlayerInspector({ view, commands, paused }: PlayerInspectorProps
   const resume = resumeOf(view);
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <Section title="Overview" open={folded["player:overview"] !== true} onToggle={() => toggleFold("player:overview")}>
-        <InspectorOverview view={view} />
-      </Section>
-      <Section title="Details" open={folded["player:details"] !== true} onToggle={() => toggleFold("player:details")}>
-        <InspectorDetails view={view} />
-      </Section>
+      {/* The sections' own column always fills, so closing them never pulls the footer up off the pane's foot. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Section title="Overview" open={folded["player:overview"] !== true} onToggle={() => toggleFold("player:overview")}>
+          <InspectorOverview view={view} />
+        </Section>
+        <Section title="Details" open={folded["player:details"] !== true} onToggle={() => toggleFold("player:details")}>
+          <InspectorDetails view={view} />
+        </Section>
+      </div>
       {paused && resume !== undefined && (
         <ResumeFooter progress={resume} onResume={commands.resume} onStartOver={commands.startOver} />
       )}
