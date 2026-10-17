@@ -27,7 +27,7 @@ import { createLibraryService } from "./library-service.js";
 import { createLiveChannelsService, type LiveChannelsService } from "./live-channels-service.js";
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
 import { createPosterFetchService, type PosterFetchService } from "./poster-fetch.js";
-import { createScanService, type ScanService } from "./scan-service.js";
+import { createScanService, type FolderScanner, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
 import { createStreamProbe } from "./stream-probe.js";
@@ -42,10 +42,10 @@ export interface ServiceOptions {
   defaultAdminUrl: string;
   liveViewTtlMs: number;
   now: () => number;
-  /** Test seams: the fetches the admin client, the probe and the image cache use. */
+  /** Test seams: the fetches the admin client, the probe and the image cache use, and the folder scanner. */
   adminFetch?: typeof fetch;
   probeFetch?: typeof fetch;
-  imageFetch?: typeof fetch;
+  imageFetch?: typeof fetch; scan?: FolderScanner;
   /** Electron lane: the native folder picker lives only here (docs/03 section 3.8). */
   openFolderPicker?: () => Promise<{ path: string } | "cancelled">;
   /** Test seam: `POST /api/fs/dialog` then takes `{ name }` under this root (3.8). */
@@ -111,7 +111,7 @@ export function createAppServices(options: ServiceOptions) {
     folders: collectionsRepo,
     files: filesRepo,
     posters,
-    now: options.now,
+    now: options.now, scan: options.scan,
   });
   jobs.register("folder-scan", scans.runner);
   jobs.register("poster-fetch", posters.runner);

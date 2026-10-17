@@ -14,9 +14,11 @@ import { build } from "esbuild";
  *
  * This file and `src/backend/src/build-shared.ts` build the SAME `dist` and must stay identical in what
  * they produce (same esbuild options, same declarations step), because the dev stack starts both programs
- * at once and whichever finishes last decides what is on disk. Splitting stays OFF: it would hoist modules
- * into `chunk-*.js` at the root of `dist`. A `dist` newer than every source is left alone instead of being
- * deleted under the other program's feet; one holding any `chunk-*.js` is never fresh.
+ * at once and whichever finishes last decides what is on disk. Code splitting must stay ON: without it each
+ * entry bundles its OWN copy of any shared module, so module-level state (the scan registry and its progress)
+ * is duplicated and diverges (scan-lifecycle fails). The hoisted `chunk-*.js` at the root of `dist` are
+ * expected; locate-tool does not depend on its depth. A `dist` newer than every source is left alone instead of
+ * being deleted under the other program's feet.
  */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHARED = path.resolve(HERE, "..", "..", "shared", "media");
@@ -38,7 +40,6 @@ function isFresh(): boolean {
   if (!existsSync(DIST)) return false;
   const built = [...collect(DIST, ".js", []), ...collect(DIST, ".d.ts", [])];
   if (built.length < entries.length * 2) return false;
-  if (readdirSync(DIST).some((name) => /^chunk-.*\.js$/.test(name))) return false;
   const newestSource = Math.max(...entries.map((file) => statSync(file).mtimeMs));
   return Math.min(...built.map((file) => statSync(file).mtimeMs)) > newestSource;
 }
@@ -52,7 +53,7 @@ if (isFresh()) {
     outdir: DIST,
     outbase: SOURCE,
     bundle: true,
-    splitting: false,
+    splitting: true,
     format: "esm",
     platform: "node",
     target: "node24",
