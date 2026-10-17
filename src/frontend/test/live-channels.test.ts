@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CHANNEL_LIST } from "@/fixtures/channels";
-import { categoryOptions, filterChannels, keyTarget, tabStopId } from "@/lib/live-channels";
+import { categoryOptions, filterChannels, keyTarget, openingChannel, tabStopId } from "@/lib/live-channels";
 import { ALL_CATEGORY } from "@/lib/live-constants";
 import type { Channel } from "@/types/channel";
 
-const items: readonly Channel[] = CHANNEL_LIST.items;
+const items: readonly Channel[] = [
+  { id: "news", name: "Fixture News", category: "News", number: "1", revision: 1, streamUrl: "https://stream.test/news.m3u8", status: "live" },
+  { id: "sports", name: "Court Side", category: "Sports", number: "2", revision: 1, streamUrl: "https://stream.test/sports.m3u8", status: "offline" },
+  { id: "desk", name: "Night Desk", category: "News", number: "3", revision: 1, streamUrl: "https://stream.test/desk.m3u8", status: "unknown" },
+];
+const categories = [{ value: "News", count: 2 }, { value: "Sports", count: 1 }];
 const names = (rows: readonly Channel[]) => rows.map((row) => row.name);
 
 describe("filterChannels", () => {
@@ -15,7 +19,7 @@ describe("filterChannels", () => {
   });
 
   it("matches the name case-insensitively and ignores surrounding spaces", () => {
-    assert.deepEqual(names(filterChannels(items, "  NEWS ", ALL_CATEGORY)), ["Fixture News", "Harbour News"]);
+    assert.deepEqual(names(filterChannels(items, "  NEWS ", ALL_CATEGORY)), ["Fixture News"]);
   });
 
   it("narrows to one category, keeping the order", () => {
@@ -27,24 +31,43 @@ describe("filterChannels", () => {
 
   it("combines the query and the category", () => {
     assert.deepEqual(names(filterChannels(items, "news", "Sports")), []);
-    assert.deepEqual(names(filterChannels(items, "desk", "News")), ["Metro Desk", "Night Desk"]);
+    assert.deepEqual(names(filterChannels(items, "desk", "News")), ["Night Desk"]);
   });
 });
 
 describe("categoryOptions", () => {
   it("puts All first with the total, then each published category with its count", () => {
-    const options = categoryOptions(CHANNEL_LIST.categories, ALL_CATEGORY, items.length);
+    const options = categoryOptions(categories, ALL_CATEGORY, items.length);
     assert.equal(options[0]?.value, ALL_CATEGORY);
     assert.equal(options[0]?.count, items.length);
     assert.deepEqual(
       options.slice(1).map((option) => [option.value, option.count]),
-      CHANNEL_LIST.categories.map((category) => [category.value, category.count]),
+      categories.map((category) => [category.value, category.count]),
     );
   });
 
   it("keeps a selected category that is no longer published, at zero", () => {
-    const options = categoryOptions(CHANNEL_LIST.categories, "Retired", items.length);
+    const options = categoryOptions(categories, "Retired", items.length);
     assert.deepEqual(options.at(-1), { value: "Retired", label: "Retired", count: 0 });
+  });
+});
+
+describe("openingChannel", () => {
+  const list = { items, categories, revision: 1 };
+
+  it("selects and attaches a hydrated last channel only in last mode", () => {
+    assert.equal(openingChannel(list, "sports", "last").selected?.id, "sports");
+    assert.equal(openingChannel(list, "sports", "last").playing?.id, "sports");
+  });
+
+  it("selects the first row but attaches nothing in none mode", () => {
+    assert.equal(openingChannel(list, "sports", "none").selected?.id, "news");
+    assert.equal(openingChannel(list, "sports", "none").playing, null);
+  });
+
+  it("does not attach a last channel no longer in the hydrated list", () => {
+    assert.equal(openingChannel(list, "missing", "last").selected?.id, "news");
+    assert.equal(openingChannel(list, "missing", "last").playing, null);
   });
 });
 

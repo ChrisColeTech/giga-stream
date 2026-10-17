@@ -18,5 +18,8 @@ export const ChannelListSchema = z.object({
   revision: z.number().int().nonnegative(),
 });
 
+export const LastChannelSchema = z.object({ id: z.string().min(1) });
+
 export type ChannelAnswer = z.infer<typeof ChannelSchema>;
 export type ChannelListAnswer = z.infer<typeof ChannelListSchema>;
+export type LastChannelAnswer = z.infer<typeof LastChannelSchema>;

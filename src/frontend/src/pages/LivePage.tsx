@@ -1,33 +1,34 @@
-import { useState } from "react";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { LiveChannelsPane } from "@/components/live/LiveChannelsPane";
 import { LiveSettingsPane } from "@/components/live/LiveSettingsPane";
 import { LiveStage } from "@/components/live/LiveStage";
-import { CHANNEL_LIST, LAST_CHANNEL_ID } from "@/fixtures/channels";
 import { useLiveActions } from "@/hooks/useLiveActions";
-import { filterChannels } from "@/lib/live-channels";
-import { ALL_CATEGORY } from "@/lib/live-constants";
-import { stageStateFor } from "@/lib/live-stage";
+import { EMPTY_CHANNEL_LIST } from "@/lib/live-channels";
+import type { LiveStageState } from "@/lib/live-stage";
 import { useAppStore } from "@/store/app-store";
 
-/** Live: playback settings on the left, the video stage in the centre, channels on the right. The page composes the
- *  panes and keeps the local selection, playing marker, search and category; the picture fit is a playback preference
- *  in the store. Its calls live in the hook. */
+/** Live: playback settings on the left, the video stage in the centre, and the fileserver's channels on the right. */
 export function LivePage({ active }: { active: boolean }) {
-  const channels = CHANNEL_LIST.items;
-  const actions = useLiveActions();
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string>(ALL_CATEGORY);
-  /* The Live opens setting: "Last channel" opens on the channel last played, already playing; "Nothing" selects the
-     first row and plays nothing. Read as the page first renders. */
-  const [playingId, setPlayingId] = useState<string | null>(() =>
-    useAppStore.getState().playback.liveOnOpen === "last" ? LAST_CHANNEL_ID : null,
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(() => playingId ?? channels[0]?.id ?? null);
+  const actions = useLiveActions(active);
+  const list = useAppStore((state) => state.channels) ?? EMPTY_CHANNEL_LIST;
+  const hasList = useAppStore((state) => state.channels) !== null;
+  const loading = useAppStore((state) => state.channelsLoading);
+  const query = useAppStore((state) => state.channelQuery);
+  const category = useAppStore((state) => state.channelCategory);
+  const selectedId = useAppStore((state) => state.selectedChannelId);
+  const playingId = useAppStore((state) => state.playingChannelId);
+  const playingUrl = useAppStore((state) => state.playingStreamUrl);
+  const streamState = useAppStore((state) => state.liveStage);
+  const streamError = useAppStore((state) => state.liveStreamError);
   const fit = useAppStore((state) => state.playback.pictureFit);
 
-  const rows = filterChannels(channels, query, category);
-  const selected = channels.find((channel) => channel.id === selectedId) ?? null;
+  const selected = list.items.find((channel) => channel.id === selectedId) ?? null;
+  const publishedCount = list.categories.reduce((sum, item) => sum + item.count, 0);
+  const stageState: LiveStageState = streamState === "failed"
+    ? "failed"
+    : hasList && publishedCount === 0 && playingUrl === null
+      ? "no-channels"
+      : streamState;
 
   return (
     <WorkspaceSplit
@@ -36,29 +37,26 @@ export function LivePage({ active }: { active: boolean }) {
       left={<LiveSettingsPane />}
       center={
         <LiveStage
-          state={stageStateFor(channels.length)}
+          state={stageState}
           fit={fit}
+          error={streamError ?? undefined}
           onRetry={actions.retry}
           onRefresh={actions.refresh}
         />
       }
       right={
         <LiveChannelsPane
-          list={CHANNEL_LIST}
-          rows={rows}
-          loading={false}
+          list={list}
+          rows={list.items}
+          loading={loading && !hasList}
           query={query}
           category={category}
           selected={selected}
           playingId={playingId}
-          onQueryChange={setQuery}
-          onCategoryChange={setCategory}
-          onSelect={setSelectedId}
-          onActivate={(id) => {
-            setSelectedId(id);
-            setPlayingId(id);
-            actions.remember(id);
-          }}
+          onQueryChange={actions.changeQuery}
+          onCategoryChange={actions.changeCategory}
+          onSelect={actions.select}
+          onActivate={actions.activate}
           onRefresh={actions.refresh}
         />
       }

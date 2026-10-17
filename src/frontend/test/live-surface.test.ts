@@ -5,7 +5,17 @@ import { EMPTY_VALUE } from "@/lib/live-constants";
 import { objectFitOf, PICTURE_FIT_OPTIONS } from "@/lib/live-picture";
 import { statusBar, statusWord } from "@/lib/live-status";
 import { stageStateFor } from "@/lib/live-stage";
-import { CHANNEL_LIST } from "@/fixtures/channels";
+import type { Channel } from "@/types/channel";
+
+const channel: Channel = {
+  id: "news",
+  name: "Fixture News",
+  category: "News",
+  number: "1",
+  revision: 1,
+  streamUrl: "https://stream.test/news.m3u8",
+  status: "live",
+};
 
 describe("status bar", () => {
   it("maps live to success, offline to error and an unprobed channel to inactive", () => {
@@ -23,7 +33,7 @@ describe("status bar", () => {
 
 describe("stage state", () => {
   it("is ready with channels and no channels when the list is empty", () => {
-    assert.equal(stageStateFor(CHANNEL_LIST.items.length), "ready");
+    assert.equal(stageStateFor(1), "ready");
     assert.equal(stageStateFor(0), "no-channels");
   });
 });
@@ -45,8 +55,6 @@ describe("picture fit", () => {
 
 describe("channel details", () => {
   it("lists name, category, number and revision of the channel", () => {
-    const channel = CHANNEL_LIST.items[0];
-    assert.ok(channel !== undefined);
     assert.deepEqual(detailRows(channel), [
       { label: "name", value: channel.name },
       { label: "category", value: channel.category },

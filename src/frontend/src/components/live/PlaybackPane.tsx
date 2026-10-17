@@ -43,11 +43,13 @@ function PrefSelect({
 
 /* A readout is a fact of the stream on screen, in the rail's mono: a dash until a channel plays. It is not a control,
    so it is never dimmed; the tooltip says when it fills in. */
-const readout = (
-  <span title={REASON_NEEDS_PLAYING} className="flex h-ctl-sm items-center font-mono text-xs text-muted">
-    {EMPTY_VALUE}
-  </span>
-);
+function Readout({ value }: { readonly value?: string }) {
+  return (
+    <span title={value === undefined ? REASON_NEEDS_PLAYING : undefined} className="flex h-ctl-sm items-center font-mono text-xs text-muted">
+      {value ?? EMPTY_VALUE}
+    </span>
+  );
+}
 
 const fitOf = (value: string): PictureFit => PICTURE_FIT_OPTIONS.find((option) => option.value === value)?.value ?? "fit";
 
@@ -56,6 +58,7 @@ const fitOf = (value: string): PictureFit => PICTURE_FIT_OPTIONS.find((option) =
 export function PlaybackPane() {
   const playback = useAppStore((state) => state.playback);
   const setPlayback = useAppStore((state) => state.setPlayback);
+  const facts = useAppStore((state) => state.liveStreamFacts);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -68,8 +71,8 @@ export function PlaybackPane() {
             onChange={(value) => setPlayback({ videoQuality: qualityOf(value) })}
           />
         </PlaybackRow>
-        <PlaybackRow label="Resolution">{readout}</PlaybackRow>
-        <PlaybackRow label="Bitrate">{readout}</PlaybackRow>
+        <PlaybackRow label="Resolution"><Readout value={facts.resolution} /></PlaybackRow>
+        <PlaybackRow label="Bitrate"><Readout value={facts.bitrate} /></PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.display" title={PLAYBACK_SECTION_TITLES.display}>
@@ -81,7 +84,7 @@ export function PlaybackPane() {
             onChange={(value) => setPlayback({ pictureFit: fitOf(value) })}
           />
         </PlaybackRow>
-        <PlaybackRow label="Aspect">{readout}</PlaybackRow>
+        <PlaybackRow label="Aspect"><Readout value={facts.aspect} /></PlaybackRow>
       </PlaybackSection>
 
       <PlaybackSection id="live.playback.audio" title={PLAYBACK_SECTION_TITLES.audio}>
@@ -115,7 +118,7 @@ export function PlaybackPane() {
             onChange={(value) => setPlayback({ lowLatency: value === "low" })}
           />
         </PlaybackRow>
-        <PlaybackRow label="Live edge">{readout}</PlaybackRow>
+        <PlaybackRow label="Live edge"><Readout value={facts.liveEdge} /></PlaybackRow>
       </PlaybackSection>
     </div>
   );
