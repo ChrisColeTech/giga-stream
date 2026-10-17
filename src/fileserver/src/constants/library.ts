@@ -3,6 +3,9 @@
 /** One page's size; the backend's title pages are 20 (03 section 3.5). */
 export const LIBRARY_PAGE_SIZE = 20;
 
+/** Upstream title pages one `view=all` request may read to fill a page that filters thin out. */
+export const UPSTREAM_PAGES_MAX = 10;
+
 /** The `all` view's years facet runs from this year back this far (03 section 3.5). */
 export const FACET_YEARS = 30;
 

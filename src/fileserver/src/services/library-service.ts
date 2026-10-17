@@ -12,22 +12,14 @@ import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository } from "../store/collection-repository.js";
 import type { LibraryRepository } from "../store/library-repository.js";
 import type { ContinuePage, LibraryItem, LibraryPage } from "../types/library.js";
-import type { AdminTitles, BackendTitle, TitleKind } from "./admin-titles.js";
+import type { AdminTitles, TitleKind } from "./admin-titles.js";
 import type { LibraryItems } from "./library-items.js";
 import type { ListPage, LibraryLists } from "./library-lists.js";
+import { createLibraryTitles } from "./library-titles.js";
 import type { TitleSession } from "./title-session.js";
 
 const invalid = (): AppError => new AppError("library.invalid", 422, "That library request cannot be used.");
 const collectionMissing = (): AppError => new AppError("collection.not_found", 404, "There is no such collection.");
-
-/** One backend page over the asked kinds, merged as the backend's own browse merges them (7.4). */
-interface TitlesPage {
-  /** False when any kind's read failed; the rows are the kinds that answered. */
-  available: boolean;
-  rows: BackendTitle[];
-  totalPages: number;
-  totalResults: number;
-}
 
 /**
  * The library query (docs/03 section 3.5): `view=all` combines the user's matching files with
@@ -45,7 +37,8 @@ export function createLibraryService(deps: {
   lists: LibraryLists;
   now: () => number;
 }) {
-  const { admin, adminUrl, session, items, repo, collections, lists, now } = deps;
+  const { adminUrl, session, items, repo, collections, lists, now } = deps;
+  const titleReader = createLibraryTitles({ admin: deps.admin, adminUrl, session, items });
 
   const kindsOf = (type: LibraryQuery["type"]): TitleKind[] =>
     type === "movie" || type === "tv" ? [type] : type === "all" ? ["movie", "tv"] : [];
@@ -57,39 +50,41 @@ export function createLibraryService(deps: {
     return orderRows(kept, query.sort, (row) => row.order, (row) => row.item.title).map((row) => row.item);
   }
 
-  /** One kind's page: TMDB's search with `q`, otherwise its browse narrowed by genre and year. */
-  async function kindPage(query: LibraryQuery, kind: TitleKind, page: number): Promise<TitlesPage | undefined> {
-    const view = await session.genreView(kind);
-    const genreId = query.genres.length === 1 ? view?.byName.get(query.genres[0] ?? "") : undefined;
-    const answer =
-      query.q !== undefined
-        ? await admin.titleSearch(adminUrl(), query.q, kind, page)
-        : await admin.titles(adminUrl(), {
-            kind,
-            sort: query.sort,
-            page,
-            ...(genreId !== undefined && { genre: genreId }),
-            ...(query.year !== undefined && { year: query.year }),
-          });
-    if (!answer.ok) return undefined;
-    return { available: true, rows: answer.value.items, totalPages: answer.value.totalPages, totalResults: answer.value.totalResults };
+  /** The genre names the asked kinds offer, and the years: the `all` view's facets. */
+  async function allFacets(kinds: readonly TitleKind[]): Promise<{ genres: string[]; years: number[] }> {
+    const genreFacets = new Set<string>();
+    for (const kind of kinds) {
+      const view = await session.genreView(kind);
+      if (view !== undefined) for (const name of view.names) genreFacets.add(name);
+    }
+    return { genres: [...genreFacets], years: yearFacets(now) };
   }
 
-  /** Both kinds' `page` merged: rows concatenated, the wider page count, the summed totals. */
-  async function titlesPage(query: LibraryQuery, kinds: readonly TitleKind[], page: number): Promise<TitlesPage> {
-    const answers = await Promise.all(kinds.map((kind) => kindPage(query, kind, page)));
-    const pages = answers.reduce<TitlesPage[]>((found, one) => (one === undefined ? found : [...found, one]), []);
-    if (pages.length === 0) return { available: false, rows: [], totalPages: 0, totalResults: 0 };
+  /**
+   * `view=all` with `watched=watching|watched` (docs/03 section 3.5): the answer is the history's
+   * items, not a page of the catalog, so a page is full until the set is exhausted.
+   */
+  async function historyBackedView(query: LibraryQuery, state: "watching" | "watched"): Promise<LibraryPage> {
+    const health = await session.health();
+    const kinds = kindsOf(query.type);
+    if (query.sort === "trending" && !(health.reachable && health.tmdbConfigured && kinds.length > 0)) throw invalid();
+    const listed = await lists.watchedSet(query, state);
+    const available = health.reachable && health.tmdbConfigured;
+    const trending = available && kinds.length > 0;
+    session.noteAvailability({ available, trending });
     return {
-      available: pages.length === kinds.length,
-      rows: pages.flatMap((one) => one.rows),
-      totalPages: Math.max(...pages.map((one) => one.totalPages)),
-      totalResults: pages.reduce((sum, one) => sum + one.totalResults, 0),
+      items: listed.items,
+      ...(listed.nextCursor !== undefined && { nextCursor: listed.nextCursor }),
+      total: listed.total,
+      facets: await allFacets(kinds),
+      trending,
+      titlesAvailable: available,
     };
   }
 
   /** `view=all` (docs/03 section 3.5): the matching files first, then the titles. */
   async function allView(query: LibraryQuery): Promise<LibraryPage> {
+    if (query.watched === "watching" || query.watched === "watched") return historyBackedView(query, query.watched);
     const health = await session.health();
     const kinds = kindsOf(query.type);
     const canTrend = health.reachable && health.tmdbConfigured && kinds.length > 0;
@@ -103,23 +98,21 @@ export function createLibraryService(deps: {
     const localsRemain = localOffset + localSlice.length < locals.length;
 
     // The titles are read only when the page has room for them (03 section 3.5).
-    const titles =
-      kinds.length > 0 && localSlice.length < LIBRARY_PAGE_SIZE ? await titlesPage(query, kinds, titlePage) : undefined;
-    const available = titles === undefined ? health.reachable && health.tmdbConfigured : titles.available;
-    const pageRows = (await Promise.all((titles?.rows ?? []).map((row) => items.titleItem(row)))).filter((item) =>
-      matchesFilters(item, query),
-    );
+    const read =
+      kinds.length > 0 && localSlice.length < LIBRARY_PAGE_SIZE
+        ? await titleReader.read(query, kinds, titlePage, LIBRARY_PAGE_SIZE - localSlice.length)
+        : undefined;
+    const titles = read?.first;
+    const available = read === undefined ? health.reachable && health.tmdbConfigured : read.available;
+    const pageRows = read?.items ?? [];
 
-    const moreTitles = titles !== undefined && titles.available && titlePage < titles.totalPages;
+    // Past the reader's bound (library-titles.ts) the cursor still continues from where it stopped.
+    const moreTitles = read?.nextPage !== undefined;
     const nextCursor =
       localsRemain || moreTitles
-        ? encodeCursor({ localOffset: localOffset + localSlice.length, titlePage: moreTitles ? titlePage + 1 : titlePage })
+        ? encodeCursor({ localOffset: localOffset + localSlice.length, titlePage: read?.nextPage ?? titlePage })
         : undefined;
-    const genreFacets = new Set<string>();
-    for (const kind of kinds) {
-      const view = await session.genreView(kind);
-      if (view !== undefined) for (const name of view.names) genreFacets.add(name);
-    }
+    const facets = await allFacets(kinds);
     const trending = available && health.tmdbConfigured && kinds.length > 0;
     session.noteAvailability({ available, trending });
     // The whole matching count, wherever it is known; TMDB's totals only when they were read
@@ -134,7 +127,7 @@ export function createLibraryService(deps: {
       items: [...localSlice, ...pageRows],
       ...total,
       ...(nextCursor !== undefined && { nextCursor }),
-      facets: { genres: [...genreFacets], years: yearFacets(now) },
+      facets,
       trending,
       titlesAvailable: available,
     };
