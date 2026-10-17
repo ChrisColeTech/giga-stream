@@ -5,6 +5,7 @@ import { useId, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Toggle } from '@/components/ui/Toggle'
 import { DUR_COLLAPSE_MS, EASE_P2P } from '@/constants/motion'
+import { useReduceMotion } from '@/hooks/useReduceMotion'
 import { cn } from '@/lib/cn'
 
 /* THE ONLY COLLAPSIBLE PANEL BLOCK (doc 03 §Shared panel primitives). A
@@ -199,6 +200,7 @@ export function Section({ title, open, onToggle, children, control, onRestoreDef
      the open state moved without anyone pressing anything (a restored
      preference), and that must paint, not play. */
   const pressedAt = useRef<number | null>(null)
+  const reduce = useReduceMotion()
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -222,7 +224,9 @@ export function Section({ title, open, onToggle, children, control, onRestoreDef
     const from = pressedAt.current
     pressedAt.current = null
     rest()
-    if (from === null) return
+    /* Giga Stream delta (docs/23 section 3.1): the app's Reduce motion setting, which an imperative `animate()` does
+       not see on its own, makes the fold paint at rest instead of play. */
+    if (from === null || reduce) return
 
     const to = el.getBoundingClientRect().height
     /* Nothing to travel — a section pressed twice inside one frame, or one
@@ -248,7 +252,7 @@ export function Section({ title, open, onToggle, children, control, onRestoreDef
       },
       onComplete: rest,
     })
-  }, [open])
+  }, [open, reduce])
 
   /* Stopping on unmount matters more than it looks: the callbacks above write
      to a detached element, and in dev a hot reload remounts mid-flight. */
@@ -277,7 +281,7 @@ export function Section({ title, open, onToggle, children, control, onRestoreDef
         >
           {/* ONE icon that TURNS, rather than two icons swapped: the same object
               changing state reads as the control it is. */}
-          <motion.span className="flex flex-none" initial={false} animate={{ rotate: open ? 0 : -90 }} transition={TWEEN}>
+          <motion.span className="flex flex-none" initial={false} animate={{ rotate: open ? 0 : -90 }} transition={reduce ? { duration: 0 } : TWEEN}>
             <ChevronDown className="size-3 text-dim" aria-hidden />
           </motion.span>
           {/* The same 45% every disabled control in this app wears, so a dead

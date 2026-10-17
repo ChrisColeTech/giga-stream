@@ -14,7 +14,6 @@ export const LIBRARY_COPY = {
   clearEmpty: "The history is already empty.",
   searchClear: "Clear the search",
   searchEmpty: "There is no search to clear.",
-  noFilter: "No filter is set.",
   anyGenre: "Any genre",
   anyYear: "Any year",
   collectionsWindow: "Manage collections",

@@ -7,7 +7,6 @@ import { LIBRARY_COPY, SORT_OPTIONS, WATCHED_OPTIONS } from "@/lib/library-copy"
 import {
   FILTER_DEFAULTS,
   choiceOf,
-  filtersAtDefault,
   type LibraryQuery,
   type ListView,
   type SortKey,
@@ -32,7 +31,6 @@ export interface LibraryFiltersProps {
 /** The right pane of Library, on LoRA Studio's gallery filter pane (components/gallery/ImageFilters.tsx): a stack of
  *  settings, each a label over its control, with Clear filters pinned at the foot. */
 export function LibraryFilters({ query, view, genres, years, onQuery, onView }: LibraryFiltersProps) {
-  const atDefault = filtersAtDefault(query);
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
@@ -99,8 +97,7 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView }: 
         <Button
           variant="ghost"
           full
-          disabled={atDefault}
-          title={atDefault ? LIBRARY_COPY.noFilter : undefined}
+          title="Reset search, sort and every filter"
           onClick={() => onQuery({ ...FILTER_DEFAULTS })}
         >
           Clear filters

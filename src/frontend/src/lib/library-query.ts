@@ -33,7 +33,8 @@ export const DEFAULT_QUERY: LibraryQuery = {
 };
 
 /** The Filter group's values at rest. Clear filters resets to these and keeps the search, the scope and the source. */
-export const FILTER_DEFAULTS = { genres: [], year: "", watched: "all" } as const;
+/** What Clear filters restores: everything the right pane sets (search, sort and the filters), never the type or source. */
+export const FILTER_DEFAULTS = { search: "", sort: "newest", genres: [], year: "", watched: "all" } as const;
 
 const COLLECTION_PREFIX = "collection:";
 
@@ -44,11 +45,6 @@ export function collectionSource(id: string): SourceId {
 /** The collection a source names, or null for the views. */
 export function collectionOf(source: SourceId): string | null {
   return source.startsWith(COLLECTION_PREFIX) ? source.slice(COLLECTION_PREFIX.length) : null;
-}
-
-/** Whether every filter in the Filter group is at its default (Clear filters is disabled then). */
-export function filtersAtDefault(query: LibraryQuery): boolean {
-  return query.genres.length === 0 && query.year === "" && query.watched === "all";
 }
 
 /** A value from a closed set, read from a control's text; anything else is the fallback. */

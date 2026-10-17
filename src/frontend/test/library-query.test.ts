@@ -5,7 +5,7 @@ import {
   DEFAULT_QUERY,
   collectionSource,
   continueItems,
-  filtersAtDefault,
+  FILTER_DEFAULTS,
   matchesSource,
   sortedCollections,
   viewCounts,
@@ -78,10 +78,11 @@ describe("the filters", () => {
     assert.deepEqual(titles(visibleItems(ALL, query({ watched: "watching" }))), ["Bravo"]);
   });
 
-  it("reports the Filter group at its default", () => {
-    assert.equal(filtersAtDefault(DEFAULT_QUERY), true);
-    assert.equal(filtersAtDefault(query({ genres: ["Drama"] })), false);
-    assert.equal(filtersAtDefault(query({ search: "only search" })), true);
+  it("clears to the default search, sort and filters, and leaves the type and source alone", () => {
+    const set = query({ scope: "movie", search: "x", sort: "az", genres: ["Drama"], year: "2020", watched: "watched" });
+    const cleared: LibraryQuery = { ...set, ...FILTER_DEFAULTS };
+    assert.deepEqual({ ...cleared, scope: DEFAULT_QUERY.scope }, DEFAULT_QUERY);
+    assert.equal(cleared.scope, "movie");
   });
 });
 

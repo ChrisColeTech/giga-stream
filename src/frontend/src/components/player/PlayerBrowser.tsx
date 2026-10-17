@@ -1,9 +1,7 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { LocalFileFacts } from "@/components/player/LocalFileFacts";
 import { MovieChapter } from "@/components/player/MovieChapter";
-import { PlayerRow } from "@/components/player/PlayerRow";
 import { Select } from "@/components/ui/Field";
-import { FIELD_CONTROL } from "@/components/ui/NumberField";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { BROWSER_SKELETON_COUNT, NO_SEASONS_REASON } from "@/lib/player-copy";
 import { episodeMarker, type PlayerView } from "@/lib/player-view";
@@ -39,22 +37,20 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
   const noSeasons = seasons.length === 0;
   return (
     <div className="flex min-w-[180px] flex-1 flex-col overflow-hidden">
-      <div className="flex-none p-2.5">
-        <PlayerRow label="Season" disabled={noSeasons} reason={NO_SEASONS_REASON}>
-          <Select
-            aria-label="Season"
-            className={FIELD_CONTROL}
-            value={season === undefined ? "" : String(season)}
-            disabled={noSeasons}
-            onChange={(event) => onSeason(Number(event.target.value))}
-          >
-            {seasons.map((entry) => (
-              <option key={entry.season} value={String(entry.season)}>
-                {`Season ${entry.season}`}
-              </option>
-            ))}
-          </Select>
-        </PlayerRow>
+      {/* No label: every option reads "Season N", so the select names itself. */}
+      <div className="flex-none p-2.5" title={noSeasons ? NO_SEASONS_REASON : undefined}>
+        <Select
+          aria-label="Season"
+          value={season === undefined ? "" : String(season)}
+          disabled={noSeasons}
+          onChange={(event) => onSeason(Number(event.target.value))}
+        >
+          {seasons.map((entry) => (
+            <option key={entry.season} value={String(entry.season)}>
+              {`Season ${entry.season}`}
+            </option>
+          ))}
+        </Select>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-hair">
         <EpisodeBrowser
