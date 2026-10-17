@@ -42,11 +42,11 @@ export function CollectionMembers({
   readonly rows: readonly MemberRow[];
 }) {
   return (
-    <Group title="Members" icon={Film} last>
+    <Group title="Videos" icon={Film} last>
       {rows.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (
-        <DataTable label="Members" columns={memberColumns(collectionId)} rows={rows} rowKey={(row) => row.key} />
+        <DataTable label="Videos" columns={memberColumns(collectionId)} rows={rows} rowKey={(row) => row.key} />
       )}
     </Group>
   );

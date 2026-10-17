@@ -12,8 +12,8 @@ import { CollectionDetailsGroup } from "./CollectionDetailsGroup";
 import { CollectionFolders } from "./CollectionFolders";
 import { CollectionMembers } from "./CollectionMembers";
 
-const SECTIONS = ["details", "folders", "members"] as const;
-const LABEL: Record<(typeof SECTIONS)[number], string> = { details: "Details", folders: "Folders", members: "Members" };
+const SECTIONS = ["details", "folders", "videos"] as const;
+const LABEL: Record<(typeof SECTIONS)[number], string> = { details: "Details", folders: "Folders", videos: "Videos" };
 
 export interface CollectionWorkspaceProps {
   readonly collection: CollectionRow;
@@ -21,7 +21,7 @@ export interface CollectionWorkspaceProps {
 }
 
 /** One collection's workspace, as Sensenova's dataset workspace (pages/datasets/DatasetWorkspace.tsx): LEFT the way back
- *  as a full-width button above the sections; CENTRE one scrolling page holding Details, Folders and Members, which the
+ *  as a full-width button above the sections; CENTRE one scrolling page holding Details, Folders and Videos, which the
  *  rail scrolls to and follows. No delete here: that belongs on the index beside the row. */
 export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceProps) {
   const spy = useScrollSpy(SECTIONS, SECTIONS[0]);
@@ -47,7 +47,7 @@ export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceP
           <div ref={spy.bind("folders")}>
             <CollectionFolders collectionId={collection.id} folders={folders} />
           </div>
-          <div ref={spy.bind("members")}>
+          <div ref={spy.bind("videos")}>
             <CollectionMembers collectionId={collection.id} rows={memberRows(refs, LIBRARY_ITEMS)} />
           </div>
         </div>

@@ -23,7 +23,7 @@ export function CollectionRows({ rows, onOpen, onDelete }: CollectionRowsProps) 
       <Wide>
         <div className={`${COLS} font-mono text-xs text-dim`}>
           <span>name</span>
-          <span className="text-right">items</span>
+          <span className="text-right">videos</span>
           <span className="text-right">manual</span>
           <span className="text-right">folders</span>
           <span>scan</span>
