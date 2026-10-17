@@ -71,7 +71,7 @@ export function Titlebar() {
   };
 
   return (
-    <header className={cn(TITLEBAR, barTone(theatre))}>
+    <header className={cn("chrome-bar", TITLEBAR, barTone(theatre))}>
       {toggle("left")}
       <Brand />
       {/* Absolutely centred on the TITLEBAR, not flex-centred among siblings, so showing or disabling a pane toggle

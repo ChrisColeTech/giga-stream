@@ -14,12 +14,14 @@ function resolve(theme: ThemeMode): "light" | "dark" {
  * changing its mind mid-session, so its media query is watched for as long as that mode is selected. The app's Reduce
  * motion therefore wins over the desktop's: Off keeps motion even when the desktop asks for less. Theatre's black is
  * a root token remap too (index.css), so its attribute rides here with the others: one hook stamps every root
- * attribute, in order, before anything downstream reads the tokens (the native overlay's palette does). */
+ * attribute, in order, before anything downstream reads the tokens (the native overlay's palette does). The idle
+ * attribute (`data-chrome-idle`, only while Theatre is on and the bars have faded, see useTheatreIdle) rides here too. */
 export function useTheme(): void {
   const theme = useAppStore((state) => state.theme);
   const accent = useAppStore((state) => state.accent);
   const motion = useAppStore((state) => state.motion);
   const theatre = useAppStore((state) => state.theatre);
+  const chromeIdle = useAppStore((state) => state.chromeIdle);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -29,6 +31,8 @@ export function useTheme(): void {
       root.dataset.motion = resolveReduceMotion(motion) ? "reduce" : "full";
       if (theatre) root.dataset.theatre = "";
       else delete root.dataset.theatre;
+      if (theatre && chromeIdle) root.dataset.chromeIdle = "";
+      else delete root.dataset.chromeIdle;
     };
 
     apply();
@@ -40,5 +44,5 @@ export function useTheme(): void {
     return () => {
       for (const query of watched) query.removeEventListener("change", apply);
     };
-  }, [theme, accent, motion, theatre]);
+  }, [theme, accent, motion, theatre, chromeIdle]);
 }

@@ -28,7 +28,7 @@ export function toggleTheatre(set: Set, get: Get): void {
       before[side] = open;
       if (open) get().togglePane(side);
     }
-    set({ theatre: true, theatreBefore: before });
+    set({ theatre: true, theatreBefore: before, chromeIdle: false });
     return;
   }
   const before = get().theatreBefore ?? {};
@@ -37,5 +37,6 @@ export function toggleTheatre(set: Set, get: Get): void {
     if (desired === undefined) continue;
     if ((get().open[paneKey(get().surface, side)] ?? true) !== desired) get().togglePane(side);
   }
-  set({ theatre: false, theatreBefore: null });
+  /* The idle flag leaves with Theatre in the same transition, so the bars can never stay hidden outside it. */
+  set({ theatre: false, theatreBefore: null, chromeIdle: false });
 }

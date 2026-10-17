@@ -43,6 +43,10 @@ export interface ShellSlice {
   theatre: boolean;
   theatreBefore: Partial<Record<PaneSide, boolean>> | null;
   toggleTheatre: () => void;
+  /** Theatre's bars are faded out after idle seconds (useTheatreIdle owns the timer; this only holds the result).
+   *  Always false outside Theatre. */
+  chromeIdle: boolean;
+  setChromeIdle: (value: boolean) => void;
   hydrationApplied: boolean;
   shellVisible: boolean;
   shellWriteEnabled: boolean;
@@ -117,6 +121,8 @@ export function shellSlice(set: Set, get: Get): ShellSlice {
     theatre: false,
     theatreBefore: null,
     toggleTheatre: () => toggleTheatre(set, get),
+    chromeIdle: false,
+    setChromeIdle: (value) => set({ chromeIdle: value }),
     hydrationApplied: false,
     shellVisible: false,
     shellWriteEnabled: false,
