@@ -6,8 +6,8 @@ import type { CollectionRow } from "@/types/collection";
 /** A collection's name is 1 to 80 characters after trimming (`03` section 3.7). */
 export const COLLECTION_NAME_MAX = 80;
 
-export const RAIL_LABEL = "Collections";
-export const RAIL_ALL = "All";
+/** The window's list, and the back link from a collection to it. */
+export const LIST_LABEL = "Collections";
 
 /** Why a name cannot be sent: nothing to act on (`06` section 2, rule 3). */
 export const NAME_BLOCK_REASON: Readonly<Record<"blank" | "unchanged", string>> = {
