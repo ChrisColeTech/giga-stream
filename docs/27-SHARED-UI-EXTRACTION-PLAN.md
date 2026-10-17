@@ -29,7 +29,7 @@ acceptance), `Done` (visually accepted on the real stack).
 |---|---|---|---|---|---|---|
 | 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below | Done | `5749213`, `6432525` (no stripping, reverted `a0f4460`, `553d1cf`), `9045a8d` (no-store) |
 | **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **done** | **Done** (interface, panes, windows and Library checked on the real stack, 2026-10-17) | `d1aa570`, `51e2cec`, `6914728`, `4f21c11` |
-| 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | Not started | |
+| 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | In progress (`admin/parity`) | |
 | 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 accepted | Not started | |
 | 4 | Providers and Titles | A | `28` | Wave 3 accepted | Not started | |
 | 5 | Playlists, Jobs and Accounts | A | `28` | Wave 4 accepted | Not started | |
