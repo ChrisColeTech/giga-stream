@@ -31,6 +31,7 @@ declare global {
       readonly onGuard: (callback: (report: unknown) => void) => void;
       readonly setPlayerPolicy: (policy: { origin: string; frameOrigins: string[] }) => void;
       readonly clearPlayerPolicy: () => void;
+      readonly setOverlay: (overlay: { color?: string; symbolColor?: string; height?: number }) => Promise<boolean>;
     };
   }
 }

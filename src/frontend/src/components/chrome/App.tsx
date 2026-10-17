@@ -1,6 +1,7 @@
 import { MotionConfig } from "framer-motion";
 import { useEffect } from "react";
 import { useAppHydration } from "@/hooks/useAppHydration";
+import { useNativeOverlay } from "@/hooks/useNativeOverlay";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { useSettingsWriteback } from "@/hooks/useSettingsWriteback";
 import { useShellKeyboard } from "@/hooks/useShellKeyboard";
@@ -18,6 +19,7 @@ export function App() {
   useShellWriteback();
   useSettingsWriteback();
   useTheme();
+  useNativeOverlay();
   useShellKeyboard();
   useEffect(() => installGuardEvents(), []);
   const reduced = useReduceMotion();

@@ -25,7 +25,7 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 | right | **Theatre** | Giga Cut's Export slot (owner, 2026-10-17): a ghost icon-and-text button beside the pane toggles. Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the active surface's left, right and bottom panes collapse by the ordinary pane toggle. Pressing again exits: each pane returns to the state it had before entering (any pane changed by hand during Theatre is healed to that state). Pressed (accent) while on; not persisted — a fresh window always starts normal |
 | right | **Bottom-pane toggle** | Player's related band. On a surface with no bottom pane it stays in place, disabled, with the reason as its tooltip. Ghost, as the other pane toggles |
 | right | **Right-pane toggle** | Shows or hides the active surface's right pane. Ghost, as the other pane toggles |
-| far right | **Window controls** | Minimize, maximize or restore, close, in the platform's own caption metrics, through named preload capabilities |
+| far right | **Window controls** | Minimize, maximize or restore, close, in the platform's own caption metrics, through named preload capabilities. On Windows the caption strip follows the theme (owner, 2026-10-17): the page sends the strip its panel and text tones — read from the same tokens a theme switch or Theatre's remap changes — and a height that tracks the UI zoom, without which the fixed strip slid past the zoomed bar |
 
 - The titlebar is a window drag region; its buttons are not.
 - While a work window is open its scrim covers everything below the titlebar, and the pane toggles and the

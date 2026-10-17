@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld("pocHost", {
   },
   setPlayerPolicy: (policy: PlayerPolicy): Promise<void> => ipcRenderer.invoke("poc:set-player-policy", policy),
   clearPlayerPolicy: (): Promise<void> => ipcRenderer.invoke("poc:clear-player-policy"),
+  setOverlay: (overlay: { color?: string; symbolColor?: string; height?: number }): Promise<boolean> =>
+    ipcRenderer.invoke("poc:set-overlay", overlay),
 });

@@ -18,20 +18,12 @@ import { Titlebar } from "./Titlebar";
 export function AppShell() {
   const surface = useSurface();
   const uiZoom = useAppStore((state) => state.uiZoom);
-  const theatre = useAppStore((state) => state.theatre);
   const { menu, close } = useContextMenu();
 
   /* UI zoom applies to the whole interface: the document's own zoom, so every part of the window scales together. */
   useEffect(() => {
     document.documentElement.style.zoom = String(uiZoom);
   }, [uiZoom]);
-
-  /* Theatre's black is a root token remap (index.css), so the attribute rides on <html> and every surface,
-   * input and border follows at once. */
-  useEffect(() => {
-    if (theatre) document.documentElement.dataset.theatre = "";
-    else delete document.documentElement.dataset.theatre;
-  }, [theatre]);
 
   return (
     <>

@@ -9,14 +9,17 @@ function resolve(theme: ThemeMode): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-/* Stamps the theme, the accent and the resolved motion on <html>, which is what every token override and the motion
- * kill-switch (styles/motion-reduce.css) select on. A "system" choice also has to follow the desktop changing its mind
- * mid-session, so its media query is watched for as long as that mode is selected. The app's Reduce motion therefore
- * wins over the desktop's: Off keeps motion even when the desktop asks for less. */
+/* Stamps the theme, the accent, the resolved motion and Theatre mode on <html>, which is what every token override
+ * and the motion kill-switch (styles/motion-reduce.css) select on. A "system" choice also has to follow the desktop
+ * changing its mind mid-session, so its media query is watched for as long as that mode is selected. The app's Reduce
+ * motion therefore wins over the desktop's: Off keeps motion even when the desktop asks for less. Theatre's black is
+ * a root token remap too (index.css), so its attribute rides here with the others: one hook stamps every root
+ * attribute, in order, before anything downstream reads the tokens (the native overlay's palette does). */
 export function useTheme(): void {
   const theme = useAppStore((state) => state.theme);
   const accent = useAppStore((state) => state.accent);
   const motion = useAppStore((state) => state.motion);
+  const theatre = useAppStore((state) => state.theatre);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -24,6 +27,8 @@ export function useTheme(): void {
       root.dataset.theme = resolve(theme);
       root.dataset.accent = accent;
       root.dataset.motion = resolveReduceMotion(motion) ? "reduce" : "full";
+      if (theatre) root.dataset.theatre = "";
+      else delete root.dataset.theatre;
     };
 
     apply();
@@ -35,5 +40,5 @@ export function useTheme(): void {
     return () => {
       for (const query of watched) query.removeEventListener("change", apply);
     };
-  }, [theme, accent, motion]);
+  }, [theme, accent, motion, theatre]);
 }

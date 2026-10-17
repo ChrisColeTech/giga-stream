@@ -12,6 +12,7 @@ import { enableAdBlocking } from "./ad-blocker.js";
 import { adHostResolverRules } from "./ad-hosts.js";
 import { installGuards, type GuardReport } from "./guards.js";
 import { installPlayerPolicyIpc } from "./player-policy-ipc.js";
+import { installWindowOverlayIpc } from "./window-overlay.js";
 
 /**
  * The desktop shell (the Giga Images pattern): the fileserver runs IN this process, so the window is
@@ -21,6 +22,11 @@ import { installPlayerPolicyIpc } from "./player-policy-ipc.js";
 
 // Ad-named hosts never resolve, from any frame or worker. Must be set before the app is ready.
 app.commandLine.appendSwitch("host-resolver-rules", adHostResolverRules());
+
+// Dev-only DevTools endpoint on a fixed loopback port: automation can attach to the renderer this window
+// actually shows and drive it like a browser tab (docs/07 section 5's checks). Must be set before the app
+// is ready. The packaged app never opens one.
+if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9222");
 
 /** The interface's Vite dev server (src/frontend/vite.config.mts), loaded unpackaged when it answers. */
 const DEV_URL = "http://127.0.0.1:5171/";
@@ -92,6 +98,11 @@ function createWindow(url: string): BrowserWindow {
     () => window.webContents.mainFrame.frameTreeNodeId,
     playerPolicy.canAcceptPolicy,
     playerPolicy.authority,
+  );
+  installWindowOverlayIpc(
+    window.webContents.ipc,
+    () => window.webContents.mainFrame.frameTreeNodeId,
+    () => mainWindow,
   );
   window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
