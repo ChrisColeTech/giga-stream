@@ -18,7 +18,7 @@ function makeDist(files: string[]): string {
 }
 
 test("the built bundle's assets and the favicon serve; the SPA entry answers deep links", async () => {
-  const dist = makeDist(["index.html", "favicon.ico", "assets/app.js"]);
+  const dist = makeDist(["index.html", "favicon.ico", "favicon.svg", "assets/app.js"]);
   const t = await makeApp({ webDist: dist });
 
   const root = await t.app.inject({ method: "GET", url: "/" });
@@ -32,6 +32,10 @@ test("the built bundle's assets and the favicon serve; the SPA entry answers dee
   const favicon = await t.app.inject({ method: "GET", url: "/favicon.ico" });
   assert.equal(favicon.statusCode, 200);
   assert.equal(favicon.body, "<favicon.ico>");
+
+  const svg = await t.app.inject({ method: "GET", url: "/favicon.svg" });
+  assert.equal(svg.statusCode, 200, "the interface's own favicon (src/frontend/public) serves");
+  assert.equal(svg.body, "<favicon.svg>");
 
   const deep = await t.app.inject({ method: "GET", url: "/some/deep/link" });
   assert.equal(deep.statusCode, 200, "a deep link answers the SPA entry");

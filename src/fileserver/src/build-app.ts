@@ -27,7 +27,7 @@ import { createPocResultsService } from "./services/poc-results-service.js";
 
 /** The parts of the served folder a browser may load; the PoC's scripts and results are not among them. */
 const SERVED_TOP = new Set(["html", "css", "js", "data", "assets"]);
-const SERVED_FILES = new Set(["index.html", "favicon.ico"]);
+const SERVED_FILES = new Set(["index.html", "favicon.ico", "favicon.svg"]);
 
 function isServed(pathName: string): boolean {
   const parts = pathName.split("/").filter(Boolean);

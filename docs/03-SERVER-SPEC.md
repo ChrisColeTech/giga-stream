@@ -55,9 +55,18 @@ change without a design discussion.
 Both servers bind `127.0.0.1` unless `HOST` says otherwise.
 
 **Fileserver environment:** `PORT`, `HOST`, `DATA_DIR` (default `~/.giga-stream`), `WEB_DIST` (the built
-interface), `ALLOW_INSECURE_ADMIN` (accept a plain `http` admin address off loopback; development only),
+interface, default `src/frontend/dist`; point it at `src/mockup` to serve the proof of concept of `14`),
+`ALLOW_INSECURE_ADMIN` (accept a plain `http` admin address off loopback; development only),
 `TEST_FOLDER_ROOT` (tests only: lets a browser run choose a folder under this root without Electron's
-picker).
+picker), `GIGA_APP_URL` (desktop shell only: the page the window loads).
+
+**Serving the interface** (as the other family apps do). The fileserver serves the built interface on its
+own origin: `index.html`, `favicon.svg`/`favicon.ico` and Vite's `assets/`. A GET that is no route, no
+`/api` or `/healthz` address and no file answers `index.html`; everything else keeps the JSON 404. With no
+`index.html` in `WEB_DIST`, nothing is served there. The Electron window loads `GIGA_APP_URL` when it is set;
+otherwise, unpackaged, the Vite dev server on 5171 when it answers within three seconds, so edits reload in
+place; otherwise the fileserver's own origin. The root `npm run dev` starts Vite beside the backend, the
+Electron app and the live server, so the development window always loads it.
 
 **Admin backend environment:** `PORT`, `HOST`, `DATA_DIR` (default `~/.giga-stream-admin`),
 `JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`

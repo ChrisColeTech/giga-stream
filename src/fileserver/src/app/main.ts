@@ -18,8 +18,36 @@ import { installGuards, type GuardReport } from "./guards.js";
 // Ad-named hosts never resolve, from any frame or worker. Must be set before the app is ready.
 app.commandLine.appendSwitch("host-resolver-rules", adHostResolverRules());
 
+/** The interface's Vite dev server (src/frontend/vite.config.mts), loaded unpackaged when it answers. */
+const DEV_URL = "http://127.0.0.1:5171/";
+
 let server: FastifyInstance | null = null;
 let mainWindow: BrowserWindow | null = null;
+
+/** Whether anything answers at the address: any response counts, only a transport failure is a no. */
+async function answers(url: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await fetch(url, { signal: AbortSignal.timeout(1500) });
+      return true;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  return false;
+}
+
+/**
+ * The page the window loads (the family pattern): `GIGA_APP_URL` when set; else, unpackaged, the Vite
+ * dev server when it answers, so edits reload in place; else this fileserver's own origin, which
+ * serves the built interface.
+ */
+async function resolveAppUrl(own: string): Promise<string> {
+  if (config.appUrl !== "") return config.appUrl;
+  if (!app.isPackaged && (await answers(DEV_URL, 3000))) return DEV_URL;
+  return own;
+}
 
 /** The preferred window clamped to the work area: every number here is a DIP (docs/02 section 1). */
 function windowSize(): { width: number; height: number; minWidth: number; minHeight: number } {
@@ -79,7 +107,7 @@ if (!app.requestSingleInstanceLock()) {
         },
       });
       await server.listen({ host: "127.0.0.1", port: config.port });
-      const url = `http://127.0.0.1:${config.port}/`;
+      const url = await resolveAppUrl(`http://127.0.0.1:${config.port}/`);
       const filters = await enableAdBlocking(session.defaultSession, (blocked) => {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.webContents.send("poc:guard", { kind: "ad blocked", url: `${blocked.host} (${blocked.type})`, blocked: true });
