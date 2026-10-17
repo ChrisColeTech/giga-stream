@@ -1,8 +1,12 @@
 import { Select } from "@/components/ui/Field";
 import { FIELD_CONTROL } from "@/components/ui/NumberField";
-import { Segmented } from "@/components/ui/Segmented";
 import { EMPTY_VALUE, PICTURE_FIT_LABEL, PLAYBACK_SECTION_TITLES, REASON_NEEDS_PLAYING } from "@/lib/live-constants";
 import { PICTURE_FIT_OPTIONS, type PictureFit } from "@/lib/live-picture";
+
+/* A rail's one-of choice is a Select, never chips: LoRA Studio's compose rail (components/generate/ComposeRail.tsx,
+   "Selects, not segmented tracks") - chips cannot share a rail's width. */
+const choiceOfFit = (value: string): PictureFit =>
+  PICTURE_FIT_OPTIONS.find((option) => option.value === value)?.value ?? "fit";
 import { PlaybackRow } from "./PlaybackRow";
 import { PlaybackSection } from "./PlaybackSection";
 
@@ -42,7 +46,18 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
 
       <PlaybackSection id="live.playback.display" title={PLAYBACK_SECTION_TITLES.display}>
         <PlaybackRow label="Fit">
-          <Segmented dense options={PICTURE_FIT_OPTIONS} value={fit} onChange={onFitChange} aria-label={PICTURE_FIT_LABEL} />
+          <Select
+            aria-label={PICTURE_FIT_LABEL}
+            className={FIELD_CONTROL}
+            value={fit}
+            onChange={(event) => onFitChange(choiceOfFit(event.target.value))}
+          >
+            {PICTURE_FIT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
         </PlaybackRow>
         <PlaybackRow label="Aspect" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
@@ -66,16 +81,7 @@ export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
 
       <PlaybackSection id="live.playback.playback" title={PLAYBACK_SECTION_TITLES.playback}>
         <PlaybackRow label="Latency" reason={REASON_NEEDS_PLAYING}>
-          <Segmented
-            dense
-            aria-label="Latency"
-            value="normal"
-            onChange={() => undefined}
-            options={[
-              { value: "normal", label: "Normal", disabled: true, disabledReason: REASON_NEEDS_PLAYING },
-              { value: "low", label: "Low", disabled: true, disabledReason: REASON_NEEDS_PLAYING },
-            ]}
-          />
+          <IdleSelect label="Latency" value="normal" text="Normal" />
         </PlaybackRow>
         <PlaybackRow label="Live edge" reason={REASON_NEEDS_PLAYING}>
           {unplayed}
