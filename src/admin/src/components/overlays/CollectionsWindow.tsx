@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { CollectionsIndex } from "@/components/collections/CollectionsIndex";
 import { CollectionWorkspace } from "@/components/collections/CollectionWorkspace";
-import { workSpec } from "@/constants/child-window";
+import { workSpec } from "@giga/ui/lib/child-metrics";
 import { COLLECTION_ROWS } from "@/fixtures/collections";
 import { LIST_LABEL } from "@/lib/collections-copy";
 import { alphabetical } from "@/lib/collections-order";
 import { useAppStore } from "@/store/app-store";
-import { ChildWindow } from "./ChildWindow";
+import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
 const SPEC = workSpec("collections", "Collections");
 const ROWS = alphabetical(COLLECTION_ROWS);

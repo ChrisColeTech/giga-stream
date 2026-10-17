@@ -1,5 +1,5 @@
-import { BORDER, CORNER_OFFSET, HEADER_GAP, INSET, OPEN_SHARE, TITLEBAR_HEIGHT, TITLE_HEIGHT } from "@/constants/child-window";
-import type { Box, ChildLimits, ChildSpec, Size } from "@/types/child-window";
+import { BORDER, CORNER_OFFSET, HEADER_GAP, INSET, OPEN_SHARE, TITLEBAR_HEIGHT, TITLE_HEIGHT } from "./child-metrics";
+import type { Box, ChildLimits, ChildSpec, Size } from "./child-types";
 
 /** What the window's padding and border add around its content on each axis. */
 const CHROME = 2 * (INSET + BORDER);

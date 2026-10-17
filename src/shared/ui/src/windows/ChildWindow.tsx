@@ -1,14 +1,15 @@
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
-import { useRef } from "react";
+import { useContext, useRef } from "react";
 import type { ReactNode } from "react";
-import { IconButton } from "@giga/ui/controls/IconButton";
-import { BORDER, HEADER_GAP, INSET, TITLE_HEIGHT } from "@/constants/child-window";
-import { EASE_OUT } from "@giga/ui/lib/motion-timing";
-import { useChildWindowBox } from "@/hooks/useChildWindowBox";
-import { useChildWindowKeys } from "@/hooks/useChildWindowKeys";
-import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
-import type { ChildSpec } from "@/types/child-window";
+import { IconButton } from "../controls/IconButton";
+import { useChildWindowBox } from "../hooks/useChildWindowBox";
+import { useChildWindowKeys } from "../hooks/useChildWindowKeys";
+import { useReduceMotion } from "../hooks/useReduceMotion";
+import { BORDER, HEADER_GAP, INSET, TITLE_HEIGHT } from "../lib/child-metrics";
+import { ChildMemoryContext } from "../lib/child-memory";
+import type { ChildSpec } from "../lib/child-types";
+import { EASE_OUT } from "../lib/motion-timing";
 import { ChildGrips } from "./ChildGrips";
 import { ChildScrim } from "./ChildScrim";
 
@@ -29,7 +30,7 @@ export interface ChildWindowProps {
  * framer-motion fade-and-rise; the host holds the AnimatePresence. */
 export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
   const frame = useRef<HTMLDivElement | null>(null);
-  const { box, move, grip } = useChildWindowBox(spec);
+  const { box, move, grip } = useChildWindowBox(spec, useContext(ChildMemoryContext));
   const reduced = useReduceMotion();
   useChildWindowKeys(frame, { escape: spec.escape, modal: spec.modal, onClose });
 

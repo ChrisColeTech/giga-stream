@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { RefObject } from "react";
-import { keepInWindow, placePopup } from "@/lib/popup-place";
-import type { PopupAnchor, PopupPolicy } from "@/types/overlays";
+import { keepInWindow, placePopup } from "../lib/popup-place";
+import type { PopupAnchor, PopupPolicy } from "../lib/popup-types";
 
 /** What every authored popup shares: it hangs off its anchor and stays inside the window as it grows; Escape and the
  *  title's X close it; and, unless its policy keeps it open, so does a press outside it or focus moving to another

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { WORK_BODY, WORK_WIDTH, workSpec } from "@/constants/child-window";
-import { clampSize, inside, limitsOf, openBox, placeAt, resized, roomOf, sized } from "@/lib/child-bounds";
+import { clampSize, inside, limitsOf, openBox, placeAt, resized, roomOf, sized } from "../src/lib/child-bounds";
+import { WORK_BODY, WORK_WIDTH, workSpec } from "../src/lib/child-metrics";
 
 const room = roomOf({ width: 1600, height: 1000 });
 const spec = workSpec("settings", "Settings");

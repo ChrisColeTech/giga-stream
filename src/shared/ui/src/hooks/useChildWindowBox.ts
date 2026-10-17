@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { clampSize, inside, limitsOf, openBox, resized, roomOf } from "@/lib/child-bounds";
-import type { Edge } from "@/lib/child-bounds";
-import { useAppStore } from "@/store/app-store";
-import type { Box, ChildSpec } from "@/types/child-window";
-import { useViewport } from "@giga/ui/hooks/useViewport";
+import { clampSize, inside, limitsOf, openBox, resized, roomOf } from "../lib/child-bounds";
+import type { Edge } from "../lib/child-bounds";
+import type { ChildMemory } from "../lib/child-memory";
+import type { Box, ChildSpec } from "../lib/child-types";
+import { useViewport } from "./useViewport";
 
 interface Gesture {
   readonly edge: Edge | "move";
@@ -22,13 +22,13 @@ export interface DragHandlers {
 /** Where a child window is and how large, and the gestures that change it. It opens where it last was (put back inside
  *  the main window, which may have moved or shrunk) or placed by its kind; the header moves it, the grips resize it,
  *  and both are held between the limits and inside the room. Only the end of a gesture is remembered, never each
- *  pointer move. A resize of the main window re-clamps the window into the room it now has. */
-export function useChildWindowBox(spec: ChildSpec) {
+ *  pointer move. A resize of the main window re-clamps the window into the room it now has. `memory` is the program's
+ *  store of where windows were; it is read once, as the window opens. */
+export function useChildWindowBox(spec: ChildSpec, memory: ChildMemory) {
   const viewport = useViewport();
   const room = useMemo(() => roomOf(viewport), [viewport]);
   const limits = useMemo(() => limitsOf(spec, room), [spec, room]);
-  const remember = useAppStore((state) => state.rememberChild);
-  const [box, setBox] = useState<Box>(() => openBox(spec, room, useAppStore.getState().childBounds[spec.key]));
+  const [box, setBox] = useState<Box>(() => openBox(spec, room, memory.recall(spec.key)));
   const gesture = useRef<Gesture | null>(null);
   const live = useRef(box);
   live.current = box;
@@ -63,7 +63,7 @@ export function useChildWindowBox(spec: ChildSpec) {
     if (gesture.current === null) return;
     gesture.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    remember(spec.key, live.current);
+    memory.remember(spec.key, live.current);
   };
 
   const handlers = (edge: Gesture["edge"]): DragHandlers => ({

@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { IconButton } from "@giga/ui/controls/IconButton";
-import { POPUP_BORDER, POPUP_CLASSES, POPUP_PAD } from "@/constants/popups";
-import { usePopupFrame } from "@/hooks/usePopupFrame";
-import type { PopupPanelProps } from "@/types/overlays";
+import { IconButton } from "../controls/IconButton";
+import { usePopupFrame } from "../hooks/usePopupFrame";
+import { POPUP_BORDER, POPUP_CLASSES, POPUP_PAD } from "../lib/popup-metrics";
+import type { PopupPanelProps } from "../lib/popup-types";
 
 /* THE ONE SCAFFOLD. Every authored popup is assembled here, in this order: the title header, the body, a conditional
  * status row, the action footer. The scaffold owns the frame, border, radius, shadow, title, separators, padding, size

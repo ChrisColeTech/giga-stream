@@ -1,5 +1,11 @@
-import { SETTINGS_SECTIONS } from "@/constants/settings-sections";
-import type { SettingsSectionId } from "@/constants/settings-sections";
+import type { ComponentType } from "react";
+
+/** One entry of a settings rail: the id a program switches on, its label and its icon. */
+export interface SettingsSection<Id extends string = string> {
+  readonly id: Id;
+  readonly label: string;
+  readonly icon: ComponentType<{ className?: string }>;
+}
 
 /* LoRA Studio's settings rail (components/settings/SettingsOverlay.tsx NAV_BUTTON), on plain buttons: this repo has no
    Headless UI, so `data-selected` is set by hand where LoRA's Tab sets it. */
@@ -11,8 +17,14 @@ const NAV_BUTTON =
   "data-selected:border-l-accent data-selected:bg-ctl data-selected:text-accent-text " +
   "data-selected:[&_svg]:text-accent";
 
-/** Settings' rail: its sections down the left edge of the window. */
-export function SettingsRail({ selected, onSelect }: { selected: SettingsSectionId; onSelect: (id: SettingsSectionId) => void }) {
+export interface SettingsRailProps<Id extends string> {
+  readonly sections: readonly SettingsSection<Id>[];
+  readonly selected: Id;
+  readonly onSelect: (id: Id) => void;
+}
+
+/** A settings window's rail: its sections down the left edge, 150 wide and 210 on a wide window. */
+export function SettingsRail<Id extends string>({ sections, selected, onSelect }: SettingsRailProps<Id>) {
   return (
     <div
       role="tablist"
@@ -20,7 +32,7 @@ export function SettingsRail({ selected, onSelect }: { selected: SettingsSection
       aria-label="Settings sections"
       className="flex w-[150px] flex-none flex-col overflow-y-auto border-r border-hair bg-panel py-1.5 lg:w-[210px]"
     >
-      {SETTINGS_SECTIONS.map((section) => {
+      {sections.map((section) => {
         const Icon = section.icon;
         const on = section.id === selected;
         return (

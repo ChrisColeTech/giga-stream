@@ -1,6 +1,6 @@
-import { GRIP } from "@/constants/child-window";
-import type { DragHandlers } from "@/hooks/useChildWindowBox";
-import type { Edge } from "@/lib/child-bounds";
+import type { DragHandlers } from "../hooks/useChildWindowBox";
+import type { Edge } from "../lib/child-bounds";
+import { GRIP } from "../lib/child-metrics";
 
 /** Where each grip sits and which cursor it wears: four edges and four corners, each a few points wide, registered
  *  before the content so a control at an edge still wins. A press on one resizes the window in that direction. */

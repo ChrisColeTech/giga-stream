@@ -1,4 +1,4 @@
-import { TITLEBAR_HEIGHT } from "@/constants/child-window";
+import { TITLEBAR_HEIGHT } from "../lib/child-metrics";
 
 /* THE SCRIM over the main window while a modal child window is open. It washes the whole main window, swallows every
  * press on it (the main window takes no input behind a modal), and a press on it brings the open window forward and

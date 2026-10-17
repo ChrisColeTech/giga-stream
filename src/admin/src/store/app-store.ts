@@ -3,7 +3,7 @@ import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } fr
 import { EVENT_ROWS } from "@/fixtures/events";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { navigationSlice, type NavigationSlice } from "./navigation-slice";
-import type { Box } from "@/types/child-window";
+import type { Box } from "@giga/ui/lib/child-types";
 import type { EventArea } from "@/types/events";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";

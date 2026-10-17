@@ -1,5 +1,5 @@
-import { POPUP_CENTRE_DEPTH, POPUP_EDGE, POPUP_GAP } from "@/constants/popups";
-import type { PopupAnchor } from "@/types/overlays";
+import { POPUP_CENTRE_DEPTH, POPUP_EDGE, POPUP_GAP } from "./popup-metrics";
+import type { PopupAnchor } from "./popup-types";
 
 /** A point for a panel of `width` x `height`, nudged so the whole panel stays `edge` inside a `windowW` x `windowH`
  *  window. Pure, so the placement rule is testable without a DOM. */

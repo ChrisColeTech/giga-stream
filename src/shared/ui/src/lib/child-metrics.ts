@@ -1,4 +1,4 @@
-import type { ChildSpec } from "@/types/child-window";
+import type { ChildSpec } from "./child-types";
 
 /** A window opens no larger than this share of the main window, and the user may make it as large as the main window. */
 export const OPEN_SHARE = 0.8;
