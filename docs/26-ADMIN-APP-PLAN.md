@@ -285,7 +285,12 @@ should be crud for titles and playlists."* So there are two new record types: a 
   accepted and the backend merge has landed.
 - **Served:** in production by the backend at `/admin/` from `ADMIN_DIST` (the same origin, so no CORS), the pattern the
   fileserver uses for the interface (`03` section 1). In development, Vite on a new port, 5172 proposed (D8, D9).
-- It is not part of the Electron app (`AGENTS.md`, Commands).
+- **The backend gets an Electron host** (owner, 2026-10-17: "add electron to the backend server"). Electron code lives only
+  in the backend's `src/app` folder, as in the fileserver (`01` section 4.1): a main process that opens one window on the
+  backend's own `/admin/` page and answers the preload's IPC (the native folder picker for `Choose`, the window-overlay
+  colours for the caption buttons). Started as a plain server (`npm start`) the backend stays headless and serves the same
+  pages to a browser, where `Choose` is not available (a typed path only). The admin is not part of the desktop app's
+  installer (`AGENTS.md`, Commands): the backend ships separately.
 
 ### 4.2 Shell (proposed; `02` section 1, `06` section 1)
 
@@ -396,8 +401,9 @@ the Titles or Playlists pages.
 - **Folder row = the family pattern** (`datasets-index.jpg`, `06` section 6.3 "Folder ... Choose"): the info glyph after
   the label, the mono field spanning the row, and a bordered icon-and-text button at the row's trailing edge: a folder
   glyph and `Choose`. The same row and button are used for the Source group's Folder in the workspace, and the Videos
-  list's add row uses it for a file. What `Choose` opens is open (D18): the folder is a path on the backend's machine, so
-  a browser cannot supply it from a native dialog.
+  list's add row uses it for a file. `Choose` opens the native folder picker (D18, decided by the owner): the admin
+  runs in the backend's own Electron window (4.1), so the main process's `dialog.showOpenDialog` answers with a path on the
+  backend's machine, exactly as the desktop app's pickers do. There is no popup and no directory-listing route.
 - **List group below** ("Channels", with `Refresh` in its heading's action slot), no rail: a checkbox first column,
   then number, name, category, kind (a word), state (a word with a left-edge accent strip; a stream row shows "Synced"
   when it carries a `source`), mode, now playing, fault (a word, only when set). Ticking a row arms the toolbar verb;
@@ -540,7 +546,7 @@ as page behaviour in the mockup.
 | 1 | **Nothing pushes state to the page.** The backend has no socket and no streamed status route (`03` 7.8, removed); `01` 4.4 forbids polling and timers in the interface. | the docs, verified in the routes | State words that change on their own: a channel going `preparing` to `live`, a sync `running` to finished. The page learns only on an action of its own or `Refresh`. The mockup shows state changing by itself, which the real app cannot do under today's rules. | D19: a streamed status route, or an amendment |
 | 2 | **Titles have no write route today.** The store mirrors TMDB; "nobody adds a title" (`03` 7.6b); a sync replaces stored payloads, so an edit would be lost. | a documented design decision, not a technical impossibility | Create, edit and delete of a title | **Decided (D20): titles are ordinary records.** `POST`, `PATCH`, `DELETE /api/titles`; a sync never overwrites a title or field an admin edited |
 | 3 | **A playlist sync overwrites `streamUrl`, `logoUrl`, `category` and `number` of a synced row** (verified in `playlist-sync-service.ts`), re-creates a deleted one, and duplicates a renamed one. | the sync's design | Reliable edit and delete of a synced channel | **Decided: the rules of 3.10** (edited fields, `sync_name`, `Enabled`, `prune` skips edited rows) |
-| 4 | **A folder is a path on the backend's machine.** A browser cannot return one from a native dialog; no route lists directories, and `01` 7 says no route serves local files. | the architecture | A working `Choose` button | D18 |
+| 4 | **A folder is a path on the backend's machine.** A plain browser cannot return one from a native dialog. | the architecture | A working `Choose` button | **Decided (D18):** the admin runs in the backend's own Electron window, so `Choose` is the native picker |
 | 5 | **Restarting the backend stops every live channel** until it rebuilds. | the merge (D4) | Restarting to apply config without a stream gap | keeping the engine as a supervised child |
 | 6 | **The admin persists nothing between page loads.** Browser storage is forbidden and the admin has no server-side settings of its own. | `01` 4.4 | Remembered theme, tab, panes | D16: a per-account settings row |
 | 7 | **No route stops one channel's build.** The engine holds an abort per channel, but only the whole-process shutdown and a PATCH or DELETE of the channel use it. | verified in `channel-runtime.ts` and the route list | The statusbar `Stop` | a stop route |
@@ -701,9 +707,9 @@ Each has a recommended default. The waves proceed on the defaults and are redire
   (`custom-<uuid>`); an optional TMDB id lets the providers produce sources for it.
 - **D16.** The admin persists nothing in version one (recommended). Persisting theme and panes would need a backend
   settings row per account.
-- **D18.** What `Choose` does. A server-side folder browser (an admin-only directory-listing route in the backend, a
-  popup anchored to the button) or nothing yet. The mockup draws the button either way; the backend route is not in
-  Wave 1b until the owner decides, and `01` section 7 ("no route serves local files") would need a line.
+- **D18.** *(Decided, owner, 2026-10-17: "follow the family convention and do what we are doing for the other folder
+  pickers; we dont have a complex popup, it just shows the native folder picker".)* `Choose` is the native folder picker
+  of the backend's Electron window. No popup and no directory-listing route.
 - **D17.** *(Retired.)* There is one rail, a workspace's own; an index has none.
 
 ## 11. Docs to amend when the waves land
