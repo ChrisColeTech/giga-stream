@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { PlayerProgress, PROGRESS_INTERVAL_MS } from "@/lib/player-progress";
+import { PlayerProgress, ProgressBeginQueue, PROGRESS_INTERVAL_MS } from "@/lib/player-progress";
 import { attemptPlayerPlay, openingPosition, shouldAttemptPlay } from "@/lib/player-opening";
 import type { WatchWrite } from "@/services/watch";
 
@@ -46,6 +46,24 @@ describe("watch progress", () => {
     await Promise.all(boundaries.reverse());
     assert.deepEqual(writes.map((write) => write.seq), [1, 2, 3, 4]);
     assert.equal(new Set(writes.map((write) => write.playbackId)).size, 1);
+  });
+
+  it("serializes deferred begins and lets only the latest completion install a recorder", async () => {
+    const queue = new ProgressBeginQueue();
+    const calls: string[] = [];
+    let releaseA: () => void = () => undefined;
+    let releaseB: () => void = () => undefined;
+    const a = new Promise<void>((resolve) => { releaseA = resolve; });
+    const b = new Promise<void>((resolve) => { releaseB = resolve; });
+    const beginA = queue.begin(async () => { calls.push("flush-a"); await a; }, () => calls.push("install-a"));
+    await Promise.resolve();
+    const beginB = queue.begin(async () => { calls.push("flush-b"); await b; }, () => calls.push("install-b"));
+    releaseA();
+    await beginA;
+    await Promise.resolve();
+    releaseB();
+    await beginB;
+    assert.deepEqual(calls, ["flush-a", "flush-b", "install-b"]);
   });
 });
 

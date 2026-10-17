@@ -4,6 +4,25 @@ import type { ItemRef } from "@/types/library";
 export const PROGRESS_INTERVAL_MS = 30_000;
 export const FINAL_PROGRESS_TIMEOUT_MS = 1_000;
 
+export class ProgressBeginQueue {
+  private generation = 0;
+  private queue: Promise<void> = Promise.resolve();
+
+  begin(flush: () => Promise<void>, install: () => void): Promise<boolean> {
+    this.generation += 1;
+    const generation = this.generation;
+    const operation = this.queue.then(async () => {
+      if (generation !== this.generation) return false;
+      await flush();
+      if (generation !== this.generation) return false;
+      install();
+      return true;
+    });
+    this.queue = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+}
+
 export async function settleFinalProgress(write: Promise<void>): Promise<void> {
   await Promise.race([
     write,

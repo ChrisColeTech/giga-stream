@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { PlayerProgress, PROGRESS_INTERVAL_MS, type ProgressIdentity } from "@/lib/player-progress";
+import { PlayerProgress, ProgressBeginQueue, PROGRESS_INTERVAL_MS, type ProgressIdentity } from "@/lib/player-progress";
 import { writeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
 
@@ -15,6 +15,7 @@ export interface PlayerProgressControls {
 /** Owns the 30-second cadence; media callbacks only report facts and lifecycle boundaries. */
 export function usePlayerProgress(active: boolean): PlayerProgressControls {
   const session = useRef<PlayerProgress | null>(null);
+  const begins = useRef(new ProgressBeginQueue());
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const isPlaying = useRef(false);
   const isActive = useRef(active);
@@ -53,9 +54,10 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
   return {
     begin: async (identity) => {
       stopTimer();
-      await writeNow();
       isPlaying.current = false;
-      session.current = new PlayerProgress(identity, !useAppStore.getState().library.pauseHistory, writeWatch);
+      await begins.current.begin(writeNow, () => {
+        session.current = new PlayerProgress(identity, !useAppStore.getState().library.pauseHistory, writeWatch);
+      });
     },
     update: (positionMs, durationMs) => session.current?.update(positionMs, durationMs),
     playing: (value) => {

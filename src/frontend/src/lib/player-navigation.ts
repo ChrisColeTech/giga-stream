@@ -10,6 +10,12 @@ export class PlayerNavigation {
   isLatest(generation: number): boolean {
     return generation === this.generation;
   }
+
+  commitLatest(generation: number, commit: () => void): boolean {
+    if (!this.isLatest(generation)) return false;
+    commit();
+    return true;
+  }
 }
 
 export async function settleLatestNavigation(

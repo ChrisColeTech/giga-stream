@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
@@ -7,6 +7,7 @@ import { PlayerStage } from "@/components/player/PlayerStage";
 import { changeFavourite, changeMembership } from "@/components/library/library-service";
 import { usePlayerData } from "@/hooks/usePlayerData";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
+import { usePlayerSources } from "@/hooks/usePlayerSources";
 import { collectionRow } from "@/lib/collections-model";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { LOCAL_MEDIA_FAILURE, NO_TITLE_SOURCE_REASON } from "@/lib/player-copy";
@@ -17,9 +18,7 @@ import {
   createPlayerSession, fallbackPlayerItem, isOpen, itemFromLibrary, playerPlaybackKey,
   playingEpisodeOf, reducePlayerSession,
 } from "@/lib/player-session";
-import { localSource, playableSources } from "@/lib/player-sources";
 import { resumeOf, viewOf } from "@/lib/player-view";
-import { localMediaAddress } from "@/services/local-media";
 import { removeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem } from "@/types/library";
@@ -56,15 +55,7 @@ export function PlayerPage({ active }: { active: boolean }) {
     stage: media.stage,
   });
   const playing = playingEpisodeOf(session);
-  const sources = useMemo(() => {
-    if (session.current?.kind === "local") {
-      return data.localInfo?.playable === true ? [localSource(localMediaAddress(session.current.ref.id))] : [];
-    }
-    if (session.current?.kind === "tv") {
-      return playableSources(data.playingEpisode?.sources, data.playingEpisode?.streamUrl);
-    }
-    return playableSources(data.detail?.sources, data.detail?.streamUrl);
-  }, [data.detail, data.localInfo, data.playingEpisode, session.current]);
+  const sources = usePlayerSources(session, data);
   const activeSource = sources.find((source) => source.id === media.activeSourceId);
   const resume = resumeOf(view);
   const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
@@ -105,14 +96,13 @@ export function PlayerPage({ active }: { active: boolean }) {
     const opening = openingPosition(resumeMode, resume);
     currentPosition.current = opening;
     setSourcePosition(opening);
-    setSources(sources, sources[0]?.id ?? null);
     setPaused(true);
     if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
     void progress.begin({
       item: session.current.ref,
       ...(playing === undefined ? {} : { season: playing.season, episode: playing.episode }),
     });
-  }, [playbackKey, sources]);
+  }, [playbackKey]);
 
   useEffect(() => {
     if (session.current === null || (session.current.kind === "tv" && playing === undefined)) return;
@@ -129,12 +119,14 @@ export function PlayerPage({ active }: { active: boolean }) {
   }, [data.detail, data.localInfo, data.playingEpisode, playbackKey, sources.length]);
 
   const close = async () => {
-    navigation.current.next();
+    const generation = navigation.current.next();
     progress.suspend();
     await settleFinalProgress(progress.flush());
-    dispatch({ type: "close" });
-    setPlayerItem(null);
-    setSources([], null);
+    navigation.current.commitLatest(generation, () => {
+      dispatch({ type: "close" });
+      setPlayerItem(null);
+      setSources([], null);
+    });
   };
   const chooseEpisode = (season: number, number: number) => {
     dispatch({ type: "episode", season, episode: number });
@@ -143,7 +135,7 @@ export function PlayerPage({ active }: { active: boolean }) {
   const commands: PlayerCommands = {
     retry: () => {
       void progress.checkpoint();
-      if (activeSource === undefined) setDataRetry((value) => value + 1);
+      setDataRetry((value) => value + 1);
       setSourcePosition(currentPosition.current);
       setUserInitiated(true);
       setRetry((value) => value + 1);

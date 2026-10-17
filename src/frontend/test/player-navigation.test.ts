@@ -50,4 +50,17 @@ describe("latest Player navigation", () => {
     assert.equal(await settleA, false);
     assert.deepEqual(refusals, []);
   });
+
+  it("does not let a pending close clear a newer open", async () => {
+    const navigation = new PlayerNavigation();
+    const closeWrite = deferred();
+    const state: string[] = [];
+    const closeGeneration = navigation.next();
+    const close = closeWrite.promise.then(() => navigation.commitLatest(closeGeneration, () => state.push("closed")));
+    const openGeneration = navigation.next();
+    assert.equal(navigation.commitLatest(openGeneration, () => state.push("opened B")), true);
+    closeWrite.resolve();
+    assert.equal(await close, false);
+    assert.deepEqual(state, ["opened B"]);
+  });
 });
