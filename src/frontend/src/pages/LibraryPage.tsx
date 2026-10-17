@@ -8,6 +8,7 @@ import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
 import { useLibraryData } from "@/hooks/useLibraryData";
+import { useRowsShelves } from "@/hooks/useRowsShelves";
 import { useLibraryRequest } from "@/hooks/useLibraryRequest";
 import { useSavedLibraryQuery } from "@/hooks/useSavedLibraryQuery";
 import { collectionRow } from "@/lib/collections-model";
@@ -22,7 +23,7 @@ import {
 } from "@/lib/library-marks";
 import type { Scope, SourceId } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
-import { libraryRenderState } from "@/lib/library-render-state";
+import { libraryRenderState, shownItems } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
 
 export function LibraryPage({ active }: { active: boolean }) {
@@ -40,9 +41,7 @@ export function LibraryPage({ active }: { active: boolean }) {
     [data.continuing, marks, history],
   );
   const render = libraryRenderState(items, data.page?.titlesAvailable ?? false, query.scope);
-  const shown = query.source === "history"
-    ? render.items.filter((item) => item.progress !== undefined)
-    : query.source === "favorites" ? render.items.filter((item) => item.favorite) : render.items;
+  const shown = shownItems(render.items, query.source);
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const onRevealed = useCallback(() => setReveal(null), []);
   /* Rows has no windowed list to take the request, and a stale one must not scroll a grid shown later. */
@@ -75,13 +74,14 @@ export function LibraryPage({ active }: { active: boolean }) {
     );
   }, [items]);
   const rows = view === "rows";
+  const shelves = useRowsShelves({
+    enabled: rows && active, query, data, collections, history, showContinue: prefs.showContinue && query.source !== "history",
+  });
   const center = rows ? (
     <LibraryRows
-      scope={query.scope} items={shown} continuing={continuing} collections={collections} selected={selected}
-      showContinue={prefs.showContinue && query.source !== "history"} onScope={onScope} onSelect={setSelected}
-      onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll} onRefresh={data.refresh} loading={data.loading}
-      paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
-      titleRegionsLoading={render.titleRegionsLoading}
+      scope={query.scope} shelves={shelves} collections={collections} selected={selected}
+      onScope={onScope} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
+      onRefresh={data.refresh} loading={data.loading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
   ) : (

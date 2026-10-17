@@ -1,3 +1,4 @@
+import { shelfCards } from "@/lib/rows-settle";
 import type { Shelf, ShelfGroup } from "@/lib/rows-shelves";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
@@ -20,7 +21,7 @@ export function RowsShelf({ shelf, collections, selected, onSelect, onRemoveWatc
       <ShelfHeading name={shelf.name} count={shelf.items.length} onSeeAll={() => onSeeAll(shelf.group)} />
       <ShelfRow
         name={shelf.name}
-        items={shelf.items}
+        items={shelfCards(shelf.items)}
         continuing={shelf.group.kind === "continue"}
         selected={selected}
         collections={collections}

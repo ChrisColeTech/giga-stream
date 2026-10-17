@@ -18,6 +18,9 @@ export function libraryRenderState(
   };
 }
 
-export function rowsRenderState(shelfCount: number, hasMore: boolean, paging: boolean) {
-  return { showSkeleton: shelfCount === 0, showPager: hasMore || paging };
+/** The items the rail's view keeps: History those with progress, Favorites those marked, otherwise all. */
+export function shownItems(items: readonly ResolvedItem[], source: string): readonly ResolvedItem[] {
+  if (source === "history") return items.filter((item) => item.progress !== undefined);
+  if (source === "favorites") return items.filter((item) => item.favorite);
+  return items;
 }

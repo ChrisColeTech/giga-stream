@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { requestVisiblePageOnce } from "@/lib/library-pager";
 import { collectionsSubmenu, FOLDER_MEMBERSHIP_REASON } from "@/lib/collection-menu";
 import { memberRows } from "@/lib/collections-members";
-import { libraryRenderState, rowsRenderState } from "@/lib/library-render-state";
+import { libraryRenderState } from "@/lib/library-render-state";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { useAppStore } from "@/store/app-store";
 
@@ -36,8 +36,6 @@ describe("backend-down Library rendering", () => {
 
 describe("Rows paging grammar", () => {
   it("keeps established skeletons for pending and settled empty Rows", () => {
-    assert.deepEqual(rowsRenderState(0, true, false), { showSkeleton: true, showPager: true });
-    assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: true, showPager: false });
     assert.equal(libraryRenderState([], false, "all").titleRegionsLoading, true);
   });
 
