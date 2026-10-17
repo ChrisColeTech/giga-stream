@@ -54,7 +54,7 @@ rules are in `01`; this document is about process.
   asked is fine.
 - **The dev stack runs from the root, in the background, during development and testing** (owner,
   2026-10-17). `npm run dev` is the only launcher (the backend, the interface's Vite on 5171, the
-  Electron app with its fileserver 8090, the live server 8097; kill-ports frees the development ports
+  Electron app with its fileserver 8090; kill-ports frees the development ports
   first, never a production one). The window loads Vite, so edits reload in place. On Windows, start
   that npm command in the background through the Windows process service and retain its PID. A plain `Start-Process` is still
   tied to the automation shell's Windows job and is killed when that shell call exits:
@@ -74,7 +74,7 @@ rules are in `01`; this document is about process.
   ad-hoc per-program spawns, and do not stop it as drive cleanup. When explicitly stopping it, use
   `taskkill /PID $stack.ProcessId /T /F` so the whole launcher tree exits.
 - **Development and production never share a port** (owner, 2026-10-17; the table is `03` section 1).
-  The installed app runs on the production ports (fileserver 8190, backend 8191, live server 8197,
+  The installed app runs on the production ports (fileserver 8190, backend 8191,
   preview 5271) so the owner can test it while the dev stack runs on the development ones. Nothing
   started for development takes a production port, and nothing stops a process on one.
 - **Automated checks use temporary data; visual verification uses the real stack** (owner, 2026-10-17: "dont use
@@ -120,7 +120,8 @@ rules are in `01`; this document is about process.
   while a fileserver-owned value still comes from a frontend fixture or a service still returns a phase-one
   refusal.
 - The default test run is fast (seconds). Heavy suites are opt-in and run once at the end.
-- The gate (`node scripts/check/gate.mjs`) runs every typecheck, the lint, the rule checker and every
+- The gate (`node scripts/check/gate.mjs`) also ends with a live smoke of the running stack (SKIPPED when none is up;
+  `AGENTS.md` Commands says how it finds the backend). It runs every typecheck, the lint, the rule checker and every
   program's tests, and must print `gate: PASS`.
 - Its result is reported as it ran.
 
@@ -192,7 +193,7 @@ written, stated as written and not run; every gap it filled and how; anything le
    `release/Giga Stream Setup <version>.exe` (the installer) and `release/win-unpacked/Giga Stream.exe`
    (runs without installing). It runs on the production ports, so the owner tests the wave in it without
    disturbing development. Only the fileserver ships in it, with the built interface it serves, the shared
-   media library and FFmpeg; the admin backend and the live server are separate programs and never do. A
+   media library and FFmpeg; the admin backend is a separate program and never does. A
    packaging failure is a wave failure, reported as it ran.
 7. The coordinator records what landed and what was verified, and tells the owner, giving the exe's path.
 

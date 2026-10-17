@@ -1,7 +1,10 @@
 # 26 - Admin App and the Single Backend
 
-**Status: PLAN, revised 2026-10-17. Nothing here is built.** *Verified* marks a fact read in the code or a doc on
-this date. *Decided* marks the owner's words. Everything else is a proposal; section 10 lists the decisions and the
+**Status: revised 2026-10-17. The merged backend (sections 3.x, Waves 1b and 2) is built and landed: the live server is
+gone, its engine runs in `src/backend/src/live`, migrations 008 to 016 are applied, titles, playlists and jobs are
+records, and roles and the provider key were removed. The admin app (section 4, `src/admin`), the backend's Electron
+host (4.1) and the mockup's acceptance are NOT built: they are planned in `27`, `28` and `29`.** *Verified* marks a fact read
+in the code or a doc on this date. *Decided* marks the owner's words. Everything else is a proposal; section 10 lists the decisions and the
 defaults the waves take until the owner redirects. When a wave lands, its part of this document becomes fact and is
 amended.
 
@@ -28,7 +31,7 @@ Governed by `00`, `01` (ownership, stack, rules), `02` (the window), `03` (route
 - **Decided:** the work is split into waves and given to workers under the delegation protocol (`07` section 6). The
   coordinator writes docs and briefs, lands, checks and reports; it does not implement.
 
-## 2. What the two servers are today
+## 2. What the two servers were before the merge (historical; they are one backend now, section 3)
 
 ### 2.1 Admin backend, `src/backend` (verified)
 
@@ -41,14 +44,15 @@ to `~/.giga-stream-admin`, with `admin.db` inside it.
 - **Channels are stored stream-address rows:** `id` (`ch_<uuid>`), `name`, `category` (free text), `number` (TEXT),
   `logo_url`, `stream_url`, `revision`, and for playlist-synced rows `tvg_id` and `source`.
 - **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token, a sign-in rate limit and a lockout. Every change
-  writes an audit entry. `api/guard.ts` `signedIn(services, request)` gates writes. There are no roles (D24): every signed-in admin is equal.
+  writes an audit entry. `api/guard.ts` `signedIn(services, request)` gates writes. There are no roles (D22): every signed-in admin is equal.
 - **Network policy** (`network-policy.ts`): refuses to listen off loopback over plain http unless
   `TLS_CERT_FILE`/`TLS_KEY_FILE`, `TRUST_PROXY` or `ALLOW_INSECURE_HTTP` is set. No-store routes: `/api/auth`,
-  `/api/admin-accounts`, `/api/audit`.
-- **CORS:** methods GET, POST, PATCH, DELETE. No `Range` header.
+  `/api/admin-accounts`, `/api/audit`, `/api/admin-channels`.
+- **CORS:** methods GET, POST, PATCH, PUT, DELETE (providers use PUT). The `/live` and `/logos` plugins answer GET and
+  HEAD and accept `Range`.
 - **Build:** `tsc`, `rootDir: "src"`, into `dist/`. Development runs `tsx`. Tests are `tsx --test`.
 
-### 2.2 Live server, `src/live-server` (verified)
+### 2.2 Live server, `src/live-server` (historical: deleted; its engine is `src/backend/src/live`)
 
 Fastify, zod and `node:sqlite` (`<DATA_DIR>/live-server.db`, `~/.giga-stream-live` by default). Ports 8097 and 8197.
 Its own composition root (`app.ts`), runs its TypeScript directly with `.ts` import extensions, and imports
@@ -111,9 +115,11 @@ src/backend/src/
 
 The exact file list belongs to the worker, within the 200-line rule of `01`.
 
-### 3.2 Store (proposed)
+### 3.2 Store (built: migrations 008 to 016, forward-only)
 
-Migration `008-live-channels.sql`, forward-only:
+008 live channels, 009 title records, 010 sync edits, 011 sync settings, 012 drop tombstones, 013 `enabled`, 014 playlists
+and jobs (`playlists` has `id, name, address, host, enabled, last_synced_at, last_outcome, created_at`), 015 accounts
+without `role`, 016 providers without `api_key`. Migration `008-live-channels.sql`:
 
 - `channels` gains `kind TEXT NOT NULL DEFAULT 'stream' CHECK (kind IN ('stream', 'live'))`. `stream_url` becomes
   nullable: a live row stores none. The live fields are `live_mode`, `live_captions`, `live_variants` (JSON) and
@@ -138,6 +144,7 @@ Reads stay public and keep the shape the fileserver reads. Writes need a signed-
 | `DELETE /api/channels/:id/fault` | signed in | clears |
 | `GET /api/admin-channels` | signed in | the full admin view: state, problem, renditions, playlist, nowPlaying, fault, mode, source |
 | `POST /api/channels/:id/rebuild` | signed in | re-reads a folder source and rebuilds (today a PATCH of the same folder) |
+| `POST /api/channels/:id/revert` | signed in | clears a synced channel's `edited_fields` so the next sync overwrites it again (3.10) |
 | `GET\|HEAD /live/:id/master.m3u8` (renditions, segments) | anyone | the same bytes as today; `Range`; playlists `no-store`, segments immutable |
 | `GET /logos/:id.png` | anyone | the generated logo |
 | `GET /test/player.html` | anyone | only with `TEST_PAGE=true` |
@@ -148,7 +155,7 @@ loopback gate (D2). `/api/admin-channels` joins the no-store list.
 
 ### 3.4 Auth and the network (proposed)
 
-- Writes are gated by `signedIn(..., ANY_ADMIN)`. Every write route has a test for 401 without a token and for a
+- Writes are gated by `signedIn(services, request)`; every account is equal. Every write route has a test for 401 without a token and for a
   disabled account.
 - Reads of channels and streams stay open, as the live server's reads were.
 - Serving a LAN goes through the backend's network policy. Today the live server serves a LAN over plain http with
@@ -169,35 +176,33 @@ loopback gate (D2). `/api/admin-channels` joins the no-store list.
 
 ### 3.6 Configuration (proposed)
 
-One `.env` and one `production.env`, as the backend has. `PORT` 8091 in development, 8191 in production. `CACHE_DIR`
+`dev.env` (committed development defaults: `SEED_TEST_CHANNELS=true`, `TEST_PAGE=true`, loaded first), `.env` (secrets
+and local overrides) and `production.env`. `PORT` 8091 in development, 8191 in production. `CACHE_DIR`
 defaults to `<DATA_DIR>/cache`. `FIXTURE_DIR` and `TEST_PAGE` carry over. `ADMIN_DIST` names the built admin app
 (default `src/admin/dist`; with no `index.html` there, nothing is served). `SEED_TEST_CHANNELS` seeds the four `fx-*`
 channels as `kind: live` served by the backend itself, which replaces the `03` 7.7 rule that points them at a second
 server. The live server's `CORS_ORIGINS` folds into the backend's.
 
-### 3.7 Scripts and ports (proposed; Wave 2)
+### 3.7 Scripts and ports (done, Wave 2)
 
-`npm run dev` drops the `live-server` entry; `live:dev` folds into `dev` with `SEED_TEST_CHANNELS=true`. `kill-ports`
-drops 8097. `live:start` and `test:live-server` retire. `03` section 1's port table loses its live row. These edits are
-Wave 2, after parity, because the live server keeps running until then.
+`npm run dev` runs the backend, the interface's Vite and the fileserver's Electron app; the live server, `live:dev`,
+`live:start` and `test:live-server` are gone. `kill-ports` is `5171 8090 8091 3001`. `03` section 1's port table still has
+a live row to remove (the coordinator's amendment list, section 11).
 
-### 3.8 Build (proposed)
+### 3.8 Build (done)
 
-`src/backend/tsconfig.json` has `rootDir: "src"` and the engine imports `src/shared/media`. The worker follows how
-`src/fileserver` already imports `src/shared` and picks the smallest change that keeps `npm run build` and `npm start`
-working. The options: (a) widen `rootDir` and emit under `dist/backend/...`; (b) a copy of `locate-tool` in the backend,
-which breaks `01` section 4.1 (one of each); (c) run the backend under `tsx` in production. (a) is preferred. The
-worker reports which it took and why.
+`src/backend` builds `src/shared/media` into its own `dist` with `node src/build-shared.ts` (esbuild plus a
+declaration-only `tsc`), the way `src/fileserver` does; `rootDir` stays `src` and `dist/server.js` keeps its layout.
 
-### 3.9 Tests (proposed)
+### 3.9 Tests (done)
 
-- Port the 40 live tests into `src/backend/test`, with temporary data and free ports. The worker writes them and does
-  not run them (`07` section 6.3).
+- The live tests live in `src/backend/test` (`live-*.test.ts`), with temporary data and free ports. Workers write them
+  and do not run them (`07` section 6.3).
 - The default run stays in seconds. The ffmpeg-dependent tests and the Chrome tests are opt-in
   (`LIVE_ENGINE_TESTS=1`) and run once at the end of the wave.
-- **Parity:** every row of `10` section 3.1 has a test on the merged backend before `src/live-server` is deleted.
+- **Parity:** every row of `10` section 3.1 has a test on the merged backend; `src/live-server` was deleted after that.
 
-### 3.10 How the two syncs work, and the rules for admin edits (verified in the code 2026-10-17)
+### 3.10 How the two syncs work, and the rules for admin edits (built; the gaps below were verified before the rules and are now closed by rules 1 to 6)
 
 **Playlist sync** (`playlist-sync-service.ts`). It owns only rows that have a `source` (the playlist host); a hand-made
 row has none and is never matched, updated or removed. For each playlist entry it looks for a match, first among rows of
@@ -229,7 +234,7 @@ row if it is missing or stale (a read then heals a thin row by refetching the de
 2. A synced channel remembers the playlist's own name (`sync_name`) separately from its display name, and matches by
    `tvgId`, then `sync_name`. Renaming never breaks the match.
 3. `prune` never deletes a row that has `edited_fields`; it counts it as `kept`.
-4. **`Enabled` is a field on the record** (owner, 2026-10-17: "enabled/disable should be a checkbox on the record, not an
+4. **`Enabled` is a field on the record, drawn as a switch** (owner, 2026-10-17: "enabled/disable should be a checkbox on the record, not an
    entirely new section and category"). It replaces the tombstone, the "Ignored entries" group and the `Deleted` filter
    of the first version of this rule. A disabled channel or title stays in its list and is hidden from the public reads;
    a sync still updates it but never re-enables it. **Deleting a synced row really deletes it**, and the next sync adds
@@ -260,9 +265,9 @@ should be crud for titles and playlists."* So there are two new record types: a 
 - **Seeding** (first start only, from the environment): each `PLAYLIST_URLS` entry becomes a playlist and a playlist job
   for it (schedule `PLAYLIST_SYNC_SCHEDULE`); the four catalog jobs (trending and popular, movies and series) are created,
   enabled when `TMDB_SYNC_SCHEDULE` is set. The existing `POST/GET /api/titles/sync` and `POST/GET /api/playlist-sync`
-  keep working as thin wrappers (they run every enabled job of that type).
+  keep working as thin wrappers over the same services the jobs use; they do not go through the job records.
 - **Scheduling:** one timer for the whole backend, armed for the earliest due `enabled` job with a schedule; it runs that
-  job, then re-arms (this stays inside `01` section 4.4's two timers). A change to a job's `enabled` or `schedule`, or a
+  job, then re-arms (`01` section 4.4 still names two env-armed schedulers and must be amended to this one timer). A change to a job's `enabled` or `schedule`, or a
   playlist's `enabled`, re-arms at once, with no restart.
 - **`Enabled` everywhere:** `channels.enabled` and `titles.enabled` are new columns (default on). The public reads
   (`GET /api/channels`, `/api/titles*`) leave disabled rows out, so the fileserver sees only enabled ones; the admin reads
@@ -286,7 +291,8 @@ should be crud for titles and playlists."* So there are two new record types: a 
 - **Served:** in production by the backend at `/admin/` from `ADMIN_DIST` (the same origin, so no CORS), the pattern the
   fileserver uses for the interface (`03` section 1). In development, Vite on a new port, 5172 proposed (D8, D9).
 - **The backend gets an Electron host** (owner, 2026-10-17: "add electron to the backend server"). Electron code lives only
-  in the backend's `src/app` folder, as in the fileserver (`01` section 4.1): a main process that opens one window on the
+  in the backend's `src/app` folder, as in the fileserver (`01` section 4.2, which today confines Electron to
+  `src/fileserver/src/app` and must be amended; NOT built yet, `28` and `29` plan it): a main process that opens one window on the
   backend's own `/admin/` page and answers the preload's IPC (the native folder picker for `Choose`, the window-overlay
   colours for the caption buttons). Started as a plain server (`npm start`) the backend stays headless and serves the same
   pages to a browser, where `Choose` is not available (a typed path only). The admin is not part of the desktop app's
@@ -295,15 +301,16 @@ should be crud for titles and playlists."* So there are two new record types: a 
 ### 4.2 Shell (proposed; `02` section 1, `06` section 1)
 
 The window is a titlebar (40px), the active page, an optional events band (160px) and a statusbar (24px). The admin
-runs in a browser tab, so there are no window controls. The minimum size is 900 x 640.
+runs in the backend's Electron window (a browser tab when the backend runs headless); in Electron the caption buttons
+follow the theme through the preload's overlay colours (4.1). The minimum size is 900 x 640.
 
 - **Titlebar** (as `docs/reference/family/datasets-index.jpg`): far left, the left-pane toggle (ghost icon button),
   then the brand: an accent icon tile and the two-line mono wordmark `GIGA / STREAM` with the mono subtitle `ADMIN`.
   **Centre: the tab pill**, a recessed rounded track holding **Channels · Providers · Titles · Playlists · Jobs ·
   Accounts**, the active tab the filled chip. Every tab is open to every signed-in admin. Right: the
   events-band toggle and the right-pane toggle (disabled, with its reason, where a page has no right pane). The pill is
-  the only navigation between tabs; there is no router and no URL segment (`04` section 1); `Ctrl+1`, `Ctrl+2` and
-  `Ctrl+3` pick the tabs. **There is no persistent navigation rail** (the owner's correction, 2026-10-17, after seeing the
+  the only navigation between tabs; there is no router and no URL segment (`04` section 1); `Ctrl+1` to
+  `Ctrl+6` pick the tabs. **There is no persistent navigation rail** (the owner's correction, 2026-10-17, after seeing the
   first mockup: the tabs are at the top, as in the family).
 - **Left pane:** present only on a workspace, where it is that workspace's rail (`‹ Channels` escape button above the
   section links; family `NavRail`). An index has no rail.
@@ -312,9 +319,9 @@ runs in a browser tab, so there are no window controls. The minimum size is 900 
 - **Statusbar:** running work first (the channels `preparing` or `starting`, shown as `N preparing` over a pulsing
   full bar because their progress is unknown, and **Stop**, disabled with the reason "No route stops a channel build yet."
   The engine can abort one channel's build (`channel-runtime.ts` keeps an `AbortController` per channel), but no route
-  exposes it; section 4.12 item 8); then one polite notice line; then `Events` and `Settings`.
-- **Events band** (160px above the statusbar, `06` section 7): mono rows of time, tone word, area (Channel, Account,
-  Session, Connection), the normalised sentence; at most 200 rows; **Clear**; shimmer lines when empty.
+  exposes it; section 4.12 item 7); then one polite notice line; then `Events` and `Settings`.
+- **Events band** (160px above the statusbar, `06` section 7): mono rows of time, tone word, area (Channel, Provider, Title,
+  Playlist, Job, Account, Session, Connection), the normalised sentence; at most 200 rows; **Clear**; shimmer lines when empty.
 - **Settings window** (a modal work window, `06` section 6.1): Appearance (theme, accent, reduce motion), Session (who is
   signed in; **Sign out**), About (version, backend revision, the address in use).
 - **Persistence:** none in version one. A reload opens on Channels with default panes and the default theme, because
@@ -339,7 +346,10 @@ is now the family's record pattern and nothing else:
    status panel, no schedule panel.
 2. **A click on a row opens that record's workspace** (the rail with `‹ <Tab>`, its sections, one scrolling page,
    `Discard changes · Save · <forward verb>`). Everything that configures or acts on a record is in its workspace.
-3. **`Enabled` is a checkbox on the record** (the family's boolean control), never a section, chip, tab or category. A
+3. **`Enabled` is a switch on the record** (the family's `Toggle`, the boolean control of the family screenshots such as
+   "Snap to buckets"; owner, 2026-10-17: a checkbox does not make sense for an enabled/disabled control), never a
+   section, chip, tab or category. The tick boxes in an index list's first column are row selection for the toolbar
+   verbs, not `Enabled`. A
    disabled record stays in its list, dimmed, with the state word `disabled`.
 4. **One field order, everywhere:** (1) the identity and required fields, in the order a person decides them; (2)
    `Enabled`; (3) the optional fields, most used first; (4) read-only facts last. The New form is group (1) only, and the
@@ -384,7 +394,7 @@ the Titles or Playlists pages.
 |---|---|---|---|---|
 | Live channel | Name*, Kind*, Number*, Category*, Source* (Folder or Videos, then the path or list) | `Enabled` | Mode, Captions, Qualities, Logo | Id, State, Renditions, Playlist, Stream address |
 | Stream channel | Name*, Number*, Category*, Stream address* | `Enabled` | Logo address | Id, Synced from |
-| Provider | Name*, Family*, Source*, Movie template* (embed) | `Enabled` | Order, Episode template, Start parameter, Subtitle parameter, Origin, Frame origins, Message shape, API key | Created |
+| Provider | Name*, Family*, Source*, Movie template* (embed) | `Enabled` | Order, Episode template, Start parameter, Subtitle parameter, Origin, Frame origins, Message shape | Created |
 | Title | Title*, Kind*, Year* | `Enabled` | TMDB id, Rating, Genres, Runtime, Poster, Backdrop, Plot, Cast, Stream address, Seasons | State, Sources |
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
@@ -411,7 +421,7 @@ the Titles or Playlists pages.
   `ArmedButton` naming the channel.
 - **Toolbar** (the strip above the groups, as `datasets-index.jpg` and `training-index.jpg`): right only, ONE forward
   verb in the filled accent, `Preview →`, acting on the ticked channel (it opens its test player; disabled, with its
-  reason, when no row or more than one is ticked, or `TEST_PAGE` is off). Nothing else is in an index toolbar.
+  reason, when no row or more than one is ticked, or `TEST_PAGE` is off, which the page reads from `GET /healthz` `testPage`: a field the wiring plan `29` adds). Nothing else is in an index toolbar.
 - Loading and empty show skeleton rows. No sentence sits over them.
 
 ### 4.6 Channel workspace, live (proposed)
@@ -477,7 +487,7 @@ anything on this screen."* So there is no Audit tab, index or workspace.
   `{episode}` placeholders are in the info tip), Start parameter, Subtitle parameter. Player: Origin, Frame origins (a
   chips input), Message shape. Toolbar: `Discard changes`, `Save`, `Titles →`. `PUT` is the save.
 - **There is no API key.** Providers are embed or stream templates; nothing in the product reads a provider's key. The
-  stored `api_key` field (`03` 7.2b) is dead and is removed (D22).
+  stored `api_key` field (`03` 7.2b) is dead and is removed (D24).
 
 ### 4.9b Titles (proposed; `03` sections 7.4 and 7.6b)
 
@@ -531,7 +541,7 @@ place, keeps the last content, and disables writes with their reason.
 
 ### 4.11 What the admin app does not have
 
-The public channel viewer or player; adding or deleting a title (nobody adds titles, `03` section 7.6b); a second sign-in; polling or a socket;
+The public channel viewer or player; a second sign-in; polling or a socket;
 browser-stored tokens (D5); modals or confirm dialogs other than the Settings work window (inline two-step only); a
 Refresh in a toolbar; text under a control; a dot for state.
 
@@ -544,13 +554,13 @@ as page behaviour in the mockup.
 | # | Limit | Source | What it blocks | Lifted by |
 |---|---|---|---|---|
 | 1 | **Nothing pushes state to the page.** The backend has no socket and no streamed status route (`03` 7.8, removed); `01` 4.4 forbids polling and timers in the interface. | the docs, verified in the routes | State words that change on their own: a channel going `preparing` to `live`, a sync `running` to finished. The page learns only on an action of its own or `Refresh`. The mockup shows state changing by itself, which the real app cannot do under today's rules. | D19: a streamed status route, or an amendment |
-| 2 | **Titles have no write route today.** The store mirrors TMDB; "nobody adds a title" (`03` 7.6b); a sync replaces stored payloads, so an edit would be lost. | a documented design decision, not a technical impossibility | Create, edit and delete of a title | **Decided (D20): titles are ordinary records.** `POST`, `PATCH`, `DELETE /api/titles`; a sync never overwrites a title or field an admin edited |
-| 3 | **A playlist sync overwrites `streamUrl`, `logoUrl`, `category` and `number` of a synced row** (verified in `playlist-sync-service.ts`), re-creates a deleted one, and duplicates a renamed one. | the sync's design | Reliable edit and delete of a synced channel | **Decided: the rules of 3.10** (edited fields, `sync_name`, `Enabled`, `prune` skips edited rows) |
+| 2 | **Titles had no write route (lifted, built).** The store mirrored TMDB; "nobody adds a title" (`03` 7.6b); a sync replaces stored payloads, so an edit would be lost. | a documented design decision, not a technical impossibility | Create, edit and delete of a title | **Decided (D20): titles are ordinary records.** `POST`, `PATCH`, `DELETE /api/titles`; a sync never overwrites a title or field an admin edited |
+| 3 | **A playlist sync overwrote `streamUrl`, `logoUrl`, `category` and `number` of a synced row (lifted, built)** (verified in `playlist-sync-service.ts` before the rules), re-creates a deleted one, and duplicates a renamed one. | the sync's design | Reliable edit and delete of a synced channel | **Decided: the rules of 3.10** (edited fields, `sync_name`, `Enabled`, `prune` skips edited rows) |
 | 4 | **A folder is a path on the backend's machine.** A plain browser cannot return one from a native dialog. | the architecture | A working `Choose` button | **Decided (D18):** the admin runs in the backend's own Electron window, so `Choose` is the native picker |
 | 5 | **Restarting the backend stops every live channel** until it rebuilds. | the merge (D4) | Restarting to apply config without a stream gap | keeping the engine as a supervised child |
 | 6 | **The admin persists nothing between page loads.** Browser storage is forbidden and the admin has no server-side settings of its own. | `01` 4.4 | Remembered theme, tab, panes | D16: a per-account settings row |
 | 7 | **No route stops one channel's build.** The engine holds an abort per channel, but only the whole-process shutdown and a PATCH or DELETE of the channel use it. | verified in `channel-runtime.ts` and the route list | The statusbar `Stop` | a stop route |
-| 8 | **A provider's `api_key` is stored but never used.** Nothing in the backend, fileserver or interface reads it. | verified in the code | A key field on the provider form | D22: removed |
+| 8 | **A provider's `api_key` was stored but never used (lifted, built).** Nothing in the backend, fileserver or interface read it; migration 016 dropped it. | verified in the code | A key field on the provider form | D24: removed |
 | 9 | **The refresh token has no safe browser home** under the no-storage rule. | `01` 4.4 | Staying signed in across a reload | D5 |
 
 Items 2, 3 and 7 are backend work, and item 1 is a design decision that changes what every page can show. They are
@@ -578,6 +588,11 @@ logic is `providers.js`, `embed.js`, `frame-guard.js`, `messages.js`, `guards.js
 | none | `css/admin/*.css` | the form grammar (Workspace, Group, Row, Actions), the grid, skeletons, the rail, the work window |
 | none | `html/channels-index.html`, `channel-workspace.html`, `channel-workspace-stream.html`, `providers-index.html`, `provider-workspace.html`, `titles-index.html`, `title-workspace.html`, `playlists-index.html`, `playlist-workspace.html`, `jobs-index.html`, `job-workspace.html`, `accounts-index.html`, `account-workspace.html`, `signin.html`, `settings.html` | new, per section 4 (one record pattern, 4.4) |
 
+**Mockup versus interface differences, resolved to the interface** (owner, 2026-10-17): the Segmented control is the
+interface's rounded pills (the mockup drew a bordered rectangle); `Enabled` is the family `Toggle` switch (the mockup drew a
+checkbox); durations, the raised `Button`, the input focus ring and the tab pill's equal-width grid follow the interface
+(`27` section 1 lists them). The mockup's tooltip arrow that follows its anchor is kept.
+
 The pages use the family classes (`.btn`, `.icon-btn`, `.inp`, `.seg`, `data-active`, `data-on`) and add no second
 control system. Toolbars are icons with tooltips; no text sits under a control; skeletons are the empty state; fixture
 rows are marked as fixtures in a comment. The mockup is the look and the grammar, not the wiring. The partial loader uses
@@ -600,12 +615,9 @@ coordinator never splits one piece, and owns all docs, landing, real checks, vis
 
 ### 6.2 Baseline
 
-Worktrees are cut from a commit, so the plan is committed first on a named baseline branch, `admin-baseline`, made from
-the current `family-port` HEAD (`8add254`) with only `docs/26-ADMIN-APP-PLAN.md` added. The owner's working tree has
-uncommitted changes in `docs/03`, `docs/06`, `docs/11`, `src/backend/src/services/title-reads.ts`, `title-shapes.ts`,
-`src/backend/test/title-stubs.ts`, `titles.test.ts`, and the frontend's `Statusbar.tsx`, `WorkspaceSplit.tsx`,
-`TitleInfoWindow.tsx` and `workspace.css`. They are not mine, so they are not in the baseline and not in any worktree.
-Worker B's branch therefore lacks the title edits; they touch no channel code, and landing merges the two.
+Worktrees are cut from a commit, so the baseline is committed first on `family-port` (every later worker is cut from the
+then-current HEAD, never from uncommitted work). The first baseline, `admin-baseline`, was made on 2026-10-17 for Waves 1b
+and 2; both have landed and been merged into `family-port`.
 
 ### 6.3 Waves and landing order
 
@@ -617,6 +629,11 @@ Worker B's branch therefore lacks the title edits; they touch no channel code, a
 | 2 | **R** | `src/live-server` removed; scripts, ports and kill-ports updated | 1b landed; the owner's approval (it deletes a program) and D13 settled | the gate passes with the program gone; `npm run dev` starts without it |
 | 3 | **A** | `src/admin`: shell, sign-in, Channels index and both workspaces | 1a accepted, 1b landed | gate; Chrome MCP visual acceptance at both sizes against the mockup (`07` section 5); the real wire against the merged backend |
 | 4 | **A** | the remaining tabs (Providers, Titles, Playlists, Jobs, Accounts), the audit rows in the Events drawer, the Settings window | 3 landed | the same |
+
+**Status (2026-10-17):** waves 0, 1b and 2 are landed. Wave 1a's mockup exists and was reviewed by the owner (roles, the
+API key, the segmented control and the Enabled control were corrected afterwards). Waves 3 and 4 are replanned: the admin is
+built on the shared UI library (`27`), customised from the template for visual parity (`28`), then wired to the backend
+(`29`), with the backend's Electron host (4.1) added by the first of those workers.
 
 Landing order: 1b, then 2, then 3, then 4; 1a lands (is accepted) before 3 starts. Wave 1a and 1b run in parallel
 because they share no path. A failed check goes back to the same worker with the exact output (`07` 6.5).
@@ -659,7 +676,7 @@ work.
 
 ## 9. Out of scope
 
-Changes to the Electron app or the fileserver beyond
+Changes to the desktop app (`src/fileserver`) beyond
 what the fileserver already tolerates; TMDB; payments; multiple admin tenants; a public channel browser.
 
 ## 10. Owner decisions
@@ -675,8 +692,8 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 - **D5.** The refresh token lives in memory only, so a reload signs in again (recommended). `sessionStorage` is browser
   storage, which `01` section 4.4 forbids.
 - **D6.** *(Retired.)* There is no Audit tab; the audit log is the Events drawer (4.9).
-- **D23.** *(Retired with roles, D24.)* Every signed-in admin reads the audit log in the Events drawer.
-- **D24.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The
+- **D23.** *(Retired with roles, D22.)* Every signed-in admin reads the audit log in the Events drawer.
+- **D22.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The
   backend's `owner` and `editor` roles came with its first commit, not from the owner; they are removed: every signed-in
   admin account is equal and may do everything, accounts have an email, a name, a password and `Enabled`.
 - **D7.** *(Reversed by the owner, 2026-10-17.)* Providers, Titles and Playlists are tabs in version one: an admin has to
@@ -697,7 +714,7 @@ Each has a recommended default. The waves proceed on the defaults and are redire
   list shows it. Background state (a channel finishing its build, a sync finishing) is read again by `Refresh` and
   after the page's own actions, with no polling and no socket (`01` 4.4). Streaming the progress of an operation (4.12
   item 1, option B) is a later improvement, not a requirement.
-- **D22.** *(Decided, owner, 2026-10-17: "providers dont even use api keys to my knowledge".)* A provider has no API key.
+- **D24.** *(Decided, owner, 2026-10-17: "providers dont even use api keys to my knowledge".)* A provider has no API key.
   The stored `api_key` is read by nothing (verified in the backend, fileserver and interface), so the column, the field, the
   schema and the contract line in `03` 7.2b are removed; the provider form has no key field.
 - **D21.** Whether the TMDB read token and the OMDb key become admin-editable settings (a masked field with `Replace`,
@@ -717,4 +734,4 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 The coordinator amends these, after landing and not before: `01` sections 1.3, 1.4, 3, 4.3 (the `/admin/` static route
 joins the root exceptions) and 4.4 (the engine's timers); `03` sections 1 and 7 (the routes of 3.3, the port table,
 7.7); `10` (rewritten for the engine inside the backend); `AGENTS.md` (layout, ports, the `/live` exception); and the
-index tables in `00` and `AGENTS.md`, which stop at `14` today and need `15` to `26`.
+index tables in `00` and `AGENTS.md`, which stop at `14` today and need `15` to `23` and `25` to `29` (there is no `24`).

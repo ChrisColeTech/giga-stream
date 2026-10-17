@@ -45,11 +45,10 @@ decoding, season-zero handling, image/address boundaries, async player-policy ac
 production stub/fixture removal. These are open work, not completed features.
 
 **Theatre mode, owner-directed (2026-10-17):** implemented and Chrome-verified end to end at the real root
-stack. Entering via the titlebar's ghost Theatre button collapses the active surface's left, right and bottom
+stack. Entering via the titlebar's ghost Theatre button collapses every surface's left, right and bottom
 panes, paints the titlebar and statusbar backgrounds and borders black, and shows the button pressed
-("Layout saved." confirms the collapsed shell persisted). Exiting restores every pane to its pre-Theatre
-state (left and right rails reappear at full width), returns both bars to panel tone and unpresses the
-button. A reload after exit confirmed the healed layout persisted while Theatre itself did not. Gate PASS
+("Layout saved." confirms the collapsed shell persisted). Exiting turns the lights on only (owner, 2026-10-17: no pane
+is restored; `06` section 1): it returns both bars to panel tone and unpresses the button. A reload after exit confirmed the healed layout persisted while Theatre itself did not. Gate PASS
 (559 tests); installer rebuilt from this state.
 
 ### Historical pre-wiring snapshot (2026-10-17, before wave A)

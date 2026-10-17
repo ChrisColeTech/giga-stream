@@ -48,7 +48,7 @@ person's changes.
 
 ## Commands
 
-The dev stack (backend, the interface's Vite, the Electron app with its fileserver, live server; the
+The dev stack (backend, the interface's Vite, the Electron app with its fileserver; the
 development ports above) runs from the root during development and testing (owner, 2026-10-17; `07`
 section 4):
 
@@ -59,11 +59,14 @@ section 4):
   npm scripts; `Start-Process` is still killed with the automation shell's Windows job.
 - `npm run kill-ports` — frees the development ports (5171, 8090, 8091, 3001) by port; never a
   production one, so an installed app the owner is testing keeps running.
-- `node scripts/check/gate.mjs` — every typecheck, the lint, the rule checker and every program's tests.
+- `node scripts/check/gate.mjs` — every typecheck, the lint, the rule checker and every program's tests, then a live
+  smoke of the running stack (`scripts/check/live-smoke.mjs`: every enabled live channel must answer its playlist and a
+  segment), reported SKIPPED when no stack is up. It reads the backend at `GIGA_SMOKE_BACKEND` (default
+  `http://127.0.0.1:3001`, the port the owner's local `src/backend/.env` sets; the code default is 8091).
 - `npm run dist:win` — builds the interface and the fileserver and packages the Windows app with
   electron-builder (`electron-builder.config.cjs`): `release/Giga Stream Setup <version>.exe`, and
   `release/win-unpacked/Giga Stream.exe` to run without installing. Only the fileserver (with the built
-  interface it serves, the shared media library and FFmpeg) is in it; the backend and live server are not.
+  interface it serves, the shared media library and FFmpeg) is in it; the backend is not.
   The coordinator produces it after every wave (`07` section 6.5).
 
 Checks and drives run against the started stack, never against ad-hoc per-program spawns (`07` section 4).
@@ -78,7 +81,8 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
 - One Zustand store and one request layer (`services/api.ts`). No application socket, browser storage or polling.
 - Routes: parse, one service call, the standard envelope. SQL only under `store/`. Electron only in the
   fileserver's `src/app`. Providers only in the admin backend.
-- Every route begins `/api`; only `/healthz` and `/ws` are root-level. Error codes are dotted and stable.
+- Every route begins `/api`; the root-level routes are `/healthz` and the backend's live stream addresses (`/live`,
+  `/logos`, the test page) and its static `/admin/` app. Error codes are dotted and stable.
 - A control works or is visibly disabled with its reason as a tooltip; no text under controls;
   loading and empty content are skeletons inside the established pane structure. Missing media/history
   never removes the inspector headings or Resume / Start over footer.

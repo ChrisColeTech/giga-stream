@@ -40,7 +40,7 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
   caption symbols follow by being sent the bar's own colour. Input inside a provider's embedded player
   (a cross-origin frame) never reaches the page, so it does not wake the bars; moving the mouse onto the
   bars, which sit outside the stage, does. Every surface goes black with the bars —
-  the black is the root token remap of `02` section 14 (`bg`, `panel`, `surface`, `stage`, `hair`,
+  the black is the `:root[data-theatre]` token remap in `src/frontend/src/index.css` (`bg`, `panel`, `surface`, `stage`, `hair`,
   `border`), so panes, input backgrounds, borders, separators and scrollbars all follow; controls keep
   their own fill and edge, so buttons, chips and the rails' selected rows read as in the normal theme
   (owner, 2026-10-17: theatre is a minimal change). The centre pane keeps a subtle spotlight:
@@ -325,8 +325,8 @@ LoRA Studio's gallery tile with Giga Stream's 2:3 poster (owner decision). Cards
 |---|---|
 | Art | the poster in one bordered button: the dim border on hover, the accent border and ring when selected. With no image it is drawn as a poster in the title's colour family with the title set large at its foot, which is the content itself, not placeholder copy |
 | Rating | a small badge in the art's top left corner: the star glyph and the rating to one decimal (`7.1`) in mono, on the family's dim scrim chip; absent when the title has no rating (a local file never has one) (owner, 2026-10-17) |
-| Details glyph | a small `Info` glyph button in the art's top right corner (named `Details for <title>`). Hovering it (after the family tooltip delay) or focusing it by keyboard shows a **details popover** anchored to it like a tooltip, never the Title information window: rating, year, `Movie` or `2 seasons · 14 episodes`, runtime, genres and the plot's opening lines, read from the title's detail (shimmer lines while it is read). it hides when the pointer leaves the glyph and the popover or focus leaves, and on `Escape`; a press on the glyph does nothing to the card and never selects it or opens the work window (owner, 2026-10-17: "the popup should show when i hover it like a tooltip") |
-| Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite; with the Details glyph drawn it sits directly beneath the glyph |
+| Details glyph | a small `Info` glyph button in the art's top right corner (named `Details for <title>`). Hovering it (after a short rest of the pointer, the family's fade time) or focusing it by keyboard shows a **details popover** anchored to it like a tooltip, never the Title information window: rating, year, `Movie` or `2 seasons · 14 episodes`, runtime, genres and the plot's opening lines, read from the title's detail (shimmer lines while it is read); the rating line is the card's own value so it always matches the badge. It hides when the pointer leaves the glyph and the popover or focus leaves, on `Escape`, an outside press or its X; on a device with no hover a press toggles it. A local file has no glyph. A press on the glyph does nothing to the card and never selects it or opens the work window (owner, 2026-10-17: "the popup should show when i hover it like a tooltip") |
+| Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite; with the Details glyph drawn it sits directly beneath the glyph, and at the corner when there is no glyph |
 | Progress | a bar on the art's bottom edge for a title in progress |
 | Verbs | under the art, on equal ghost tile buttons: **Play** (**Open** for a series), **Info**, and a fixed square menu button |
 | Title | a visible, single-line title beneath the poster and above the verbs, with ellipsis for overflow; the full title also remains the tooltip and accessible name (owner, 2026-10-17) |
