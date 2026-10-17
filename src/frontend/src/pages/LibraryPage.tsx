@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { HistoryStrip } from "@/components/library/HistoryStrip";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
+import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
 import { useLibraryData } from "@/hooks/useLibraryData";
@@ -49,7 +50,11 @@ export function LibraryPage({ active }: { active: boolean }) {
     ? render.items.filter((item) => item.progress !== undefined)
     : query.source === "favorites" ? render.items.filter((item) => item.favorite) : render.items;
   const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
-  useLibraryRequest({ patch, setView, setSelected });
+  const [reveal, setReveal] = useState<Reveal | null>(null);
+  const onRevealed = useCallback(() => setReveal(null), []);
+  /* Rows has no windowed list to take the request, and a stale one must not scroll a grid shown later. */
+  useEffect(() => { if (view === "rows") setReveal(null); }, [view, reveal]);
+  useLibraryRequest({ patch, setView, setSelected, setReveal });
   const onSource = (source: SourceId): void => patch({ source });
   const onScope = (scope: Scope): void => patch({ scope });
   const onSeeAll = useCallback((group: ShelfGroup): void => {
@@ -93,7 +98,7 @@ export function LibraryPage({ active }: { active: boolean }) {
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
       onRefresh={data.refresh} loading={data.loading}
       paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
-      titleRegionsLoading={render.titleRegionsLoading}
+      titleRegionsLoading={render.titleRegionsLoading} reveal={reveal} onRevealed={onRevealed}
     />
   );
 

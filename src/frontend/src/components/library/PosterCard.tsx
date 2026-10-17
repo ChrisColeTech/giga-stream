@@ -16,6 +16,8 @@ import { TILE_BADGE, TILE_CHIP, TILE_FRAME, TILE_IDLE, TILE_SELECTED } from "./t
 
 export interface PosterCardProps {
   readonly item: ResolvedItem;
+  /** Its place in the windowed list, for keyboard movement and focus pinning (`docs/32` section 2.4). */
+  readonly index?: number;
   readonly selected: boolean;
   readonly inHistory: boolean;
   readonly collections: readonly CollectionRow[];
@@ -27,7 +29,7 @@ export interface PosterCardProps {
  *  wears the star badge beneath the Details glyph in its top right corner, the rating chip is in its top left, progress
  *  runs along its foot, and Play, Info and the menu sit under it.
  *  A press selects the card and opens its Info. The visible title also supplies the tooltip and accessible name. */
-export function PosterCard({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
+export function PosterCard({ item, index, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
   /* Title information returns focus here when it closes: the card's own button. */
   const artRef = useRef<HTMLButtonElement>(null);
   const id = item.ref.id;
@@ -44,7 +46,7 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect, o
   const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
 
   return (
-    <div data-card-id={id} className="flex min-w-0 flex-col gap-1" onContextMenu={onMenu}>
+    <div data-card-id={id} data-index={index} className="flex min-w-0 flex-col gap-1" onContextMenu={onMenu}>
       {/* The Details glyph is a sibling of the art button, not inside it: a button cannot hold a button. */}
       <div className="relative">
         <button

@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
+import { createItemMemory } from "@/store/library-item-memory";
 import { DEFAULT_QUERY, type LibraryQuery, type ViewCounts } from "@/lib/library-query";
 import type { CollectionListSchema, CollectionSchema, FolderSchema } from "@/services/schemas/collection-schema";
 import type { JobListSchema, JobSchema } from "@/services/schemas/job-schema";
@@ -56,6 +57,7 @@ type Set = (partial: Partial<Host>) => void;
 type Get = () => Host;
 
 export function librarySlice(set: Set, get: Get): LibrarySlice {
+  const remember = createItemMemory();
   return {
     collections: [],
     jobs: [],
@@ -133,11 +135,7 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       set({ scanProgress: { ...get().scanProgress, [folderId]: progress } }),
     setLibraryCounts: (libraryCounts) => set({ libraryCounts }),
     setLibraryQuery: (change) => set({ libraryQuery: { ...get().libraryQuery, ...change } }),
-    rememberLibraryItems: (items) => {
-      const byKey = new Map(get().libraryItems.map((item) => [`${item.ref.kind}:${item.ref.id}`, item]));
-      for (const item of items) byKey.set(`${item.ref.kind}:${item.ref.id}`, item);
-      set({ libraryItems: [...byKey.values()] });
-    },
+    rememberLibraryItems: (items) => set({ libraryItems: remember(get().libraryItems, items) }),
     requestLibraryRefresh: () => set({ libraryRefreshSerial: get().libraryRefreshSerial + 1 }),
     setLibraryPrefs: (change) =>
       set({ library: { ...get().library, ...change }, settingsRevision: get().settingsRevision + 1 }),

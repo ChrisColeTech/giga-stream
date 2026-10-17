@@ -41,9 +41,9 @@ width `W` (the width inside its padding, so the scrollbar is already excluded):
   chrome under it (gap 4 + the 20px title line + gap 4 + the 24px verb row = 52). `rowHeight = ceil(cardWidth * 1.5
   + 52)`, `pitch = rowHeight + 12`. Rows are laid out with explicit `columns` (`repeat(columns, minmax(0, 1fr))`), so the
   render and the maths cannot disagree.
-- **List.** One column, `rowHeight` is a constant (the row's content is a 54px thumbnail with 6px padding: 66px),
-  `pitch = 66 + 4`. `PosterListRow` is given that height explicitly, so a row with a progress bar or a long facts line
-  never changes the pitch.
+- **List.** One column, `rowHeight` is a constant (the row's content is a 54px thumbnail, 6px padding twice and a 1px border twice: 68px),
+  `pitch = 68 + 4`. The row is stretched to that height by the windowed row, so a row with a progress bar or a long
+  facts line never changes the pitch.
 - `lib/window-rows.ts` holds all of it as pure functions of a `RowSpec` (min column width, gap, art aspect, chrome,
   or a fixed row height).
 
@@ -99,9 +99,11 @@ each side: the renderer works from a sorted list of mounted row indices and emit
   layout effect that follows the render that mounted it (`pendingFocus`). Selection moves with focus as today.
   ArrowDown on the last loaded row selects nothing new (the same edge rule as `cardStep`).
 - **Reveal (`select this card`).** `useLibraryRequest` keeps its work (clear the filters, select the id) and also
-  publishes `reveal = { id, serial }` through a new `setReveal` target of the page. The windowed grid receives
-  `reveal`; when its `serial` is new and the id is in the loaded list (also if the list lands later: the effect
-  depends on the id lookup), it calls `focusIndex(index)` (scroll into the window, then focus the card).
+  publishes `reveal = { id }` (a new object per request) through a new `setReveal` target of the page, set in the same
+  frame as the old lookup, after the cleared query has begun its reload. The windowed grid or list receives
+  `reveal`; once it is mounted with a measured layout (also when the reloaded list lands later) it tries once
+  (`onRevealed` clears the request, found or not): if the id is in the loaded list it calls `focusIndex(index)` (scroll
+  into the window, then focus the card). A request still pending when the Rows view is shown is dropped.
   The old `[data-card-id]` lookup stays for the Rows view only, and is harmless otherwise.
 - **Details popover, context menu.** They hang off the card that opened them (`DetailsGlyph` is inside the card; the
   menu is a coordinate anchor with closures). The popover is hover or focus driven and is allowed to disappear with
@@ -135,7 +137,7 @@ page loads. This replaces 63,677 nodes with a few thousand.
 
 ### 2.7 The list view
 
-Windowed with the same engine (one column, fixed 66px row): a 27,000-row list has the same DOM problem and the same
+Windowed with the same engine (one column, fixed 68px row): a 27,000-row list has the same DOM problem and the same
 fix. `PosterList` and `PosterGrid` are two thin users of `WindowedRows`.
 
 ### 2.8 The Rows view: not in this build
@@ -162,7 +164,8 @@ is to hold the identity set in the page ref.
 | File | Role |
 |---|---|
 | `lib/window-rows.ts` | pure: `rowLayout`, `visibleRows`, `windowSegments`, `anchorFor`, `scrollTopForAnchor`, `scrollTopToReveal`, `gridStep` |
-| `constants/library-window.ts` | `OVERSCAN_ROWS`, the grid and list `RowSpec`s |
+| `constants/library-window.ts`, `types/window-rows.ts` | `OVERSCAN_ROWS`, the grid and list `RowSpec`s; the geometry types |
+| `store/library-item-memory.ts` | the incremental item memory behind `rememberLibraryItems` (section 3) |
 | `hooks/useWindowedRows.ts` | the observers, the range state, the anchor, `scrollToIndex`, `focusIndex` |
 | `components/library/WindowedRows.tsx` | renders spacers and rows, owns key handling and focus pinning |
 | `components/library/PosterGrid.tsx`, `PosterList.tsx` | thin users of `WindowedRows` |
@@ -218,5 +221,5 @@ On the owner's real stack (`07` section 4), Library, All, grid view, Chrome MCP 
 7. Reveal: Player, Reveal in Library for a title that is deep in the list: the grid scrolls to it and focuses it.
 8. A card's context menu and Details popover still open and anchor to the card; Title information closes with focus
    back on the card.
-9. List view: the same steps 1, 2, 4 and 5; rows are 66px and never overlap.
+9. List view: the same steps 1, 2, 4 and 5; rows are 68px and never overlap.
 10. Posters: only mounted cards request `/api/images`; no accent colours while loading (the shimmer).
