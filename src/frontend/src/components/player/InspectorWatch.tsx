@@ -68,7 +68,7 @@ export function InspectorWatch({ view, commands }: InspectorWatchProps) {
       {memberNames.length > 0 && (
         <div className="flex flex-wrap gap-1 px-2.5 pb-1">
           {memberNames.map((name) => (
-            <span key={name} className="rounded-ctl border border-hair px-1.5 py-0.5 text-[11px] text-muted">
+            <span key={name} className="rounded-ctl border border-hair px-1.5 py-0.5 font-mono text-[11px] text-muted">
               {name}
             </span>
           ))}

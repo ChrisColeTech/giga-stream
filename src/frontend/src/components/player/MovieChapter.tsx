@@ -12,13 +12,13 @@ export interface MovieChapterProps {
 export function MovieChapter({ title, runtimeMs, quality }: MovieChapterProps) {
   return (
     <div className="flex items-center gap-2.5 p-2.5">
-      <span className="grid size-10 flex-none place-items-center rounded-ctl bg-surface text-dim">
+      <span className="grid size-10 flex-none place-items-center rounded-ctl bg-surface text-muted">
         <Film className="size-4" aria-hidden />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-[13px] font-semibold text-text">{title}</span>
-        <span className="flex items-center gap-2 font-mono text-[11px] text-dim tabular-nums">
-          <span className="uppercase">Movie</span>
+        <span className="flex items-center gap-2 font-mono text-[11px] text-muted tabular-nums">
+          <span>Movie</span>
           {runtimeMs !== undefined && <span>{formatRuntime(runtimeMs)}</span>}
           {quality !== undefined && <span>{quality}</span>}
         </span>

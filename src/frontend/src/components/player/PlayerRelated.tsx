@@ -1,9 +1,9 @@
 import { RelatedCard } from "@/components/player/RelatedCard";
+import { RelatedSkeleton } from "@/components/player/RelatedSkeleton";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { FoldBody } from "@/components/ui/FoldBody";
 import { IconButton } from "@/components/ui/IconButton";
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
-import { RELATED_BASIS_LABEL, RELATED_CARD_WIDTH, RELATED_LOCAL_REASON, RELATED_SKELETON_COUNT } from "@/lib/player-copy";
+import { RELATED_BASIS_LABEL, RELATED_LOCAL_REASON } from "@/lib/player-copy";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { sameRef } from "@/lib/player-session";
 import type { PlayerView } from "@/lib/player-view";
@@ -15,9 +15,10 @@ export interface PlayerRelatedProps {
   readonly commands: PlayerCommands;
 }
 
-/** The related band across the bottom (`06` section 5.5): the word Related, the basis it was found by, and a collapse
- *  toggle. Cards are 2:3 posters, at most twenty. Loading and empty are eight card skeletons; a local file's band is
- *  folded and its toggle is off with the reason. */
+/** The related band across the bottom (`06` section 5.5), drawn as Giga LoRA Studio's bottom rail (`PastRuns`): a
+ *  header of the lowercase mono word and the count, the basis after it, and a collapse toggle; beneath it the
+ *  thumbnail row. Loading and empty are eight thumbnail skeletons; a local file's band is folded and its toggle is
+ *  off with the reason. */
 export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelatedProps) {
   const local = view.tab?.kind === "local";
   const isFolded = local || folded;
@@ -26,7 +27,12 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
   const label = isFolded ? "Expand related titles" : "Collapse related titles";
 
   const toggle = (
-    <IconButton aria-label={label} title={local ? RELATED_LOCAL_REASON : label} disabled={local} on={!isFolded} onClick={onToggle}>
+    <IconButton
+      aria-label={label}
+      title={local ? RELATED_LOCAL_REASON : label}
+      disabled={local}
+      onClick={onToggle}
+    >
       <Disclosure open={!isFolded} />
     </IconButton>
   );
@@ -35,13 +41,19 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-7 flex-none items-center gap-2 px-2">
         {local ? <span className="inline-flex" title={RELATED_LOCAL_REASON}>{toggle}</span> : toggle}
-        <span className="font-mono text-[11px] font-semibold text-muted">Related</span>
-        {hasCards && <span className="font-mono text-[10px] text-dim">{RELATED_BASIS_LABEL}</span>}
+        <span className="font-mono text-[11px] text-muted">
+          {hasCards ? `related — ${view.related.length}` : "related"}
+        </span>
+        {hasCards && <span className="font-mono text-[11px] text-muted">{RELATED_BASIS_LABEL}</span>}
       </div>
       <FoldBody open={!isFolded} className="min-h-0 flex-1">
-        <div className="h-full overflow-hidden">
+        <div className="h-full">
           {hasCards ? (
-            <div className="flex h-full items-start gap-2 overflow-x-auto bg-panel px-2 py-1">
+            <div
+              role="listbox"
+              aria-label="Related titles"
+              className="flex h-full items-stretch gap-1.5 overflow-x-auto bg-panel px-2.5 py-1.5"
+            >
               {view.related.map((item) => (
                 <RelatedCard
                   key={`${item.ref.kind}-${item.ref.id}`}
@@ -52,9 +64,7 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
               ))}
             </div>
           ) : (
-            <div className="h-full overflow-hidden bg-panel px-1">
-              <SkeletonCards count={RELATED_SKELETON_COUNT} cardWidth={RELATED_CARD_WIDTH} />
-            </div>
+            <RelatedSkeleton />
           )}
         </div>
       </FoldBody>
