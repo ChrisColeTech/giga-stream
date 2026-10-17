@@ -92,10 +92,10 @@ test("a video that cannot be played, or a folder with none, leaves that channel 
 
 test("encode mode streams a playlist live through the real encoder and leaves no output when the backend closes", { skip, timeout: 120_000 }, async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-encode-"));
+  const t = await realApp({ dataDir });
   try {
-    const t = await realApp({ dataDir });
     const token = (await signIn(t.app)).access;
-    const body = { id: "enc", name: "Encode", category: "News", number: 1, mode: "encode", captions: true,
+    const body = { kind: "live", id: "enc", name: "Encode", category: "News", number: 1, mode: "encode", captions: true,
       videos: [fixture(dir, "news", 1), fixture(dir, "news", 2)] };
     assert.equal((await send(t.app, "POST", "/api/channels", body, token)).status, 201);
     await t.live.settled();
@@ -116,6 +116,12 @@ test("encode mode streams a playlist live through the real encoder and leaves no
     await t.dispose();
     assert.deepEqual(filesUnder(path.join(dataDir, "encode")), [], "no encode-mode output after the backend closes");
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    // Close the app first (its database file is open), and never let cleanup hide an earlier failure.
+    await t.dispose().catch(() => undefined);
+    try {
+      rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch {
+      // a leftover temp folder is harmless; the test's own result is what matters
+    }
   }
 });
