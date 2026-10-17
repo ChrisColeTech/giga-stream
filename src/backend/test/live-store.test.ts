@@ -74,7 +74,7 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
     assert.equal(store.channels.countLive(), 0);
     store.close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
-    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 15 });
+    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 16 });
     db.close();
   });
 });

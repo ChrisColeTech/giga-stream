@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ADDRESS_MAX, API_KEY_MAX, FRAME_ORIGINS_MAX, PARAM_MAX, PROVIDER_NAME_MAX, SOURCE_MAX } from "../constants/limits.js";
+import { ADDRESS_MAX, FRAME_ORIGINS_MAX, PARAM_MAX, PROVIDER_NAME_MAX, SOURCE_MAX } from "../constants/limits.js";
 
 /** How a provider plays (docs/03 section 7.2b). */
 export const PROVIDER_FAMILIES = ["embed", "stream"] as const;
@@ -15,7 +15,6 @@ export interface BackendProvider {
   id: number;
   name: string;
   source: string;
-  api_key: string;
   is_active: boolean;
   order: number;
   family: ProviderFamily;
@@ -88,7 +87,6 @@ export const ProviderInputSchema = z
   .object({
     name: text(PROVIDER_NAME_MAX),
     source: text(SOURCE_MAX),
-    api_key: z.string().trim().max(API_KEY_MAX).optional(),
     order: z.number().int().min(0).optional(),
     family: z.enum(PROVIDER_FAMILIES).default("embed"),
     movieTemplate: template(MOVIE_TEMPLATE_PLACEHOLDERS).optional(),

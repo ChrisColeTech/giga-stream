@@ -8,7 +8,6 @@ const ProviderRow = z.object({
   id: z.number(),
   name: z.string(),
   source: z.string(),
-  api_key: z.string(),
   is_active: z.number(),
   created_at: z.string(),
   order: z.number(),
@@ -47,7 +46,6 @@ function toProvider(row: unknown): BackendProvider {
     id: r.id,
     name: r.name,
     source: r.source,
-    api_key: r.api_key,
     is_active: r.is_active === 1,
     order: r.order,
     family: familyOf(r.family),
@@ -67,7 +65,6 @@ export interface ProviderRecord {
   id: number;
   name: string;
   source: string;
-  api_key: string;
   is_active: number;
   created_at: string;
   order: number;
@@ -82,7 +79,7 @@ export interface ProviderRecord {
 }
 
 const COLUMNS = `
-  id, name, source, api_key, is_active, created_at, "order", family, movie_template, episode_template,
+  id, name, source, is_active, created_at, "order", family, movie_template, episode_template,
   start_param, subtitles_param, origin, frame_origins, message_shape`;
 
 /**
@@ -94,12 +91,12 @@ export function createProviderRepository(db: DatabaseSync) {
   const one = db.prepare(`SELECT ${COLUMNS} FROM providers WHERE id = ?`);
   const insert = db.prepare(`
     INSERT INTO providers (
-      name, source, api_key, is_active, created_at, "order", family, movie_template, episode_template,
+      name, source, is_active, created_at, "order", family, movie_template, episode_template,
       start_param, subtitles_param, origin, frame_origins, message_shape
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const update = db.prepare(`
     UPDATE providers SET
-      name = ?, source = ?, api_key = ?, is_active = ?, "order" = ?, family = ?, movie_template = ?,
+      name = ?, source = ?, is_active = ?, "order" = ?, family = ?, movie_template = ?,
       episode_template = ?, start_param = ?, subtitles_param = ?, origin = ?, frame_origins = ?,
       message_shape = ?
     WHERE id = ?`);
@@ -114,14 +111,14 @@ export function createProviderRepository(db: DatabaseSync) {
     isEmpty: (): boolean => all.all().length === 0,
     insert(c: Omit<ProviderRecord, "id">): number {
       const result = insert.run(
-        c.name, c.source, c.api_key, c.is_active, c.created_at, c.order, c.family, c.movie_template,
+        c.name, c.source, c.is_active, c.created_at, c.order, c.family, c.movie_template,
         c.episode_template, c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape,
       );
       return Number(result.lastInsertRowid);
     },
     update(c: ProviderRecord): boolean {
       const result = update.run(
-        c.name, c.source, c.api_key, c.is_active, c.order, c.family, c.movie_template, c.episode_template,
+        c.name, c.source, c.is_active, c.order, c.family, c.movie_template, c.episode_template,
         c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape, c.id,
       );
       return Number(result.changes) > 0;
