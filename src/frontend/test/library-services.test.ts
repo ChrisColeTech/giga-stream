@@ -5,7 +5,9 @@ import { writeFavorite } from "@/services/favorites";
 import {
   LibrarySearchSession,
   appendLibraryPage,
+  canLoadLibraryPage,
   knownLibraryCount,
+  libraryQueryKey,
   readAllLibraryPages,
   readContinue,
   readLibrary,
@@ -133,6 +135,23 @@ describe("library pagination", () => {
     assert.equal(knownLibraryCount(first), undefined);
     assert.equal(knownLibraryCount({ ...page, total: 40, nextCursor: "next" }), 40);
     assert.equal(knownLibraryCount(page), 1);
+  });
+
+  it("hides an old cursor as soon as the current query differs or starts loading", () => {
+    const oldKey = libraryQueryKey(DEFAULT_QUERY);
+    const nextKey = libraryQueryKey({ ...DEFAULT_QUERY, watched: "watching" });
+    assert.equal(canLoadLibraryPage(oldKey, nextKey, false, false, "old-cursor"), false);
+    assert.equal(canLoadLibraryPage(oldKey, oldKey, true, false, "old-cursor"), false);
+    assert.equal(canLoadLibraryPage(oldKey, oldKey, false, false, "old-cursor"), true);
+  });
+
+  it("deduplicates repeated rows within the appended page", () => {
+    const duplicate = { ...item, watchId: "w2" };
+    const combined = appendLibraryPage(
+      { ...page, items: [{ ...item, watchId: "w1" }] },
+      { ...page, items: [duplicate, duplicate] },
+    );
+    assert.deepEqual(combined.items.map((row) => row.watchId), ["w1", "w2"]);
   });
 });
 

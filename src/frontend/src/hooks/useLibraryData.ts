@@ -3,7 +3,9 @@ import { DEFAULT_QUERY, collectionOf, matchesQuery, type LibraryQuery, type View
 import {
   LibrarySearchSession,
   appendLibraryPage,
+  canLoadLibraryPage,
   knownLibraryCount,
+  libraryQueryKey,
   readContinue,
   readLibrary,
 } from "@/services/library";
@@ -19,6 +21,7 @@ export interface LibraryData {
   readonly continuing: readonly LibraryItem[];
   readonly loading: boolean;
   readonly paging: boolean;
+  readonly hasMore: boolean;
   readonly loadMore: () => void;
   readonly refresh: () => void;
 }
@@ -28,10 +31,12 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
+  const [acceptedQueryKey, setAcceptedQueryKey] = useState<string | null>(null);
   const session = useRef<LibrarySearchSession | null>(null);
   const sideRequest = useRef<AbortController | null>(null);
   const pageRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
+  const firstPagePending = useRef(true);
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
   const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
@@ -40,12 +45,18 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     session.current = new LibrarySearchSession(
       (answer) => {
         setPage(answer);
+        setAcceptedQueryKey(libraryQueryKey(useAppStore.getState().libraryQuery));
+        firstPagePending.current = false;
         setLoading(false);
         const store = useAppStore.getState();
         store.rememberLibraryItems(answer.items);
         acceptCount(store.libraryQuery, answer);
       },
-      (error) => { setLoading(false); useAppStore.getState().say(sentence(error), "warn"); },
+      (error) => {
+        firstPagePending.current = false;
+        setLoading(false);
+        useAppStore.getState().say(sentence(error), "warn");
+      },
     );
   }
 
@@ -88,6 +99,7 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
 
   const read = (debounce: boolean): void => {
     queryGeneration.current += 1;
+    firstPagePending.current = true;
     pageRequest.current?.abort();
     setPaging(false);
     setLoading(true);
@@ -97,7 +109,8 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
 
   const loadMore = (): void => {
     const cursor = page?.nextCursor;
-    if (cursor === undefined || paging) return;
+    const key = libraryQueryKey(query);
+    if (firstPagePending.current || !canLoadLibraryPage(acceptedQueryKey, key, loading, paging, cursor)) return;
     const generation = queryGeneration.current;
     const controller = new AbortController();
     pageRequest.current?.abort();
@@ -136,7 +149,22 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   const filtered = source.filter((item) => item.progress?.state === "watching" && matchesQuery({
     ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
-  return { page, continuing: filtered, loading, paging, loadMore, refresh: () => { read(false); readSideData(); } };
+  const hasMore = canLoadLibraryPage(
+    acceptedQueryKey,
+    libraryQueryKey(query),
+    loading,
+    paging,
+    page?.nextCursor,
+  );
+  return {
+    page,
+    continuing: filtered,
+    loading,
+    paging,
+    hasMore,
+    loadMore,
+    refresh: () => { read(false); readSideData(); },
+  };
 }
 
 function acceptCount(query: LibraryQuery, page: LibraryPage): void {

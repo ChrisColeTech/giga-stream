@@ -10,6 +10,7 @@ import { RowsShelf } from "./RowsShelf";
 import { RowsSkeleton } from "./RowsSkeleton";
 import { navigateRows } from "./rows-navigation";
 import { ROWS_COPY } from "./rows-constants";
+import { rowsRenderState } from "@/lib/library-render-state";
 
 export interface LibraryRowsProps {
   readonly scope: Scope;
@@ -61,34 +62,34 @@ export function LibraryRows({
     () => buildShelves({ items, continuing, collections, marks, showContinue }),
     [items, continuing, collections, marks, showContinue],
   );
+  const render = rowsRenderState(shelves.length, hasMore, paging);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
-      {shelves.length === 0 ? (
-        <RowsSkeleton />
-      ) : (
-        <div
-          role="group"
-          aria-label={ROWS_COPY.listLabel}
-          className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto py-3"
-          onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => navigateRows(event, onSelect)}
-        >
-          {shelves.map((shelf) => (
-            <RowsShelf
-              key={shelf.id}
-              shelf={shelf}
-              collections={collections}
-              selected={selected}
-              onSelect={onSelect}
-              onRemoveWatch={onRemoveWatch}
-              onSeeAll={onSeeAll}
-            />
-          ))}
-          {titleRegionsLoading && shelves.length > 0 && <RowsSkeleton />}
+      <div
+        role="group"
+        aria-label={ROWS_COPY.listLabel}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto py-3"
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => navigateRows(event, onSelect)}
+      >
+        {render.showSkeleton && <RowsSkeleton />}
+        {shelves.map((shelf) => (
+          <RowsShelf
+            key={shelf.id}
+            shelf={shelf}
+            collections={collections}
+            selected={selected}
+            onSelect={onSelect}
+            onRemoveWatch={onRemoveWatch}
+            onSeeAll={onSeeAll}
+          />
+        ))}
+        {titleRegionsLoading && shelves.length > 0 && <RowsSkeleton />}
+        {render.showPager && (
           <LibraryPager hasMore={hasMore} loading={paging} view="rows" onVisible={onLoadMore} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

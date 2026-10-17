@@ -82,7 +82,7 @@ export function LibraryPage({ active }: { active: boolean }) {
       scope={query.scope} items={shown} continuing={continuing} collections={collections} selected={selected}
       showContinue={prefs.showContinue && query.source !== "history"} onScope={onScope} onSelect={setSelected}
       onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll} onRefresh={data.refresh} loading={data.loading}
-      paging={data.paging} hasMore={data.page?.nextCursor !== undefined} onLoadMore={data.loadMore}
+      paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
       titleRegionsLoading={render.titleRegionsLoading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
@@ -92,7 +92,7 @@ export function LibraryPage({ active }: { active: boolean }) {
       shown={shown} continuing={continuing} collections={collections} selected={selected} onScope={onScope}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
       onRefresh={data.refresh} loading={data.loading}
-      paging={data.paging} hasMore={data.page?.nextCursor !== undefined} onLoadMore={data.loadMore}
+      paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
       titleRegionsLoading={render.titleRegionsLoading}
     />
   );

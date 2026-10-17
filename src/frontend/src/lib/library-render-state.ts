@@ -17,3 +17,7 @@ export function libraryRenderState(
     titleRegionsLoading: scope !== "local",
   };
 }
+
+export function rowsRenderState(shelfCount: number, hasMore: boolean, paging: boolean) {
+  return { showSkeleton: shelfCount === 0, showPager: hasMore || paging };
+}

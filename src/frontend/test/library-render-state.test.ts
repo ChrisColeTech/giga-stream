@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { collectionsSubmenu, FOLDER_MEMBERSHIP_REASON } from "@/lib/collection-menu";
 import { memberRows } from "@/lib/collections-members";
-import { libraryRenderState } from "@/lib/library-render-state";
+import { libraryRenderState, rowsRenderState } from "@/lib/library-render-state";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { useAppStore } from "@/store/app-store";
 
@@ -30,6 +30,13 @@ describe("backend-down Library rendering", () => {
       items: [local], titleRegionsLoading: false,
     });
     assert.deepEqual(libraryRenderState([movie, local], true, "all").items, [movie, local]);
+  });
+});
+
+describe("Rows paging grammar", () => {
+  it("keeps the pager beside an empty-page skeleton when another cursor exists", () => {
+    assert.deepEqual(rowsRenderState(0, true, false), { showSkeleton: true, showPager: true });
+    assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: true, showPager: false });
   });
 });
 

@@ -112,6 +112,36 @@ describe("optimistic memberships", () => {
     assert.deepEqual(useAppStore.getState().marks.memberships["title:member-independent"], ["c2"]);
     assert.equal(useAppStore.getState().notice?.sentence, "First refused.");
   });
+
+  it("ignores an older full snapshot that resolves after a newer reconciliation", async () => {
+    const snapshots: Array<(response: Response) => void> = [];
+    let announceFirst: (() => void) | undefined;
+    let announceSecond: (() => void) | undefined;
+    const firstStarted = new Promise<void>((resolve) => { announceFirst = resolve; });
+    const secondStarted = new Promise<void>((resolve) => { announceSecond = resolve; });
+    globalThis.fetch = async (input) => {
+      if (!String(input).startsWith("/api/items/")) return success(collection(1));
+      const index = snapshots.length;
+      return new Promise((resolve) => {
+        snapshots.push(resolve);
+        if (index === 0) announceFirst?.();
+        else announceSecond?.();
+      });
+    };
+    const ref = { kind: "title" as const, id: "member-snapshot-order" };
+    const first = changeMembership(ref, "c1", true);
+    await firstStarted;
+    const second = changeMembership(ref, "c2", true);
+    await secondStarted;
+    assert.equal(snapshots.length, 2);
+    snapshots[1]?.(success({ memberships: [
+      { collectionId: "c1", source: "manual" }, { collectionId: "c2", source: "manual" },
+    ] }));
+    await Promise.resolve();
+    snapshots[0]?.(success({ memberships: [{ collectionId: "c1", source: "manual" }] }));
+    await Promise.all([first, second]);
+    assert.deepEqual(useAppStore.getState().marks.memberships["title:member-snapshot-order"], ["c1", "c2"]);
+  });
 });
 
 describe("optimistic watch deletion", () => {

@@ -107,9 +107,11 @@ export async function changeMembership(
     const state = useAppStore.getState();
     state.upsertCollection(answer);
     state.requestLibraryRefresh();
+    const reconciliation = next(membershipReadGeneration, item);
     try {
       const memberships = await readMemberships(ref);
-      if (membershipGeneration.get(queueKey) === generation) state.setMemberships(item, memberships);
+      if (membershipGeneration.get(queueKey) === generation
+        && membershipReadGeneration.get(item) === reconciliation) state.setMemberships(item, memberships);
     } catch (error: unknown) {
       if (membershipGeneration.get(queueKey) === generation) state.say(sentence(error), "warn");
     }

@@ -99,11 +99,34 @@ export function libraryRowIdentity(item: LibraryItem): string {
 
 export function appendLibraryPage(current: LibraryPage, next: LibraryPage): LibraryPage {
   const seen = new Set(current.items.map(libraryRowIdentity));
+  const appended: LibraryItem[] = [];
+  for (const item of next.items) {
+    const identity = libraryRowIdentity(item);
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    appended.push(item);
+  }
   return {
     ...next,
-    items: [...current.items, ...next.items.filter((item) => !seen.has(libraryRowIdentity(item)))],
+    items: [...current.items, ...appended],
     total: next.total ?? current.total,
   };
+}
+
+export function libraryQueryKey(query: LibraryQuery): string {
+  return JSON.stringify([
+    query.source, query.scope, query.search.trim(), query.sort, query.genres, query.year, query.watched,
+  ]);
+}
+
+export function canLoadLibraryPage(
+  acceptedQueryKey: string | null,
+  currentQueryKey: string,
+  loading: boolean,
+  paging: boolean,
+  nextCursor: string | undefined,
+): boolean {
+  return acceptedQueryKey === currentQueryKey && !loading && !paging && nextCursor !== undefined;
 }
 
 export function knownLibraryCount(page: LibraryPage): number | undefined {
