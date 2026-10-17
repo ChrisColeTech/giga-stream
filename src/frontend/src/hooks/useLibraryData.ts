@@ -32,6 +32,7 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
   const [acceptedQueryKey, setAcceptedQueryKey] = useState<string | null>(null);
+  const pageRef = useRef<LibraryPage | null>(null);
   const session = useRef<LibrarySearchSession | null>(null);
   const sideRequest = useRef<AbortController | null>(null);
   const pageRequest = useRef<AbortController | null>(null);
@@ -44,6 +45,7 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   if (session.current === null) {
     session.current = new LibrarySearchSession(
       (answer) => {
+        pageRef.current = answer;
         setPage(answer);
         setAcceptedQueryKey(libraryQueryKey(useAppStore.getState().libraryQuery));
         firstPagePending.current = false;
@@ -118,11 +120,10 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     setPaging(true);
     void readLibrary(query, controller.signal, cursor).then((next) => {
       if (generation !== queryGeneration.current || pageRequest.current !== controller) return;
-      setPage((current) => {
-        const merged = current === null ? next : appendLibraryPage(current, next);
-        acceptCount(query, merged);
-        return merged;
-      });
+      const merged = pageRef.current === null ? next : appendLibraryPage(pageRef.current, next);
+      pageRef.current = merged;
+      setPage(merged);
+      acceptCount(query, merged);
       useAppStore.getState().rememberLibraryItems(next.items);
     }).catch((error: unknown) => {
       if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
