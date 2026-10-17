@@ -16,7 +16,7 @@ const COLUMNS: ReadonlyArray<Column<CollectionFolder>> = [
   { key: "indexed", label: "indexed", align: "right", width: "72px", cell: (folder) => folder.indexedCount },
   { key: "scan", label: "scan", width: "112px", cell: (folder) => <ScanState scan={folder.scan} /> },
   { key: "last", label: "last scan", width: "136px", cell: (folder) => lastScanLabel(folder.lastScanAt) },
-  { key: "controls", label: "", align: "right", width: "148px", cell: (folder) => <FolderControls folder={folder} /> },
+  { key: "controls", label: "", align: "right", width: "172px", cell: (folder) => <FolderControls folder={folder} /> },
 ];
 
 /** The folders attached to one collection (`03` section 3.8). Their locations are never shown, only their names. With none,
@@ -30,7 +30,7 @@ export function CollectionFolders({
 }) {
   const verbs = useCollectionVerbs();
   return (
-    <Group id="collections.folders" title="Folders" icon={Folder}>
+    <Group id="section-folders" title="Folders" icon={Folder}>
       {folders.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (

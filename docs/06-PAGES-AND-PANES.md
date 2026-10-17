@@ -522,17 +522,21 @@ row with nothing wired yet is disabled in place and its reason is its tooltip.
 
 ### 6.3 Collections
 
-No rail (owner, 2026-10-16: a rail repeating the list is redundant). The window opens on its list, which holds a
-**New collection** group (a name, an
-optional **Folder** to start from through the native dialog, and **Create** at the last row) and the list of
-collections on the family action list (owner, 2026-10-16: the table "doesnt let me crud"): each row carries its
-scan state as the left-edge bar, its name and its totals; on hover, **Attach folder**, **Rename** (in place,
-over the list) and a two-step **Remove**; a press opens the collection. An open collection has a back link to the list at its top (`Collections /` and its
-name), then its attached folders first (name,
-indexed count, scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**) with **Attach
-folder** through the native dialog, then its member table (image, title, year, remove), **Rename**, and a
-two-step **Remove collection** that states `Original files remain untouched.` A token that expires keeps the
-draft and asks to choose again.
+The family's index and workspace flow (owner, 2026-10-16), as Giga LoRA Studio's Datasets and Dataset pages:
+
+- **Index, no rail.** The form on top: **New collection** (a name, an optional **Folder** to start from through
+  the native dialog, **Create**), or **Edit collection** when a tile's pencil fills it (the name, **Cancel**,
+  **Save**). Then the **Collections** group: its first row is search, sort (by name, most items, most folders)
+  and Grid / List; then a tile per collection (its glyph with the counts on it, the name, the folders and scan
+  state), whose pencil edits it in the form and whose trash is the inline **Remove** / **Keep**
+  (`Original files remain untouched.`). A tile opens that collection's workspace.
+- **Workspace, with a rail.** The rail is `← Collections`, the name with its totals, and the sections (Folders,
+  Members) with their counts; a press jumps there and the rail follows the scroll. The page holds the attached
+  folders (name, indexed count, scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**)
+  with **Attach folder** through the native dialog, then the member table (image, title, year, remove).
+  Renaming and removing the collection live on the index.
+
+A token that expires keeps the draft and asks to choose again.
 
 A folder is never more than one press away (owner, 2026-10-16: the button sat under two groups on a view you
 had to find first): **Attach folder…** is also the first row of a collection's context menu in Library's rail.

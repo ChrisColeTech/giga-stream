@@ -26,7 +26,7 @@ function memberColumns(collectionId: string): ReadonlyArray<Column<MemberRow>> {
       key: "remove",
       label: "",
       align: "right",
-      width: "44px",
+      width: "56px",
       cell: (row) => <MemberRemoveAction collectionId={collectionId} memberRef={row.ref} title={row.title} />,
     },
   ];
@@ -42,7 +42,7 @@ export function CollectionMembers({
   readonly rows: readonly MemberRow[];
 }) {
   return (
-    <Group id="collections.members" title="Members" icon={Film}>
+    <Group id="section-members" title="Members" icon={Film} last>
       {rows.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (

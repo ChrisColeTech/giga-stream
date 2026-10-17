@@ -21,9 +21,7 @@ export const SCANNING_REASON = "The folder is already scanning.";
 export const ARM_TIMEOUT_MS = 5000;
 
 /** The armed state of a removal: the control's new label and the sentence that names what the removal leaves alone. */
-export const ARMED_LABEL = "Remove collection?";
 export const FOLDER_ARMED_LABEL = "Remove folder?";
-export const CONSEQUENCE = "Original files remain untouched.";
 /** What removing a folder leaves on disk (`03` section 3.8: its files are never touched). */
 export const FOLDER_CONSEQUENCE = "The files on disk stay.";
 
