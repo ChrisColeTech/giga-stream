@@ -21,8 +21,9 @@ export interface ShelfRowProps {
 }
 
 /* Each card is a `data-card` carrying its id, so the Rows view can find its keyboard stop and move the selection.
-   The row is a grid of fixed-share columns: the cards fill the rail's width, a short shelf leaves the space to its
-   right, and a long one scrolls. A Continue card's own fixed width is overridden to fill its column. */
+   The row is a grid of share columns (`rows-constants`): the cards fill the rail's width, a short shelf leaves the space
+   to its right, and a long one scrolls. A Continue card's own fixed width is overridden to fill its column. The row's
+   vertical padding leaves room for a card's hover lift and its shadow, which the scroll box would otherwise clip. */
 const LANDSCAPE_CARD = "[&>article]:w-full";
 
 /** One shelf's cards in a single horizontal row (`06` section 4, Rows). Two edge chevrons show while the pointer or
@@ -70,7 +71,7 @@ export function ShelfRow({
         aria-label={name}
         onScroll={measure}
         className={cn(
-          "m-0 grid list-none grid-flow-col overflow-x-auto px-3 py-1",
+          "m-0 grid list-none grid-flow-col overflow-x-auto px-3 py-2",
           ROW_GAP,
           continuing ? LANDSCAPE_COLUMNS : POSTER_COLUMNS,
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",

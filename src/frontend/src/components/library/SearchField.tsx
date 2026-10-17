@@ -13,7 +13,7 @@ export function SearchField({ value, onChange }: SearchFieldProps) {
   const empty = value === "";
   return (
     <div className="relative flex min-w-0 items-center">
-      <Search className="pointer-events-none absolute left-2 size-3.5 text-dim" aria-hidden />
+      <Search className="pointer-events-none absolute left-2 size-3.5 text-muted" aria-hidden />
       <TextField
         data-search
         aria-label="Search"
