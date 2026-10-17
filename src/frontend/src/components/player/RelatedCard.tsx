@@ -1,26 +1,37 @@
 import { PosterImage } from "@/components/ui/PosterImage";
+import { cn } from "@/lib/cn";
 import { RELATED_CARD_WIDTH } from "@/lib/player-copy";
 import type { LibraryItem } from "@/types/library";
 
 export interface RelatedCardProps {
   readonly item: LibraryItem;
+  /** The card for the item the Player has open: the accent border, as the Studio's rail marks its selected render. */
+  readonly selected: boolean;
   readonly onOpen: () => void;
 }
 
-/** One related title (`06` section 5.5): a 2:3 poster, the title and the year beneath it, always drawn, even on the
- *  fallback poster. Sized to the 210 px band: the card is as wide as its poster, RELATED_CARD_WIDTH (92 px), so the poster
- *  is 138 px tall and the card about 170 px tall in the 182 px body. The skeleton cards of the same band use the same width. */
-export function RelatedCard({ item, onOpen }: RelatedCardProps) {
+/** One related title (`06` section 5.5): a 2:3 poster in the Studio rail's thumbnail frame (a hairline border, the ctl
+ *  radius, the accent border when selected, the dim border on hover). The title lives on the poster alone; the year is
+ *  the only line beneath it. Sized to the 210 px band: the card is RELATED_CARD_WIDTH (92 px) wide, so the frame is about
+ *  138 px tall. */
+export function RelatedCard({ item, selected, onOpen }: RelatedCardProps) {
   return (
     <button
       type="button"
       onClick={onOpen}
       title={item.title}
+      aria-current={selected || undefined}
       style={{ width: RELATED_CARD_WIDTH }}
-      className="flex flex-none cursor-pointer flex-col items-center gap-1 border-0 bg-transparent p-0 text-left font-sans text-muted hover:text-text"
+      className="group flex flex-none cursor-pointer flex-col gap-1 border-0 bg-transparent p-0 text-left font-sans"
     >
-      <PosterImage src={item.posterUrl} alt={item.title} />
-      <span className="w-full truncate text-center text-[11px] leading-tight text-text">{item.title}</span>
+      <span
+        className={cn(
+          "block overflow-hidden rounded-ctl border bg-surface",
+          selected ? "border-accent" : "border-border group-hover:border-dim",
+        )}
+      >
+        <PosterImage src={item.posterUrl} alt={item.title} />
+      </span>
       {item.year !== undefined && (
         <span className="w-full truncate text-center font-mono text-[10px] text-dim tabular-nums">{item.year}</span>
       )}

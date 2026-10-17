@@ -5,6 +5,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SkeletonCards } from "@/components/ui/SkeletonCards";
 import { RELATED_BASIS_LABEL, RELATED_CARD_WIDTH, RELATED_LOCAL_REASON, RELATED_SKELETON_COUNT } from "@/lib/player-copy";
 import type { PlayerCommands } from "@/lib/player-commands";
+import { sameRef } from "@/lib/player-session";
 import type { PlayerView } from "@/lib/player-view";
 
 export interface PlayerRelatedProps {
@@ -21,6 +22,7 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
   const local = view.tab?.kind === "local";
   const isFolded = local || folded;
   const hasCards = view.related.length > 0;
+  const current = view.tab?.ref;
   const label = isFolded ? "Expand related titles" : "Collapse related titles";
 
   const toggle = (
@@ -39,13 +41,18 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
       <FoldBody open={!isFolded} className="min-h-0 flex-1">
         <div className="h-full overflow-hidden">
           {hasCards ? (
-            <div className="flex h-full items-start gap-2 overflow-x-auto px-2 pb-2">
+            <div className="flex h-full items-start gap-2 overflow-x-auto bg-panel px-2 py-1">
               {view.related.map((item) => (
-                <RelatedCard key={`${item.ref.kind}-${item.ref.id}`} item={item} onOpen={() => commands.openRelated(item)} />
+                <RelatedCard
+                  key={`${item.ref.kind}-${item.ref.id}`}
+                  item={item}
+                  selected={current !== undefined && sameRef(item.ref, current)}
+                  onOpen={() => commands.openRelated(item)}
+                />
               ))}
             </div>
           ) : (
-            <div className="h-full overflow-hidden px-1">
+            <div className="h-full overflow-hidden bg-panel px-1">
               <SkeletonCards count={RELATED_SKELETON_COUNT} cardWidth={RELATED_CARD_WIDTH} />
             </div>
           )}
