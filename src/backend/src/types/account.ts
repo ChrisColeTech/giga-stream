@@ -2,14 +2,11 @@ import { z } from "zod";
 
 import { ACCOUNT_NAME_MAX, EMAIL_MAX, PASSWORD_MAX, PASSWORD_MIN } from "../constants/limits.js";
 
-export type Role = "owner" | "editor";
-
 /** An account as the backend answers it (docs/03 section 7.11). Never a hash. */
 export interface AdminAccount {
   id: string;
   email: string;
   name: string;
-  role: Role;
   disabled: boolean;
   createdAt: number;
   updatedAt: number;
@@ -20,19 +17,17 @@ export interface AdminAccount {
 export interface Principal {
   accountId: string;
   email: string;
-  role: Role;
 }
 
 const email = z.string().trim().min(3).max(EMAIL_MAX).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 const password = z.string().min(PASSWORD_MIN).max(PASSWORD_MAX);
 const name = z.string().trim().min(1).max(ACCOUNT_NAME_MAX);
-const role = z.enum(["owner", "editor"]);
 
-export const AccountCreateSchema = z.object({ email, name, role, password }).strict();
+export const AccountCreateSchema = z.object({ email, name, password }).strict();
 export type AccountCreate = z.infer<typeof AccountCreateSchema>;
 
 export const AccountPatchSchema = z
-  .object({ email, name, role, password, disabled: z.boolean() })
+  .object({ email, name, password, disabled: z.boolean() })
   .partial()
   .strict();
 export type AccountPatch = z.infer<typeof AccountPatchSchema>;

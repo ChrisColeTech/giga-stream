@@ -1,9 +1,8 @@
 import type { FastifyRequest } from "fastify";
 
-import { AppError, ERRORS } from "../constants/errors.js";
 import type { Actor } from "../services/audit-service.js";
 import type { Services } from "../services/service-registry.js";
-import type { Principal, Role } from "../types/account.js";
+import type { Principal } from "../types/account.js";
 
 /** The address a request came from: the proxy's `X-Forwarded-For` only when `TRUST_PROXY` (Fastify's `ip`). */
 export const actorOf = (request: FastifyRequest, principal?: Principal): Actor => ({
@@ -12,27 +11,22 @@ export const actorOf = (request: FastifyRequest, principal?: Principal): Actor =
 });
 
 /**
- * A signed-in admin whose role is one of `roles` (docs/03 sections 7.11-7.12). No or a bad token is
- * `401 auth.unauthorized`; a role that may not do this is `403 auth.forbidden`.
+ * A signed-in admin (docs/03 sections 7.11-7.12); every admin account is equal (docs/26 D22). No or a bad
+ * token is `401 auth.unauthorized`.
  */
-export function signedIn(services: Services, request: FastifyRequest, roles: readonly Role[]): Principal {
-  const principal = services.auth.authenticate(request.headers.authorization);
-  if (!roles.includes(principal.role)) throw new AppError(ERRORS.authForbidden);
-  return principal;
+export function signedIn(services: Services, request: FastifyRequest): Principal {
+  return services.auth.authenticate(request.headers.authorization);
 }
 
-export const ANY_ADMIN: readonly Role[] = ["owner", "editor"];
-
 /**
- * Whether the request carries a valid owner or editor token. It never refuses: a public read that asks for more
+ * Whether the request carries a valid admin token. It never refuses: a public read that asks for more
  * (`includeDisabled`) simply gets the public answer without one.
  */
 export function isAdmin(services: Services, request: FastifyRequest): boolean {
   try {
-    signedIn(services, request, ANY_ADMIN);
+    signedIn(services, request);
     return true;
   } catch {
     return false;
   }
 }
-export const OWNER: readonly Role[] = ["owner"];

@@ -15,7 +15,7 @@ function fieldsOf(input: {
   origin?: string;
   frameOrigins?: string[];
   messageShape?: "vidsrc-status" | "player-event";
-}): Omit<ProviderRecord, "id" | "name" | "source" | "api_key" | "is_active" | "created_at"> {
+}): Omit<ProviderRecord, "id" | "name" | "source" | "is_active" | "created_at"> {
   return {
     order: input.order ?? 0,
     family: input.family ?? "embed",
@@ -59,7 +59,6 @@ export function createProviderService(deps: {
       const record: Omit<ProviderRecord, "id"> = {
         name: input.name,
         source: input.source,
-        api_key: input.api_key ?? "",
         is_active: 1,
         created_at: createdAt,
         ...fieldsOf(input),
@@ -79,7 +78,6 @@ export function createProviderService(deps: {
         id,
         name: patch.name ?? current.name,
         source: patch.source ?? current.source,
-        api_key: patch.api_key ?? current.api_key,
         is_active: current.is_active ? 1 : 0,
         created_at: current.created_at,
         ...fieldsOf({

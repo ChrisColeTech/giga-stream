@@ -7,7 +7,7 @@ import { z } from "zod";
 import { itemOf, itemsOf, liveBody, streamBody, VIDEOS } from "./live-channel-kit.js";
 import { makeApp, pick, request, send, signIn } from "./test-app.js";
 
-async function owner() {
+async function signedInApp() {
   const t = await makeApp();
   return { t, token: (await signIn(t.app)).access };
 }
@@ -24,7 +24,7 @@ const FileserverChannel = z.object({
 });
 
 test("a new live channel answers preparing with its defaults, then plays its videos in order", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   const created = await send(t.app, "POST", "/api/channels", liveBody(), token);
   assert.equal(created.status, 201);
   assert.deepEqual(
@@ -41,7 +41,7 @@ test("a new live channel answers preparing with its defaults, then plays its vid
 });
 
 test("a public read builds a live row's addresses from the caller's origin and shows no local path", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   await send(t.app, "POST", "/api/channels", liveBody(), token);
   const lan = await request(t.app, { method: "GET", url: "/api/channels", headers: { host: "stream.example:9000" } });
   assert.deepEqual(itemOf(lan.body, "home"), {
@@ -59,7 +59,7 @@ test("a public read builds a live row's addresses from the caller's origin and s
 });
 
 test("both kinds answer the shape the fileserver reads: number is text, streamUrl is not empty", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   await send(t.app, "POST", "/api/channels", liveBody(), token);
   await send(t.app, "POST", "/api/channels", streamBody({ logoUrl: "https://live.example/news.png" }), token);
   const list = await send(t.app, "GET", "/api/channels");
@@ -69,7 +69,7 @@ test("both kinds answer the shape the fileserver reads: number is text, streamUr
 });
 
 test("a body without a kind is a stream row; the kind discriminates, and a field of the other kind is refused", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   const plain = await send(t.app, "POST", "/api/channels", streamBody(), token);
   assert.deepEqual([plain.status, pick(plain.body, "data.kind"), pick(plain.body, "data.streamUrl")], [201, "stream", "https://live.example/news.m3u8"]);
   const named = await send(t.app, "POST", "/api/channels", streamBody({ kind: "stream", number: "9" }), token);
@@ -87,7 +87,7 @@ test("a body without a kind is a stream row; the kind discriminates, and a field
 });
 
 test("a bad live channel is refused naming the field; its paths must exist", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   const refusal = async (body: unknown) => {
     const answer = await send(t.app, "POST", "/api/channels", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
@@ -108,13 +108,13 @@ test("a bad live channel is refused naming the field; its paths must exist", asy
 });
 
 test("a live number is text on the wire: digits or an integer are accepted and kept without leading zeros", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   const answer = await send(t.app, "POST", "/api/channels", liveBody({ number: "0012" }), token);
   assert.deepEqual([answer.status, pick(answer.body, "data.number")], [201, "12"]);
 });
 
 test("a taken id or live number is channel.taken; stream rows share numbers freely", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   assert.equal((await send(t.app, "POST", "/api/channels", liveBody(), token)).status, 201);
   const refusal = async (body: unknown) => {
     const answer = await send(t.app, "POST", "/api/channels", body, token);
@@ -131,7 +131,7 @@ test("a taken id or live number is channel.taken; stream rows share numbers free
 });
 
 test("an edit is live at once: renamed, reordered, then switched from a list to a folder and back", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   await send(t.app, "POST", "/api/channels", liveBody(), token);
   await t.live.settled();
   const renamed = await send(t.app, "PATCH", "/api/channels/home", { kind: "live", name: "Family", number: 8 }, token);
@@ -148,7 +148,7 @@ test("an edit is live at once: renamed, reordered, then switched from a list to 
 });
 
 test("a change is refused when it does not fit the row: the kind, the other kind's fields, the id, the category", async () => {
-  const { t, token } = await owner();
+  const { t, token } = await signedInApp();
   await send(t.app, "POST", "/api/channels", liveBody(), token);
   const stream = String(pick((await send(t.app, "POST", "/api/channels", streamBody(), token)).body, "data.id"));
   const refusal = async (id: string, body: unknown) => {

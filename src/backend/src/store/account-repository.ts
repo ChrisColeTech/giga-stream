@@ -1,13 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
-import type { AdminAccount, Role } from "../types/account.js";
+import type { AdminAccount } from "../types/account.js";
 
 const AccountRow = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string(),
-  role: z.enum(["owner", "editor"]),
   password_hash: z.string(),
   disabled: z.number().int(),
   session_version: z.number().int(),
@@ -34,7 +33,6 @@ function toStored(row: unknown): StoredAccount {
       id: r.id,
       email: r.email,
       name: r.name,
-      role: r.role,
       disabled: r.disabled === 1,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -51,12 +49,11 @@ export interface AccountWrite {
   id: string;
   email: string;
   name: string;
-  role: Role;
   passwordHash: string;
   disabled: boolean;
 }
 
-const COLUMNS = `id, email, name, role, password_hash, disabled, session_version, failed_sign_ins, locked_until,
+const COLUMNS = `id, email, name, password_hash, disabled, session_version, failed_sign_ins, locked_until,
   created_at, updated_at, last_sign_in_at`;
 
 /** The admin accounts table (docs/03 section 7.11). Emails are unique without case. */
@@ -65,10 +62,10 @@ export function createAccountRepository(db: DatabaseSync) {
   const byEmail = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts WHERE email_key = ?`);
   const all = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts ORDER BY email_key`);
   const count = db.prepare("SELECT COUNT(*) AS n FROM admin_accounts");
-  const owners = db.prepare("SELECT COUNT(*) AS n FROM admin_accounts WHERE role = 'owner' AND disabled = 0");
-  const insert = db.prepare(`INSERT INTO admin_accounts (id, email, email_key, name, role, password_hash, disabled,
-    created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const update = db.prepare(`UPDATE admin_accounts SET email = ?, email_key = ?, name = ?, role = ?, password_hash = ?,
+  const enabled = db.prepare("SELECT COUNT(*) AS n FROM admin_accounts WHERE disabled = 0");
+  const insert = db.prepare(`INSERT INTO admin_accounts (id, email, email_key, name, password_hash, disabled,
+    created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  const update = db.prepare(`UPDATE admin_accounts SET email = ?, email_key = ?, name = ?, password_hash = ?,
     disabled = ?, updated_at = ? WHERE id = ?`);
   const bumpVersion = db.prepare("UPDATE admin_accounts SET session_version = session_version + 1 WHERE id = ?");
   const signInFailed = db.prepare("UPDATE admin_accounts SET failed_sign_ins = ?, locked_until = ? WHERE id = ?");
@@ -89,12 +86,12 @@ export function createAccountRepository(db: DatabaseSync) {
     },
     list: (): StoredAccount[] => all.all().map(toStored),
     count: (): number => n(count),
-    enabledOwners: (): number => n(owners),
+    enabledCount: (): number => n(enabled),
     insert(a: AccountWrite, at: number): void {
-      insert.run(a.id, a.email, a.email.toLowerCase(), a.name, a.role, a.passwordHash, a.disabled ? 1 : 0, at, at);
+      insert.run(a.id, a.email, a.email.toLowerCase(), a.name, a.passwordHash, a.disabled ? 1 : 0, at, at);
     },
     update(a: AccountWrite, at: number): void {
-      update.run(a.email, a.email.toLowerCase(), a.name, a.role, a.passwordHash, a.disabled ? 1 : 0, at, a.id);
+      update.run(a.email, a.email.toLowerCase(), a.name, a.passwordHash, a.disabled ? 1 : 0, at, a.id);
     },
     /** Every access token issued before this stops working (the `ver` claim no longer matches). */
     revokeSessions: (id: string): void => void bumpVersion.run(id),

@@ -41,7 +41,7 @@ const EnvSchema = z.object({
   DATA_DIR: z.string().default(""),
   // Signs access tokens (docs/03 section 7.12). The backend refuses to start without one.
   JWT_SECRET: z.string().default(""),
-  // The first owner, created when there are no accounts (section 7.11).
+  // The first admin, created when there are no accounts (section 7.11).
   ADMIN_BOOTSTRAP_EMAIL: z.string().default(""),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().default(""),
   // Serving over the network (section 7.10).

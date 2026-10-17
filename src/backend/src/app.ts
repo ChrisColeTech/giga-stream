@@ -22,7 +22,7 @@ import { DATABASE_FILE_NAME } from "./constants/deployment.js";
 import { REQUEST_BODY_LIMIT_BYTES } from "./constants/limits.js";
 import type { LiveSeams } from "./live/engine/live-engine.js";
 import { corsOrigins, isPrivateRoute, startRefusal, tlsOptions } from "./network-policy.js";
-import { bootstrapOwner } from "./services/bootstrap-owner.js";
+import { bootstrapAdmin } from "./services/bootstrap-admin.js";
 import { createServices, type Services } from "./services/service-registry.js";
 import { seedTestChannels } from "./services/test-channels.js";
 import { createStore } from "./store/store.js";
@@ -82,7 +82,7 @@ export async function buildApp(
       fetchImpl,
     });
     const ready = services;
-    const owner = await bootstrapOwner(
+    const bootstrap = await bootstrapAdmin(
       ready.accounts,
       ready.hasAccounts(),
       settings.ADMIN_BOOTSTRAP_EMAIL,
@@ -100,7 +100,7 @@ export async function buildApp(
     // The one timer (docs/01 section 4.4) is armed for the earliest due enabled job (docs/26 section 3.11).
     ready.scheduler.arm();
 
-    if (owner === "none") {
+    if (bootstrap === "none") {
       app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_EMAIL/PASSWORD: nobody can sign in");
     }
     app.addHook("onClose", async () => {

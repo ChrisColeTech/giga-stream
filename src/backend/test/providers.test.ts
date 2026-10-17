@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { makeApp, pick, send, asOwner, signIn } from "./test-app.js";
+import { makeApp, pick, send, signIn } from "./test-app.js";
 import { EMBED_PROVIDER_CATALOG } from "../src/constants/embed-providers.js";
 
-const provider = { name: "JustWatch", source: "justwatch", api_key: "jw-api-key-123" };
+const provider = { name: "JustWatch", source: "justwatch" };
 
 test("a new backend lists no providers, with no sign-in", async () => {
   const t = await makeApp();
@@ -53,25 +53,21 @@ test("an invalid field is provider.invalid, naming the field", async () => {
   const t = await makeApp();
   const access = (await signIn(t.app)).access;
 
-  const noName = await send(t.app, "POST", "/api/providers", { name: "", source: "test", api_key: "key" }, access);
+  const noName = await send(t.app, "POST", "/api/providers", { name: "", source: "test" }, access);
   assert.equal(pick(noName.body, "error.code"), "provider.invalid");
   assert.equal(pick(noName.body, "error.details.field"), "name");
 
   const longSource = await send(t.app, "POST", "/api/providers", {
     name: "Test",
     source: "x".repeat(100),
-    api_key: "key",
   }, access);
   assert.equal(pick(longSource.body, "error.code"), "provider.invalid");
   assert.equal(pick(longSource.body, "error.details.field"), "source");
 
-  const longKey = await send(t.app, "POST", "/api/providers", {
-    name: "Test",
-    source: "test",
-    api_key: "x".repeat(300),
-  }, access);
-  assert.equal(pick(longKey.body, "error.code"), "provider.invalid");
-  assert.equal(pick(longKey.body, "error.details.field"), "api_key");
+  // An API key is not a provider field any more (docs/26 D24): it is refused like any unknown field.
+  const withKey = await send(t.app, "POST", "/api/providers", { name: "Test", source: "test", api_key: "key" }, access);
+  assert.equal(pick(withKey.body, "error.code"), "provider.invalid");
+  assert.equal(pick(withKey.body, "error.details.field"), "api_key");
 });
 
 test("a provider change raises the revision a reader sees on its next read", async () => {
@@ -86,19 +82,20 @@ test("a provider change raises the revision a reader sees on its next read", asy
   assert.equal(after, before + 1);
 });
 
-test("an editor can manage providers", async () => {
+test("a second admin account can manage providers, and no answer carries an API key", async () => {
   const t = await makeApp();
-  const ownerAccess = (await signIn(t.app)).access;
+  const firstAccess = (await signIn(t.app)).access;
   await send(t.app, "POST", "/api/admin-accounts", {
-    name: "Editor",
-    email: "editor@example.test",
-    password: "editor-password-123",
-    role: "editor",
-  }, ownerAccess);
+    name: "Second",
+    email: "second@example.test",
+    password: "second-password-123",
+  }, firstAccess);
 
-  const editorAccess = (await signIn(t.app, "editor@example.test", "editor-password-123")).access;
-  const created = await send(t.app, "POST", "/api/providers", provider, editorAccess);
+  const secondAccess = (await signIn(t.app, "second@example.test", "second-password-123")).access;
+  const created = await send(t.app, "POST", "/api/providers", provider, secondAccess);
   assert.equal(created.status, 201);
+  const list = await send(t.app, "GET", "/api/providers");
+  assert.equal(JSON.stringify(list.body).includes("api_key"), false);
 });
 
 const templated = {
@@ -124,8 +121,6 @@ test("the template fields round-trip through create and update", async () => {
   const newId = Number(pick(created.body, "data.id"));
   assert.equal(pick(created.body, "data.order"), 2);
   assert.equal(pick(created.body, "data.family"), "embed");
-  // No api_key in the body reads as an empty credential, never a refusal (the column is NOT NULL).
-  assert.equal(pick(created.body, "data.api_key"), "");
   assert.equal(pick(created.body, "data.movieTemplate"), "https://vidsrc.sh/embed/movie/{tmdbId}");
   assert.equal(pick(created.body, "data.episodeTemplate"), "https://vidsrc.sh/embed/tv/{tmdbId}/{season}/{episode}");
   assert.equal(pick(created.body, "data.startParam"), "startAt");

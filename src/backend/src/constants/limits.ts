@@ -21,7 +21,6 @@ export const CHANNEL_BODY_LIMIT_BYTES = 256 * 1024;
 // Providers (docs/03 section 7.2b).
 export const PROVIDER_NAME_MAX = 120;
 export const SOURCE_MAX = 60;
-export const API_KEY_MAX = 256;
 export const PARAM_MAX = 60;
 export const FRAME_ORIGINS_MAX = 8;
 

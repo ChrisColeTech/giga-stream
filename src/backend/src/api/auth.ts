@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { Services } from "../services/service-registry.js";
 import { LoginSchema, PasswordChangeSchema, RefreshSchema } from "../types/account.js";
 import { ok } from "./envelope.js";
-import { ANY_ADMIN, actorOf, signedIn } from "./guard.js";
+import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
 
 /** Sign-in and tokens (docs/03 section 7.12). */
@@ -24,12 +24,12 @@ export function registerAuth(app: FastifyInstance, services: Services): void {
   });
 
   app.get("/api/auth/me", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     return ok(reply, services.auth.me(principal));
   });
 
   app.post("/api/auth/password", async (request, reply) => {
-    const principal = signedIn(services, request, ANY_ADMIN);
+    const principal = signedIn(services, request);
     const { currentPassword, newPassword } = parseInput(PasswordChangeSchema, request.body);
     return ok(reply, await services.auth.changePassword(principal, currentPassword, newPassword, actorOf(request, principal)));
   });
