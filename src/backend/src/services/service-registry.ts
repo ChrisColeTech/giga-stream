@@ -11,6 +11,7 @@ import { createPlaylistSchedule } from "./playlist-schedule.js";
 import { createPlaylistSyncService } from "./playlist-sync-service.js";
 import { createProviderService } from "./provider-service.js";
 import { createSignInLimiter } from "./sign-in-limiter.js";
+import { createStreamTemplates } from "./stream-templates.js";
 import { createTitleService } from "./title-service.js";
 import { createTmdbClient } from "./tmdb-client.js";
 
@@ -22,6 +23,8 @@ export interface ServiceOptions {
   omdbKey: string;
   omdbBase?: string;
   omdbDailyLimit?: number;
+  movieStreamTemplate: string;
+  episodeStreamTemplate: string;
   now: () => number;
   dataDir: string;
   playlistUrls: string[];
@@ -51,6 +54,11 @@ export function createServices(store: Store, options: ServiceOptions) {
     now,
   });
   const playlistSchedule = createPlaylistSchedule({ sync: playlistSyncService, now });
+  const streams = createStreamTemplates({
+    movieTemplate: options.movieStreamTemplate,
+    episodeTemplate: options.episodeStreamTemplate,
+    allowLoopback: options.allowLoopback,
+  });
   return {
     audit,
     auth,
@@ -59,7 +67,7 @@ export function createServices(store: Store, options: ServiceOptions) {
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
     channels: createChannelService({ store, audit, allowLoopback: options.allowLoopback, now }),
     providers: createProviderService({ store, audit, now }),
-    titles: createTitleService({ store, audit, tmdb, omdb, now }),
+    titles: createTitleService({ store, audit, tmdb, omdb, streams, now }),
     playlistSync: {
       run: playlistSyncService.run,
       status: (): PlaylistSyncStatus => ({ ...playlistSyncService.status(), schedule: playlistSchedule.describe() }),

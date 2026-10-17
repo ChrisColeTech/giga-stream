@@ -50,6 +50,8 @@ export async function buildApp(
       omdbKey: settings.OMDB_API_KEY,
       omdbBase: settings.OMDB_BASE,
       omdbDailyLimit: settings.OMDB_DAILY_LIMIT,
+      movieStreamTemplate: settings.MOVIE_STREAM_TEMPLATE,
+      episodeStreamTemplate: settings.EPISODE_STREAM_TEMPLATE,
       now,
       dataDir: settings.DATA_DIR,
       playlistUrls: settings.PLAYLIST_URLS,

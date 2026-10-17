@@ -5,6 +5,11 @@ import { DatabaseSync } from "node:sqlite";
 
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { stubTmdb, tmdbOn } from "./title-stubs.js";
+import type { Config } from "../src/config.js";
+
+const MOVIE_TEMPLATE = "https://streams.example/movie/{tmdbId}/index.m3u8";
+const EPISODE_TEMPLATE = "https://streams.example/tv/{tmdbId}/{season}/{episode}/index.m3u8";
+const LOOPBACK_TEMPLATE = "http://127.0.0.1:8097/live/fx-sports/master.m3u8";
 
 const FIRST = {
   name: "First", source: "first", order: 1, family: "embed",
@@ -31,9 +36,9 @@ const STREAM = { name: "Strm", source: "strm", order: 0, family: "stream",
 const BARE = { name: "Bare", source: "bare", order: 0, family: "embed" };
 
 /** An app whose providers cover every rule: two active templated embeds, an inactive one, a stream and a bare one. */
-async function appWithProviders() {
+async function appWithProviders(config: Partial<Config> = {}) {
   const tmdb = await stubTmdb();
-  const t = await makeApp({ config: tmdbOn(tmdb) });
+  const t = await makeApp({ config: { ...tmdbOn(tmdb), ...config } });
   const access = (await signIn(t.app)).access;
   for (const entry of [FIRST, SECOND, SLEEPY, STREAM, BARE]) {
     const created = await send(t.app, "POST", "/api/providers", entry, access);
@@ -108,5 +113,64 @@ test("a series detail and a browse page never carry sources", async () => {
   const page = await send(t.app, "GET", "/api/titles?kind=movie&sort=trending&page=1");
   const row = pick(page.body, "data.items.0") as Record<string, unknown>;
   assert.equal(Object.hasOwn(row, "sources"), false);
+  await t.dispose();
+});
+
+test("a set movie template fills the detail's streamUrl", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: MOVIE_TEMPLATE } });
+  const detail = await send(t.app, "GET", "/api/titles/movie-603");
+  assert.equal(pick(detail.body, "data.streamUrl"), "https://streams.example/movie/603/index.m3u8");
+  await t.dispose();
+});
+
+test("a set episode template fills each episode's streamUrl", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({ config: { ...tmdbOn(tmdb), EPISODE_STREAM_TEMPLATE: EPISODE_TEMPLATE } });
+  const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
+  assert.equal(pick(season.body, "data.episodes.0.streamUrl"), "https://streams.example/tv/1399/1/1/index.m3u8");
+  await t.dispose();
+});
+
+test("a template that is not set answers no streamUrl key", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({ config: tmdbOn(tmdb) });
+  const detail = await send(t.app, "GET", "/api/titles/movie-603");
+  const data = pick(detail.body, "data") as Record<string, unknown>;
+  assert.equal(Object.hasOwn(data, "streamUrl"), false);
+  const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
+  const episode = pick(season.body, "data.episodes.0") as Record<string, unknown>;
+  assert.equal(Object.hasOwn(episode, "streamUrl"), false);
+  await t.dispose();
+});
+
+test("a loopback template with the flag off is omitted, never answered broken", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: LOOPBACK_TEMPLATE } });
+  const detail = await send(t.app, "GET", "/api/titles/movie-603");
+  const data = pick(detail.body, "data") as Record<string, unknown>;
+  assert.equal(Object.hasOwn(data, "streamUrl"), false);
+  await t.dispose();
+});
+
+test("a loopback template with the flag on fills the dev stream", async () => {
+  const tmdb = await stubTmdb();
+  const t = await makeApp({
+    loopback: true,
+    config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: LOOPBACK_TEMPLATE },
+  });
+  const detail = await send(t.app, "GET", "/api/titles/movie-603");
+  assert.equal(pick(detail.body, "data.streamUrl"), LOOPBACK_TEMPLATE);
+  await t.dispose();
+});
+
+test("a movie may carry streamUrl and sources together; neither displaces the other", async () => {
+  const t = await appWithProviders({ MOVIE_STREAM_TEMPLATE: MOVIE_TEMPLATE });
+  const detail = await send(t.app, "GET", "/api/titles/movie-603");
+  assert.equal(pick(detail.body, "data.streamUrl"), "https://streams.example/movie/603/index.m3u8");
+  assert.equal(pick(detail.body, "data.sources.length"), 2);
+  const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
+  assert.equal(pick(season.body, "data.episodes.0.sources.length"), 2);
+  assert.equal(pick(season.body, "data.episodes.0.streamUrl"), undefined, "only the episode template fills episodes");
   await t.dispose();
 });
