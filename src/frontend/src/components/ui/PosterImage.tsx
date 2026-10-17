@@ -36,7 +36,7 @@ export function PosterImage({ src, alt, className }: { src?: string; alt: string
         className="absolute inset-x-0 top-0 h-px"
         style={{ background: `color-mix(in srgb, ${tone} 70%, transparent)` }}
       />
-      <span className="absolute inset-x-2.5 bottom-3 line-clamp-4 font-sans text-[15px] leading-[1.15] font-semibold tracking-tight text-text">
+      <span className="absolute inset-x-2.5 bottom-3 line-clamp-4 text-left font-sans text-[15px] leading-[1.15] font-semibold tracking-tight text-text">
         {alt}
       </span>
     </div>

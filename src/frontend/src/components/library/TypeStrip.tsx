@@ -7,17 +7,14 @@ export interface TypeStripProps {
   readonly onScope: (scope: Scope) => void;
 }
 
-/** The type strip above the grid: All, Movies, TV, Local in equal segments, in the flex-none strip with a bottom border. */
+/* LoRA Studio's top strip over a gallery grid (components/media/HandoffStrip.tsx `STRIP`). */
+const STRIP = "flex flex-none flex-wrap items-center gap-2 border-b border-hair px-3 py-2";
+
+/** The type strip above the grid: All, Movies, TV and Local as the family's pill choice, in the gallery's top strip. */
 export function TypeStrip({ scope, onScope }: TypeStripProps) {
   return (
-    <div className="flex flex-none items-center border-b border-hair px-3 py-2">
-      <Segmented<Scope>
-        aria-label="Type"
-        options={SCOPE_OPTIONS}
-        value={scope}
-        onChange={onScope}
-        className="h-9 w-full [&>button]:h-full [&>button]:basis-0"
-      />
+    <div className={STRIP}>
+      <Segmented<Scope> aria-label="Type" equal options={SCOPE_OPTIONS} value={scope} onChange={onScope} />
     </div>
   );
 }

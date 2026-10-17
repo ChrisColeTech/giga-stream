@@ -7,12 +7,15 @@ export interface ContinueStripProps {
 }
 
 /** The Continue watching strip above the results. It is absent when nothing is in progress, so no empty band shows. Its
- *  heading is the section-header role of `21` section 8a. */
+ *  heading is LoRA's gallery album header: the name in faint mono, the count dim. */
 export function ContinueStrip({ items }: ContinueStripProps) {
   if (items.length === 0) return null;
   return (
     <section aria-label={LIBRARY_COPY.continueHeading} className="flex min-w-0 flex-col gap-1 px-3 pt-3">
-      <h2 className="m-0 font-sans text-[11px] leading-5 font-semibold text-faint">{LIBRARY_COPY.continueHeading}</h2>
+      <h2 className="m-0 flex items-center gap-2 font-mono text-xs font-normal text-faint">
+        {LIBRARY_COPY.continueHeading}
+        <span className="text-dim tabular-nums">{items.length}</span>
+      </h2>
       <ul className="m-0 flex list-none gap-3 overflow-x-auto py-2">
         {items.map((item) => (
           <li key={`${item.ref.kind}:${item.ref.id}`} className="flex-none">
