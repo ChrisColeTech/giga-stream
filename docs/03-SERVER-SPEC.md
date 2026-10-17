@@ -372,7 +372,7 @@ interface Folder {
 |---|---|
 | `POST /api/fs/dialog` | opens the native folder picker (Electron only) and answers `{ token, name }`. A browser answers `409 fs.desktop_required`; a cancelled picker `409 fs.cancelled` |
 | `POST /api/collections/:collectionId/folders` | `{ token }`; attaches the chosen folder and queues its scan; answers `201` with the `Folder` |
-| `GET /api/folders/:folderId/scan` | the folder's running scan as a **streamed NDJSON body**: one `ScanEvent` per line (`found`, `probed`, `progress`, `done`, `cancelled` — the shared library's shapes, `src/shared/media/src/types/scan.ts`), ending when the scan ends. `409 job.not_running` when no scan is running for it. A client that goes away does not stop the scan; the job runs on (3.9) |
+| `GET /api/folders/:folderId/scan` | the folder's queued, running or cancelling scan as a **streamed NDJSON body**: `found`, `probed`, `progress`, then terminal `done` or `cancelled`. Catch-up lines already produced are sent first; a scan that just settled remains available for terminal catch-up for this fileserver run. `409 job.not_running` only when there is no queued, active or retained terminal scan. A client that goes away does not stop the scan; the job runs on (3.9) |
 | `PUT /api/folders/:folderId` | `{ token }`; replaces the folder's location and rescans it |
 | `POST /api/folders/:folderId/rescan` | queues a scan; `409 job.running` if one is already running for it |
 | `DELETE /api/folders/:folderId` | detaches it and removes its file records; files on disk are never touched |
@@ -393,6 +393,8 @@ The scan itself is the shared library's async generator (`scanFolder`, `src/shar
 whose facts come back, then `done` — and the scan route (`GET /api/folders/:folderId/scan`) streams those
 events line by line, NDJSON, as the generator yields them. That is how progress reaches the interface with
 no socket and no polling: one request, one streamed answer, in the shape the generator already produces.
+The HTTP wire shape removes every `absolutePath` before serialization. File entries carry only the relative
+`path`, size/modified facts and documented media facts; a local absolute path never crosses the server boundary.
 
 ### 3.9 Jobs
 
@@ -401,6 +403,7 @@ interface Job {
   id: string;
   kind: "folder-scan" | "media-probe" | "poster-fetch";   // poster-fetch makes a local file's still
   label: string;             // a short sentence: "Scanning Movies", never a path
+  folderId?: string;         // required for folder-scan jobs; absent for other kinds
   state: "queued" | "running" | "cancelling" | "done" | "failed" | "cancelled" | "interrupted";
   percent?: number;
   error?: { code: string; message: string };

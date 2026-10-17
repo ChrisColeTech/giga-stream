@@ -439,6 +439,10 @@ as NDJSON with a catch-up snapshot. Wave B fixes the one server gap: the walk re
 start is learned of at the next state read, and `poster-fetch`/`media-probe` percent changes are seen at the next
 state read — enough for the rail and the status bar, by the no-polling rule.
 
+Wave 2.3 closes the stream-boundary details: queued scans own their catch-up stream before a runner starts;
+terminal catch-up remains available for the fileserver run; `cancelled` is terminal success; serialized file
+events omit `absolutePath`; and folder-scan Job answers carry `folderId` so cancellation never guesses by label.
+
 ## 8. Decisions taken (formerly open questions)
 
 1. **Events drawer rows.** Network traffic per §3.7: host only, never a path or query; the guard reports arrive
