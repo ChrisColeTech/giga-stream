@@ -32,9 +32,9 @@ export const SURFACES: Readonly<Record<Surface, SurfaceConfig>> = {
     label: "Player",
     centerMin: 520,
     panes: {
-      left: { min: 240, max: 420, preferred: 288 },
-      right: { min: 288, max: 480, preferred: 344 },
-      bottom: { min: 148, max: 280, preferred: 188 },
+      left: { min: 190, max: 380, preferred: 236 },
+      right: { min: 220, max: 420, preferred: 280 },
+      bottom: { min: 60, max: 280, preferred: 140 },
     },
   },
 };
