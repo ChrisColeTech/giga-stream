@@ -18,7 +18,7 @@ const NAV =
 
 const TAB =
   /* Sentence case, no transform. */
-  "cursor-pointer rounded-[6px] border-0 bg-transparent px-3.25 py-1 text-center text-faint " +
+  "cursor-pointer rounded-[6px] border-0 bg-transparent px-3.25 py-1 text-center text-muted " +
   "transition-[background,color,box-shadow] duration-fade ease-linear " +
   "not-disabled:hover:text-text not-data-active:not-disabled:active:bg-hov " +
   /* Chrome asleep under an overlay should simply be inert: not a forbidding cursor. */
