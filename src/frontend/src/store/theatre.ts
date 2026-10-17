@@ -16,27 +16,18 @@ export function togglePane(set: Set, get: Get, side: PaneSide): void {
   });
 }
 
-/** Theatre collapses the panes by the ordinary toggle and remembers each side's prior state; exiting heals
- *  every side back to what it was, however it was changed while Theatre was on. */
+/** Entering Theatre collapses every open pane of the current surface by the ordinary toggle and changes the bar
+ *  colour. Leaving only changes the colour back: no pane is touched, and the user reopens them with the toggles
+ *  (owner, 2026-10-17). The idle flag leaves with Theatre in the same transition, so the bars can never stay hidden
+ *  outside it. */
 export function toggleTheatre(set: Set, get: Get): void {
-  if (!get().theatre) {
-    const before: Partial<Record<PaneSide, boolean>> = {};
-    for (const side of SIDES) {
-      if (SURFACES[get().surface].panes[side] === null) continue;
-      const key = paneKey(get().surface, side);
-      const open = get().open[key] ?? true;
-      before[side] = open;
-      if (open) get().togglePane(side);
-    }
-    set({ theatre: true, theatreBefore: before, chromeIdle: false });
+  if (get().theatre) {
+    set({ theatre: false, chromeIdle: false });
     return;
   }
-  const before = get().theatreBefore ?? {};
   for (const side of SIDES) {
-    const desired = before[side];
-    if (desired === undefined) continue;
-    if ((get().open[paneKey(get().surface, side)] ?? true) !== desired) get().togglePane(side);
+    if (SURFACES[get().surface].panes[side] === null) continue;
+    if (get().open[paneKey(get().surface, side)] ?? true) get().togglePane(side);
   }
-  /* The idle flag leaves with Theatre in the same transition, so the bars can never stay hidden outside it. */
-  set({ theatre: false, theatreBefore: null, chromeIdle: false });
+  set({ theatre: true, chromeIdle: false });
 }

@@ -17,7 +17,7 @@ describe("Theatre mode", () => {
     useAppStore.setState({ surface: "player" });
   });
 
-  it("collapses the surface's panes and restores each side's prior state on exit", () => {
+  it("entering collapses the open panes of the surface and sets theatre", () => {
     useAppStore.getState().togglePane("bottom");
     const sizes = { ...useAppStore.getState().sizes };
     assert.equal(pane("left"), true);
@@ -30,15 +30,38 @@ describe("Theatre mode", () => {
     assert.equal(pane("right"), false);
     assert.equal(pane("bottom"), false, "already closed stays closed");
     assert.deepEqual(useAppStore.getState().sizes, sizes, "sizes are untouched");
+  });
 
+  it("leaves a pane the surface does not have untouched", () => {
+    useAppStore.setState({ surface: "library" });
+    const before = { ...useAppStore.getState().open };
+    useAppStore.getState().toggleTheatre();
+    assert.equal(useAppStore.getState().open[paneKey("library", "bottom")], before[paneKey("library", "bottom")]);
+    assert.equal(useAppStore.getState().open[paneKey("player", "left")], before[paneKey("player", "left")]);
+    assert.equal(useAppStore.getState().open[paneKey("library", "left")], false);
+  });
+
+  it("exiting only clears theatre and chromeIdle: every pane stays as it is at that moment", () => {
+    useAppStore.getState().toggleTheatre();
     useAppStore.getState().togglePane("left");
-    assert.equal(pane("left"), true, "a pane may be reopened by hand during Theatre");
+    useAppStore.getState().setChromeIdle(true);
+    const revision = useAppStore.getState().shellRevision;
 
     useAppStore.getState().toggleTheatre();
     assert.equal(useAppStore.getState().theatre, false);
-    assert.equal(pane("left"), true);
-    assert.equal(pane("right"), true);
-    assert.equal(pane("bottom"), false, "the side closed before Theatre stays closed");
+    assert.equal(useAppStore.getState().chromeIdle, false);
+    assert.equal(pane("left"), true, "a pane reopened in Theatre stays open");
+    assert.equal(pane("right"), false, "a pane still closed stays closed");
+    assert.equal(pane("bottom"), false);
+    assert.equal(useAppStore.getState().shellRevision, revision, "no pane was toggled on exit");
+  });
+
+  it("toggling twice does not reopen the panes", () => {
+    useAppStore.getState().toggleTheatre();
+    useAppStore.getState().toggleTheatre();
+    assert.equal(pane("left"), false);
+    assert.equal(pane("right"), false);
+    assert.equal(pane("bottom"), false);
   });
 
   it("renders the Theatre button in the titlebar, ghost, with a transitioned bar tone", () => {
