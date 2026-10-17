@@ -79,7 +79,7 @@ test("static immutable dialog no-ops target only governed player frames and fail
       return Promise.resolve(true);
     },
   };
-  const reports: Array<{ kind: string; url?: string }> = [];
+  const reports: Array<{ kind: string; url?: string; blocked: boolean }> = [];
   new DialogGuardInstaller(authority, (report) => reports.push(report)).install(loaded);
   await Promise.resolve();
   assert.equal(executed, DIALOG_GUARD_SCRIPT, "main owns one static script");
@@ -98,7 +98,7 @@ test("static immutable dialog no-ops target only governed player frames and fail
   };
   new DialogGuardInstaller(authority, (report) => reports.push(report)).install(nested);
   await Promise.resolve();
-  assert.deepEqual(reports, [{ kind: "dialog guard failure", url: "https://player.example" }]);
+  assert.deepEqual(reports, [{ kind: "dialog guard failure", url: "https://player.example", blocked: false }]);
   assert.equal(authority.owns({ ...player, parent: app }), true);
 
   authority.clear();
