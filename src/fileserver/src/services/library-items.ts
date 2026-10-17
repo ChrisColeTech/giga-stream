@@ -1,6 +1,7 @@
 import type { ItemKind } from "../store/collection-repository.js";
 import type { FavoritesRepository } from "../store/favorites-repository.js";
 import type { LibraryFileRow, LibraryWatchRow } from "../store/library-repository.js";
+import { localDisplayTitle } from "../store/local-file-repository.js";
 import type { LibraryItem, TitleDetail } from "../types/library.js";
 import type { BackendTitle, TitleKind } from "./admin-titles.js";
 import type { GenreView } from "./title-session.js";
@@ -40,7 +41,7 @@ export function createLibraryItems(deps: {
       {
         ref: { kind: "local", id: row.id },
         kind: "local",
-        title: row.title,
+        title: localDisplayTitle(row.title, ""),
         genres: [],
         favorite: favorites.isFavorite("local", row.id),
         ...(row.posterId !== undefined && { posterUrl: `/api/images/${row.posterId}` }),
