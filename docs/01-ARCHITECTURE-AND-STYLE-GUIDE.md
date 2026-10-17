@@ -209,6 +209,8 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
 - `any`, `@ts-ignore` and double assertions are forbidden. External values start as `unknown` and are
   validated and narrowed. State machines are discriminated unions.
 - Source files are at most 200 measured lines and tests 250, wrapping logical lines at 120 columns.
+- A file copied verbatim from a family app (`23` section 3.1, listed in `scripts/check-rules/family-files.mjs`) keeps the
+  family's shape: it may exceed 200 lines and export several components. Every other rule applies to it.
 - One exported React component per file; the filename matches the export; named exports.
 - Components are `PascalCase.tsx`, hooks `useThing.ts`, everything else kebab-case. Types live under
   `types/`, one domain per file. No arbitrary barrels.

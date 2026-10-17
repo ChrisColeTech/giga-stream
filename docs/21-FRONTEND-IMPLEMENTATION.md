@@ -477,7 +477,10 @@ Providers rows, and any popup for Add to collection) are gone, with a grep provi
 3. **Provider stage (`06` 5.3).** Outside phase 1. Waits for the write-up from `14`.
 4. **Radix pin.** Default: `2.1.24`, the version Giga Images runs, checked against the two-week rule in section 4.1.
 
-## 8a. Visual sweep (2026-10-16)
+## 8a. Visual sweep (2026-10-16) - retired
+
+Retired on 2026-10-16 by `23`: type and motion come from the family's components and tokens, copied verbatim, not from
+the scale below. The text is kept for the record only.
 
 The owner's review found the surfaces inconsistent. This sweep sets one set of rules, and every surface meets them before
 its phase 1 is signed off. The reference for the look is the family: Giga Images' Generate and Studio (sidebars, controls),

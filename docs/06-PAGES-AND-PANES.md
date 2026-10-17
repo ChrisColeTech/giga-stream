@@ -466,17 +466,16 @@ There is no Clear History here: it belongs to Library.
 
 ### 5.5 Related (bottom)
 
-A band across the full work area.
+A band across the full work area. It is Giga LoRA Studio's bottom rail, `components/generate/PastRuns.tsx`, copied
+(`23` section 3.4): the same row, the same thumbnail frame, the same selected and hover render, the same skeleton.
 
 | Part | Behaviour |
 |---|---|
-| Toolbar | `Related`, the basis it was found by (`TMDB`, from TMDB's recommendations, `11` section 4; otherwise `Genre + year`, `Genre` or `Year` over the catalog), and a collapse toggle |
-| Cards | a horizontal row of square thumbnails, as Giga LoRA Studio's bottom rail (`components/generate/PastRuns.tsx`): the picture, the frame and the selected render, with no caption; the title is the picture's alt text and its tooltip; at most 20 at first |
-| Header | the word `related`, then the count, in lowercase mono (`related — 8`), with the basis label after it as a value |
+| Rail | one horizontal row of 4:3 thumbnails that fill the band's height, with no header, no fold, no caption and no tint; the title is each thumbnail's tooltip and accessible name, and the basis (`TMDB`, or `Genre + year`, `Genre`, `Year` over the catalog, `11` section 4) is the rail's accessible label; at most 20 at first |
 | Activation | replaces the current item with that title; a movie loads at once, a series waits for an episode to be chosen |
-| Loading and empty | 8 card skeletons |
-| Failure | the last cards stay and one notice says why |
-| Local file | the band is collapsed and its toggle disabled, with the reason `No related titles for local files` as its tooltip |
+| Loading and empty | the rail's own skeleton (`ThumbnailRailSkeleton`) |
+| Failure | the last thumbnails stay and one notice says why |
+| Local file | the band shows the rail's skeleton; there is nothing related to a local file |
 
 ### 5.6 Opening something
 

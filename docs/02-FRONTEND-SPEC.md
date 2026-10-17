@@ -197,8 +197,9 @@ window so it is never clipped by a pane.
 
 Global keys yield to text fields, selects and open popups.
 
-Motion: a pane collapse travels 100 ms, a folding group 110 ms, window and popup entrances 200 ms,
-everything else 140 ms. The reduce-motion setting (follow system, off, on) makes every one of them
+Motion is the family's vocabulary (`index.css`, `constants/motion.ts`; `23` decision 3): a colour or border fade 70 ms,
+a pane collapse 100 ms (Giga Cut's ruling, kept in section 1.3), a rail section's fold 100 ms, the events drawer and a window's entrance 200 ms, an overlay's
+entrance 280 ms. The reduce-motion setting (follow system, off, on) makes every one of them
 instant.
 
 ## 7. Loading, empty and failure
