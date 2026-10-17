@@ -208,7 +208,7 @@ is imported from `@giga/ui` and is not written under `src/admin` at all.
 | `constants/preview-copy.ts` | the Preview window's title, state-line words and its `Retry` label | 30 |
 | `constants/settings-sections.ts` | the three sections and `SETTINGS_LABELS` | 40 |
 | `constants/fixture-switches.ts` | reads `?signedin=0`, `?load=0` (mockup parity); deleted by `29` | 20 |
-| `lib/field-checks.ts` | pure: required, 1 to 9999, https address, schedule `^\d+[mh]$|off`, year, rating | 80 |
+| `lib/field-checks.ts` | pure: required, 1 to 9999, https address, schedule (a number and `m` or `h`, or `off`), year, rating | 80 |
 | `lib/row-state.ts` | pure: a record to its state word and row `data-st` (channel, title, job, playlist, provider, account) | 90 |
 | `lib/event-sentence.ts` | pure: an audit-shaped fixture entry to its tone, area and one sentence (`ada@example.test updated channel Fixture News`); reused unchanged by `29` | 100 |
 | `lib/preview-state.ts` | pure: a channel's state, problem and the player's error to the one status line, `Retry`'s visibility and whether the stage wears its skeleton | 50 |
@@ -219,7 +219,7 @@ is imported from `@giga/ui` and is not written under `src/admin` at all.
 | `store/panes-slice.ts` | the library's `PaneHost` contract for the left panes: `open`, `sizes`, `openVersion`, `togglePane`, `commitSizes` | 50 |
 | `store/session-slice.ts` | `signedIn`, `actor` (fixture), `signOut`; replaced by `29`'s real session | 40 |
 | `store/selectors.ts` | `useTab`, `usePaneOpen`, `useWorkSurfaceOpen` | 25 |
-| `types/shell.ts`, `events.ts` | trimmed; the event `area` is a string the app types as `Connection | Session | Channel | Provider | Title | Playlist | Job | Account` | 15 to 45 |
+| `types/shell.ts`, `events.ts` | trimmed; the event `area` is a string the app types as one of Connection, Session, Channel, Provider, Title, Playlist, Job, Account | 15 to 45 |
 | `types/admin-channel.ts`, `admin-provider.ts`, `admin-title.ts`, `admin-playlist.ts`, `admin-job.ts`, `admin-account.ts`, `admin-audit.ts` | the **backend's own response shapes** (listed in `29` section 5), so wiring replaces only the source of the data | 30 to 80 |
 
 ### 6.2 The six tabs
