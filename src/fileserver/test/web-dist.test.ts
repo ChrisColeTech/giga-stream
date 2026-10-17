@@ -61,8 +61,8 @@ test("an unknown /api or /healthz address stays the JSON 404 envelope, never the
 test("without an index.html the dist has no SPA entry and unknown paths stay 404", async () => {
   const dist = makeDist(["assets/app.js"]);
   const t = await makeApp({ webDist: dist });
-  const deep = await t.app.inject({ method: "GET", url: "/some/deep/link" });
-  assert.equal(deep.statusCode, 404);
+  const deep = await send(t.app, "GET", "/some/deep/link");
+  assert.equal(deep.status, 404);
   assert.equal(pick(deep.body, "error.code"), "route.not_found");
   await t.dispose();
   rmSync(dist, { recursive: true, force: true });
@@ -71,8 +71,8 @@ test("without an index.html the dist has no SPA entry and unknown paths stay 404
 test("a served segment with no file behind it stays 404 instead of the SPA entry", async () => {
   const dist = makeDist(["index.html", "assets/app.js"]);
   const t = await makeApp({ webDist: dist });
-  const missing = await t.app.inject({ method: "GET", url: "/assets/missing.js" });
-  assert.equal(missing.statusCode, 404);
+  const missing = await send(t.app, "GET", "/assets/missing.js");
+  assert.equal(missing.status, 404);
   assert.equal(pick(missing.body, "error.code"), "route.not_found");
   await t.dispose();
   rmSync(dist, { recursive: true, force: true });
