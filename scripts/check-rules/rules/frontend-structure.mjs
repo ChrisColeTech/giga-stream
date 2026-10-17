@@ -1,4 +1,3 @@
-import { isFamilyFile } from "../family-files.mjs";
 import { lineAt } from "../load-files.mjs";
 
 /**
@@ -25,7 +24,7 @@ export const frontendStructure = {
 
       const componentFile =
         file.rel.endsWith(".tsx") && (COMPONENT_TREE.test(file.rel) || file.program === "backend");
-      if (componentFile && !file.isTest && !isFamilyFile(file.rel)) {
+      if (componentFile && !file.isTest) {
         const exported = [...file.bare.matchAll(COMPONENT_EXPORT)].map((match) => match[1]);
         if (exported.length > 1) {
           findings.push({ file: file.rel, message: `exports ${exported.length} components; one per file` });

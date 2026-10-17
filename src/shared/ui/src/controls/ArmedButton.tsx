@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { TWO_STEP_MS } from "@/constants/surfaces";
-import { useArmedAction } from "@/hooks/useArmedAction";
-import { Button, type ButtonSize } from "@giga/ui/controls/Button";
+import { useArmedAction } from "../hooks/useArmedAction";
+import { TWO_STEP_MS } from "../lib/motion-timing";
+import { Button, type ButtonSize } from "./Button";
+import { armedFace } from "./armed-face";
 
 export interface ArmedButtonProps {
   readonly children: ReactNode;
@@ -13,11 +14,13 @@ export interface ArmedButtonProps {
   readonly disabled?: boolean;
   readonly size?: ButtonSize;
   readonly full?: boolean;
+  /** How long the second press has to come; the family's value unless a caller gives its own. */
+  readonly timeoutMs?: number;
 }
 
-/** Giga Stream's one inline two-step (`01` section 9): ghost at rest, the first press turns it into the danger question,
- *  the second within TWO_STEP_MS confirms. Losing focus, Escape, or the timeout disarm it. No modal confirm. This
- *  replaces the family TwoStep, which had no blur or Escape disarm, and the hand-rolled copies beside it. */
+/** The one inline two-step (`01` section 9): ghost at rest, the first press turns it into the danger question, the second
+ *  within the timeout confirms. Losing focus, Escape, or the timeout disarm it. No modal confirm. This replaces the family
+ *  TwoStep, which had no blur or Escape disarm, and the hand-rolled copies beside it. */
 export function ArmedButton({
   children,
   question,
@@ -26,15 +29,17 @@ export function ArmedButton({
   disabled = false,
   size = "sm",
   full = false,
+  timeoutMs = TWO_STEP_MS,
 }: ArmedButtonProps) {
-  const { armed, arm, disarm } = useArmedAction(TWO_STEP_MS);
+  const { armed, arm, disarm } = useArmedAction(timeoutMs);
+  const face = armedFace(armed, title);
   return (
     <Button
       size={size}
       full={full}
-      variant={armed ? "danger" : "ghost"}
+      variant={face.variant}
       disabled={disabled}
-      title={armed ? "Press again to confirm" : title}
+      title={face.title}
       onBlur={disarm}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !armed) return;

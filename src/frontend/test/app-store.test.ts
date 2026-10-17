@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { SURFACES, SURFACE_ORDER, limitsOf, limitsOfKey, paneKey } from "@/constants/surfaces";
-import { resolveReduceMotion } from "@/hooks/useReduceMotion";
+import { resolveReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { useAppStore } from "@/store/app-store";
 import { decodeState } from "@/services/state";

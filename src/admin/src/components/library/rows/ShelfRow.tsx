@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { cn } from "@giga/ui/lib/cn";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";

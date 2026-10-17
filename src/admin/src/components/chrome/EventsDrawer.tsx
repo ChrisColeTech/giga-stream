@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
-import { COLLAPSE_S, EASE_P2P } from "@/constants/timing";
-import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { COLLAPSE_S, EASE_P2P } from "@giga/ui/lib/motion-timing";
+import { useReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { cn } from "@giga/ui/lib/cn";
 import { useAppStore } from "@/store/app-store";
-import { EventRow } from "./EventRow";
+import { EventRow } from "@giga/ui/shell/EventRow";
 
 /* A COLLAPSIBLE BOTTOM PANEL, not a side drawer: a flex-none child of the app sitting between the pages and the
  * statusbar, 160px open (`06` section 1.3). Its height is a framer-motion tween, skipped under reduced motion. It stays

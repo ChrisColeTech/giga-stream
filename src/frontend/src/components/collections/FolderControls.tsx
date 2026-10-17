@@ -1,5 +1,5 @@
 import { Check, CircleStop, FolderMinus, FolderSync, RefreshCw } from "lucide-react";
-import { useArmedAction } from "@/hooks/useArmedAction";
+import { useArmedAction } from "@giga/ui/hooks/useArmedAction";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import {
   ARM_TIMEOUT_MS,

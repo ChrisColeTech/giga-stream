@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import { isTextField } from "@/lib/text-field";
+import { isTextField } from "@giga/ui/lib/text-field";
 import type { ChildEscape } from "@/types/child-window";
 
 /** The keyboard of a child window. A modal window makes the main window deaf: any key typed outside it is swallowed in

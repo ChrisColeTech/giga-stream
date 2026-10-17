@@ -1,5 +1,3 @@
-import { isFamilyFile } from "../family-files.mjs";
-
 const COLUMNS = 120;
 const SOURCE_CEILING = 200;
 const TEST_CEILING = 250;
@@ -41,7 +39,7 @@ export const sizeAndNaming = {
     for (const file of files) {
       const lines = measure(file.text);
       const ceiling = file.isTest ? TEST_CEILING : SOURCE_CEILING;
-      if (lines > ceiling && !isFamilyFile(file.rel)) {
+      if (lines > ceiling) {
         findings.push({ file: file.rel, message: `${lines} measured lines exceeds the ${ceiling}-line ceiling` });
       }
       const problem = nameProblem(file);

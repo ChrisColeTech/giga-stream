@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppStore } from "@/store/app-store";
-import { isTextField } from "@/lib/text-field";
+import { isTextField } from "@giga/ui/lib/text-field";
 import type { Surface } from "@/types/shell";
 
 /** Ctrl+1, Ctrl+2, Ctrl+3 switch to Live, Library and Player (`02` section 6). */

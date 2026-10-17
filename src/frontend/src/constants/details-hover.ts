@@ -1,4 +1,4 @@
-import { DUR_FADE_MS } from "@/constants/motion";
+import { DUR_FADE_MS } from "@giga/ui/lib/motion-timing";
 
 /** How long the pointer rests on a card's Details glyph before its popover opens, and so before the detail read starts.
  *  The family tooltip (`components/ui/Tooltip`) has no delay of its own: it shows at once and fades in over

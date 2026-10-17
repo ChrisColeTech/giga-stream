@@ -2,11 +2,11 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { animate, motionValue } from "framer-motion";
 import type { AnimationPlaybackControls } from "framer-motion";
 import { limitsOfKey } from "@/constants/surfaces";
-import { COLLAPSE_S, EASE_P2P } from "@/constants/timing";
+import { COLLAPSE_S, EASE_P2P } from "@giga/ui/lib/motion-timing";
+import { reduceMotionNow } from "@giga/ui/hooks/useReduceMotion";
 import { useAppStore } from "@/store/app-store";
 import type { ExpectedResize, PaneMotion, PaneTweenApi } from "@/types/panes";
 import type { PaneKey } from "@/types/shell";
-import { reduceMotion } from "./useReduceMotion";
 
 const near = (left: readonly number[], right: readonly number[]): boolean =>
   left.length === right.length && left.every((value, index) => Math.abs(value - (right[index] ?? Number.NaN)) <= 1);
@@ -60,7 +60,7 @@ export function usePaneTween(keys: readonly PaneKey[], repaint: () => void): Pan
       const pane = stop(key);
       const from = pane.painted.get();
       pane.target = to;
-      if (Math.abs(from - to) < 0.01 || reduceMotion()) {
+      if (Math.abs(from - to) < 0.01 || reduceMotionNow()) {
         pane.painted.set(to);
         notifyStatus();
         /* No travel, but the resize just sent reached Allotment while the previous min/max were still installed: a

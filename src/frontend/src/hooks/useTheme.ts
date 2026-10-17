@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { REDUCED_MOTION_QUERY } from "@/constants/timing";
-import { resolveReduceMotion } from "@/hooks/useReduceMotion";
+import { REDUCED_MOTION_QUERY } from "@giga/ui/lib/motion-timing";
+import { resolveReduceMotion } from "@giga/ui/hooks/useReduceMotion";
 import { useAppStore } from "@/store/app-store";
 import type { ThemeMode } from "@/types/shell";
 
