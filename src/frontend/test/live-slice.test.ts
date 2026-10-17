@@ -19,17 +19,26 @@ describe("live slice", () => {
     assert.equal(channelListUnavailable(state().backend, state().channelsResolved), true);
   });
 
-  it("stores list interactions independently from the active stream", () => {
-    state().setChannels({ items: [], categories: [], revision: 1 });
+  it("clears a missing list selection without interrupting the active stream", () => {
+    const channel = {
+      id: "news",
+      name: "News",
+      category: "News",
+      revision: 1,
+      streamUrl: "https://media.test/news.m3u8",
+      status: "live" as const,
+    };
+    state().setChannels({ items: [channel], categories: [{ value: "News", count: 1 }], revision: 1 });
     state().setChannelQuery("news");
     state().setChannelCategory("News");
     state().selectChannel("news");
-    state().playChannel("news", "https://media.test/news.m3u8", true);
+    state().playChannel(channel.id, channel.streamUrl, true);
+    assert.equal(state().playingChannelId, "news");
     state().setChannels({ items: [], categories: [], revision: 2 });
 
     assert.equal(state().channelQuery, "news");
     assert.equal(state().channelCategory, "News");
-    assert.equal(state().selectedChannelId, "news");
+    assert.equal(state().selectedChannelId, null);
     assert.equal(state().playingChannelId, "news");
     assert.equal(state().playingStreamUrl, "https://media.test/news.m3u8");
     assert.equal(state().channels?.revision, 2);
