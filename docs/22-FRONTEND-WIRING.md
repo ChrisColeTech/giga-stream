@@ -48,7 +48,7 @@ corrected first.
 | `03` §3.6 | `TitleDetail` and `Episode` gain `sources?: TitleSource[]` (the shape below). The fileserver attaches the title's **sources** instead of the raw provider records; provider records (and their `api_key`) stop at the fileserver | the credentials never belong in the renderer; the client loads addresses, it does not read provider rows |
 | `03` §7.2b | the provider record gains `order` (number), `family` (`"embed" \| "stream"`), `movieTemplate?`, `episodeTemplate?`, `startParam?`, `subtitlesParam?`, `origin?`, `frameOrigins?`, `messageShape?`; POST/PUT accept them; migration adds the columns | `16` §4's shape, trimmed to what `14` proved; the archive backend held templates (`12` §1.1) |
 | `03` §7.5 | the sources rule: the backend fills, per title and per episode, one `TitleSource` per active provider whose template applies, ordered by `order` then id; a provider without a template for the kind yields no source; the stream rule is unchanged for the dev lane | the promised "fields that carry it ... written here from the results of `14`" |
-| `03` §1 | `SEED_PROVIDERS` env (default false): with it, a backend with no providers creates VidSrc, VixSrc and VidZee from `12`, `18` and the PoC's `providers.json` | development needs the proven three without hand-run curl scripts |
+| `03` §1 | `SEED_PROVIDERS` env (default false): with it, a backend with no providers seeds the **full catalog** — the twenty-nine embed hosts of `18` §2 with their templates and parameters as captured (each TV shape marked verified or presumed per `18` §2's notes), plus the stream-family records (`17`'s list) with no templates | the owner's providers number far more than three; the owner's live database holds none today, so the seed is the only source |
 | `06` §5.3, §10 | the stage toolbar gains a **Source** control when a title has two or more playable sources; `06` §10's "no source or provider control" is replaced (owner, this session) | the owner asked for source switching on the player screen |
 | `22` §8 | resolved in place; no `01` change — the guard reports ride the preload's named capability (`01` §7), not an application transport | the one push in the system is the desktop shell's |
 
@@ -245,6 +245,11 @@ there are no sources, which is exactly the dev-template lane (`03` §7.5). State
   `about:blank`, frame removed (`14` check 13).
 - A source whose frame never reports and never errors is the loading state, not a failure; the stage shows the
   player alone while it loads (`06` §3.1's grammar).
+- **Sources without documented messages play but report nothing** *(a fact of the catalog, not a defect)*: only
+  VidSrc, VixSrc, VidZee and VidSrc.su have documented player messages (`18` §6), and only some hosts document a
+  start parameter (`18` §3). A source with neither shows no progress, offers no resume, and its drawer rows show
+  load and guards only — the picker marks such a row so the choice is informed. The verified shapes win where a
+  host's docs disagree with what it really posts (`12` §2.3, the VixSrc `event`-object case).
 
 ### 3.5 Settings
 
@@ -385,7 +390,7 @@ waits on).
 
 | Wave | Worker | Delivers | Proof |
 |---|---|---|---|
-| A | backend worker | the provider fields, migration, CRUD, the sources fill on detail and season answers, `SEED_PROVIDERS`, tests | the gate's backend steps; sources on a title answer, in order, honouring templates; no source without a template |
+| A | backend worker | the provider fields, migration, CRUD, the sources fill on detail and season answers, `SEED_PROVIDERS` with the full catalog (all of `18` §2's embed hosts + the stream-family rows), tests | the gate's backend steps; sources on a title answer for every active provider whose template applies, in order; no source without a template; a fresh `SEED_PROVIDERS` database lists the whole catalog |
 | B | fileserver worker | the 11 settings keys; `sources` pass-through (schemas, types, service); provider records stop being attached; static whitelist `assets` + SPA entry; scan percent `null`; `watchedPercent`/`liveOnOpen` read their settings; tests | the gate's fileserver steps; settings round trip over HTTP; a built `assets` bundle served; sources on title and episode answers |
 | 2.0 | coordinator | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, `lib/event-log.ts`, the rule that refuses the admin backend's address in `src/frontend` (`01` §1.1) | `test/api.test.ts`, `test/event-log.test.ts` pass; the rule checker reports the new rule |
 | 2.1 | coordinator | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the statusbar connection word, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
@@ -445,3 +450,12 @@ state read — enough for the rail and the status bar, by the no-polling rule.
    (§0.1). The credentials never reach the renderer.
 5. **Browser-case containment.** Provider embeds are always sandboxed in a browser, unsandboxed in Electron; the
    interface says `unprotected` in the browser case (`14` §2.3, `16` §9.4 defaulted).
+6. **Autoplay (§3.2a).** The setting governs unattended attaches only; a click always plays. Off: first frame
+   paused; a refused `play()` never force-mutes.
+7. **resumeMode (§3.2a).** Read literally: banner / seek-now / zero.
+8. **Sources beat `streamUrl` (§3.4).** When both exist the embed plays and `streamUrl` is listed last in the
+   picker as `App player`; with no sources the stream plays as today.
+9. **Source pick is in-session (§3.4).** A stored per-title preference is a `03` contract change (a fileserver
+   table, `16` §6.3's shape) — deferred, not forgotten.
+10. **Provider records stop at the fileserver (§0.1).** Answers carry `sources`; `api_key` never reaches the
+    renderer; the fileserver's provider-attachment tests are rewritten in wave B.
