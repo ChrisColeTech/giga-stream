@@ -24,7 +24,8 @@ export interface SyncRequest {
   scope: "trending" | "popular" | "titles";
   kind?: Kind;
   pages?: number;
-  ids?: number[];
+  /** Title ids (`movie-603`, `tv-1399`): the kind comes with the id (docs/26 section 3.10, rule 6). */
+  ids?: string[];
 }
 
 export interface SyncStatus {

@@ -7,6 +7,16 @@ export interface PlaylistSyncCounts {
   skipped: number;
   refused: number;
   removed: number;
+  /** Sync-owned rows whose entry vanished but that an admin edited: `prune` keeps them (docs/26 section 3.10). */
+  kept: number;
+}
+
+/** A playlist as a read shows it: never its full address (docs/26 section 3.11). */
+export interface PlaylistRef {
+  id: number;
+  name: string;
+  host: string;
+  masked: string;
 }
 
 /** The `202` body of `POST /api/playlist-sync`. */
@@ -23,7 +33,7 @@ export interface PlaylistSyncStatus {
   lastOutcome?: string;
   counts?: PlaylistSyncCounts;
   schedule: string;
-  playlists: string[];
+  playlists: PlaylistRef[];
 }
 
 /** `POST /api/playlist-sync` body: `{ dryRun?, prune? }`; a dry run writes nothing. */

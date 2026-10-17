@@ -8,11 +8,13 @@
     "node": ">=24.11"
   },
   "scripts": {
-    "dev": "tsx --env-file-if-exists=.env src/server.ts",
+    "build:shared": "node src/build-shared.ts",
+    "dev": "node src/build-shared.ts && tsx --env-file-if-exists=.env src/server.ts",
     "start": "node --env-file-if-exists=.env --env-file=production.env dist/server.js",
-    "build": "tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/store/migrations','dist/store/migrations',{recursive:true})\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-    "test": "tsx --test test/*.test.ts"
+    "build": "node src/build-shared.ts && tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/store/migrations','dist/store/migrations',{recursive:true})\"",
+    "typecheck": "node src/build-shared.ts && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "node src/build-shared.ts && tsx --test test/*.test.ts",
+    "import:live-server": "tsx scripts/import-live-server-db.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.1",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

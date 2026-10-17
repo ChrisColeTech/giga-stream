@@ -99,6 +99,24 @@ test("routes must begin /api except /healthz and /ws; SQL belongs in store/", ()
   assert.equal(found.filter((f) => f.message.includes("SQL belongs")).length, 1);
 });
 
+test("the backend's stream plugins and admin app are the only other root routes, each in its one file", () => {
+  const found = violations({
+    "src/backend/src/api/live-streams.ts":
+      'x.register(p, { prefix: "/live" });\nx.register(p, { prefix: "/logos" });\nx.register(p, { prefix: "/nope" });\n' +
+      'app.get("/test/player.html", h);\napp.get("/live/a", h);\napp.get("/other", h);\n',
+    "src/backend/src/api/admin-static.ts": 'app.get("/admin", h);\napp.get("/admin/*", h);\napp.get("/live/a", h);\n',
+    "src/backend/src/api/other.ts": 'app.get("/admin/x", h);\nx.register(p, { prefix: "/live" });\n',
+  });
+  const routes = found.filter((f) => f.message.includes("must begin /api"));
+  assert.deepEqual(routes.map((f) => `${f.file}:${f.line}`).sort(), [
+    "src/backend/src/api/admin-static.ts:3",
+    "src/backend/src/api/live-streams.ts:3",
+    "src/backend/src/api/live-streams.ts:6",
+    "src/backend/src/api/other.ts:1",
+    "src/backend/src/api/other.ts:2",
+  ]);
+});
+
 test("the renderer may not fetch outside services, store to browser storage or build a second socket", () => {
   const found = violations({
     "src/frontend/src/services/api.ts": "export const g = () => fetch('/api/x');\n",

@@ -124,8 +124,8 @@ test("malformed TMDB siblings are skipped while valid movie and TV names remain"
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   const related = await send(t.app, "GET", "/api/titles/movie-603/recommendations");
   assert.deepEqual(pick(movie.body, "data.items") as unknown[], [
-    { id: "movie-603", tmdbId: 603, kind: "movie", shape: "list", title: "The Matrix", year: 1999, genres: [] },
-    { id: "movie-701", tmdbId: 701, kind: "movie", shape: "list", title: "Valid Sibling", year: 2026, genres: [] },
+    { id: "movie-603", tmdbId: 603, kind: "movie", shape: "list", title: "The Matrix", year: 1999, genres: [], state: "synced" },
+    { id: "movie-701", tmdbId: 701, kind: "movie", shape: "list", title: "Valid Sibling", year: 2026, genres: [], state: "synced" },
   ]);
   assert.equal(pick(movie.body, "data.totalResults"), 4, "TMDB's total is preserved when members are skipped");
   assert.equal(pick(tv.body, "data.items.0.title"), "Game of Thrones");

@@ -7,8 +7,9 @@ import { ANY_ADMIN, actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
 
 /**
- * The playlist sync (docs/03 section 7.2c): owner or editor. The POST awaits the run and answers
- * `202` with its counts; the GET reports the run in flight, the last outcome and the schedule.
+ * The playlist sync as a whole (docs/03 section 7.2c), kept as a thin wrapper over the playlists: owner or editor.
+ * The POST awaits a run over every enabled playlist and answers `202` with its counts; the GET reports the run in
+ * flight, the last outcome and the first enabled playlist job's schedule. A single playlist is synced by its job.
  */
 export function registerPlaylistSync(app: FastifyInstance, services: Services): void {
   app.get("/api/playlist-sync", async (request, reply) => {

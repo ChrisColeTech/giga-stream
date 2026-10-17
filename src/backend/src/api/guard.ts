@@ -22,4 +22,17 @@ export function signedIn(services: Services, request: FastifyRequest, roles: rea
 }
 
 export const ANY_ADMIN: readonly Role[] = ["owner", "editor"];
+
+/**
+ * Whether the request carries a valid owner or editor token. It never refuses: a public read that asks for more
+ * (`includeDisabled`) simply gets the public answer without one.
+ */
+export function isAdmin(services: Services, request: FastifyRequest): boolean {
+  try {
+    signedIn(services, request, ANY_ADMIN);
+    return true;
+  } catch {
+    return false;
+  }
+}
 export const OWNER: readonly Role[] = ["owner"];

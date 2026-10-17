@@ -2,30 +2,38 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import { type Actor, type AuditService } from "./audit-service.js";
 import { type OmdbClient } from "./omdb-client.js";
+import { describeRequest } from "./title-sync-request.js";
 import { type TmdbClient } from "./tmdb-client.js";
 import {
   type Kind,
-  KINDS,
   type SyncRequest,
   DEFAULT_SYNC_PAGES,
   MAX_SYNC_PAGES,
   TITLE_FRESH_MS,
   asRecord,
-  formatSchedule,
   listOf,
   num,
+  parseTitleId,
   rowOf,
   storedRowOf,
 } from "./title-shapes.js";
 
-/** An in-flight or most recent sync, kept in memory for the status and the single-flight rule. */
-interface Job {
-  startedAt: number;
-  request: SyncRequest;
-  triggered: "admin" | "system";
+/** What one finished run reports: the sentence (`ok` or why it failed) and how many titles it pulled. */
+export interface SyncResult {
+  outcome: string;
+  titles: number;
 }
 
-/** The catalog-sync job (docs/03 section 7.6b): single-flight and audited; its outcome is read from the status. */
+/** An in-flight sync, kept in memory for the status and the single-flight rule. */
+interface Running {
+  startedAt: number;
+  request: SyncRequest;
+}
+
+/**
+ * The catalog sync (docs/03 section 7.6b): single-flight and audited; its outcome is read from the status. Nothing
+ * here owns a timer: a catalog job (`job-runner.ts`) asks for a run, and the backend's one scheduler decides when.
+ */
 export function createTitleSync(deps: {
   store: Store;
   audit: AuditService;
@@ -37,11 +45,8 @@ export function createTitleSync(deps: {
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
 
-  let running: Job | null = null;
-  let lastRun: { finishedAt: number; outcome: string; titles: number; triggered: "admin" | "system" } | null = null;
-  let scheduleTimer: ReturnType<typeof setTimeout> | undefined;
-  let scheduleMs: number | undefined;
-  let scheduledChain: Promise<void> = Promise.resolve();
+  let running: Running | null = null;
+  let lastRun: { finishedAt: number; outcome: string } | null = null;
   let stopped = false;
 
   function listPage(kind: Kind, source: "trending" | "popular", page: number) {
@@ -49,12 +54,13 @@ export function createTitleSync(deps: {
     return tmdb.get<Record<string, unknown>>(path, { page });
   }
 
-  async function runSync(request: SyncRequest, triggered: "admin" | "system"): Promise<number> {
+  async function runSync(request: SyncRequest): Promise<number> {
     let pulled = 0;
     if (request.scope === "titles") {
-      for (const id of request.ids ?? []) {
+      for (const titleId of request.ids ?? []) {
         if (stopped) return pulled;
-        await deps.ensureTitle("movie", id);
+        const [kind, id] = parseTitleId(titleId);
+        await deps.ensureTitle(kind, id);
         pulled += 1;
       }
     } else {
@@ -87,8 +93,6 @@ export function createTitleSync(deps: {
         }
       }
     }
-    if (stopped) return pulled; // the store may already be closed at shutdown
-    lastRun = { finishedAt: now(), outcome: "ok", titles: pulled, triggered };
     return pulled;
   }
 
@@ -101,41 +105,44 @@ export function createTitleSync(deps: {
     }
   }
 
-  function describeRequest(request: SyncRequest): Record<string, unknown> {
-    return request.scope === "titles"
-      ? { scope: "titles", ids: (request.ids ?? []).length }
-      : { scope: request.scope, kind: request.kind, pages: request.pages };
-  }
-
   /** One observed sync run: audited started/finished/failed, the outcome kept, the slot released. */
-  async function syncOnce(request: SyncRequest, actor: Actor, triggered: "admin" | "system"): Promise<void> {
+  async function syncOnce(request: SyncRequest, actor: Actor, triggered: "admin" | "system"): Promise<SyncResult> {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
     recordSyncAudit("sync.started", actor, detail);
+    let result: SyncResult;
     try {
-      const titles = await runSync(request, triggered);
+      const titles = await runSync(request);
       recordSyncAudit("sync.finished", actor, { ...detail, titles });
+      result = { outcome: "ok", titles };
     } catch (error: unknown) {
-      recordSyncAudit("sync.failed", actor, {
-        ...detail,
-        reason: error instanceof Error ? error.message : "failed",
-      });
-      lastRun = {
-        finishedAt: now(),
-        outcome: error instanceof Error ? error.message : "failed",
-        titles: 0,
-        triggered,
-      };
+      const reason = error instanceof Error ? error.message : "failed";
+      recordSyncAudit("sync.failed", actor, { ...detail, reason });
+      result = { outcome: reason, titles: 0 };
     } finally {
       running = null;
     }
+    if (!stopped) lastRun = { finishedAt: now(), outcome: result.outcome };
+    return result;
+  }
+
+  function claim(request: SyncRequest): void {
+    if (running !== null) throw new AppError(ERRORS.syncBusy, { startedAt: running.startedAt });
+    running = { startedAt: now(), request };
   }
 
   return {
-    /** Start a bulk sync (docs/03 section 7.6b). Single flight; `409 sync.busy` when one runs. */
+    isRunning: (): boolean => running !== null,
+
+    /** Start a sync and return at once (docs/03 section 7.6b). Single flight; `409 sync.busy` when one runs. */
     startSync(request: SyncRequest, actor: Actor): void {
-      if (running !== null) throw new AppError(ERRORS.syncBusy, { startedAt: running.startedAt });
-      running = { startedAt: now(), request, triggered: "admin" };
+      claim(request);
       void syncOnce(request, actor, "admin");
+    },
+
+    /** Run a sync and wait for it: the scheduler's run and a catalog job's. Single flight like `startSync`. */
+    runNow(request: SyncRequest, actor: Actor, triggered: "admin" | "system"): Promise<SyncResult> {
+      claim(request);
+      return syncOnce(request, actor, triggered);
     },
 
     status() {
@@ -146,49 +153,13 @@ export function createTitleSync(deps: {
         ...(lastRun !== null && { lastRunAt: lastRun.finishedAt, lastOutcome: lastRun.outcome }),
         titles: total,
         stale,
-        schedule: formatSchedule(scheduleMs),
         omdb: omdb.quota(),
       };
     },
 
-    /**
-     * Arm the schedule hook (`TMDB_SYNC_SCHEDULE`): the system's only timer (`01` section 4.4). The
-     * warm-up walks trending and popular for both kinds, `DEFAULT_SYNC_PAGES` each.
-     */
-    armSchedule(intervalMs: number): void {
-      this.clearSchedule();
-      stopped = false;
-      scheduleMs = intervalMs;
-      const warmup: SyncRequest[] = KINDS.flatMap((kind) => [
-        { scope: "trending" as const, kind, pages: DEFAULT_SYNC_PAGES },
-        { scope: "popular" as const, kind, pages: DEFAULT_SYNC_PAGES },
-      ]);
-      const tick = (): void => {
-        scheduledChain = scheduledChain.then(async () => {
-          for (const request of warmup) {
-            if (running !== null) break;
-            running = { startedAt: now(), request, triggered: "system" };
-            await syncOnce(request, {}, "system");
-          }
-        });
-        scheduleTimer = setTimeout(tick, intervalMs);
-      };
-      tick();
-    },
-
-    clearSchedule(): void {
-      stopped = true; // the in-flight runSync checks this between pages and leaves the store alone
-      if (scheduleTimer !== undefined) clearTimeout(scheduleTimer);
-      scheduleTimer = undefined;
-      scheduleMs = undefined;
-    },
-
-    /** Test seam: resolves when no sync is running and the scheduled chain has settled. */
-    async idle(): Promise<void> {
-      while (running !== null) {
-        await new Promise((resolve) => setTimeout(resolve, 5));
-      }
-      await scheduledChain;
+    /** Shutdown: the run in flight stops between pages and leaves the store alone. */
+    stop(): void {
+      stopped = true;
     },
   };
 }

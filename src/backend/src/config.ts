@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 /** Env parsing (docs/03 section 1) — the only place `process.env` is read. */
@@ -25,6 +26,12 @@ const PlaylistUrls = z.string().default("").transform((value, ctx): string[] => 
 
 /** Development and production never share a port (docs/03 section 1); `npm start` is production. */
 const PORTS = { development: 8091, production: 8191 } as const;
+
+/** src/backend, whether running from src/ (tsx) or dist/ (built). */
+const PROGRAM_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** The built admin app (`npm run build` in src/admin), served at `/admin/` (docs/26 section 4.1). */
+const DEFAULT_ADMIN_DIST = path.resolve(PROGRAM_ROOT, "..", "admin", "dist");
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -57,8 +64,18 @@ const EnvSchema = z.object({
   // absent. This is the dev lane; with providers, sources ride alongside.
   MOVIE_STREAM_TEMPLATE: z.string().default(""),
   EPISODE_STREAM_TEMPLATE: z.string().default(""),
+  // The test channels (docs/10 section 3.3): four live channels made from the fixture files in FIXTURE_DIR and
+  // served by this backend itself. They need no ALLOW_LOOPBACK_STREAMS: a live row stores no address.
   SEED_TEST_CHANNELS: BooleanFlag,
   ALLOW_LOOPBACK_STREAMS: BooleanFlag,
+  // The live engine (docs/10 section 4). CACHE_DIR holds loop mode's encodes (large); unset, the backend uses
+  // `<DATA_DIR>/cache` of the DATA_DIR it actually runs with, so an override of DATA_DIR moves it too.
+  CACHE_DIR: z.string().default(""),
+  FIXTURE_DIR: z.string().default(""),
+  // Serves /test/player.html, a bare hls.js player for manual checks.
+  TEST_PAGE: BooleanFlag,
+  // The built admin app, served at /admin/ (docs/26 section 4.1); with no index.html there, nothing is.
+  ADMIN_DIST: z.string().default(""),
   // The playlist sync (docs/03 section 7.2c). With PLAYLIST_URLS unset the sync has nothing to do
   // and the schedule stays unarmed.
   PLAYLIST_URLS: PlaylistUrls,
@@ -75,6 +92,8 @@ export const config = {
   ...parsed,
   PORT: parsed.PORT ?? PORTS[parsed.NODE_ENV === "production" ? "production" : "development"],
   DATA_DIR: parsed.DATA_DIR || path.join(os.homedir(), ".giga-stream-admin"),
+  FIXTURE_DIR: parsed.FIXTURE_DIR || path.join(os.tmpdir(), "giga-stream-fixtures"),
+  ADMIN_DIST: path.resolve(parsed.ADMIN_DIST || DEFAULT_ADMIN_DIST),
 };
 
 export type Config = typeof config;
