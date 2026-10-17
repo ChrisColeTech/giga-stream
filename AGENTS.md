@@ -39,6 +39,7 @@ person's changes.
   | Interface | 5171 (Vite) | 5271 (`npm run preview`); the packaged app is served by its fileserver |
   | Fileserver | 8090 | 8190 (the packaged app) |
   | Admin backend | 8091 (3001 where the local `src/backend/.env` sets it) | 8191 |
+  | Admin app (Vite, base `/admin/`; the backend serves the built app at `/admin/`) | 5172 | the backend's own port |
 - `src/shared/<domain>` libraries any program or tool may import (`docs/01` section 4.2); not programs.
   `src/shared/media` finds and runs the bundled FFmpeg and scans folders for video files.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
@@ -48,16 +49,17 @@ person's changes.
 
 ## Commands
 
-The dev stack (backend, the interface's Vite, the Electron app with its fileserver; the
-development ports above) runs from the root during development and testing (owner, 2026-10-17; `07`
-section 4):
+The dev stack (the backend running inside its own Electron window, which loads the admin app from Vite on 5172; the
+interface's Vite; the desktop app's Electron window with its fileserver; the development ports above) runs from the
+root during development and testing (owner, 2026-10-17; `07` section 4):
 
-- `npm run dev` — the only stack launcher; run it from the repository root (Electron window included).
-  The window loads Vite, so edits reload in place.
+- `npm run dev` — the only stack launcher; run it from the repository root (both Electron windows included: the
+  admin's, debug port 9223, and the desktop app's, 9222). The windows load Vite, so edits reload in place. The backend
+  runs headless with `npm start` in `src/backend`, and `npm run dev` inside `src/backend` runs it without a window.
 - To keep it running across automation-shell calls on Windows, launch that command through
   `Win32_Process.Create` exactly as documented in `07` section 4. Do not add alternate stack-launcher
   npm scripts; `Start-Process` is still killed with the automation shell's Windows job.
-- `npm run kill-ports` — frees the development ports (5171, 8090, 8091, 3001) by port; never a
+- `npm run kill-ports` — frees the development ports (5171, 5172, 8090, 8091, 3001) by port; never a
   production one, so an installed app the owner is testing keeps running.
 - `node scripts/check/gate.mjs` — every typecheck, the lint, the rule checker and every program's tests, then a live
   smoke of the running stack (`scripts/check/live-smoke.mjs`: every enabled live channel must answer its playlist and a

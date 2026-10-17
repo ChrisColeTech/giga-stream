@@ -56,6 +56,7 @@ environment overrides either.
 | Interface (Vite; proxies `/api` and `/ws` to the fileserver) | 5171 (`npm run dev`) | 5271 (`npm run preview`, proxying to 8190) |
 | Fileserver | 8090 | 8190 (the packaged app) |
 | Admin backend | 8091 | 8191 |
+| Admin app (Vite, base `/admin/`; proxies `/api`, `/live`, `/logos` and `/test` to the backend) | 5172 (`npm run dev`) | served by the backend at `/admin/` |
 
 The fileserver's default admin address follows the same column: `http://127.0.0.1:8091` in development,
 `http://127.0.0.1:8191` in the packaged app, until Settings ▸ Admin backend names another. Both servers
