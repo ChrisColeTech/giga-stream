@@ -49,6 +49,11 @@ const EnvSchema = z.object({
   OMDB_API_KEY: z.string().default(""),
   OMDB_BASE: z.string().default("https://www.omdbapi.com/"),
   OMDB_DAILY_LIMIT: z.coerce.number().int().min(1).max(100_000).default(1_000),
+  // The stream rule (docs/03 section 7.5): {tmdbId} (and {season}/{episode} on the episode template)
+  // are filled on every movie detail and episode answered; a template that is not set leaves streamUrl
+  // absent. This is the dev lane; with providers, sources ride alongside.
+  MOVIE_STREAM_TEMPLATE: z.string().default(""),
+  EPISODE_STREAM_TEMPLATE: z.string().default(""),
   SEED_TEST_CHANNELS: BooleanFlag,
   ALLOW_LOOPBACK_STREAMS: BooleanFlag,
   // The playlist sync (docs/03 section 7.2c). With PLAYLIST_URLS unset the sync has nothing to do
