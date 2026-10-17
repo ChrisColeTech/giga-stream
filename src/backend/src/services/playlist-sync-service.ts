@@ -6,7 +6,6 @@ import type { PlaylistRecord } from "../store/playlist-repository.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistSyncAnswer, PlaylistSyncCounts, PlaylistSyncStatus } from "../types/playlist-sync.js";
 import type { Actor, AuditService } from "./audit-service.js";
-import { withoutQuery } from "./address-rule.js";
 import { httpsLogoUrl, type LogoResolver } from "./logo-resolver.js";
 import { fetchPlaylist } from "./playlist-fetch.js";
 import { playlistRefOf } from "./playlist-ref.js";
@@ -66,8 +65,7 @@ export function createPlaylistSyncService(deps: {
 
     // Enrichment: an entry's own logo always wins; a miss leaves the row with no logo.
     for (const { entry } of usable) {
-      const logo = httpsLogoUrl(entry.logoUrl) ?? httpsLogoUrl(await logos.resolve(entry.name, entry.tvgId));
-      entry.logoUrl = logo === undefined ? undefined : withoutQuery(logo);
+      entry.logoUrl = httpsLogoUrl(entry.logoUrl) ?? httpsLogoUrl(await logos.resolve(entry.name, entry.tvgId));
     }
 
     const plan = planSync({
