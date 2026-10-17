@@ -62,6 +62,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),
     ...(overrides.probeFetch !== undefined && { probeFetch: overrides.probeFetch }),
     ...(overrides.imageFetch !== undefined && { imageFetch: overrides.imageFetch }),
+    ...(overrides.scan !== undefined && { scan: overrides.scan }),
     ...(overrides.openFolderPicker !== undefined && { openFolderPicker: overrides.openFolderPicker }),
     testFolderRoot: overrides.testFolderRoot ?? config.testFolderRoot,
   });

@@ -11,6 +11,7 @@ import { createLocalFileRepository } from "../src/store/local-file-repository.js
 import { createJobRepository } from "../src/store/job-repository.js";
 import { createJobService, type JobContext } from "../src/services/job-service.js";
 import { createScanService } from "../src/services/scan-service.js";
+import { fakeScan } from "./fake-scan.js";
 
 const folderRoot = mkdtempSync(path.join(os.tmpdir(), "giga-jobs-root-"));
 process.env.TEST_FOLDER_ROOT = folderRoot;
@@ -149,6 +150,7 @@ test("a scan job stays indeterminate while the walk finds files, then climbs to 
     files: createLocalFileRepository(db),
     posters: { queue: (id) => void stills.push(id), runner: async () => undefined },
     now: () => 0,
+    scan: fakeScan,
   });
   const reports: Array<number | null> = [];
   const context: JobContext = {

@@ -15,6 +15,7 @@ import { openDatabase, type Database } from "../src/store/database.js";
 import { createJobRepository } from "../src/store/job-repository.js";
 import { createLocalFileRepository } from "../src/store/local-file-repository.js";
 import type { PublicScanEvent } from "../src/types/scan-event.js";
+import { fakeScan } from "./fake-scan.js";
 
 interface Rig {
   db: Database;
@@ -40,6 +41,7 @@ function makeRig(files: string[] = []): Rig {
     files: createLocalFileRepository(db),
     posters: { queue: () => undefined, runner: async () => undefined },
     now: () => 1,
+    scan: fakeScan,
   });
   const collections = createCollectionService({
     collections: folders,

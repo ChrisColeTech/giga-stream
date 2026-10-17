@@ -45,14 +45,19 @@ const newRun = (jobId: string): ScanRun => ({
   probed: 0,
 });
 
+/** The shape of the shared folder scanner, injectable for tests. */
+export type FolderScanner = typeof scanFolder;
+
 export function createScanService(deps: {
   jobs: JobService;
   folders: CollectionRepository;
   files: LocalFileRepository;
   posters: PosterFetchService;
   now: () => number;
+  /** The folder scanner; tests inject one that never spawns ffprobe. */
+  scan?: FolderScanner | undefined;
 }): ScanService {
-  const { jobs, folders, files, posters, now } = deps;
+  const { jobs, folders, files, posters, now, scan = scanFolder } = deps;
   const runs = new Map<string, ScanRun>();
   let readerId = 0;
 
@@ -155,7 +160,7 @@ export function createScanService(deps: {
       runs.set(folder.id, run);
       const keepPaths: string[] = [];
       try {
-        for await (const event of scanFolder(folder.path, { signal: context.signal })) {
+        for await (const event of scan(folder.path, { signal: context.signal })) {
           if (event.type === "found") {
             keepPaths.push(event.file.path);
             const row = files.recordFileInfo({

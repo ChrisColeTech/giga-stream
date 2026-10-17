@@ -8,6 +8,8 @@ import type { FastifyInstance } from "fastify";
 import { after } from "node:test";
 
 import { buildApp } from "../src/build-app.js";
+import type { FolderScanner } from "../src/services/scan-service.js";
+import { fakeScan } from "./fake-scan.js";
 
 const PROGRAM_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BACKEND_ROOT = path.resolve(PROGRAM_ROOT, "..", "backend");
@@ -40,7 +42,7 @@ after(async () => {
 
 /** The real fileserver on a fresh temporary data folder, or on `options.dataDir` for restart tests. */
 export async function makeApp(
-  options: { dataDir?: string; probeFetch?: typeof fetch; webDist?: string } = {},
+  options: { dataDir?: string; probeFetch?: typeof fetch; webDist?: string; scan?: FolderScanner } = {},
 ): Promise<FileserverApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-fileserver-test-"));
   const clock = testClock();
@@ -50,6 +52,8 @@ export async function makeApp(
     logger: false,
     ...(options.probeFetch !== undefined && { probeFetch: options.probeFetch }),
     ...(options.webDist !== undefined && { webDist: options.webDist }),
+    // No test probes real files through the app: the stand-in scanner never spawns ffprobe (see fake-scan.ts).
+    scan: options.scan ?? fakeScan,
   });
   const owned = options.dataDir === undefined;
   const created: FileserverApp = {
