@@ -1,4 +1,5 @@
 import { CircleAlert, PanelBottom, Settings } from "lucide-react";
+import { barTone } from "@/lib/bar-tone";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { RunningWork } from "./RunningWork";
@@ -7,8 +8,8 @@ import { RunningWork } from "./RunningWork";
  * refusal, as a sentence), then the two doors on the right, Events and Settings. Events is a toggle: the button that opens
  * the drawer closes it, and wears the pressed look while it is up. Settings only opens its modal window. */
 const BAR =
-  "relative z-20 flex h-6 flex-none items-center gap-2.5 border-t border-border " +
-  "bg-panel px-2.5 font-sans text-xs text-muted";
+  "relative z-20 flex h-6 flex-none items-center gap-2.5 border-t px-2.5 font-sans text-xs text-muted " +
+  "transition-[background-color,border-color] duration-fast ease-linear";
 
 /* A door is a control label (12px, muted) with its icon in the same colour: both are muted at rest and both take the
  * accent only while the door's panel is up (`data-on`). The icon inherits the colour, so it cannot be lit alone. */
@@ -28,10 +29,11 @@ export function Statusbar() {
   const toggleEvents = useAppStore((state) => state.toggleEvents);
   const openOverlay = useAppStore((state) => state.openOverlay);
   const notice = useAppStore((state) => state.notice);
+  const theatre = useAppStore((state) => state.theatre);
   const browser = typeof window === "undefined" || window.pocHost?.runtime !== "electron";
 
   return (
-    <footer className={BAR}>
+    <footer className={cn(BAR, barTone(theatre))}>
       <RunningWork />
       {notice !== null && (
         <span key={notice.serial} role="status" title={notice.sentence} className="flex min-w-0 items-center gap-1.5 text-xs text-text">

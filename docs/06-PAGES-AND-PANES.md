@@ -19,16 +19,20 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 
 | Position | Control | Behaviour |
 |---|---|---|
-| far left | **Left-pane toggle** | Shows or hides the active surface's left pane; pressed (accent outline) while it is shown; restores the committed size. Tooltip "Toggle the left pane" |
+| far left | **Left-pane toggle** | Shows or hides the active surface's left pane; pressed (accent outline) while it is shown; restores the committed size. A ghost icon button, transparent at rest (owner, 2026-10-17, matching Giga Cut's pane toggles). Tooltip "Toggle the left pane" |
 | left | **Brand** | A small accent icon tile and a two-line mono wordmark, `GIGA / STREAM` |
 | centre | **Live / Library / Player** | A recessed rounded track with a sliding chip; the active surface is the chip. The only navigation between surfaces |
-| right | **Bottom-pane toggle** | Player's related band. On a surface with no bottom pane it stays in place, disabled, with the reason as its tooltip |
-| right | **Right-pane toggle** | Shows or hides the active surface's right pane |
+| right | **Theatre** | Giga Cut's Export slot (owner, 2026-10-17): a ghost icon-and-text button beside the pane toggles. Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the active surface's left, right and bottom panes collapse by the ordinary pane toggle. Pressing again exits: each pane returns to the state it had before entering (any pane changed by hand during Theatre is healed to that state). Pressed (accent) while on; not persisted — a fresh window always starts normal |
+| right | **Bottom-pane toggle** | Player's related band. On a surface with no bottom pane it stays in place, disabled, with the reason as its tooltip. Ghost, as the other pane toggles |
+| right | **Right-pane toggle** | Shows or hides the active surface's right pane. Ghost, as the other pane toggles |
 | far right | **Window controls** | Minimize, maximize or restore, close, in the platform's own caption metrics, through named preload capabilities |
 
 - The titlebar is a window drag region; its buttons are not.
 - While a work window is open its scrim covers everything below the titlebar, and the pane toggles and the
   surface switch sleep with it.
+- **Theatre mode** (owner, 2026-10-17) paints the titlebar and statusbar black (`bg-black`) over the normal
+  panel colour and collapses the panes; the panes' collapse is the ordinary toggle, so the saved layout
+  follows it and exiting restores the remembered per-side state.
 - There is no account, search field, Settings gear, provider chip or media control in the titlebar.
 
 ### 1.2 Statusbar (24px)

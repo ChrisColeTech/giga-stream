@@ -1,11 +1,12 @@
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
-import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
+import { DEFAULT_SURFACE, SIDES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
 import { EVENT_ROWS } from "@/fixtures/events";
 import { appendEvent, type EventInput } from "@/lib/event-log";
 import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-schema";
 import type { StateSnapshot } from "@/services/state";
 import { acceptSettings, applySnapshot, rejectSettings } from "@/store/shell-hydration";
 import type { SettingsFields } from "@/store/settings-state";
+import { togglePane, toggleTheatre } from "@/store/theatre";
 import type { AppState } from "@/store/app-store";
 import type { Box } from "@/types/child-window";
 import type { EventRow } from "@/types/events";
@@ -39,6 +40,10 @@ export interface ShellSlice {
   folded: Readonly<Record<string, boolean>>;
   appVersion: string | null;
   runtime: "electron" | "browser" | null;
+  /** Theatre mode (owner, 2026-10-17): black chrome, panes collapsed; exits restore each pane's prior state. */
+  theatre: boolean;
+  theatreBefore: Partial<Record<PaneSide, boolean>> | null;
+  toggleTheatre: () => void;
   hydrationApplied: boolean;
   shellVisible: boolean;
   shellWriteEnabled: boolean;
@@ -110,6 +115,9 @@ export function shellSlice(set: Set, get: Get): ShellSlice {
     adminUrl: DEFAULT_SETTINGS.adminUrl,
     appVersion: null,
     runtime: null,
+    theatre: false,
+    theatreBefore: null,
+    toggleTheatre: () => toggleTheatre(set, get),
     hydrationApplied: false,
     shellVisible: false,
     shellWriteEnabled: false,
@@ -153,17 +161,6 @@ function changeAdminUrl(set: Set, get: Get, adminUrl: string): number {
   const revision = get().settingsRevision + 1;
   set({ adminUrl, settingsRevision: revision });
   return revision;
-}
-
-function togglePane(set: Set, get: Get, side: PaneSide): void {
-  const state = get();
-  if (SURFACES[state.surface].panes[side] === null) return;
-  const key = paneKey(state.surface, side);
-  set({
-    open: { ...state.open, [key]: !(state.open[key] ?? true) },
-    openVersion: state.openVersion + 1,
-    shellRevision: state.shellRevision + 1,
-  });
 }
 
 function say(set: Set, get: Get, sentence: string, tone: Notice["tone"]): void {

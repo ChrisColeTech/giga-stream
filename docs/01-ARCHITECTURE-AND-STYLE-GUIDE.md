@@ -329,15 +329,16 @@ the same timeout, blur and close disarm it. An icon cannot turn into a question 
 The family rule, from Giga Cut (`D:\Projects\giga-cut\docs\01-ARCHITECTURE-AND-STYLE-GUIDE.md` §Buttons and
 surfaces, owner decisions 2026-09-30; its audit and screenshot sources are Giga Cut `22` §A1). The owner's words
 there: *"the buttons should be the modern ghost buttons"* (2026-09-20). **Ghost in the body; edged only in the
-chrome; at most one filled accent per surface, as a form's commit.**
+chrome; at most one filled accent per surface, as a form's commit.** The titlebar is ghost too (owner,
+2026-10-17: the pane toggles and the Theatre button are ghost, matching Giga Cut's titlebar).
 
 | Variant (`components/ui`) | Allowed only here |
 |---|---|
 | Ghost (`Button variant="ghost"`, `IconButton` plain); the default | Everywhere in the body: pane content, rails, `Group`/`Row`/`Wide`/`Actions` verbs, row and card verbs, popovers, panel footers, notes over a stage |
-| Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | The titlebar (pane toggles) and window and popup headers (the close `X`). Nothing in a body |
+| Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | Window and popup headers (the close `X`). Nothing in a body, and nothing in the titlebar |
 | Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), at most one per surface |
 | Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
-| Icon-only (`IconButton`) | Toolbars, row ends, panel footers; an `aria-label` and a tooltip always. `bordered` only in the chrome |
+| Icon-only (`IconButton`) | Toolbars, row ends, panel footers, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape |
 | Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
 
 A lit toggle outside the titlebar is its accent glyph alone (a filled accent star for a favourite), with no
