@@ -9,11 +9,10 @@ const SQL = /\b(SELECT\s[\s\S]{1,200}?\sFROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DE
 
 /**
  * The live stream addresses, which players load directly (`01` section 4.3): only in the one file of each
- * program that serves them (the live server's media file, and the merged backend's `live-streams.ts`). There
- * `/live` and `/logos` are encapsulated plugins registered with a `prefix`, so their routes are relative; the
- * prefix is what must be one of the two.
+ * program that serves them (the backend's `live-streams.ts`). There `/live` and `/logos` are encapsulated
+ * plugins registered with a `prefix`, so their routes are relative; the prefix is what must be one of the two.
  */
-const STREAM_ROUTE_FILES = new Set(["src/live-server/src/api/media.ts", "src/backend/src/api/live-streams.ts"]);
+const STREAM_ROUTE_FILES = new Set(["src/backend/src/api/live-streams.ts"]);
 const STREAM_ROUTE = /^\/(live|logos)\/|^\/test\/player\.html$/;
 const STREAM_PREFIX = /^\/(live|logos)$/;
 /** The built admin app at `/admin/` (docs/26 section 4.1): only in the backend's one static-serving file. */
@@ -22,7 +21,7 @@ const ADMIN_ROUTE = /^\/admin(\/|$)/;
 const PREFIX_LITERAL = /\bprefix:\s*["'`]([^"'`]+)["'`]/g;
 
 function inRouteFolder(rel) {
-  return /^src\/fileserver\/src\/routes\//.test(rel) || /^src\/(backend|live-server)\/src\/api\//.test(rel);
+  return /^src\/fileserver\/src\/routes\//.test(rel) || /^src\/backend\/src\/api\//.test(rel);
 }
 
 export const transportAndRoutes = {

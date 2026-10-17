@@ -13,7 +13,6 @@ const PROGRAM_ROOTS = [
   ["frontend", "src/frontend"],
   ["fileserver", "src/fileserver"],
   ["backend", "src/backend"],
-  ["live-server", "src/live-server"],
   ["shared", "src/shared"],
   ["scripts", "scripts"],
 ];

@@ -9,7 +9,7 @@ import type { Config } from "../src/config.js";
 
 const MOVIE_TEMPLATE = "https://streams.example/movie/{tmdbId}/index.m3u8";
 const EPISODE_TEMPLATE = "https://streams.example/tv/{tmdbId}/{season}/{episode}/index.m3u8";
-const LOOPBACK_TEMPLATE = "http://127.0.0.1:8097/live/fx-sports/master.m3u8";
+const LOOPBACK_TEMPLATE = "http://127.0.0.1:8091/live/fx-sports/master.m3u8";
 
 const FIRST = {
   name: "First", source: "first", order: 1, family: "embed",

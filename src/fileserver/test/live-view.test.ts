@@ -23,7 +23,7 @@ test("a read within the TTL serves the view it holds; after the TTL the next rea
       name: "FX Test",
       category: "Test",
       number: "1",
-      streamUrl: "http://127.0.0.1:8097/live/fx-test/master.m3u8",
+      streamUrl: "http://127.0.0.1:8091/live/fx-test/master.m3u8",
     }),
   });
   assert.equal(created.status, 201);
