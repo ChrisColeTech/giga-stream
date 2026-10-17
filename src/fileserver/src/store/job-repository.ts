@@ -15,6 +15,7 @@ const JobRow = z.object({
   created_at: z.number(),
   started_at: z.number().nullable(),
   finished_at: z.number().nullable(),
+  request: z.string(),
 });
 
 /** Identifiers only, never a path (the 001 header note; the brief's port note). */
@@ -54,14 +55,16 @@ export interface JobRepository {
   interruptUnfinished(at: number, error: { code: string; message: string }): number;
 }
 
-const COLUMNS = "id, kind, label, state, percent, error_code, error_message, created_at, started_at, finished_at";
+const COLUMNS = "id, kind, label, state, percent, error_code, error_message, created_at, started_at, finished_at, request";
 const UNSETTLED = SETTLED_JOB_STATES.map((state) => `'${state}'`).join(", ");
 
 function toSummary(row: z.infer<typeof JobRow>): Job {
+  const request = parseRequest(row.request);
   const job: Job = {
     id: row.id,
     kind: row.kind,
     label: row.label,
+    ...(row.kind === "folder-scan" && request !== null && "folderId" in request && { folderId: request.folderId }),
     state: row.state,
     createdAt: row.created_at,
     ...(row.percent !== null && { percent: row.percent }),
@@ -74,9 +77,18 @@ function toSummary(row: z.infer<typeof JobRow>): Job {
 
 const RequestSchema = z.union([z.object({ folderId: z.string().min(1) }), z.object({ localFileId: z.string().min(1) })]);
 
+function parseRequest(value: string): JobRequest | null {
+  try {
+    const parsed = RequestSchema.safeParse(JSON.parse(value));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createJobRepository(db: Database): JobRepository {
   const insert = db.prepare("INSERT INTO jobs (id, kind, label, state, request, created_at) VALUES (?, ?, ?, 'queued', ?, ?)");
-  const selectOne = db.prepare(`SELECT ${COLUMNS}, request FROM jobs WHERE id = ?`);
+  const selectOne = db.prepare(`SELECT ${COLUMNS} FROM jobs WHERE id = ?`);
   const selectAll = db.prepare(`SELECT ${COLUMNS} FROM jobs ORDER BY created_at DESC, rowid DESC`);
   const selectRecent = db.prepare(
     `SELECT * FROM (SELECT ${COLUMNS} FROM jobs WHERE state NOT IN (${UNSETTLED}) ORDER BY created_at DESC, rowid DESC)
@@ -102,14 +114,8 @@ export function createJobRepository(db: Database): JobRepository {
     },
 
     requestOf(id) {
-      const row = selectOne.get(id) as { request?: unknown } | undefined;
-      if (!row) return null;
-      try {
-        const parsed = RequestSchema.safeParse(JSON.parse(String(row.request ?? "null")));
-        return parsed.success ? parsed.data : null;
-      } catch {
-        return null;
-      }
+      const row = JobRow.safeParse(selectOne.get(id));
+      return row.success ? parseRequest(row.data.request) : null;
     },
 
     find(id) {

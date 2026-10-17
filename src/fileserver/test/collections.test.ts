@@ -1,21 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { makeApp, pick, send } from "./app-fixture.js";
 
 test("a collection is created, read, renamed and listed", async () => {
   const t = await makeApp();
-  const created = await send(t.app, "POST", "/api/collections", { name: "Movies" });
+  const created = await send(t.app, "POST", "/api/collections", { name: "Movies", type: "movie" });
   assert.equal(created.status, 201);
   const id = pick(created.body, "data.id") as string;
   assert.equal(pick(created.body, "data.name"), "Movies");
+  assert.equal(pick(created.body, "data.type"), "movie");
   assert.equal(pick(created.body, "data.itemCount"), 0);
   assert.deepEqual(pick(created.body, "data.folders"), []);
 
-  const renamed = await send(t.app, "PATCH", `/api/collections/${id}`, { name: "  Films  " });
+  const renamed = await send(t.app, "PATCH", `/api/collections/${id}`, { name: "  Films  ", type: "local" });
   assert.equal(pick(renamed.body, "data.name"), "Films");
+  assert.equal(pick(renamed.body, "data.type"), "local");
 
-  await send(t.app, "POST", "/api/collections", { name: "Series" });
+  await send(t.app, "POST", "/api/collections", { name: "Series", type: "tv" });
   const list = await send(t.app, "GET", "/api/collections");
   const names = (pick(list.body, "data") as Array<{ name: string }>).map((one) => one.name);
   assert.deepEqual(names, ["Films", "Series"]);
@@ -24,17 +29,22 @@ test("a collection is created, read, renamed and listed", async () => {
 
 test("a name that is empty, too long, or a duplicate ignoring case is refused", async () => {
   const t = await makeApp();
-  await send(t.app, "POST", "/api/collections", { name: "Movies" });
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "movies" })).status, 422);
-  assert.equal(pick((await send(t.app, "POST", "/api/collections", { name: "movies" })).body, "error.code"), "collection.invalid");
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "   " })).status, 422);
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "x".repeat(81) })).status, 422);
+  await send(t.app, "POST", "/api/collections", { name: "Movies", type: "movie" });
+  assert.equal((await send(t.app, "POST", "/api/collections", { name: "movies", type: "movie" })).status, 422);
+  assert.equal(
+    pick((await send(t.app, "POST", "/api/collections", { name: "movies", type: "movie" })).body, "error.code"),
+    "collection.invalid",
+  );
+  assert.equal((await send(t.app, "POST", "/api/collections", { name: "   ", type: "local" })).status, 422);
+  assert.equal((await send(t.app, "POST", "/api/collections", { name: "x".repeat(81), type: "local" })).status, 422);
+  assert.equal((await send(t.app, "POST", "/api/collections", { name: "Missing type" })).status, 400);
+  assert.equal((await send(t.app, "POST", "/api/collections", { name: "Bad type", type: "other" })).status, 422);
   await t.dispose();
 });
 
 test("manual members come and go and count, with the shape of docs/03 section 3.7", async () => {
   const t = await makeApp();
-  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Watch list" });
+  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Watch list", type: "movie" });
   const collectionId = pick(makeCollection.body, "data.id") as string;
 
   const added = await send(t.app, "PUT", `/api/collections/${collectionId}/items`, {
@@ -70,7 +80,7 @@ test("an unknown collection is 404 collection.not_found on every write route", a
 
 test("a delete removes the collection, and the state answer stops listing it", async () => {
   const t = await makeApp();
-  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Gone" });
+  const makeCollection = await send(t.app, "POST", "/api/collections", { name: "Gone", type: "local" });
   const id = pick(makeCollection.body, "data.id") as string;
   const answer = await send(t.app, "DELETE", `/api/collections/${id}`);
   assert.deepEqual(pick(answer.body, "data.removed"), id);
@@ -79,4 +89,21 @@ test("a delete removes the collection, and the state answer stops listing it", a
   assert.ok(!(pick(listed.body, "data") as Array<{ id: string }>).some((one) => one.id === id));
   assert.deepEqual(pick((await send(t.app, "GET", "/api/state")).body, "data.collections"), []);
   await t.dispose();
+});
+
+test("collection type survives a fileserver restart", async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-collection-restart-"));
+  const first = await makeApp({ dataDir });
+  const made = await send(first.app, "POST", "/api/collections", { name: "Series", type: "tv" });
+  const id = String(pick(made.body, "data.id"));
+  await first.dispose();
+
+  const second = await makeApp({ dataDir });
+  const listed = pick((await send(second.app, "GET", "/api/collections")).body, "data") as Array<{
+    id: string;
+    type: string;
+  }>;
+  assert.equal(listed.find((collection) => collection.id === id)?.type, "tv");
+  await second.dispose();
+  rmSync(dataDir, { recursive: true, force: true });
 });

@@ -6,7 +6,8 @@ import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
 
 const IdParams = z.object({ collectionId: z.string() });
-const NameBody = z.object({ name: z.unknown().optional() }).passthrough();
+const CreateBody = z.object({ name: z.unknown(), type: z.unknown() }).passthrough();
+const PatchBody = z.object({ name: z.unknown().optional(), type: z.unknown().optional() }).passthrough();
 const ItemBody = z.object({ kind: z.string(), id: z.string() });
 const ItemParams = z.object({ collectionId: z.string(), kind: z.string(), itemId: z.string() });
 const ItemOfKind = z.object({ kind: z.string(), itemId: z.string() });
@@ -16,15 +17,15 @@ export function registerCollectionsRoutes(app: FastifyInstance, services: AppSer
   app.get("/api/collections", async () => okEnvelope(services.collections.list()));
 
   app.post("/api/collections", async (request, reply) => {
-    const body = parseInput(NameBody, request.body);
+    const body = parseInput(CreateBody, request.body);
     reply.code(201);
-    return okEnvelope(services.collections.create(body.name));
+    return okEnvelope(services.collections.create(body.name, body.type));
   });
 
   app.patch("/api/collections/:collectionId", async (request) => {
     const params = parseInput(IdParams, request.params);
-    const body = parseInput(NameBody, request.body);
-    return okEnvelope(services.collections.rename(params.collectionId, body.name));
+    const body = parseInput(PatchBody, request.body);
+    return okEnvelope(services.collections.update(params.collectionId, body));
   });
 
   app.delete("/api/collections/:collectionId", async (request) => {
