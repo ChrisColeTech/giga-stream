@@ -182,7 +182,7 @@ to `@giga/ui` in library mode and is not written under `src/admin` at all.
 | `components/records/NewRecordGroup.tsx` | the "New <record>" `Group` frame: plus tile, title, fold, children, the final `Create` primary | 50 |
 | `components/records/ListGroup.tsx` | the list `Group` frame: tile, title, heading action slot (`Refresh`, `Older`/`Newer`), the grid as its body | 50 |
 | `components/records/FieldError.tsx` | the `row-err` line under a row (role alert, 14px, `--st-failed`) | 20 |
-| `components/records/VideoList.tsx` | the live source's ordered video rows (index, path, up, down, remove) and the add row (`Choose` a file, `Add`) | 120 |
+| `components/records/VideoList.tsx` | the live source's ordered video rows (index, path, up, down, remove) and the add row (a path field and `Add`; no `Choose`, because the preload's picker is for folders only, `29` section 13) | 120 |
 | `components/records/SeasonList.tsx` | the title's editable seasons (season, episode count, remove) and `Add season` | 100 |
 | `components/session/SignInForm.tsx` | the sign-in `Group` (Email, Password, `Sign in`) | 70 |
 | `pages/SignInPage.tsx` | centres `SignInForm` in the page area; the titlebar and statusbar stay | 30 |
@@ -341,8 +341,8 @@ follows `07` 6.4.
 
 ### Wave 0 - the mockup agrees with the app (worker M)
 
-- **Does.** Items 1, 3, 4, 5, 7 and 9 of section 5: restyle `.seg` as pills; make `.pill` the interface's equal-width grid at 12px; enable Light and System with the light tokens; add the `UI zoom` row; set the durations to 70 / 140 / 200 / 280 ms and align the input focus ring, `select` chevron and accent ink; verify every `Enabled` is `.tgl` and every list tick is `.chk` labelled as selection (change the header's select-all label to `Select all <records>`).
-- **Files.** `css/controls/fields.css`, `css/controls/buttons.css`, `css/admin/form.css`, `css/admin/controls.css`, `css/admin/shell.css`, `css/tokens.css` (light tokens, durations), `html/settings.html`, `js/settings.js`.
+- **Does.** Items 1, 3, 4, 5, 7 and 9 of section 5: restyle `.seg` as pills; make `.pill` the interface's equal-width grid at 12px; enable Light and System with the light tokens; add the `UI zoom` row; set the durations to 70 / 140 / 200 / 280 ms and align the input focus ring, `select` chevron and accent ink; verify every `Enabled` is `.tgl` and every list tick is `.chk` labelled as selection (change the header's select-all label to `Select all <records>`); remove the file `Choose` button from the Videos add row (the native picker chooses folders only; section 5 gains no row because it is a contract fact, `29` section 13).
+- **Files.** `css/controls/fields.css`, `css/controls/buttons.css`, `css/admin/form.css`, `css/admin/controls.css`, `css/admin/shell.css`, `css/tokens.css` (light tokens, durations), `html/settings.html`, `html/channel-workspace.html`, `js/settings.js`. If the coordinator has already made any of these changes, the worker verifies and skips them.
 - **Depends on.** Nothing. Runs first and in parallel with wave 1.
 - **Tests.** None (plain HTML).
 - **Acceptance** (coordinator, owner asked first): serve the mockup on 5190; open Channels' New form: the Kind control is two rounded pills filling the row, no outer rectangle; open Settings: Theme Light switches the page light; a UI zoom row exists. Compare to the frontend's Library rail `Segmented`. Failure: any square-cornered `.seg`, any checkbox that acts as `Enabled`.
