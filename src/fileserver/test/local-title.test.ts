@@ -43,6 +43,7 @@ test("migration and the read boundary keep legacy local titles nonempty and path
   old.close();
   const restarted = await makeApp({ dataDir });
   const migrated = new DatabaseSync(dbFile);
+  assert.equal((migrated.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, 5);
   assert.equal(
     (migrated.prepare("SELECT title FROM local_files WHERE id = ?").get(fileId) as { title: string }).title,
     "Legacy Feature.mkv",
