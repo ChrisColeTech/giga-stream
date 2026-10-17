@@ -3,7 +3,7 @@ import { Disclosure } from "@/components/ui/Disclosure";
 import { FoldBody } from "@/components/ui/FoldBody";
 import { IconButton } from "@/components/ui/IconButton";
 import { SkeletonCards } from "@/components/ui/SkeletonCards";
-import { RELATED_BASIS_LABEL, RELATED_LOCAL_REASON, RELATED_SKELETON_COUNT } from "@/lib/player-copy";
+import { RELATED_BASIS_LABEL, RELATED_CARD_WIDTH, RELATED_LOCAL_REASON, RELATED_SKELETON_COUNT } from "@/lib/player-copy";
 import type { PlayerCommands } from "@/lib/player-commands";
 import type { PlayerView } from "@/lib/player-view";
 
@@ -45,10 +45,8 @@ export function PlayerRelated({ view, folded, onToggle, commands }: PlayerRelate
               ))}
             </div>
           ) : (
-            /* The shared grid is auto-fill at 144 px and would wrap; these !important overrides pin it to one row of eight
-             * 48 px columns, the width of a 2:3 card at the band's 140 px height, and keep it from wrapping. */
-            <div className="h-full overflow-hidden [&>div]:!grid-flow-col [&>div]:!grid-cols-[repeat(8,48px)] [&>div]:!gap-2 [&>div]:!p-1 [&>div]:w-max">
-              <SkeletonCards count={RELATED_SKELETON_COUNT} />
+            <div className="h-full overflow-hidden px-1">
+              <SkeletonCards count={RELATED_SKELETON_COUNT} cardWidth={RELATED_CARD_WIDTH} />
             </div>
           )}
         </div>
