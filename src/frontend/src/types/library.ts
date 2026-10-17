@@ -28,6 +28,8 @@ export interface LibraryItem {
   /** A real value only, never an invented HD. */
   readonly quality?: string;
   readonly genres: readonly string[];
+  /** TMDB's rating, 0 to 10, unrounded; absent when unknown (a local file never has one). */
+  readonly rating?: number;
   readonly favorite: boolean;
   /** Present only in a collection view; manual wins while both sources include the item. */
   readonly collectionSource?: MembershipSource;
