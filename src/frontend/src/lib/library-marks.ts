@@ -30,6 +30,10 @@ export function withRemoved(history: HistoryMarks, key: string): HistoryMarks {
   return { ...history, removed: { ...history.removed, [key]: true } };
 }
 
+export function withRestored(history: HistoryMarks, key: string): HistoryMarks {
+  return { ...history, removed: { ...history.removed, [key]: false } };
+}
+
 export function withCleared(): HistoryMarks {
   return { cleared: true, removed: {} };
 }

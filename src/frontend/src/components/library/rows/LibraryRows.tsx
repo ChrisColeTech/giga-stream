@@ -14,6 +14,7 @@ export interface LibraryRowsProps {
   readonly scope: Scope;
   /** The items the query shows (the rail's view, the type, the search and the filters), grouped into shelves. */
   readonly items: readonly ResolvedItem[];
+  readonly continuing: readonly ResolvedItem[];
   readonly collections: readonly CollectionRow[];
   readonly selected: string | null;
   /** The Continue watching setting; off (or in History), that shelf is not drawn. */
@@ -22,6 +23,8 @@ export interface LibraryRowsProps {
   readonly onSelect: (id: string) => void;
   readonly onRemoveWatch: (item: ResolvedItem) => void;
   readonly onSeeAll: (group: ShelfGroup) => void;
+  readonly onRefresh: () => void;
+  readonly loading: boolean;
   /** Drawn under the type strip: the History strip while History is open, as the grid draws it. */
   readonly strip?: ReactNode;
 }
@@ -32,6 +35,7 @@ export interface LibraryRowsProps {
 export function LibraryRows({
   scope,
   items,
+  continuing,
   collections,
   selected,
   showContinue,
@@ -39,16 +43,18 @@ export function LibraryRows({
   onSelect,
   onRemoveWatch,
   onSeeAll,
+  onRefresh,
+  loading,
   strip,
 }: LibraryRowsProps) {
   const marks = useAppStore((state) => state.marks);
   const shelves = useMemo(
-    () => buildShelves({ items, collections, marks, showContinue }),
-    [items, collections, marks, showContinue],
+    () => buildShelves({ items, continuing, collections, marks, showContinue }),
+    [items, continuing, collections, marks, showContinue],
   );
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} />
+      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
       {shelves.length === 0 ? (
         <RowsSkeleton />

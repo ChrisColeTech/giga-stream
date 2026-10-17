@@ -19,6 +19,7 @@ export interface TitleDetail {
   readonly backdropUrl?: string;
   /** Absent when no stream rule is set. */
   readonly streamUrl?: string;
+  readonly sources?: readonly import("@/services/schemas/source-schema").TitleSource[];
 }
 
 export interface Episode {
@@ -30,4 +31,5 @@ export interface Episode {
   readonly stillUrl?: string;
   /** Absent when no stream rule is set. */
   readonly streamUrl?: string;
+  readonly sources?: readonly import("@/services/schemas/source-schema").TitleSource[];
 }

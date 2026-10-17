@@ -33,3 +33,5 @@ export const LibraryPageSchema = z.object({
 });
 
 export const ContinuePageSchema = z.object({ items: z.array(LibraryItemSchema) });
+
+export const FavoriteSchema = z.object({ ref: ItemRefSchema, favorite: z.boolean() });

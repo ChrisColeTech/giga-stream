@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { cn } from "@/lib/cn";
 import { continueLabel, progressRatio, remainingLabel } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
@@ -23,6 +23,7 @@ export interface ContinueCardProps {
  *  menu. A press selects it and opens its Info, as a poster does; the menu is the poster's. */
 export function ContinueCard({ item, selected, collections, onSelect, onRemoveWatch }: ContinueCardProps) {
   const artRef = useRef<HTMLButtonElement>(null);
+  const [imageFailed, setImageFailed] = useState(false);
   const progress = item.progress;
   if (progress === undefined) return null;
   const label = continueLabel(item.title, progress);
@@ -53,6 +54,16 @@ export function ContinueCard({ item, selected, collections, onSelect, onRemoveWa
           background: `linear-gradient(160deg, color-mix(in srgb, ${tone} 46%, var(--color-surface)) 0%, var(--color-surface) 82%)`,
         }}
       >
+        {item.posterUrl !== undefined && !imageFailed && (
+          <img
+            src={item.posterUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        )}
         {ratio !== undefined && <ProgressBar ratio={ratio} className="absolute inset-x-0 bottom-0" />}
       </button>
       <span className="flex min-w-0 justify-between gap-2 font-mono text-xs">

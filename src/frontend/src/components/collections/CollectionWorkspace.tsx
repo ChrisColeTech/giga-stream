@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { labelColumn } from "@/components/ui/Form";
 import { NavItem, NavRail } from "@/components/ui/NavRail";
 import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { useCollectionMembers } from "@/hooks/useCollectionMembers";
 import { LIST_LABEL } from "@/lib/collections-copy";
 import { collectionFolder, collectionRow } from "@/lib/collections-model";
 import type { CollectionAnswer } from "@/services/collections";
@@ -26,6 +27,7 @@ export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceP
   const progress = useAppStore((state) => state.scanProgress);
   const row = collectionRow(collection);
   const folders = collection.folders.map((folder) => collectionFolder(folder, progress[folder.id]));
+  const members = useCollectionMembers(collection.id);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -47,7 +49,8 @@ export function CollectionWorkspace({ collection, onBack }: CollectionWorkspaceP
             <CollectionFolders collectionId={collection.id} folders={folders} />
           </div>
           <div ref={spy.bind("videos")}>
-            <CollectionMembers collectionId={collection.id} rows={[]} status="not-loaded" />
+            <CollectionMembers collectionId={collection.id} rows={members.rows}
+              status={members.loading ? "not-loaded" : "loaded"} onRemoved={members.refresh} />
           </div>
         </div>
       </div>

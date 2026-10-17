@@ -5,6 +5,7 @@ import type { JobListSchema, JobSchema } from "@/services/schemas/job-schema";
 import type { z } from "zod";
 import type { ScanProgress } from "@/types/collection";
 import type { LibraryPrefs } from "@/types/settings";
+import type { LibraryItem } from "@/types/library";
 
 const EMPTY_COUNTS: ViewCounts = { all: 0, history: 0, favorites: 0, collections: {} };
 
@@ -16,6 +17,7 @@ export interface LibrarySlice {
   scanProgress: Readonly<Record<string, ScanProgress>>;
   libraryCounts: ViewCounts;
   libraryQuery: LibraryQuery;
+  libraryItems: readonly LibraryItem[];
   library: LibraryPrefs;
   setCollections: (collections: z.infer<typeof CollectionListSchema>) => void;
   beginCollectionsRead: () => number;
@@ -32,9 +34,11 @@ export interface LibrarySlice {
   setScanProgress: (folderId: string, progress: ScanProgress) => void;
   setLibraryCounts: (counts: ViewCounts) => void;
   setLibraryQuery: (change: Partial<LibraryQuery>) => void;
+  rememberLibraryItems: (items: readonly LibraryItem[]) => void;
   setLibraryPrefs: (change: Partial<LibraryPrefs>) => void;
   setFavourite: (key: string, favourite: boolean) => void;
   setMembership: (key: string, collectionId: string, member: boolean) => void;
+  setMemberships: (key: string, collectionIds: readonly string[]) => void;
   marks: {
     readonly favourites: Readonly<Record<string, boolean>>;
     readonly memberships: Readonly<Record<string, readonly string[]>>;
@@ -57,6 +61,7 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
     scanProgress: {},
     libraryCounts: EMPTY_COUNTS,
     libraryQuery: { ...DEFAULT_QUERY },
+    libraryItems: [],
     library: {
       libraryView: DEFAULT_SETTINGS.libraryView,
       librarySort: DEFAULT_SETTINGS.librarySort,
@@ -124,6 +129,11 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       set({ scanProgress: { ...get().scanProgress, [folderId]: progress } }),
     setLibraryCounts: (libraryCounts) => set({ libraryCounts }),
     setLibraryQuery: (change) => set({ libraryQuery: { ...get().libraryQuery, ...change } }),
+    rememberLibraryItems: (items) => {
+      const byKey = new Map(get().libraryItems.map((item) => [`${item.ref.kind}:${item.ref.id}`, item]));
+      for (const item of items) byKey.set(`${item.ref.kind}:${item.ref.id}`, item);
+      set({ libraryItems: [...byKey.values()] });
+    },
     setLibraryPrefs: (change) =>
       set({ library: { ...get().library, ...change }, settingsRevision: get().settingsRevision + 1 }),
     marks: { favourites: {}, memberships: {} },
@@ -138,6 +148,10 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
         ? [...current.filter((id) => id !== collectionId), collectionId]
         : current.filter((id) => id !== collectionId);
       set({ marks: { ...marks, memberships: { ...marks.memberships, [key]: next } } });
+    },
+    setMemberships: (key, collectionIds) => {
+      const marks = get().marks;
+      set({ marks: { ...marks, memberships: { ...marks.memberships, [key]: [...collectionIds] } } });
     },
   };
 }
