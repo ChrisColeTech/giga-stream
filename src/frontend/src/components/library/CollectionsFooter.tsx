@@ -11,7 +11,7 @@ export function CollectionsFooter() {
   return (
     <div className="flex-none border-t border-hair p-2">
       <Button full onClick={() => openOverlay("collections")}>
-        <FolderCog className="size-3.5" aria-hidden /> Manage collections
+        <FolderCog className="size-3.5 text-muted" aria-hidden /> Manage collections
       </Button>
     </div>
   );

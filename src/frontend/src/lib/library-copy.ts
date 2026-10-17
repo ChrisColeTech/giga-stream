@@ -21,13 +21,16 @@ export const LIBRARY_COPY = {
   scanning: "Scanning folders",
   watched: "Watched",
   moreActions: "More actions",
+  play: "Play",
+  open: "Open",
+  info: "Info",
   rating: "Rating",
   seasonsNone: "No seasons",
   cast: "Cast",
   plot: "Plot",
   runtime: "Runtime",
   seasons: "Seasons",
-  continueHeading: "Continue Watching",
+  continueHeading: "Continue watching",
   listLabel: "Titles",
 } as const;
 

@@ -32,7 +32,9 @@ export function ContextMenuRow({ row, hasTicks }: ContextMenuRowProps) {
     return <Menu.Separator className="mx-0.5 my-1 h-px bg-hair" />;
   }
   if (row.kind === "heading") {
-    return <Menu.Label className="px-2 pt-1.25 pb-0.75 font-mono text-[10px] text-dim">{row.label}</Menu.Label>;
+    return (
+      <Menu.Label className="px-2 pt-1.25 pb-0.75 font-sans text-[11px] font-semibold text-faint">{row.label}</Menu.Label>
+    );
   }
   return (
     <Menu.Item

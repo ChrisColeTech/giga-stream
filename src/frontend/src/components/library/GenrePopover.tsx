@@ -46,7 +46,7 @@ export function GenrePopover({ genres, selected, onChange }: GenrePopoverProps) 
         className="h-9! justify-between px-2.5"
       >
         <span className="min-w-0 truncate font-sans text-[13px] font-normal">{label}</span>
-        <ChevronDown className="size-3.5 flex-none" aria-hidden />
+        <ChevronDown className="size-3.5 flex-none text-muted" aria-hidden />
       </Button>
       {open && (
         <div

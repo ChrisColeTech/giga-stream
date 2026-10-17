@@ -42,7 +42,7 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
       data-card-id={id}
       onContextMenu={onMenu}
       className={cn(
-        "flex min-w-0 items-center gap-2 rounded-card border px-1.5 py-1.5",
+        "flex min-w-0 items-center gap-2 rounded-card border px-1.5 py-1.5 transition-[background,border-color] duration-fade ease-linear",
         selected ? "border-accent-edge bg-accent-tint" : "border-transparent hover:bg-hov",
       )}
     >
@@ -61,28 +61,34 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate font-sans text-[13px] text-text">{item.title}</span>
-          {facts !== "" && <span className="truncate font-mono text-[11px] text-dim">{facts}</span>}
+          {facts !== "" && <span className="truncate font-sans text-xs text-dim">{facts}</span>}
           {ratio !== undefined && <ProgressBar ratio={ratio} />}
         </span>
       </button>
       <IconButton
         bordered
+        round
         on={item.favorite}
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
         title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         onClick={() => changeFavourite(item.ref, !item.favorite)}
       >
-        <Star className="size-3.5" fill={item.favorite ? "currentColor" : "none"} aria-hidden />
+        <Star
+          className={cn("size-3.5", item.favorite ? "text-accent-text" : "text-muted")}
+          fill={item.favorite ? "currentColor" : "none"}
+          aria-hidden
+        />
       </IconButton>
       <Button size="sm" onClick={() => playRef(item.ref)}>
-        <Play aria-hidden /> {item.kind === "tv" ? "Open" : "Play"}
+        <Play className="text-muted" aria-hidden /> {item.kind === "tv" ? LIBRARY_COPY.open : LIBRARY_COPY.play}
       </Button>
       <Button size="sm" ref={infoRef} onClick={context.onInfo}>
-        <Info aria-hidden /> Info
+        <Info className="text-muted" aria-hidden /> {LIBRARY_COPY.info}
       </Button>
       <IconButton
         bordered
+        round
         aria-label={LIBRARY_COPY.moreActions}
         title={LIBRARY_COPY.moreActions}
         onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context)}

@@ -7,12 +7,13 @@ export interface ShelfHeadingProps {
   readonly onSeeAll: () => void;
 }
 
-/** A shelf's heading (`06` section 4, Rows): the name, its count in mono, and See all at the right end. */
+/** A shelf's heading (`06` section 4, Rows), in the section-header role of `21` section 8a: the name in sans 11px semibold,
+ *  faint; its count in mono 11px, a value; See all at the right end. */
 export function ShelfHeading({ name, count, onSeeAll }: ShelfHeadingProps) {
   return (
     <div className="flex min-w-0 items-center gap-2 px-3">
-      <h2 className="m-0 min-w-0 truncate font-sans text-[13px] leading-5 font-bold text-text">{name}</h2>
-      <span className="flex-none font-mono text-[11px] leading-5 text-dim">{count}</span>
+      <h2 className="m-0 min-w-0 truncate font-sans text-[11px] leading-5 font-semibold text-faint">{name}</h2>
+      <span className="flex-none font-mono text-[11px] leading-5 text-dim tabular-nums">{count}</span>
       <Button
         size="sm"
         variant="ghost"
