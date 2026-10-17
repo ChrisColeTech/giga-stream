@@ -5,7 +5,7 @@ import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { FACT_UNKNOWN, NOT_SIGNED_IN, SETTINGS_LABELS } from "@/constants/settings-sections";
-import { SIGNED_OUT_NOTICE } from "@/constants/sign-in-copy";
+import { useSignOut } from "@/hooks/useSignOut";
 import { useAppStore } from "@/store/app-store";
 
 /* A read-only fact: mono, muted, one control high (the template's About). */
@@ -15,8 +15,7 @@ const FACT = "flex h-9 items-center font-mono text-sm text-muted";
  *  place. Signed out, the facts are dashes and `Sign out` says why it cannot be used. */
 export function SessionSection() {
   const actor = useAppStore((state) => state.actor);
-  const signOut = useAppStore((state) => state.signOut);
-  const say = useAppStore((state) => state.say);
+  const signOut = useSignOut();
   const unknown = actor === null ? NOT_SIGNED_IN : undefined;
 
   return (
@@ -36,10 +35,7 @@ export function SessionSection() {
           <Button
             variant="ghost"
             reason={unknown}
-            onClick={() => {
-              signOut();
-              say(SIGNED_OUT_NOTICE);
-            }}
+            onClick={() => void signOut()}
           >
             <LogOut aria-hidden /> Sign out
           </Button>

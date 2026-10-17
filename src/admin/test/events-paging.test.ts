@@ -24,7 +24,8 @@ describe("the Events drawer's starting rows", () => {
   it("are empty before sign-in: the audit log is read after it", () => {
     state().signOut();
     assert.deepEqual(state().events, []);
-    state().signIn("ada@example.test");
+    state().beginSignIn();
+    state().finishSignIn({ ok: true, session: { actor: actorFor("ada@example.test") } });
     assert.equal(state().events.length, START);
   });
 });
@@ -85,7 +86,8 @@ describe("the session", () => {
     assert.deepEqual(actorFor(" ed@example.test"), { email: "ed@example.test", name: "ed" });
     state().signOut();
     assert.equal(state().actor, null);
-    state().signIn("ed@example.test");
+    state().beginSignIn();
+    state().finishSignIn({ ok: true, session: { actor: actorFor("ed@example.test") } });
     assert.equal(state().signedIn, true);
     assert.equal(state().actor?.email, "ed@example.test");
   });

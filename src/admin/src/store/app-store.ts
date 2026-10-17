@@ -31,7 +31,7 @@ export type AppState = ChromeSlice<AdminKinds> &
   WorkSlice;
 
 export const useAppStore = create<AppState>()((set, get) => {
-  const session = sessionSlice(set);
+  const session = sessionSlice(set, get);
   return {
     ...createChromeSlice<AdminKinds>(set, get, {
       defaults: APPEARANCE_DEFAULTS,
