@@ -17,8 +17,14 @@ export function SkeletonCards({ count, cardWidth }: SkeletonCardsProps) {
     <div className={fixed ? "flex w-max gap-2 p-1" : "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3 p-3"} aria-hidden>
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className={fixed ? "flex flex-none flex-col gap-1.5" : "flex min-w-0 flex-col gap-1.5"} style={columnStyle}>
-          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-card">
-            <Skeleton className="absolute inset-0 rounded-card" />
+          <div
+            className={
+              fixed
+                ? "relative aspect-[2/3] w-full overflow-hidden rounded-ctl border border-border bg-surface"
+                : "relative aspect-[2/3] w-full overflow-hidden rounded-card"
+            }
+          >
+            <Skeleton className={fixed ? "absolute inset-0 rounded-ctl" : "absolute inset-0 rounded-card"} />
           </div>
           <Skeleton style={{ width: "80%" }} />
           <Skeleton className="opacity-60" style={{ width: "40%" }} />
