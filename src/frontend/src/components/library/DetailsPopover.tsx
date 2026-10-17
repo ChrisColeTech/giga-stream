@@ -20,7 +20,8 @@ export interface DetailsPopoverProps {
  *  runtime and plot come from the title's detail and are shimmer lines until it is read. */
 export function DetailsPopover({ item, anchor, onClose, belongs }: DetailsPopoverProps) {
   const { detail, pending } = useTitleDetail(item.ref.id);
-  const rating = ratingOutOfTen(detail?.rating ?? item.rating);
+  /* The card's own rating, never the detail's: TMDB's list and detail answers differ, and the badge must agree. */
+  const rating = ratingOutOfTen(item.rating);
   const genres = detail?.genres ?? item.genres;
   const facts = detailFacts(item, detail);
 

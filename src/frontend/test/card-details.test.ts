@@ -15,6 +15,11 @@ describe("the rating badge", () => {
     assert.equal(ratingOutOfTen(7.142), "7.1 / 10");
   });
 
+  it("agrees with the popover line for the same (card) rating", () => {
+    assert.equal(ratingBadge(7.159), "7.2");
+    assert.equal(ratingOutOfTen(7.159), `${ratingBadge(7.159)} / 10`);
+  });
+
   it("is absent for an unknown, unrated or invalid rating", () => {
     assert.equal(ratingBadge(undefined), undefined);
     assert.equal(ratingBadge(0), undefined);
