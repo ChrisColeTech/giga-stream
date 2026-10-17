@@ -4,14 +4,13 @@ import { PosterImage } from "@/components/ui/PosterImage";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { workSpec } from "@/constants/child-window";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";
-import { playRef } from "@/components/library/library-service";
-import { setFavorite, useMarks } from "@/components/library/marks-store";
+import { changeFavourite, playRef } from "@/components/library/library-service";
 import { TitleWatchBlock } from "@/components/library/TitleWatchBlock";
-import { COLLECTION_ROWS } from "@/fixtures/collections";
+import { COLLECTION_ROWS, MEMBERSHIP } from "@/fixtures/collections";
 import { LIBRARY_ITEMS, TITLE_DETAILS } from "@/fixtures/titles";
 import { durationLabel, identityLine, ratingLabel, seasonsLabel } from "@/lib/library-facts";
 import { LIBRARY_COPY } from "@/lib/library-copy";
-import { resolveItem, type ResolvedItem } from "@/lib/library-marks";
+import { NO_HISTORY, resolveItem, type ResolvedItem } from "@/lib/library-marks";
 import { useAppStore } from "@/store/app-store";
 import type { TitleDetail } from "@/types/title";
 import { ChildWindow } from "./ChildWindow";
@@ -24,9 +23,9 @@ const SPEC = workSpec("title-info", "Title information", { width: 640, body: 480
 export function TitleInfoWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
   const ref = useAppStore((state) => state.overlayItem);
-  const marks = useMarks();
+  const marks = useAppStore((state) => state.marks);
   const base = LIBRARY_ITEMS.find((candidate) => ref !== null && candidate.ref.kind === ref.kind && candidate.ref.id === ref.id);
-  const item: ResolvedItem | undefined = base === undefined ? undefined : resolveItem(base, marks);
+  const item: ResolvedItem | undefined = base === undefined ? undefined : resolveItem(base, marks, NO_HISTORY, MEMBERSHIP);
   const detail: TitleDetail | undefined = ref?.kind === "title" ? TITLE_DETAILS[ref.id] : undefined;
   const progress = item?.progress;
   const local = item?.kind === "local";
@@ -63,7 +62,7 @@ export function TitleInfoWindow() {
             disabled={item === undefined}
             title={item === undefined ? LIBRARY_COPY.noItem : undefined}
             onClick={() => {
-              if (item !== undefined) setFavorite(item.ref, !item.favorite);
+              if (item !== undefined) changeFavourite(item.ref, !item.favorite);
             }}
           >
             <Star className="size-3" fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />

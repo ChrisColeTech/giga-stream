@@ -10,10 +10,9 @@ import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
 import { enterOnCard } from "./card-keys";
 import { menuEventBelow, openCardMenu } from "./card-menu";
-import { playRef } from "./library-service";
+import { changeFavourite, playRef } from "./library-service";
 import { openTitleInfo } from "./open-title-info";
 import { ProgressBar } from "./ProgressBar";
-import { setFavorite } from "./marks-store";
 
 export interface PosterListRowProps {
   readonly item: ResolvedItem;
@@ -21,15 +20,21 @@ export interface PosterListRowProps {
   readonly inHistory: boolean;
   readonly collections: readonly CollectionRow[];
   readonly onSelect: (id: string) => void;
+  readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
 /** One title in the list view: a thumbnail, its name and facts, and the same commands as a card. */
-export function PosterListRow({ item, selected, inHistory, collections, onSelect }: PosterListRowProps) {
+export function PosterListRow({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterListRowProps) {
   const infoRef = useRef<HTMLButtonElement>(null);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
   const facts = [identityLine(item), item.genres.join(", ")].filter((part) => part !== "").join(" · ");
-  const context = { collections, inHistory, onInfo: () => openTitleInfo(item.ref, infoRef.current) };
+  const context = {
+    collections,
+    inHistory,
+    onInfo: () => openTitleInfo(item.ref, infoRef.current),
+    onRemoveWatch: () => onRemoveWatch(item),
+  };
   const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
 
   return (
@@ -66,7 +71,7 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
         title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
-        onClick={() => setFavorite(item.ref, !item.favorite)}
+        onClick={() => changeFavourite(item.ref, !item.favorite)}
       >
         <Star className="size-3.5" fill={item.favorite ? "currentColor" : "none"} aria-hidden />
       </IconButton>

@@ -11,9 +11,8 @@ import type { CollectionRow } from "@/types/collection";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { enterOnCard } from "./card-keys";
 import { openTitleInfo } from "./open-title-info";
-import { playRef } from "./library-service";
+import { changeFavourite, playRef } from "./library-service";
 import { ProgressBar } from "./ProgressBar";
-import { setFavorite } from "./marks-store";
 
 export interface PosterCardProps {
   readonly item: ResolvedItem;
@@ -21,17 +20,23 @@ export interface PosterCardProps {
   readonly inHistory: boolean;
   readonly collections: readonly CollectionRow[];
   readonly onSelect: (id: string) => void;
+  readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
 /** One title in the grid (`06` section 4.2): a 2:3 poster with a favorite mark, progress and a watched check. Play and
  *  Info show on hover and on keyboard focus. A press selects; Enter on the selected card opens Info. */
-export function PosterCard({ item, selected, inHistory, collections, onSelect }: PosterCardProps) {
+export function PosterCard({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
   const infoRef = useRef<HTMLButtonElement>(null);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
   const watched = item.progress?.state === "watched";
   const meta = [item.year, item.quality].filter((part) => part !== undefined).map(String).join(" · ");
-  const context = { collections, inHistory, onInfo: () => openTitleInfo(item.ref, infoRef.current) };
+  const context = {
+    collections,
+    inHistory,
+    onInfo: () => openTitleInfo(item.ref, infoRef.current),
+    onRemoveWatch: () => onRemoveWatch(item),
+  };
   const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
 
   return (
@@ -59,7 +64,7 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect }:
           aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
           aria-pressed={item.favorite}
           title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
-          onClick={() => setFavorite(item.ref, !item.favorite)}
+          onClick={() => changeFavourite(item.ref, !item.favorite)}
           className="absolute top-1.5 left-1.5 z-10 size-6"
         >
           <Star className="size-3" fill={item.favorite ? "currentColor" : "none"} aria-hidden />

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveItems, seedMarks, type ResolvedItem } from "@/lib/library-marks";
+import { NO_HISTORY, resolveItems, type ResolvedItem } from "@/lib/library-marks";
 import {
   DEFAULT_QUERY,
   collectionSource,
@@ -36,7 +36,12 @@ const ITEMS: readonly LibraryItem[] = [
   },
 ];
 
-const ALL: readonly ResolvedItem[] = resolveItems(ITEMS, seedMarks(ITEMS, { "m-a": ["c-x"], "t-b": ["c-x", "c-y"] }));
+const ALL: readonly ResolvedItem[] = resolveItems(
+  ITEMS,
+  { favourites: {}, memberships: {} },
+  NO_HISTORY,
+  { "m-a": ["c-x"], "t-b": ["c-x", "c-y"] },
+);
 const query = (change: Partial<LibraryQuery>): LibraryQuery => ({ ...DEFAULT_QUERY, ...change });
 const titles = (items: readonly ResolvedItem[]): string[] => items.map((item) => item.title);
 

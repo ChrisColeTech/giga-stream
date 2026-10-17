@@ -17,7 +17,6 @@ export function SearchField({ value, onChange }: SearchFieldProps) {
       <TextField
         data-search
         aria-label="Search"
-        placeholder="Search titles"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="h-9! pr-7 pl-7"

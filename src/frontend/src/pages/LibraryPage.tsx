@@ -3,10 +3,18 @@ import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
-import { useMarks } from "@/components/library/marks-store";
-import { COLLECTION_ROWS } from "@/fixtures/collections";
+import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
+import { COLLECTION_ROWS, MEMBERSHIP } from "@/fixtures/collections";
 import { LIBRARY_ITEMS } from "@/fixtures/titles";
-import { resolveItems } from "@/lib/library-marks";
+import {
+  NO_HISTORY,
+  itemKey,
+  resolveItems,
+  withCleared,
+  withRemoved,
+  type HistoryMarks,
+  type ResolvedItem,
+} from "@/lib/library-marks";
 import {
   DEFAULT_QUERY,
   genreChoices,
@@ -18,23 +26,35 @@ import {
   type Scope,
   type SourceId,
 } from "@/lib/library-query";
+import { useAppStore } from "@/store/app-store";
 
 const GENRES = genreChoices(LIBRARY_ITEMS);
 const YEARS = yearChoices(LIBRARY_ITEMS);
 
-/** Library: collections on the left, the media body in the centre, filters on the right. The query, the view and the
- *  selection are local to the surface; the marks come from the shared marks store. */
+/** Library: collections on the left, the media body in the centre, filters on the right. The query, the view, the
+ *  selection and the watch-history marks are local to the surface; favourites and memberships come from the store. */
 export function LibraryPage({ active }: { active: boolean }) {
   const [query, setQuery] = useState<LibraryQuery>(DEFAULT_QUERY);
   const [view, setView] = useState<ListView>("grid");
   const [selected, setSelected] = useState<string | null>(null);
-  const marks = useMarks();
-  const items = useMemo(() => resolveItems(LIBRARY_ITEMS, marks), [marks]);
+  const [history, setHistory] = useState<HistoryMarks>(NO_HISTORY);
+  const marks = useAppStore((state) => state.marks);
+  const items = useMemo(() => resolveItems(LIBRARY_ITEMS, marks, history, MEMBERSHIP), [marks, history]);
   const shown = useMemo(() => visibleItems(items, query), [items, query]);
   const counts = useMemo(() => viewCounts(items, COLLECTION_ROWS), [items]);
   const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
   const onSource = (source: SourceId): void => patch({ source });
   const onScope = (scope: Scope): void => patch({ scope });
+
+  /* A watch entry or the whole History changes only when the fileserver accepts the call. */
+  const onRemoveWatch = useCallback((item: ResolvedItem): void => {
+    if (item.watchId === undefined || !removeWatchEntry(item.watchId)) return;
+    const key = itemKey(item.ref);
+    setHistory((current) => withRemoved(current, key));
+  }, []);
+  const onClearHistory = useCallback((): void => {
+    if (clearWatchHistory()) setHistory(withCleared());
+  }, []);
 
   return (
     <WorkspaceSplit
@@ -52,6 +72,8 @@ export function LibraryPage({ active }: { active: boolean }) {
           selected={selected}
           onScope={onScope}
           onSelect={setSelected}
+          onRemoveWatch={onRemoveWatch}
+          onClearHistory={onClearHistory}
         />
       }
       right={<LibraryFilters query={query} view={view} genres={GENRES} years={YEARS} onQuery={patch} onView={setView} />}

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clearHistory, removeWatch, resolveItem, resolveItems, seedMarks, setFavorite, setMembership } from "@/lib/library-marks";
+import { NO_HISTORY, itemKey, resolveItem, resolveItems, withCleared, withRemoved } from "@/lib/library-marks";
 import type { LibraryItem } from "@/types/library";
 
 const ITEMS: readonly LibraryItem[] = [
-  { ref: { kind: "title", id: "movie-1" }, kind: "movie", title: "One", genres: [], favorite: false },
+  { ref: { kind: "title", id: "1" }, kind: "movie", title: "One", genres: [], favorite: false },
   {
-    ref: { kind: "title", id: "movie-2" },
+    ref: { kind: "title", id: "2" },
     kind: "movie",
     title: "Two",
     genres: [],
@@ -15,43 +15,38 @@ const ITEMS: readonly LibraryItem[] = [
   },
 ];
 
-const MEMBERSHIP = { "movie-1": ["c-a"] };
+const SEED = { "1": ["c-a"] };
+const EMPTY = { favourites: {}, memberships: {} };
 
-describe("seeding and resolving marks", () => {
-  it("seeds favorites and memberships from the fixtures", () => {
-    const marks = seedMarks(ITEMS, MEMBERSHIP);
-    const [one, two] = resolveItems(ITEMS, marks);
+describe("keys", () => {
+  it("keys an item as kind and id, the store's form", () => {
+    assert.equal(itemKey({ kind: "local", id: "local-1" }), "local:local-1");
+  });
+});
+
+describe("resolving an item over the store and the fixture", () => {
+  it("reads the fixture favourite and seed memberships while the store has none", () => {
+    const [one, two] = resolveItems(ITEMS, EMPTY, NO_HISTORY, SEED);
     assert.equal(one?.favorite, false);
     assert.equal(two?.favorite, true);
     assert.deepEqual(one?.collectionIds, ["c-a"]);
     assert.deepEqual(two?.collectionIds, []);
   });
 
-  it("keeps the fixture progress until History is cleared or an entry is removed", () => {
-    const marks = seedMarks(ITEMS, MEMBERSHIP);
+  it("prefers the store's marks over the fixture", () => {
+    const marks = { favourites: { "movie:1": true }, memberships: { "movie:1": ["c-b"] } };
+    const one = ITEMS[0];
+    assert.ok(one !== undefined);
+    const resolved = resolveItem(one, marks, NO_HISTORY, SEED);
+    assert.equal(resolved.favorite, true);
+    assert.deepEqual(resolved.collectionIds, ["c-b"]);
+  });
+
+  it("drops progress when an entry is removed or History is cleared", () => {
     const two = ITEMS[1];
     assert.ok(two !== undefined);
-    assert.notEqual(resolveItem(two, marks).progress, undefined);
-    assert.equal(resolveItem(two, removeWatch(marks, "movie-2")).progress, undefined);
-    assert.equal(resolveItem(two, clearHistory(marks)).progress, undefined);
-  });
-});
-
-describe("the marks are immutable updates", () => {
-  it("sets a favorite without touching the input", () => {
-    const marks = seedMarks(ITEMS, MEMBERSHIP);
-    const next = setFavorite(marks, "movie-1", true);
-    assert.equal(marks.favorite["movie-1"], false);
-    assert.equal(next.favorite["movie-1"], true);
-  });
-
-  it("adds and removes a membership without duplicates", () => {
-    const marks = seedMarks(ITEMS, MEMBERSHIP);
-    const added = setMembership(marks, "movie-1", "c-b", true);
-    assert.deepEqual(added.collections["movie-1"], ["c-a", "c-b"]);
-    const again = setMembership(added, "movie-1", "c-b", true);
-    assert.deepEqual(again.collections["movie-1"], ["c-a", "c-b"]);
-    const removed = setMembership(again, "movie-1", "c-a", false);
-    assert.deepEqual(removed.collections["movie-1"], ["c-b"]);
+    assert.notEqual(resolveItem(two, EMPTY, NO_HISTORY, SEED).progress, undefined);
+    assert.equal(resolveItem(two, EMPTY, withRemoved(NO_HISTORY, "movie:2"), SEED).progress, undefined);
+    assert.equal(resolveItem(two, EMPTY, withCleared(), SEED).progress, undefined);
   });
 });

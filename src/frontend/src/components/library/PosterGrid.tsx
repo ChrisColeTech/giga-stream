@@ -12,13 +12,14 @@ export interface PosterGridProps {
   readonly inHistory: boolean;
   readonly collections: readonly CollectionRow[];
   readonly onSelect: (id: string) => void;
+  readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
 /* Cards at least 144 px wide, so six to eight across at 1600 px of body width (`06` section 4.2). */
 const GRID = "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3 p-3";
 
 /** The poster grid. Loading and empty draw card skeletons; arrow keys move the selection across the cards. */
-export function PosterGrid({ items, selected, inHistory, collections, onSelect }: PosterGridProps) {
+export function PosterGrid({ items, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterGridProps) {
   if (items.length === 0) return <SkeletonCards count={SKELETON_CARDS} />;
   const ids = items.map((item) => item.ref.id);
   return (
@@ -36,6 +37,7 @@ export function PosterGrid({ items, selected, inHistory, collections, onSelect }
           inHistory={inHistory}
           collections={collections}
           onSelect={onSelect}
+          onRemoveWatch={onRemoveWatch}
         />
       ))}
     </div>

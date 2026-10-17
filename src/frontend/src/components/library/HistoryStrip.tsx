@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { CLEAR_WINDOW_MS } from "@/lib/library-limits";
+import { useArmedAction } from "@/hooks/useArmedAction";
 import { LIBRARY_COPY } from "@/lib/library-copy";
+import { CLEAR_WINDOW_MS } from "@/lib/library-limits";
 
 export interface HistoryStripProps {
   readonly empty: boolean;
@@ -11,20 +11,14 @@ export interface HistoryStripProps {
 /** The strip under the type strip in History: Clear history is two-step. The first press arms it and names the
  *  consequence; the second press within four seconds clears. Focus loss and Escape disarm it. */
 export function HistoryStrip({ empty, onClear }: HistoryStripProps) {
-  const [armed, setArmed] = useState(false);
-
-  useEffect(() => {
-    if (!armed) return undefined;
-    const timer = window.setTimeout(() => setArmed(false), CLEAR_WINDOW_MS);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
+  const { armed, arm, disarm } = useArmedAction(CLEAR_WINDOW_MS);
 
   const press = (): void => {
     if (!armed) {
-      setArmed(true);
+      arm();
       return;
     }
-    setArmed(false);
+    disarm();
     onClear();
   };
 
@@ -32,10 +26,10 @@ export function HistoryStrip({ empty, onClear }: HistoryStripProps) {
     <div
       className="flex flex-none items-center justify-end border-b border-hair px-3 py-1.5"
       onKeyDown={(event) => {
-        if (event.key === "Escape") setArmed(false);
+        if (event.key === "Escape") disarm();
       }}
       onBlur={(event) => {
-        if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setArmed(false);
+        if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) disarm();
       }}
     >
       <Button
