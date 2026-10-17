@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { LIBRARY_COPY } from "@/lib/library-copy";
 import { CONTINUE_LIMIT } from "@/lib/library-limits";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { DEFAULT_QUERY } from "@/lib/library-query";
@@ -67,7 +68,7 @@ describe("buildShelves order", () => {
       marks: NO_MARKS,
     });
     assert.deepEqual(named(shelves), [
-      "Continue Watching",
+      LIBRARY_COPY.continueHeading,
       "Favorites",
       "Apple",
       "Zebra",
@@ -110,7 +111,7 @@ describe("Continue Watching", () => {
     );
     const watched = { positionMs: 9, durationMs: 9, state: "watched" as const };
     const items = [...many, item("done", "movie", [], { progress: watched })];
-    const shelf = find(buildShelves({ items, collections: [], marks: NO_MARKS }), "Continue Watching");
+    const shelf = find(buildShelves({ items, collections: [], marks: NO_MARKS }), LIBRARY_COPY.continueHeading);
     assert.equal(shelf.items.length, CONTINUE_LIMIT);
     assert.ok(shelf.items.every((entry) => entry.progress?.state === "watching"));
   });
