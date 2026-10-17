@@ -34,7 +34,7 @@ export const SURFACES: Readonly<Record<Surface, SurfaceConfig>> = {
     panes: {
       left: { min: 190, max: 380, preferred: 236 },
       right: { min: 220, max: 420, preferred: 280 },
-      bottom: { min: 60, max: 280, preferred: 140 },
+      bottom: { min: 60, max: 280, preferred: 210 },
     },
   },
 };

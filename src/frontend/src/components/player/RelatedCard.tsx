@@ -7,9 +7,9 @@ export interface RelatedCardProps {
   readonly onOpen: () => void;
 }
 
-/** One related title (`06` section 5.5): a 2:3 poster, the title and the year. Sized to the 140 px band: the card is as wide
- *  as its poster, RELATED_CARD_WIDTH (48 px), so the poster is 72 px tall and the card 102 px tall in the 112 px body. The
- *  skeleton cards of the same band use the same width. */
+/** One related title (`06` section 5.5): a 2:3 poster, the title and the year beneath it, always drawn, even on the
+ *  fallback poster. Sized to the 210 px band: the card is as wide as its poster, RELATED_CARD_WIDTH (92 px), so the poster
+ *  is 138 px tall and the card about 170 px tall in the 182 px body. The skeleton cards of the same band use the same width. */
 export function RelatedCard({ item, onOpen }: RelatedCardProps) {
   return (
     <button
