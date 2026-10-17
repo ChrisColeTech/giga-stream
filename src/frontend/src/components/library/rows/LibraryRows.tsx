@@ -29,7 +29,7 @@ export interface LibraryRowsProps {
   readonly loading: boolean;
   readonly paging: boolean;
   readonly hasMore: boolean;
-  readonly onLoadMore: () => void;
+  readonly onLoadMore: () => boolean;
   readonly titleRegionsLoading: boolean;
   /** Drawn under the type strip: the History strip while History is open, as the grid draws it. */
   readonly strip?: ReactNode;
@@ -64,7 +64,7 @@ export function LibraryRows({
   );
   const render = rowsRenderState(shelves.length, hasMore, paging);
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
       <div

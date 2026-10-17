@@ -34,7 +34,7 @@ export interface LibraryBodyProps {
   readonly loading: boolean;
   readonly paging: boolean;
   readonly hasMore: boolean;
-  readonly onLoadMore: () => void;
+  readonly onLoadMore: () => boolean;
   readonly titleRegionsLoading: boolean;
 }
 
@@ -65,7 +65,7 @@ export function LibraryBody({
   const continueRows = inHistory || !showContinue ? [] : continuing;
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
