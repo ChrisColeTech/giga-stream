@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { migrate, readSchemaVersion } from "../src/store/migrate.js";
 
-test("migration 004 safely types old collections and uses only conclusive title identity", () => {
+test("migrations after v3 safely type old collections and backfill local titles", () => {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE collections (
@@ -17,6 +17,13 @@ test("migration 004 safely types old collections and uses only conclusive title 
     CREATE TABLE collection_folders (
       id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, path TEXT NOT NULL, name TEXT NOT NULL,
       created_at INTEGER NOT NULL, last_scanned_at INTEGER
+    );
+    CREATE TABLE local_files (
+      id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, collection_id TEXT NOT NULL, path TEXT NOT NULL,
+      title TEXT NOT NULL, size_bytes INTEGER, mtime_ms INTEGER, duration_ms INTEGER, width INTEGER,
+      height INTEGER, video_codec TEXT, audio_codec TEXT, container TEXT, playable INTEGER NOT NULL DEFAULT 1,
+      probe_error_code TEXT, probe_error_message TEXT, poster_id TEXT, added_at INTEGER NOT NULL,
+      UNIQUE (folder_id, path)
     );
     INSERT INTO collections VALUES
       ('empty', 'Empty', 0, 0), ('movies', 'Movies', 0, 0), ('tv', 'TV', 0, 0),
@@ -31,11 +38,17 @@ test("migration 004 safely types old collections and uses only conclusive title 
       ('i9', 'uppercase', 'title', 'Movie-6', 0), ('i10', 'empty-suffix', 'title', 'movie-', 0),
       ('i11', 'malformed', 'title', 'movie-7x', 0), ('i12', 'bad-tv', 'title', 'tv-8x', 0);
     INSERT INTO collection_folders VALUES ('f1', 'folder', 'C:\\private', 'private', 0, NULL);
+    INSERT INTO local_files (id, folder_id, collection_id, path, title, added_at)
+      VALUES ('file-1', 'f1', 'folder', 'C:\\private\\Feature.mkv', '', 0);
     PRAGMA user_version = 3;
   `);
 
-  assert.equal(migrate(db), 4);
-  assert.equal(readSchemaVersion(db), 4);
+  assert.equal(migrate(db), 5);
+  assert.equal(readSchemaVersion(db), 5);
+  assert.equal(
+    (db.prepare("SELECT title FROM local_files WHERE id = 'file-1'").get() as { title: string }).title,
+    "Feature.mkv",
+  );
   const rows = db.prepare("SELECT id, type FROM collections ORDER BY id").all() as Array<{
     id: string;
     type: string;
