@@ -97,10 +97,12 @@ skeletons while local files, collections, favorites and history stay usable.
 
 ## 6. Second launch
 
-The window opens on the tab you left, with your pane layout; Live opens on your last channel. Nothing
-else is restored: no window, popup or drawer, no selection, and the channel and title lists are read
-live again. Cached images are reused. If the backend is down, the lists are skeletons and the player
-stays; if it is back, they fill.
+The window opens on the surface you left with your pane layout and settings. **R1 enhancement, owner
+2026-10-17 (pending; `22` §5.1):** also restore the page query, presentation, selection, folds, scroll, and
+Player item/episode/source identity. Channel and title data are read live again; cached images are reused.
+Restoration obeys autoplay/resume settings rather than simulating a new Play gesture. A missing saved identity
+is cleared with one notice. Windows, popups and the Events drawer are not restored. Until R1 lands, only the
+shell/settings and last Live channel restore; page-local state resets.
 
 ## 7. Failure modes
 

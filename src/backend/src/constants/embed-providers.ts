@@ -30,7 +30,9 @@ export const EMBED_PROVIDER_CATALOG: SeedProvider[] = [
     origin: "https://player.vidzee.wtf", frameOrigins: ["https://player.vidzee.wtf"], messageShape: "player-event",
   },
   {
-    name: "Cinezo", source: "cinezo", order: 4, family: "embed",
+    // Order 0: the owner's default source for movies and TV (owner, 2026-10-17) — the first source
+    // by preference order, which every title's answer and the Player's default pick follow.
+    name: "Cinezo", source: "cinezo", order: 0, family: "embed",
     movieTemplate: "https://player.cinezo.live/embed/movie/{tmdbId}",
     episodeTemplate: "https://player.cinezo.live/embed/tv/{tmdbId}/{season}/{episode}",
   },

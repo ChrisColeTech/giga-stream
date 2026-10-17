@@ -10,7 +10,41 @@ corrected first.
 
 ---
 
-## 0. What the source says today (checked 2026-10-17)
+## 0. Current acceptance status (2026-10-17)
+
+Phase 1's completed visual composition remains the baseline. Phase 2 changes its data and actions, not its
+layout, typography, controls or empty/loading grammar. Any visual change requires the owner's explicit direction.
+
+| Work | Implementation | Acceptance |
+|---|---|---|
+| Backend/fileserver foundations | Landed, including provider sources, settings, collections and scan contracts | Cross-program sweep found additional gaps; not blanket-approved |
+| 2.0 Request boundary and schemas | Landed | Reopened: composite-child validation and remaining contract mismatches from the wire sweep |
+| 2.1 State/settings/shell | Landed | Reopened: Chrome exposed an unbound browser timer in layout write-back; direct fix now saves layouts; full walkthrough still required |
+| 2.2 Live | Landed | Live stream reads verified; complete visual/control acceptance remains open |
+| 2.3 Collections | Landed | CRUD/scan HTTP checks passed; complete Chrome walkthrough remains open |
+| 2.4 Library | Landed | Reopened after cached blank-title and full-width skeleton regressions; current Chrome reads pass with 40 named items on repeated reads; all view/action checks remain open |
+| 2.5 Player | Landed | Reopened after idle composition and browser runtime-detection regressions; current direct fixes restore video/inspector sections; saved-progress footer and complete playback walkthrough remain unverified |
+| 2.6 Events/guards | Incomplete | Guard/stream/embed reports and About facts still need wiring; event fixtures remain |
+| 2.7 Cleanup/full walks | Incomplete | Runtime stubs, unused fixtures and unresolved audit findings remain |
+
+Latest coordinator gate: **PASS, 555 tests**. This is compilation/unit verification, not complete phase acceptance.
+Chrome MCP verified repeated real Library answers with zero blank titles, populated title browser/inspector,
+restored inspector section toggles, corrected grid columns and layout-save behavior. It has not proved every
+surface/state or the packaged app's complete walkthrough. Previously produced installers are not final acceptance.
+
+**Direct corrective pass, owner-directed (2026-10-17):** Chrome MCP checked the real root stack at measured
+viewports 1302×641 and 1097×612. Library has visible titles and bounded poster columns; Related has visible
+captions with matching skeleton geometry. The idle video, inspector section headings and footer stay mounted;
+disabled Resume explains its missing saved position via a tooltip. VidSrc's Matrix player screen loads with no
+iframe sandbox and no sandbox-refusal screen. Two repeated Library reads each validate with 40 items and zero
+blank titles. The console capture has no application errors. Continuous provider playback and the remaining
+audit items are not marked verified by this check.
+
+The remaining wire sweep includes licences, startup rescans, dynamic stream track choices, partial-child
+decoding, season-zero handling, image/address boundaries, async player-policy acknowledgement, events and
+production stub/fixture removal. These are open work, not completed features.
+
+### Historical pre-wiring snapshot (2026-10-17, before wave A)
 
 - **Frontend.** Phase 1 is complete (with `25`'s visual-gap waves on top: the events drawer has real rows fed by
   `say()`, the store carries a library request, preferences apply at once and save only the admin address —
@@ -44,7 +78,7 @@ corrected first.
   and the availability routes. The Electron runs (`14` section 6.2) played VixSrc and VidZee movies and exact
   episodes with Ghostery on; VidSrc's episode played after the first ad-layer press.
 
-## 0.1 Amendments made with this revision (docs first, `07` section 2)
+## 0.1 Amendments made with the original plan (docs first, `07` section 2)
 
 | File | Change | Why |
 |---|---|---|
@@ -52,7 +86,7 @@ corrected first.
 | `03` §7.2b | the provider record gains `order` (number), `family` (`"embed" \| "stream"`), `movieTemplate?`, `episodeTemplate?`, `startParam?`, `subtitlesParam?`, `origin?`, `frameOrigins?`, `messageShape?`; POST/PUT accept them; migration adds the columns | `16` §4's shape, trimmed to what `14` proved; the archive backend held templates (`12` §1.1) |
 | `03` §7.5 | the sources rule: the backend fills, per title and per episode, one `TitleSource` per active provider whose template applies, ordered by `order` then id; a provider without a template for the kind yields no source; the stream rule is unchanged for the dev lane | the promised "fields that carry it ... written here from the results of `14`" |
 | `03` §1, §7.2b | the seeder is `src/backend/scripts/seed-providers.ts` — the one mechanism, no new env flag. Wave A upgrades it to the full catalog: every embed host of `18` §2 with its templates and parameters as captured (TV shapes marked verified or presumed), and the CinePro rows carrying their **own** `source` values (today the script collapses them all to `"cinepro"`, which the sources fill cannot tell apart). Skip-if-seeded stays | the owner's live database holds zero providers today, and this script is how providers have always arrived |
-| `06` §5.3, §10 | the stage toolbar gains a **Source** control when a title has two or more playable sources; `06` §10's "no source or provider control" is replaced (owner, this session) | the owner asked for source switching on the player screen |
+| `06` §5.3, §10 | the inspector footer gains a **Source** control when a title has two or more playable sources; the stage remains unobstructed | the owner asked for source switching beside the inspector footer controls |
 | `22` §8 | resolved in place; no `01` change — the guard reports ride the preload's named capability (`01` §7), not an application transport | the one push in the system is the desktop shell's |
 
 ```ts
@@ -94,11 +128,11 @@ interface TitleSource {
 - **No browser storage.** Saved state is a fileserver row (`02` section 2.3).
 - **Every wire value is `unknown` until Zod has validated it** (`01` section 2). A part of an answer the interface
   cannot read is one notice on the statusbar, and never costs the rest of the answer (`01` section 8).
-- **Embed containment is the PoC's, verbatim.** The frame allow list, the referrer policy, the browser-case
-  sandbox, the nested-frame guard and the dialog no-ops are ported from the PoC (`14` §2.2–2.4), not redesigned.
-  In Electron the frame runs unsandboxed (the proven configuration: Ghostery, the name backstop and the shell
-  guards contain it); in a browser it always runs sandboxed, and the interface says `unprotected` where the
-  mockup's statusbar said it (`14` §2.3; `16` §9.4 defaulted).
+- **Provider iframes have no sandbox attribute in either runtime** (owner, 2026-10-17). The mandatory
+  browser sandbox was an integration mistake: VidSrc refuses it. Keep the PoC allow list, origin referrer
+  policy, exact message checks and clean stop. Electron retains its ad blocker and main-process guards;
+  browser runtime is reported as `unprotected` in the statusbar, never over the video. Electron's renderer
+  process sandbox is a separate mechanism.
 
 ## 2. The service layer
 
@@ -138,8 +172,8 @@ shows its sentence once on the notice line.
 **The embed library is not a REST service:** `lib/embed-url.ts` builds the address from a `TitleSource`, resume
 seconds and the subtitle language; `lib/embed-messages.ts` is the PoC decode table, seconds to milliseconds;
 the desktop service sets/clears the source policy through the preload's named capability. Electron owns the
-static frame/dialog guard because a renderer cannot reach a cross-origin `contentDocument`; a browser relies on
-the iframe sandbox. These pieces are unit-tested (`14` §2.2–2.4, strengthened at product integration).
+static frame/dialog guard because a renderer cannot reach a cross-origin `contentDocument`; a browser has no
+Electron shell guards. Neither runtime adds an iframe sandbox. These pieces are unit-tested (`14` §2.2–2.4).
 
 ## 3. What each surface reads and writes
 
@@ -224,7 +258,7 @@ Start over banner, `resume` seeks to the watched position at once, `restart` sta
 | Local file | `GET /api/media/local/:id/info`; the Range route `GET /api/media/local/:id` | the file plays in the `<video>` and seeks through byte ranges (`03` section 3.10) |
 | Test-server title and episode | the `streamUrl` from `GET /api/titles/:id` and `.../seasons/:season` | plays in the `<video>` like a channel (`06` section 5.3) |
 | **Provider source (embed)** | the `sources` on the same answers | the stage hosts the source's embed address in the iframe of §3.4a; resume passes the watched seconds through `startParam`; progress comes from the decoded messages (`03` §7.5, `14`, `12` §2.3) |
-| **Source control** | none (local choice) | on the stage toolbar when the title has two or more of {its sources, its `streamUrl` if any}: lists them, marks the active one; picking one clean-stops the current embed (src to `about:blank`, frame removed) and hosts the next (`06` §5.3 as amended). Default, no pick: the first source by order; the `streamUrl`, when present, is listed last as `App player` |
+| **Source control** | none (local choice) | in the inspector footer above Resume / Start over when the title has two or more of {its sources, its `streamUrl` if any}: lists them, marks the active one; picking one clean-stops the current embed (src to `about:blank`, frame removed) and hosts the next (`06` §5.3). Default, no pick: the first source by order — the seeded preference puts **Cinezo first for movies and TV** (owner, 2026-10-17; migration `007`, catalog order 0); `streamUrl`, when present, is last as `App player` |
 | Progress | `PUT /api/watch` | every 30 s while playing and on pause, end, seek settle, tab switch and close; each playback numbers its writes from 1, and a lower number never replaces a higher one (`03` section 3.13, `06` section 5.3). For an embed the position is the last decoded message's, and the write also fires on `pause`/`ended` messages and on clean stop |
 | Resume and Start over | the watch entry in the title's detail | the banner shows where the title was left; Resume re-opens with `startAt` seconds for an embed, seek for the app's own media (`06` section 5.3) |
 | Episode browser | `GET /api/titles/:id/seasons/:season` | changing the season starts nothing; choosing an episode loads that exact episode — for an embed, the episode source's own address (`03` §3.6) |
@@ -237,8 +271,7 @@ there are no sources, which is exactly the dev-template lane (`03` §7.5). State
 ### 3.4a The embed host (ported from the PoC, `14` §2.2–2.4)
 
 - The stage swaps the `<video>` for a 16:9 iframe: `allow="autoplay; fullscreen; encrypted-media;
-  picture-in-picture"`, `allowFullscreen`, `referrerPolicy="origin"`; `sandbox="allow-scripts allow-same-origin
-  allow-presentation"` in the browser case, no sandbox attribute in Electron (the proven configuration).
+  picture-in-picture"`, `allowFullscreen`, `referrerPolicy="origin"`; no sandbox attribute in either runtime.
 - On frame load the nested-frame guard is installed: the source's `frameOrigins` are the allowed hosts, any other
   nested frame is pointed at `about:blank` and logged, `alert`/`confirm`/`prompt` become no-ops
   (`lib/frame-guard.ts`, the PoC's script verbatim).
@@ -326,7 +359,7 @@ Already running in the Electron host (`app/ad-blocker.ts` + `app/ad-hosts.ts`): 
 on the session, the `ad*`/`ads` host-resolver backstop, fail-soft (a first launch with no network starts
 unblocked and says so). This plan wires what the interface shows of it: every `ad blocked` report is an events row
 (host and request type), the About section's runtime facts say `Ad blocking: on` in Electron and `unprotected`
-in a browser, and provider embeds are always sandboxed in the browser case (`14` §2.3). No new setting: the
+in a browser; provider iframes have no sandbox attribute in either runtime (owner, 2026-10-17). No new setting: the
 blocker is on wherever the desktop shell runs (`16` §9.4 defaulted). The PoC's strict-mode allow lists stay a
 PoC instrument (`16` §7).
 
@@ -378,6 +411,32 @@ its parts are validated separately; the saved shell is applied once; the panes s
 frames; a 1.5 s fallback shows defaults without writing them back; later changes are written back 400 ms after the last
 change; a later state read never re-applies the saved shell.
 
+### 5.1 R1 — refresh and page-session restoration enhancement
+
+**Owner requested, 2026-10-17; pending implementation/acceptance.** Roll this into the refresh work, not a
+visual redesign. All saved page state lives in the fileserver, never browser storage.
+
+- **Source switching is not a page refresh.** Replace only the iframe/native media host. Keep the same
+  document, shell, selected title/episode, pane DOM, metadata, filters, scroll and inspector state. No title,
+  season, related, state or Library refetch is caused merely by selecting another playable source. Flush old
+  progress and carry position to the new source where supported. Switching must not crash/unmount the app.
+- **Intentional reload/relaunch restores the page session.** In addition to existing shell/settings, restore
+  Live query/category/selection; Library query, presentation, selection and scroll; Player item identity,
+  exact episode, browsed season, selected source id; pane folds and scroll positions. Runtime media/DOM objects
+  and fetched catalog payloads are never persisted; reread data and match restored IDs against fresh answers.
+- **Resume and auto-start keep their settings semantics.** Restoration is not a new user play gesture. Read
+  current watch progress; obey autoplay and resumeMode. A removed source falls back to the first playable
+  source; a removed item/collection/channel is cleared with one notice rather than a loop or fabricated row.
+- **Hydration is still one-time and non-destructive.** Defaults never overwrite saved page state before the
+  state read completes. Saved browsing values take precedence over default-view/default-sort settings on
+  restore; a deliberate later settings change still applies. Later refreshes retain local navigation.
+- **Proof:** reload from a filtered/scrolled Library and from an exact Player episode/source; verify identity,
+  filters, folds, scroll and source restore without autoplay escalation. Change Source repeatedly and assert
+  the document time origin and pane node identities are unchanged, with only the media host replaced.
+
+Implement as sequential delegated server and frontend refresh work after the direct regression fix is committed.
+Do not mark R1 complete until the gate and real Chrome MCP reload/source-switch walks pass.
+
 ## 5.2 Fileserver gap: serving the built interface
 
 `build-app.ts` whitelists `/`, `/index.html` and first segments `html|css|js|data`. The React build emits
@@ -404,7 +463,7 @@ and packages, but does not implement wave code.
 | 2.2 | live worker | `services/channels.ts`, `services/stream-player.ts`, the channel search and the stage | Live opens on the last channel; Refresh updates the dots; a test channel plays |
 | 2.3 | collections worker | `services/collections.ts`, `services/folders.ts`, `services/jobs.ts`, `services/desktop.ts`, `services/scan-stream.ts` | settings survive a restart; a collection is created and removed; a folder's scan streams and the indeterminate bar shows |
 | 2.4 | library worker | `services/library.ts`, `services/titles.ts`, `services/favorites.ts`, `services/watch.ts`; the menu's `Collections ▸` wired | the views show their counts; a favourite persists; a collection toggled from the card's menu is listed after a restart |
-| 2.5 | player worker | `services/local-media.ts`, the progress hook, the tabs, `lib/embed-url.ts`, `lib/embed-messages.ts`, `lib/frame-guard.ts`, the embed host component, the stage Source control | a local file plays and seeks; progress survives a restart; Resume works; with the seeder run, a title's first source plays in the embed and switching sources clean-stops and re-hosts |
+| 2.5 | player worker | `services/local-media.ts`, progress, one-item playback, `lib/embed-url.ts`, `lib/embed-messages.ts`, named desktop frame policy, the embed host, inspector-footer Source control | a local file plays and seeks; progress survives a restart; Resume works; with the seeder run, a title's first source plays in the embed and switching sources clean-stops and re-hosts |
 | 2.6 | events worker | the events wiring of §3.7 across api, stream player, embed host and `pocHost.onGuard`; the drawer UI | a connection loss, a failed stream, a refused popup and a blocked ad each produce a row; host only, no paths |
 | 2.7 | cleanup worker | fixtures deleted; `web:build`; the full walks | `grep` finds no import of `fixtures/`; the gate passes; the walks of `05` §3–5 run against the fileserver; the Electron window runs the embed with the guards and the blocked-ad rows |
 
@@ -456,12 +515,13 @@ events omit `absolutePath`, and terminal `done` repeats no file inventory; folde
 2. **Provider stage.** Built in wave 2.5 from the PoC's proven mechanics, per §3.4a. Embed-family providers only;
    stream-family sources wait until one is proven playable without a resolve step (`00` §5, `16` §3.2).
 3. **Source preference persistence.** In-session only in this phase: the pick lives in the playback slice, the next
-   open auto-selects the first source by order. A per-title stored preference (`16` §6.3) is user data and waits
+   open auto-selects the first source by order — **Cinezo by seeded order 0, the owner's default for movies and
+   TV (2026-10-17)**. A per-title stored preference (`16` §6.3) is user data and waits
    for its own contract change in `03` (fileserver table) — noted, not built here.
 4. **Providers and `api_key`.** The fileserver stops attaching raw provider records; answers carry `sources`
    (§0.1). The credentials never reach the renderer.
-5. **Browser-case containment.** Provider embeds are always sandboxed in a browser, unsandboxed in Electron; the
-   interface says `unprotected` in the browser case (`14` §2.3, `16` §9.4 defaulted).
+5. **Browser-case containment.** Provider embeds have no iframe sandbox in Chrome or Electron; the
+   statusbar says `unprotected` in the browser case; no badge covers the stage.
 6. **Autoplay (§3.2a).** The setting governs unattended attaches only; a click always plays. Off: first frame
    paused; a refused `play()` never force-mutes.
 7. **resumeMode (§3.2a).** Read literally: banner / seek-now / zero.

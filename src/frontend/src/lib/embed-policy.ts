@@ -1,26 +1,23 @@
 export const EMBED_ALLOW = "autoplay; fullscreen; encrypted-media; picture-in-picture";
-export const EMBED_SANDBOX = "allow-scripts allow-same-origin allow-presentation";
 
 export interface EmbedFramePolicy {
   readonly allow: string;
   readonly referrerPolicy: "origin";
-  readonly sandbox?: string;
 }
 
-export function embedFramePolicy(electron: boolean): EmbedFramePolicy {
+export function embedFramePolicy(): EmbedFramePolicy {
   return {
     allow: EMBED_ALLOW,
     referrerPolicy: "origin",
-    ...(electron ? {} : { sandbox: EMBED_SANDBOX }),
   };
 }
 
-export interface RemovableFrame {
+export interface StoppableFrame {
   src: string;
-  remove(): void;
 }
 
-export function stopEmbed(frame: RemovableFrame): void {
+/** Blanks the frame so picture and sound stop at once. The DOM node's owner (React, via the host's key)
+ *  removes it; imperatively removing a React-owned node crashes the renderer at the next commit. */
+export function stopEmbed(frame: StoppableFrame): void {
   frame.src = "about:blank";
-  frame.remove();
 }

@@ -96,6 +96,10 @@ A surface's own browsing state stays in the page in phase 1: Live's search, cate
 channel; Library's query, view, selection and history marks; the Player's session. Phase 2 moves what it must
 (`22`).
 
+**R1 enhancement (owner, 2026-10-17; pending, `22` §5.1):** persist page-session identity, browsing controls,
+folds and scroll through the fileserver so an intentional reload restores them. Persist no catalog payloads,
+media URLs, DOM objects or promises. Source switching must replace only the media host, never the page.
+
 The store performs no I/O and holds no promise, timer, DOM node or media element.
 
 ### 2.2 Services

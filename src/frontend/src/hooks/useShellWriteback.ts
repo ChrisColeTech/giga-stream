@@ -85,8 +85,8 @@ export function useShellWriteback(): void {
         getState: useAppStore.getState,
         subscribe: useAppStore.subscribe,
         write: patchShellState,
-        schedule: window.setTimeout,
-        cancel: window.clearTimeout,
+        schedule: (task, delay) => window.setTimeout(task, delay),
+        cancel: (id) => window.clearTimeout(id),
       }),
     [],
   );

@@ -135,8 +135,9 @@ specifies that for both families.
 ### 5.1 Embed-style (iframe)
 
 - The stage hosts a 16:9 `<iframe>` (the PoC's `embed.js` behaviour) with
-  `allow="autoplay; fullscreen; encrypted-media; picture-in-picture"` and, when the frame policy is
-  strict, `sandbox="allow-scripts allow-same-origin allow-presentation"`.
+  `allow="autoplay; fullscreen; encrypted-media; picture-in-picture"` and `referrerPolicy="origin"`.
+  Product frames have no `sandbox` attribute in either runtime (owner, 2026-10-17). The PoC's optional
+  sandbox test is historical evidence, not a product requirement.
 - **Progress** is read from the provider's `postMessage` reports (decoded by `messageShape`),
   converted from seconds to milliseconds, and written to the watch state on the same cadence the
   app uses elsewhere (`06` §5.3: about every 30 s, and on pause/end/seek/tab/close).
@@ -295,9 +296,9 @@ flagged, not assumed.
    (PoC-style) and through CinePro (proxy stream), is it one provider with two sources or two
    providers? This plan treats it as one provider (the upstream) with a preferred family, but the
    picker can show both sources.
-4. **Strict network mode in the product.** Does the product ship in ad-blocked strict mode by
-   default (the PoC's `POC_STRICT=1`), or does it expose the network policy as a setting? The
-   frame rules in `01`/`02` must answer this.
+4. **Frame policy resolved by the owner, 2026-10-17.** No iframe sandbox in either runtime. Electron
+   retains its ad blocker and main-process guards; browser runtime reports `unprotected`. The renderer
+   process sandbox and context isolation remain enabled and are not iframe attributes.
 5. **Resume across families.** If the user switches from an embed-style provider to a stream-style
    one mid-title, does the resume position carry over? This plan says yes (it is the title's watch
    progress, not the provider's), but the embed provider must accept a `startParam` to honour it.

@@ -1,4 +1,4 @@
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { POSTER_GRID, PosterGridSkeleton } from "./PosterGridSkeleton";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { SKELETON_CARDS } from "@/lib/library-limits";
 import type { ResolvedItem } from "@/lib/library-marks";
@@ -15,18 +15,15 @@ export interface PosterGridProps {
   readonly onRemoveWatch: (item: ResolvedItem) => void;
 }
 
-/* Cards at least 144 px wide, so six to eight across at 1600 px of body width (`06` section 4.2). */
-const GRID = "grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3 p-3";
-
 /** The poster grid. Loading and settled empty queries draw card skeletons. */
 export function PosterGrid({ items, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterGridProps) {
-  if (items.length === 0) return <SkeletonCards count={SKELETON_CARDS} />;
+  if (items.length === 0) return <PosterGridSkeleton count={SKELETON_CARDS} />;
   const ids = items.map((item) => item.ref.id);
   return (
     <div
       role="group"
       aria-label={LIBRARY_COPY.listLabel}
-      className={GRID}
+      className={POSTER_GRID}
       onKeyDown={(event) => navigateCards(event, ids, onSelect)}
     >
       {items.map((item) => (

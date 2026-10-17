@@ -19,7 +19,7 @@ app. The plan's items that the owner's reviews changed:
 
 | Planned here | As built | Why |
 |---|---|---|
-| Player tabs, a tab menu, a stage toolbar, a Resume banner, a Watch block | one item at a time; the stage's context menu; Resume and Start over in the inspector's footer while paused (Resume = Ask); no Watch block | owner, 2026-10-16: two toolbars repeated the title, the Watch block was read-only, tabs were not wanted |
+| Player tabs, a tab menu, a stage toolbar, a Resume banner, a Watch block | one item at a time; stage context menu; persistent inspector Resume / Start over footer, disabled with reasons when unavailable; no Watch block | owner decisions 2026-10-16 and 2026-10-17: no tabs/repeated toolbars; unavailable controls stay in place |
 | Statusbar connection word and dot | running work (bar, count, Stop), the notice line with a tone glyph, Events, Settings | dots are banned; LoRA's progress bar shows what runs |
 | Status dots on channel rows and collection rows | a left-edge status strip and a status word on channels; a shimmer count while a collection scans | dots are banned |
 | Collections table with a detail pane, rename on the index | Sensenova's index (create form, rows, `Remove` two-step) and workspace (rail, Details, Folders, Videos) | owner: the family's dataset index and workspace |
@@ -538,7 +538,9 @@ top right. No system or browser button look: the family's `Button` and `IconButt
 
 **Rails and bottom bands.** The Player's related band is a port of Giga LoRA Studio's bottom rail (`components/generate/
 PastRuns.tsx` in `D:\Projects\giga-lora-studio`): the same panel ground, the same thumbnail frame, the same hover and
-selected render, the same row scroll. The owner's review (2026-10-16) set the band to match the Studio's image: 140 px high, square thumbnails with no caption, the lowercase mono header with the count. The differences that stay are the spec's: eight card skeletons. Earlier, the band was 2:3 posters at 210 px high; that is retired. If a difference is found that is not on that list, it is a defect.
+selected render, the same row scroll. The current specification is `06` section 5.5: 4:3 artwork, no rail
+header, and a visible title below each recommendation (owner update, 2026-10-17). Skeletons match that
+image-and-caption geometry. Earlier square/no-caption and 2:3/header layouts are historical, not requirements.
 
 **Readability.** Text sits on the surface tokens at the scale above. Muted text is the secondary colour, dim is for
 hints and disabled text only. A line never breaks a word; a long title is truncated with an ellipsis and its full text
@@ -549,7 +551,7 @@ in the tooltip.
 A read-only probe of `D:\Projects\giga-stream-poc\src\mockup` answered how the mockup embeds a provider's player and
 logs traffic. Its findings:
 
-- **The embed.** A sandboxed or unsandboxed iframe with a fixed `allow` list and `referrerPolicy` `origin`
+- **The embed.** An iframe without a `sandbox` attribute in either runtime (owner, 2026-10-17), with a fixed `allow` list and `referrerPolicy` `origin`
   (`js\embed.js:23-27`, `js\config.js:10-11`). The mockup sends nothing to the embed, and accepts every window message
   without checking its origin (`js\messages.js:40-55`). A refused frame may still log as `ok`; this is untested.
 - **What the page can see.** In a browser, nothing inside a cross-origin iframe: no requests, statuses or timings. In

@@ -5,7 +5,7 @@ import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { progressRatio } from "@/lib/library-facts";
 import {
-  BROWSER_SKELETON_COUNT, NO_SEASONS_REASON, PLAYER_IDLE_CONTROL_REASON, PLAYER_LOADING_REASON,
+  BROWSER_SKELETON_COUNT, NO_SEASONS_REASON, PLAYER_LOADING_REASON,
 } from "@/lib/player-copy";
 import { episodeMarker, type EpisodeMarker, type PlayerView } from "@/lib/player-view";
 
@@ -17,20 +17,13 @@ export interface PlayerBrowserProps {
 }
 
 /** The left pane (`06` section 5.2): a series' season select over its episode rows, or a movie or local file as one row
- *  of the same shape. No collapsible section wraps it; idle keeps the season control visibly disabled. */
+ *  of the same shape. No collapsible section wraps it; with nothing open it is row skeletons. */
 export function PlayerBrowser({ view, onSeason, onEpisode, loading }: PlayerBrowserProps) {
   const { tab, item, detail, seasons, season, episode } = view;
   if (tab === undefined) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-none p-2.5">
-          <Tooltip text={PLAYER_IDLE_CONTROL_REASON} focusable label={`Season. ${PLAYER_IDLE_CONTROL_REASON}`}>
-            <Select aria-label="Season" value="" disabled><option value="">Season</option></Select>
-          </Tooltip>
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden border-t border-hair">
-          <SkeletonRows count={BROWSER_SKELETON_COUNT} />
-        </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <SkeletonRows count={BROWSER_SKELETON_COUNT} />
       </div>
     );
   }

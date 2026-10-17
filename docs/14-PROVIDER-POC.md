@@ -102,10 +102,10 @@ loaded; Malwarebytes flagged them and stopped the run. Since then (`network-rule
   as strict mode, so provider players cannot reach the network until the blocker is ready (`check.mjs`
   passes `failClosed` when the lists are absent).
 - **The browser case is unprotected (2026-10-16).** In a plain browser there is no Ghostery and no
-  main-process guards; only the sandboxed frame and the frame guard (section 2.4) contain it. The
-  statusbar shows `unprotected` in the browser case and `guarded` in Electron. Whether provider titles
-  are refused in the browser, or the browser case always uses the sandboxed frame, is a product decision
-  (`16` section 9, open decision 4).
+  main-process guards. The PoC offered optional sandbox testing; some providers refuse that mode.
+  **Product decision, owner 2026-10-17:** omit the iframe sandbox in Chrome and Electron. Browser runtime
+  still reports `unprotected`; Electron retains its guards. The sandboxed test cases below remain historical
+  evidence, not instructions to reintroduce a product iframe sandbox.
 
 ### 2.4 Frame and dialog containment
 

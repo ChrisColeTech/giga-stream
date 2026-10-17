@@ -7,7 +7,7 @@ import { PosterGrid } from "./PosterGrid";
 import { PosterList } from "./PosterList";
 import { TypeStrip } from "./TypeStrip";
 import { LibraryPager } from "./LibraryPager";
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { PosterGridSkeleton } from "./PosterGridSkeleton";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { SKELETON_CARDS, SKELETON_ROWS } from "@/lib/library-limits";
 
@@ -96,7 +96,7 @@ export function LibraryBody({
           />
         )}
         {titleRegionsLoading && shown.length > 0 && (
-          view === "grid" ? <SkeletonCards count={SKELETON_CARDS} /> : <SkeletonRows count={SKELETON_ROWS} />
+          view === "grid" ? <PosterGridSkeleton count={SKELETON_CARDS} /> : <SkeletonRows count={SKELETON_ROWS} />
         )}
         <LibraryPager hasMore={hasMore} loading={paging} view={view} onVisible={onLoadMore} />
       </div>

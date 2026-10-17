@@ -16,11 +16,11 @@ export interface EmbedHostProps {
   readonly onReady: () => void;
 }
 
-/** Browser sandbox or Electron's named main-process policy owns containment for exactly one frame. */
+/** Both runtimes omit iframe sandbox; Electron additionally installs the named main-process policy. */
 export function EmbedHost(props: EmbedHostProps) {
   const playback = useRef(props.onPlayback);
   playback.current = props.onPlayback;
-  const policy = embedFramePolicy(props.electron);
+  const policy = embedFramePolicy();
   const address = embedUrl(props.source, props.positionMs, props.subtitleLanguage);
 
   const mount = useCallback((frame: HTMLIFrameElement | null) => {
@@ -44,13 +44,8 @@ export function EmbedHost(props: EmbedHostProps) {
 
   return (
     <>
-      {!props.electron && (
-        <span className="absolute top-2 right-2 z-10 rounded-ctl bg-panel/90 px-2 py-1 font-mono text-xs text-faint">
-          unprotected
-        </span>
-      )}
       <iframe key={`${address}:${props.retry}`} ref={mount} src="about:blank" title={`${props.source.name} player`}
-        allow={policy.allow} allowFullScreen referrerPolicy={policy.referrerPolicy} sandbox={policy.sandbox}
+        allow={policy.allow} allowFullScreen referrerPolicy={policy.referrerPolicy}
         className="size-full border-0 bg-stage"
         onLoad={(event) => { if (event.currentTarget.src !== "about:blank") props.onReady(); }} />
     </>

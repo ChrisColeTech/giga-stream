@@ -48,7 +48,7 @@ When every wave is done, the specs (`01`, `02`, `06`, `21`, `23`) are rewritten 
 | VG-025 | Continue watching ignores the rail source; two orders | fix: one function takes the source and one order | `lib/library-query.ts`, `components/library/LibraryBody.tsx`, `lib/rows-shelves.ts` |
 | VG-026 | Remove from History can never be used (no watch ids) | fix: fixture watch ids | `fixtures/titles.ts` |
 | VG-027 | The collection menu's Rename and Remove are dead; Remove is danger at rest | fix: both open the Collections window on that collection | `components/library/rail-menu.ts`, `components/library/CollectionsSection.tsx`, `store/app-store.ts`, `components/overlays/CollectionsWindow.tsx` |
-| VG-028 | Cards lack the title line, watched check and quality of `06` §4.2 | record: the owner chose LoRA's tile; the title is the tooltip | `docs/06` |
+| VG-028 | Cards lack the title line, watched check and quality of `06` §4.2 | historical decision superseded for titles on 2026-10-17: show visible Library and Related titles; no extra watched/quality badges | `docs/06` |
 | VG-029 | Continue cards have no menu and do not select | fix: menu and selection | `components/library/ContinueCard.tsx`, `components/library/ContinueStrip.tsx`, `components/library/LibraryBody.tsx` |
 | VG-030 | Five heading styles across surfaces | record: the mapping (section 3) | `docs/01` |
 | VG-031 | Rows chevrons are raised in the body | record: over-art controls are an exception | `docs/01` |
@@ -130,7 +130,7 @@ implemented, each exception with the case that forces it, and nothing that descr
 |---|---|
 | VG-007 | `01` section 9, Headings: the brand and the surface switch keep the family's radii and spacing |
 | VG-017 | `06` section 2, rule 8: the accordion's grow model, and the space it leaves in a short rail |
-| VG-028 | `06` section 4.2, Poster grid: LoRA's tile; the title is the tooltip |
+| VG-028 | `06` section 4.2, Poster grid: family tile with a visible title line (owner update 2026-10-17) |
 | VG-030 | `01` section 9, Headings: the five heading roles (section 3 above) |
 | VG-031 | `01` section 9, Buttons and surfaces: the over-art chevron exception |
 | VG-032 | `06` section 4.1: Sensenova's rail is text, no glyphs |

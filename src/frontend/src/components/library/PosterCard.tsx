@@ -23,7 +23,7 @@ export interface PosterCardProps {
 
 /** One title in the grid (`06` section 4.2), on LoRA's gallery tile: the 2:3 poster is the selectable art, a favorite
  *  wears the star badge in its top right corner, progress runs along its foot, and Play, Info and the menu sit under it.
- *  A press selects the card and opens its Info, as a Continue watching card does. The title is the tooltip and the name. */
+ *  A press selects the card and opens its Info. The visible title also supplies the tooltip and accessible name. */
 export function PosterCard({ item, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
   /* Title information returns focus here when it closes: the card's own button. */
   const artRef = useRef<HTMLButtonElement>(null);
@@ -60,6 +60,9 @@ export function PosterCard({ item, selected, inHistory, collections, onSelect, o
         )}
         {ratio !== undefined && <ProgressBar ratio={ratio} className="absolute inset-x-0 bottom-0" />}
       </button>
+      <span className="block min-w-0 truncate px-1 font-sans text-sm font-medium text-text" title={item.title}>
+        {item.title}
+      </span>
       <CardActions item={item} onMore={(button) => openCardMenu(menuEventBelow(button), item, context)} />
     </div>
   );

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { makeApp, pick, send, asOwner, signIn } from "./test-app.js";
+import { EMBED_PROVIDER_CATALOG } from "../src/constants/embed-providers.js";
 
 const provider = { name: "JustWatch", source: "justwatch", api_key: "jw-api-key-123" };
 
@@ -151,6 +152,16 @@ test("a provider without the new fields carries the defaults: order 0, family em
   assert.equal(pick(created.body, "data.family"), "embed");
   assert.equal(pick(created.body, "data.movieTemplate"), undefined);
   assert.equal(pick(created.body, "data.messageShape"), undefined);
+});
+
+test("the seeded catalog puts Cinezo first: the owner's default source for movies and TV", async () => {
+  const orders = new Map(EMBED_PROVIDER_CATALOG.map((row) => [row.name, row.order]));
+  const cinezo = orders.get("Cinezo");
+  assert.equal(cinezo, 0);
+  for (const [name, order] of orders) {
+    if (name !== "Cinezo") assert.ok(order > 0, `${name} must sort after Cinezo`);
+  }
+  assert.equal(EMBED_PROVIDER_CATALOG.filter((row) => row.order === cinezo).length, 1, "exactly one default");
 });
 
 test("a template refusal names the field and names the missing placeholder", async () => {

@@ -174,24 +174,24 @@ export function PlayerPage({ active }: { active: boolean }) {
   return <WorkspaceSplit surface="player" active={active}
     left={<PlayerBrowser view={view} loading={browserLoading}
       onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
-    center={<PlayerStage view={stageView} commands={commands} sources={sources} activeSource={hostedSource}
-      selectedSourceId={activeSource?.id ?? ""}
+    center={<PlayerStage view={stageView} commands={commands} activeSource={hostedSource}
       startPositionMs={startPositionMs} retry={retry} userInitiated={userInitiated}
       loading={stageLoading} awaitingResume={waitingForResume}
       playableUnitSelected={session.current?.kind !== "tv" || playing !== undefined}
       playableUnitResolved={playableUnitResolved} noSourceReason={noSourceReason}
-      onSource={(id) => {
-        void progress.flush();
-        setSourcePosition(currentPosition.current);
-        setSource(id);
-        setUserInitiated(true);
-      }} onState={setStage}
+      onState={setStage}
       onProgress={(position, duration) => {
         currentPosition.current = position;
         progress.update(position, duration);
       }} onPlaying={progress.playing} onBoundary={() => void progress.checkpoint()}
       onPausedChange={setPaused} />}
     right={<PlayerInspector view={view} commands={commands} paused={paused}
+      sources={sources} activeId={activeSource?.id ?? ""} onSelect={(id) => {
+        void progress.flush();
+        setSourcePosition(currentPosition.current);
+        setSource(id);
+        setUserInitiated(true);
+      }}
       loading={data.basePending && data.detail === undefined && data.localInfo === undefined} />}
     bottom={<PlayerRelated view={view} commands={commands} loading={data.relatedPending && data.related.length === 0} />} />;
 }

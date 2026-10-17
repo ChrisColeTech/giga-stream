@@ -28,10 +28,10 @@ describe("provider embed address and runtime policy", () => {
     assert.equal(url.searchParams.get("ds_lang"), "en-US");
   });
 
-  it("sandboxes and labels the browser lane, but leaves Electron unsandboxed", () => {
-    assert.equal(embedFramePolicy(false).sandbox, "allow-scripts allow-same-origin allow-presentation");
-    assert.equal(embedFramePolicy(false).referrerPolicy, "origin");
-    assert.equal(embedFramePolicy(true).sandbox, undefined);
+  it("omits iframe sandbox in both runtimes while preserving permissions and referrer policy", () => {
+    assert.equal(Object.hasOwn(embedFramePolicy(), "sandbox"), false);
+    assert.equal(embedFramePolicy().referrerPolicy, "origin");
+    assert.equal(embedFramePolicy().allow, "autoplay; fullscreen; encrypted-media; picture-in-picture");
   });
 
   it("sets and clears only the named Electron player policy capability", () => {
@@ -47,15 +47,13 @@ describe("provider embed address and runtime policy", () => {
     assert.deepEqual(calls, ["set:https://player.example:https://player.example", "clear"]);
   });
 
-  it("blank-stops and removes the old frame before another source is hosted", () => {
-    const calls: string[] = [];
-    const frame = { src: "https://player.example", remove: () => calls.push("removed") };
+  it("blank-stops the old frame; React owns the node's removal via the host key", () => {
+    const frame = { src: "https://player.example" };
     stopEmbed(frame);
     assert.equal(frame.src, "about:blank");
-    assert.deepEqual(calls, ["removed"]);
   });
 
-  it("removes the old listener and frame before the next authority is installed", () => {
+  it("removes the old listener and blanks the old frame before the next authority is installed", () => {
     const calls: string[] = [];
     let listener: ((event: MessageEvent<unknown>) => void) | undefined;
     const target = {
@@ -66,12 +64,12 @@ describe("provider embed address and runtime policy", () => {
         assert.equal(current, listener); calls.push("unlisten-old");
       },
     };
-    const old = { src: source.url, contentWindow: null, remove: () => calls.push("remove-old") };
+    const old = { src: source.url, contentWindow: null };
     const dispose = mountEmbedLifecycle(old, source, target, () => undefined, () => calls.push("clear-old"));
     dispose();
     calls.push("set-new");
     assert.equal(old.src, "about:blank");
-    assert.deepEqual(calls, ["listen-old", "unlisten-old", "remove-old", "clear-old", "set-new"]);
+    assert.deepEqual(calls, ["listen-old", "unlisten-old", "clear-old", "set-new"]);
   });
 });
 

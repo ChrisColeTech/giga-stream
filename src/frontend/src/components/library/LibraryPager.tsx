@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { SkeletonCards } from "@/components/ui/SkeletonCards";
+import { PosterGridSkeleton } from "./PosterGridSkeleton";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 
 export function requestVisiblePageOnce(active: { current: boolean }, request: () => void): void {
@@ -46,7 +46,7 @@ export function LibraryPager({
   return (
     <div ref={sentinel} aria-label={loading ? "Loading more titles" : undefined}>
       {loading && (view === "list" ? <SkeletonRows count={3} /> : (
-        <SkeletonCards count={4} className="grid grid-cols-[repeat(auto-fill,minmax(144px,1fr))] gap-3 p-3" />
+        <PosterGridSkeleton count={4} />
       ))}
     </div>
   );

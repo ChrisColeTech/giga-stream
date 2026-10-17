@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { EmbedHost } from "@/components/player/EmbedHost";
 import { NativePlayer } from "@/components/player/NativePlayer";
-import { PlayerSourceControl } from "@/components/player/PlayerSourceControl";
 import { PlayerStageStatus } from "@/components/player/PlayerStageStatus";
 import { StageNote } from "@/components/player/StageNote";
 import { collectionsSubmenu } from "@/lib/collection-menu";
 import { applyEmbedPlayback } from "@/lib/embed-playback";
+import { objectFitOf } from "@/lib/live-picture";
 import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
 import { LOCAL_MEDIA_FAILURE, STREAM_FAILURE } from "@/lib/player-copy";
@@ -19,9 +19,7 @@ import type { StageState } from "@/types/player";
 export interface PlayerStageProps {
   readonly view: PlayerView;
   readonly commands: PlayerCommands;
-  readonly sources: readonly PlayerSource[];
   readonly activeSource: PlayerSource | undefined;
-  readonly selectedSourceId: string;
   readonly startPositionMs: number;
   readonly retry: number;
   readonly userInitiated: boolean;
@@ -30,7 +28,6 @@ export interface PlayerStageProps {
   readonly playableUnitSelected: boolean;
   readonly playableUnitResolved: boolean;
   readonly noSourceReason: string;
-  readonly onSource: (id: string) => void;
   readonly onState: (state: StageState) => void;
   readonly onProgress: (positionMs: number, durationMs?: number) => void;
   readonly onPlaying: (playing: boolean) => void;
@@ -48,7 +45,7 @@ export function PlayerStage(props: PlayerStageProps) {
   const pictureFit = useAppStore((state) => state.playback.pictureFit);
   const autoplay = useAppStore((state) => state.playback.autoplay);
   const subtitleLanguage = useAppStore((state) => state.playback.subtitleLanguage);
-  const electron = useAppStore((state) => state.runtime) === "electron";
+  const electron = typeof window !== "undefined" && window.pocHost?.runtime === "electron";
 
   useEffect(() => {
     const node = stageRef.current;
@@ -81,6 +78,8 @@ export function PlayerStage(props: PlayerStageProps) {
     props.playableUnitSelected,
     props.playableUnitResolved,
   );
+  const hasMediaHost = render === "native" || render === "native-failed"
+    || render === "embed" || render === "embed-failed";
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     if (tab === undefined) return;
@@ -107,7 +106,10 @@ export function PlayerStage(props: PlayerStageProps) {
   return (
     <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-stage outline-none fullscreen:bg-black">
-      <PlayerSourceControl sources={props.sources} activeId={props.selectedSourceId} onSelect={props.onSource} />
+      {!hasMediaHost && (
+        <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"}
+          className="size-full bg-stage" style={{ objectFit: objectFitOf(pictureFit) }} />
+      )}
       {(render === "embed" || render === "embed-failed") && props.activeSource?.kind === "embed" && (
         <EmbedHost source={props.activeSource.embed} positionMs={props.startPositionMs}
           subtitleLanguage={subtitleLanguage} electron={electron} retry={props.retry}
@@ -121,8 +123,6 @@ export function PlayerStage(props: PlayerStageProps) {
           onPlaying={(playing) => { props.onPausedChange(!playing); props.onPlaying(playing); }}
           onSeeked={props.onBoundary} onEnded={props.onBoundary} />
       )}
-      {render === "idle" && <PlayerStageStatus kind="idle" onAction={props.commands.reveal} />}
-      {render === "choose-episode" && <PlayerStageStatus kind="choose-episode" />}
       {render === "unavailable" && <PlayerStageStatus kind="unavailable" onAction={props.commands.retry} />}
       {render === "no-source" && (
         <PlayerStageStatus kind="no-source" reason={props.noSourceReason} onAction={props.commands.retry} />

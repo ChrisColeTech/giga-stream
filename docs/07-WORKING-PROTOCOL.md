@@ -94,6 +94,12 @@ rules are in `01`; this document is about process.
   draw the documented skeletons. A wiring change never replaces established controls with an empty-state
   card, dash facts or native controls that the page docs did not specify; a control works or remains in
   place disabled with its documented accessible reason.
+- **Wiring preserves the completed UI.** A worker must compare touched markup with the accepted visual
+  baseline before editing. Missing media/history may disable actions, but never remove inspector headings
+  or the Resume / Start over footer. The idle source-less video remains mounted. Any redesign or new
+  placeholder composition requires an explicit owner decision, recorded before implementation.
+- **Embed acceptance uses the owner's current policy:** no iframe `sandbox` attribute in either runtime.
+  This is distinct from Electron's renderer-process sandbox; do not disable that process protection.
 - **The real wire is part of acceptance.** The coordinator drives the fileserver answers used by the
   surface, verifies them against the frontend schemas, and sweeps the touched paths for stubs, mocks and
   fixture imports. One malformed composite child must not discard valid siblings. A wave is not accepted

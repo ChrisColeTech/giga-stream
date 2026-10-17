@@ -1,4 +1,5 @@
 import { AppError, ERRORS } from "../constants/errors.js";
+import { StoredTitleSchema } from "./title-row-schema.js";
 
 /** Freshness (docs/03 sections 7.6, 7.6b): days for titles, hours for lists and popularity. */
 export const TITLE_FRESH_MS = 3 * 24 * 60 * 60 * 1000;
@@ -127,7 +128,7 @@ export function detailOf(kind: Kind, tmdbId: number, answer: Record<string, unkn
 export function rowOf(kind: Kind, tmdb: Record<string, unknown>, now: number): Record<string, unknown> | undefined {
   const tmdbId = num(tmdb.id);
   const title = tmdbTitleOf(kind, tmdb);
-  if (tmdbId === undefined || title === undefined) return undefined;
+  if (tmdbId === undefined || !Number.isInteger(tmdbId) || tmdbId <= 0 || title === undefined) return undefined;
   const popularity = num(tmdb.popularity);
   return {
     id: titleIdOf(kind, tmdbId),
@@ -159,9 +160,9 @@ export function storedRowOf(
   readAt: number,
 ): Record<string, unknown> | undefined {
   const record = asRecord(payload);
-  const title = nonBlank(record.title);
-  if (record.id === titleIdOf(kind, tmdbId) && record.kind === kind && num(record.tmdbId) === tmdbId && title !== undefined) {
-    return { ...record, title };
+  if (record.id === titleIdOf(kind, tmdbId) && record.kind === kind && num(record.tmdbId) === tmdbId) {
+    const parsed = StoredTitleSchema.safeParse(record);
+    return parsed.success ? parsed.data : undefined;
   }
   if (num(record.id) !== tmdbId) return undefined;
   return rowOf(kind, record, readAt);

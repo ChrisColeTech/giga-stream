@@ -38,6 +38,7 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 | **Running work** | First. LoRA Studio's running work: a 112px bar that fills to the first running job's percent (full and pulsing when the job cannot say how far it is, as a scan walking a folder), then `N running · X%` in mono, or `idle` over an empty track, then **Stop**. Stop cancels the first running job on one press (owner: a confirm makes no sense on an emergency stop); with nothing running it is disabled, `Nothing to stop`. The job's label and percent are the tooltip. Phase 1 reads the jobs fixture and Stop calls the `cancelJob` stub |
 | **Notice line** | One polite live region. Each sentence replaces the last, in the text colour; a warn or error has a tone-coloured alert glyph before it, so it stays legible on the light theme and colour is not the only signal. It carries every outcome, refusal and unreadable-answer report. A warn or error is also appended to the events log |
 | **Events** | An icon and the label "Events". Toggles the drawer; tinted while it is open |
+| **Browser protection status** | `unprotected` in a plain browser, with a tooltip explaining that Electron's shell guards and ad blocker are absent; belongs here, never over the media (owner, 2026-10-17) |
 | **Settings** | An icon and the label "Settings". Opens the Settings window. It is not a toggle and is never lit: the window's scrim covers the statusbar, and the window's `X` and Escape close it |
 
 There is no connection dot or word. A dot is not used for state anywhere, and the outcome of the last request
@@ -87,7 +88,9 @@ panes to them without a tween, and becomes visible two animation frames later, o
 2. **Last good content stays** while a refresh runs and when a refresh fails recoverably; one notice says
    why.
 3. **A control works or is visibly disabled.** A disabled control stays in place, dimmed, and its reason is
-   its tooltip. No text is printed under a control.
+   its tooltip. No text is printed under a control. Missing media, missing history, loading and failure are
+   enablement conditions, not permission to remove the pane's controls or section headers. This includes
+   the inspector's Resume / Start over footer (owner clarification, 2026-10-17).
 4. **Pane toolbars are icons**, each with an accessible name and the family tooltip; ghost by default, no
    filled accent toolbar action. Search fields sit in the pane's strip, not in a header.
 5. **Selected and playing are different states.** One primary selection per pane. A refresh keeps the
@@ -306,11 +309,11 @@ LoRA Studio's gallery tile with Giga Stream's 2:3 poster (owner decision). Cards
 | Favorite | the star badge in the art's top right corner, in the accent, when the title is a favourite |
 | Progress | a bar on the art's bottom edge for a title in progress |
 | Verbs | under the art, on equal ghost tile buttons: **Play** (**Open** for a series), **Info**, and a fixed square menu button |
-| Title | the art's tooltip and accessible name |
+| Title | a visible, single-line title beneath the poster and above the verbs, with ellipsis for overflow; the full title also remains the tooltip and accessible name (owner, 2026-10-17) |
 
-- The owner chose LoRA's tile, so a card has no title line, year line, watched check or quality badge under
-  the art: the title is the tooltip, the watch state is the progress bar and Title information, and the quality
-  is in Title information and the list.
+- Cards retain the family tile and now show a title line beneath the art (owner, 2026-10-17); no added year
+  line, watched check or quality badge. The watch state is the progress bar and Title information, and the
+  quality is in Title information and the list. Grid and Rows shelves use the same visible-title card.
 - A press on the art selects the card and opens its Info; `Enter` on a focused card does exactly what the press
   does. Play and Info are always drawn, never only on hover.
 - Context menu (on the card and from its menu button): the watch line as a heading when there is progress, Play
@@ -422,14 +425,16 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 │ Seasons and      │ Stage                          │ Overview         │
 │ episodes         │ the video, filling the pane    │ Details          │
 │                  │                                │                  │
-│                  │                                │ Resume (paused)  │
+│                  │                                │ Resume / Restart │
 ├──────────────────┴────────────────────────────────┴──────────────────┤
 │ Related titles across the full width                                 │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 Player is always enabled. With nothing open its stage is the player alone, nothing drawn over it, and its
-panes are skeletons.
+panes show skeleton content inside their established structure. The source-less video and its existing
+native control chrome remain mounted; no idle card, invented dash facts or substitute Season field is added.
+Overview / Details headings and the inspector footer stay in place.
 
 ### 5.1 One title at a time (owner decision, 2026-10-16)
 
@@ -480,10 +485,13 @@ fitted by the Picture fit preference (Fit by default). Chrome's native control l
 alone. A stream that fails shows Live's stage note (§3.1): an icon, `This stream will not play`, the reason in
 one sentence and **Retry**, clear of the control bar. The stage's verbs are its context menu (§5.1).
 
-- **Resume.** With Settings > Playback > **Resume** at `Ask`, a title left partway pins `resume at m:ss`,
-  **Resume** (the one accent) and **Start over** at the foot of the details pane while the video is paused, and
-  hides them while it plays. At `Always resume` or `Always start over` the Player has done that on opening and
-  asks nothing, so the footer is not drawn.
+- **Resume.** **Resume** (the one accent) and **Start over** remain pinned at the foot of the details pane in
+  every state. Resume is enabled when the paused item has saved progress and a playable source; Start over
+  is enabled when the paused item has a playable source. Otherwise each stays visibly disabled with its
+  accessible reason tooltip (no item, loading, no saved position, no playable source, or pause first).
+  Show `resume at m:ss` only when a real saved position exists. The Resume preference controls automatic
+  opening behavior only: Ask waits for a choice, Always resume seeks, Always start over starts at zero.
+  None of these preferences hides the footer (owner clarification, 2026-10-17).
 - **Progress** is written about every 30 seconds while playing (never more often) and immediately on pause,
   ended, seek settle and close. Each playback numbers its writes from 1 and a lower number can
   never replace a higher one.
@@ -492,19 +500,23 @@ one sentence and **Retry**, clear of the control bar. The stage's verbs are its 
   the test server) plays from it. Neither is converted or relayed.
 - **A provider's title plays in the provider's embedded player**, hosted in the stage in place of the
   `<video>` (owner, 2026-10-16). The stage hosts the iframe of `22` section 3.4a (the PoC's proven frame:
-  allow list, referrer policy, the nested-frame guard, clean stop). Resume passes the watched seconds
+  allow list, referrer policy, the nested-frame guard, clean stop). Provider iframes have no `sandbox`
+  attribute in either Chrome or Electron (owner, 2026-10-17; VidSrc refuses sandboxed frames). Electron's
+  renderer process sandbox, context isolation, ad blocker and main-process guards remain separate mechanisms.
+  Resume passes the watched seconds
   through the source's start parameter; progress comes from the source's documented messages, on the same
   cadence as the `<video>`'s; Retry re-creates the frame with a fresh address. When the title has two or
   more playable sources (its provider sources, and its stream address if any, listed last as `App player`),
-  the stage toolbar gains a **Source** control (owner, 2026-10-17) that lists them and switches: picking one
+  the inspector footer gains a **Source** control above Resume / Start over (owner, 2026-10-17). It lists
+  them and switches: picking one
   clean-stops the current frame and hosts the next. With no pick, the first source by preference order
   plays; when one source fails to start, the next in order is offered, not played unasked. A source without
   documented messages plays but reports no progress.
 
 ### 5.4 Details (right)
 
-Two collapsible blocks (§2.8) of mono key and value facts, skeletons with no title open, and Resume pinned at
-the foot while paused (§5.3). Each open block takes its share of the pane and scrolls inside itself rather than
+Two persistent collapsible blocks (§2.8) of mono key and value facts, skeleton content with no title open,
+and the persistent Resume / Start over footer (§5.3). Each open block takes its share of the pane and scrolls inside itself rather than
 squeezing its content (owner: opening the lower block must add a scrollbar, not shrink the art); the footer stays
 on the pane's foot when the blocks close. Nothing is written twice: the title appears once, in Overview. A fact's
 value sits at the row's right edge; the label column is sized to the longest label the inspector draws.
@@ -517,6 +529,9 @@ value sits at the row's right edge; the label column is sized to the longest lab
 The read-only Watch block is gone (owner, 2026-10-16). Favorite, Collections and Remove from History are the
 stage's context menu; the episode marker in the browser shows progress.
 
+The media stage carries no runtime-status badge or source selector. Browser `unprotected` status belongs
+in the application statusbar; Source belongs in this inspector footer (owner, 2026-10-17).
+
 There is no Clear History here: it belongs to Library.
 
 ### 5.5 Related (bottom)
@@ -526,9 +541,9 @@ A band across the full work area. It is Giga LoRA Studio's bottom rail, `compone
 
 | Part | Behaviour |
 |---|---|
-| Rail | one horizontal list of 4:3 thumbnails that fill the band's height, with no header, no fold, no caption and no tint; each is a button, reached with Tab (a list of buttons, not a listbox, since there is no selection to move with arrows); the open title's thumbnail wears the accent border and `aria-current`; the title is each thumbnail's tooltip and accessible name, and the list is labelled `Related titles` (in phase 2, with its basis: `TMDB`, or `Genre + year`, `Genre`, `Year` over the catalog, `11` section 4); at most 20 at first |
+| Rail | one horizontal list of 4:3 thumbnails with a visible single-line title beneath each image (owner, 2026-10-17), reserving caption height within the band; no section header, fold or tint. Each card is a button reached with Tab, with the full title as tooltip and accessible name; the open title wears the accent border and `aria-current`. The list is labelled `Related titles` (with its basis in phase 2); at most 20 at first |
 | Activation | replaces the current item with that title (the open one does nothing); a movie loads at once, a series opens on its resumable episode or waits for one to be chosen (§5.1) |
-| Loading and empty | the rail's own skeleton (`ThumbnailRailSkeleton`) |
+| Loading and empty | the rail's image-and-caption skeleton (`RelatedSkeleton`), matching the visible-title cards |
 | Failure | the last thumbnails stay and one notice says why |
 | Local file | the band shows the rail's skeleton; there is nothing related to a local file |
 

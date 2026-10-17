@@ -81,7 +81,10 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   fileserver's `src/app`. Providers only in the admin backend.
 - Every route begins `/api`; only `/healthz` and `/ws` are root-level. Error codes are dotted and stable.
 - A control works or is visibly disabled with its reason as a tooltip; no text under controls;
-  loading and empty are skeletons.
+  loading and empty content are skeletons inside the established pane structure. Missing media/history
+  never removes the inspector headings or Resume / Start over footer.
+- Provider iframes have no `sandbox` attribute in Chrome or Electron (owner, 2026-10-17). Keep Electron's
+  renderer process sandbox, context isolation, ad blocker and main-process guards.
 
 ## How to work (full text: `docs/07`)
 

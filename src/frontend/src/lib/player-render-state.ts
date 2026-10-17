@@ -13,7 +13,7 @@ export type PlayerStageRender =
   | "embed"
   | "embed-failed";
 
-/** Chooses one truthful stage host. Native controls exist only when a native source is attached. */
+/** Chooses the active media host; pending/idle states keep the source-less player on the dark stage. */
 export function playerStageRender(
   open: boolean,
   loading: boolean,
