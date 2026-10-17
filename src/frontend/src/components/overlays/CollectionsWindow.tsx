@@ -15,7 +15,7 @@ import { ChildWindow } from "./ChildWindow";
 const SPEC = workSpec("collections", "Collections");
 const ALL = "all";
 const SORTED = alphabetical(COLLECTION_ROWS);
-const LABELS = ["Name"] as const;
+const LABELS = ["Name", "Folder"] as const;
 
 /** Collections: a work window (`06` section 6.3). The rail lists All, then every collection alphabetically, a scan dot
  *  beside any whose folder is scanning; All holds the create group and the table, and a selected collection shows its

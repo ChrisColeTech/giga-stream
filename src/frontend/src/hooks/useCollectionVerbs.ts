@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   attachFolder,
   cancelScan,
+  chooseFolder,
   createCollection,
   removeCollection,
   removeFolder,
@@ -21,6 +22,8 @@ export interface CollectionVerbs {
   readonly rename: (collectionId: string, name: string) => boolean;
   readonly remove: (collectionId: string) => boolean;
   readonly attach: (collectionId: string) => boolean;
+  /** Picks a folder for a collection being created. */
+  readonly chooseFolder: () => boolean;
   readonly removeMember: (collectionId: string, ref: ItemRef) => boolean;
   readonly replace: (folderId: string) => boolean;
   readonly rescan: (folderId: string) => boolean;
@@ -40,6 +43,7 @@ export function useCollectionVerbs(): CollectionVerbs {
       rename: (collectionId, name) => report(renameCollection(collectionId, name)),
       remove: (collectionId) => report(removeCollection(collectionId)),
       attach: (collectionId) => report(attachFolder(collectionId)),
+      chooseFolder: () => report(chooseFolder()),
       removeMember: (collectionId, ref) => report(removeMember(collectionId, ref)),
       replace: (folderId) => report(replaceFolder(folderId)),
       rescan: (folderId) => report(rescanFolder(folderId)),

@@ -1,4 +1,4 @@
-import { FolderPlus } from "lucide-react";
+import { FolderOpen, FolderPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
@@ -7,8 +7,8 @@ import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";
 
-/** The New collection group: one Name row and Create at the end. Create is disabled only while the name is blank. A
- *  created collection clears the field; a refused one keeps it. */
+/** The New collection group: the Name, an optional Folder to start from, and Create at the end. Create is disabled only
+ *  while the name is blank. A created collection clears the field; a refused one keeps it. */
 export function CollectionCreateGroup() {
   const verbs = useCollectionVerbs();
   const [name, setName] = useState("");
@@ -26,6 +26,14 @@ export function CollectionCreateGroup() {
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
         />
+      </Row>
+      <Row
+        label="Folder"
+        tip="Start the collection from a folder: its videos join as the folder is scanned. Files on disk are only read, never changed."
+      >
+        <Button onClick={() => verbs.chooseFolder()}>
+          <FolderOpen aria-hidden /> Choose folder…
+        </Button>
       </Row>
       <Actions>
         <Button

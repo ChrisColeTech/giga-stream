@@ -1,6 +1,7 @@
 import { NavGroup, NavItem } from "@/components/ui/NavRail";
 import { SHIMMER } from "@/components/ui/SkeletonRows";
 import { StatusDot } from "@/components/ui/StatusDot";
+import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { cn } from "@/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { RAIL_SKELETON_ROWS } from "@/lib/library-limits";
@@ -19,6 +20,7 @@ export interface CollectionsSectionProps {
  *  Until there are collections, the group draws shimmer rows in the navigation row's shape. A row's context menu rides
  *  on a `contents` wrapper, because the family NavItem takes no menu handler of its own. */
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
+  const verbs = useCollectionVerbs();
   return (
     <NavGroup heading="Collections">
       {collections.length === 0
@@ -30,7 +32,11 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
         : sortedCollections(collections).map((row) => {
             const id = collectionSource(row.id);
             return (
-              <div key={row.id} className="contents" onContextMenu={openCollectionMenu}>
+              <div
+                key={row.id}
+                className="contents"
+                onContextMenu={(event) => openCollectionMenu(event, () => verbs.attach(row.id))}
+              >
                 <NavItem selected={source === id} count={counts.collections[row.id] ?? 0} onClick={() => onSource(id)}>
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate">{row.name}</span>

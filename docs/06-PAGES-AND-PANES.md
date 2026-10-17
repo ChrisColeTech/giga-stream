@@ -522,12 +522,16 @@ row with nothing wired yet is disabled in place and its reason is its tooltip.
 
 ### 6.3 Collections
 
-A left rail of All and every collection alphabetically. **All** holds a **New collection** group (a name and
-**Create** at the last row) and a table of collections with their counts and scan state. A selected collection
-shows its name, its member table (image, title, year, remove), its attached folders (name, indexed count,
-scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**), **Attach folder** through the
-native dialog, **Rename** at the last row, and a two-step **Remove collection** that states `Original files
-remain untouched.` A token that expires keeps the draft and asks to choose again.
+A left rail of All and every collection alphabetically. **All** holds a **New collection** group (a name, an
+optional **Folder** to start from through the native dialog, and **Create** at the last row) and a table of
+collections with their counts and scan state. A selected collection shows its attached folders first (name,
+indexed count, scan state, last scan; **Replace**, **Rescan**, **Cancel scan**, **Remove**) with **Attach
+folder** through the native dialog, then its member table (image, title, year, remove), **Rename**, and a
+two-step **Remove collection** that states `Original files remain untouched.` A token that expires keeps the
+draft and asks to choose again.
+
+A folder is never more than one press away (owner, 2026-10-16: the button sat under two groups on a view you
+had to find first): **Attach folder…** is also the first row of a collection's context menu in Library's rail.
 
 ---
 

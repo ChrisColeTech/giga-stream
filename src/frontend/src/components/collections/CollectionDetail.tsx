@@ -8,8 +8,8 @@ import { CollectionMembers } from "./CollectionMembers";
 import { CollectionRemove } from "./CollectionRemove";
 import { CollectionRename } from "./CollectionRename";
 
-/** One collection's own section (`06` section 6.3): its name (the Name group, which the rail's selection already heads),
- *  its members, its folders and the removal, each a family group. The window keys it by the collection's id, so a draft never carries over to another collection. */
+/** One collection's own section (`06` section 6.3): its folders first, since folders are how a collection fills, then
+ *  its members, its name and the removal, each a family group. The window keys it by the collection's id, so a draft never carries over to another collection. */
 export function CollectionDetail({
   collection,
   onRemoved,
@@ -21,9 +21,9 @@ export function CollectionDetail({
   const folders = COLLECTION_FOLDERS[collection.id] ?? [];
   return (
     <div className="flex min-w-0 flex-col">
-      <CollectionRename collectionId={collection.id} name={collection.name} />
-      <CollectionMembers collectionId={collection.id} rows={memberRows(refs, LIBRARY_ITEMS)} />
       <CollectionFolders collectionId={collection.id} folders={folders} />
+      <CollectionMembers collectionId={collection.id} rows={memberRows(refs, LIBRARY_ITEMS)} />
+      <CollectionRename collectionId={collection.id} name={collection.name} />
       <CollectionRemove collectionId={collection.id} onRemoved={onRemoved} />
     </div>
   );

@@ -21,6 +21,12 @@ export function removeMember(_collectionId: string, _ref: ItemRef): ServiceResul
   return notConnected();
 }
 
+/** Opens the native folder picker for a collection not created yet; answers the chosen folder's token and name
+ *  (`POST /api/fs/dialog`, `03` section 3.8). Phase 1 stub. */
+export function chooseFolder(): ServiceResult {
+  return notConnected();
+}
+
 /** Attaches a folder chosen with the native picker (`03` section 3.8). Phase 1 stub. */
 export function attachFolder(_collectionId: string): ServiceResult {
   return notConnected();
