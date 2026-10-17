@@ -70,9 +70,16 @@ rules are in `01`; this document is about process.
   The installed app runs on the production ports (fileserver 8190, backend 8191, live server 8197,
   preview 5271) so the owner can test it while the dev stack runs on the development ones. Nothing
   started for development takes a production port, and nothing stops a process on one.
-- **Checks never touch the owner's data or running app.** A check runs the fileserver and the admin
-  backend with temporary `DATA_DIR`s, on free ports, and serves its own build of the interface. The
-  owner's `~/.giga-stream`, saved layout and Electron window are not test fixtures.
+- **Automated checks use temporary data; visual verification uses the real stack** (owner, 2026-10-17: "dont use
+  the isolate fileserver use the real fileserver and real backend and find real problems"). The gate and a
+  program's tests run the fileserver and the admin backend with temporary `DATA_DIR`s on free ports. Anything
+  that LOOKS at the product (visual acceptance, a drive to find a bug, an investigation of something the owner
+  sees) runs against the owner's real `npm run dev` stack: the real fileserver, backend and data, in the real
+  Electron window through its debug port (9222) or a Chrome tab on the Vite port (5171). An isolated copy
+  hides real problems: stale data, state the owner's window really holds, and paint and hydration timing. On
+  the real stack the coordinator changes only UI state (surface, panes, Theatre) and restores it, never
+  deletes or overwrites the owner's records without asking, and reports every real problem it sees, not only
+  the one it was asked about.
 - **Page-level fakes** (a socket hello, a fetch) live in a harness outside the repository and never
   write to a real server.
 - **Stop processes by PID**, never by image name; killing `electron.exe` or `node.exe` by name takes
@@ -163,8 +170,9 @@ written, stated as written and not run; every gap it filled and how; anything le
 1. The coordinator reads the report as a claim, not as evidence, and reads the diff.
 2. It merges the branch, runs `npm ci` where a lockfile changed (never under a running app, 4), and runs
    the gate.
-3. It runs the real checks the worker could not: the programs started on free ports with temporary
-   data, driven over HTTP (the fileserver has no socket, `03` section 4), restarted and re-read. For a
+3. It runs the real checks the worker could not: the backend and fileserver started on free ports with
+   temporary data, driven over HTTP (the fileserver has no socket, `03` section 4), restarted and re-read; and,
+   for anything visual, the owner's real stack (section 4). For a
    frontend wave it also completes section 5's Chrome MCP visual acceptance before the branch is called
    landed.
 4. A failure goes back to the **same** worker with the exact output. The coordinator does not quietly

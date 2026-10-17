@@ -89,7 +89,14 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
 ## How to work (full text: `docs/07`)
 
 - Edit with the editor tools, one file at a time; never write a script that writes source or docs.
-- Checks use free ports and temporary `DATA_DIR`s, never the owner's `~/.giga-stream` or running app.
+- Automated tests and the gate use free ports and temporary `DATA_DIR`s. **Visual verification and bug-finding
+  run against the REAL stack, never an isolated copy** (owner, 2026-10-17: "dont use the isolate fileserver use
+  the real fileserver and real backend and find real problems"): the owner's running `npm run dev` stack, with its
+  real fileserver (8090), real backend and real data, seen in the real Electron window through its debug port
+  (9222) or in a Chrome tab on the Vite port (5171). An isolated copy hides real problems (it hid stale channel
+  rows pointing at a dead port, and a video that painted stale after a pane collapsed). On the real stack: change
+  only UI state (surface, panes, Theatre) and put it back as found, never delete or overwrite the owner's records
+  without asking, and report every real problem seen, whether or not it was the thing asked about.
   Ask before starting a program the owner did not ask for. Stop processes by PID, never by name.
 - A worker works only in its own worktree and branch, compiles clean, writes tests but does not run
   them, never edits a doc, commits without pushing, and reports in the format of `docs/07` section 6.4.
