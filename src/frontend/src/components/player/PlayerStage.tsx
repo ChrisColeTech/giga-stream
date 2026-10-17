@@ -148,7 +148,7 @@ export function PlayerStage(props: PlayerStageProps) {
           errorReason={props.activeSource.id === "local" ? LOCAL_MEDIA_FAILURE : STREAM_FAILURE}
           onState={props.onState} onProgress={props.onProgress}
           onPlaying={(playing) => { props.onPausedChange(!playing); props.onPlaying(playing); }}
-          onSeeked={props.onBoundary} onEnded={props.onBoundary} />
+          onEnded={props.onBoundary} />
       )}
       {render === "unavailable" && <PlayerStageStatus kind="unavailable" onAction={props.commands.retry} />}
       {render === "no-source" && (

@@ -38,6 +38,7 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
     if (clearing) return;
     setClearing(true);
     void clearWatch().then(() => {
+      useAppStore.getState().forgetAllWatch();
       useAppStore.getState().requestLibraryRefresh();
       say("History cleared.");
     }).catch((error: unknown) => {

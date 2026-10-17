@@ -5,16 +5,20 @@ import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
 
-/** `PUT /api/watch` (docs/03 section 3.13); structurally validated here, ordered by the service. */
+/** Longest id or playback id accepted; real ones are a few dozen characters. */
+const ID_MAX = 200;
+
+/** `PUT /api/watch` (docs/03 section 3.13); structurally validated here, ordered by the service. Positions are
+ *  integer milliseconds (docs/01 section 8), so a float or a negative number is a malformed request. */
 const WriteBody = z
   .object({
-    item: z.object({ kind: z.enum(["title", "local"]), id: z.string() }),
-    season: z.number().optional(),
-    episode: z.number().optional(),
-    positionMs: z.number(),
-    durationMs: z.number().optional(),
-    playbackId: z.string(),
-    seq: z.number(),
+    item: z.object({ kind: z.enum(["title", "local"]), id: z.string().min(1).max(ID_MAX) }),
+    season: z.number().int().positive().optional(),
+    episode: z.number().int().positive().optional(),
+    positionMs: z.number().int().nonnegative(),
+    durationMs: z.number().int().positive().optional(),
+    playbackId: z.string().min(1).max(ID_MAX),
+    seq: z.number().int().positive(),
   })
   .passthrough();
 

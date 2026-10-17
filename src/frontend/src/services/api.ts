@@ -22,6 +22,10 @@ export interface ApiOptions {
   readonly body?: unknown;
   readonly signal?: AbortSignal;
   readonly area?: EventArea;
+  /** Lets the request outlive the page (a write made as the window closes). */
+  readonly keepalive?: boolean;
+  /** A success adds no Events row (a periodic progress write); a failure still does. */
+  readonly quiet?: boolean;
 }
 
 async function refusal(response: Response): Promise<ApiError> {
@@ -51,6 +55,7 @@ export async function api<T>(path: string, schema: z.ZodType<T>, options: ApiOpt
     const response = await fetch(path, {
       method,
       signal: options.signal,
+      ...(options.keepalive === true && { keepalive: true }),
       headers: options.body === undefined ? undefined : { "content-type": "application/json" },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
@@ -85,7 +90,10 @@ export async function api<T>(path: string, schema: z.ZodType<T>, options: ApiOpt
     }
     throw new ApiError("fileserver.unreachable", errorSentence("fileserver.unreachable"));
   } finally {
-    useAppStore.getState().logEvent(restEvent(method, status, performance.now() - started, options.area ?? "Connection"));
+    const succeeded = typeof status === "number" && status < 400;
+    if (!(options.quiet === true && succeeded)) {
+      useAppStore.getState().logEvent(restEvent(method, status, performance.now() - started, options.area ?? "Connection"));
+    }
   }
 }
 

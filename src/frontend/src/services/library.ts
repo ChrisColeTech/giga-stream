@@ -3,8 +3,6 @@ import { collectionOf, type LibraryQuery } from "@/lib/library-query";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
 import { CollectionLibraryPageSchema, ContinuePageSchema, LibraryPageSchema } from "./schemas/library-schema";
-import { notConnected, type ServiceResult } from "./not-connected";
-import type { ItemRef } from "@/types/library";
 
 export interface LibrarySearchSeams {
   readonly read: typeof readLibrary;
@@ -145,8 +143,3 @@ export async function readAllLibraryPages(query: LibraryQuery, signal?: AbortSig
   }
   return page;
 }
-
-/* Player and Settings retain their phase-1 calls until wave 2.5; Library uses the real modules above and `watch.ts`. */
-export const playItem = (_ref: ItemRef): ServiceResult => notConnected();
-export const playEpisode = (_ref: ItemRef, _season: number, _episode: number): ServiceResult => notConnected();
-export const removeHistoryEntry = (_watchId: string): ServiceResult => notConnected();
