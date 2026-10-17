@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { CollectionType } from "../types/collection.js";
+import type { CollectionMembership, CollectionType } from "../types/collection.js";
 import type { Database } from "./database.js";
 
 /** Rows of the user's own data tables. `path` is private and never crosses into a DTO (001 header). */
@@ -11,7 +11,6 @@ export interface CollectionRow {
   createdAt: number;
   updatedAt: number;
 }
-
 export interface FolderRow {
   id: string;
   collectionId: string;
@@ -20,7 +19,6 @@ export interface FolderRow {
   lastScannedAt?: number;
   createdAt: number;
 }
-
 const CollectionRowZ = z.object({
   id: z.string(),
   name: z.string(),
@@ -28,7 +26,6 @@ const CollectionRowZ = z.object({
   created_at: z.coerce.number(),
   updated_at: z.coerce.number(),
 });
-
 const FolderRowZ = z.object({
   id: z.string(),
   collection_id: z.string(),
@@ -37,7 +34,6 @@ const FolderRowZ = z.object({
   created_at: z.coerce.number(),
   last_scanned_at: z.number().nullable(),
 });
-
 export type ItemKind = "title" | "local";
 export interface CollectionRepository {
   listCollections(): CollectionRow[];
@@ -46,12 +42,10 @@ export interface CollectionRepository {
   insertCollection(id: string, name: string, type: CollectionType, at: number): void;
   updateCollection(id: string, patch: { name?: string; type?: CollectionType }, at: number): void;
   deleteCollection(id: string): void;
-
   addMember(collectionId: string, kind: ItemKind, itemId: string, at: number): void;
   removeMember(collectionId: string, kind: ItemKind, itemId: string): void;
-  collectionsOfItem(kind: ItemKind, itemId: string): string[];
+  collectionsOfItem(kind: ItemKind, itemId: string): CollectionMembership[];
   itemCount(collectionId: string): number;
-
   listFolders(collectionId: string): FolderRow[];
   findFolder(folderId: string): FolderRow | null;
   addFolder(id: string, collectionId: string, path: string, name: string, at: number): void;
@@ -76,14 +70,21 @@ export function createCollectionRepository(db: Database): CollectionRepository {
   );
   const dropMember = db.prepare("DELETE FROM collection_items WHERE collection_id = ? AND item_kind = ? AND item_id = ?");
   const memberships = db.prepare(
-    `SELECT DISTINCT c.id FROM collections c
+    `SELECT c.id AS collection_id,
+            CASE WHEN i.id IS NOT NULL THEN 'manual' ELSE 'folder' END AS source
+       FROM collections c
        LEFT JOIN collection_items i ON i.collection_id = c.id AND i.item_kind = ? AND i.item_id = ?
        LEFT JOIN local_files lf ON lf.collection_id = c.id AND ? = 'local' AND lf.id = ?
       WHERE i.id IS NOT NULL OR lf.id IS NOT NULL
       ORDER BY c.name COLLATE NOCASE`,
   );
-  const countItems = db.prepare("SELECT COUNT(*) AS n FROM collection_items WHERE collection_id = ?");
-  const countFiles = db.prepare("SELECT COUNT(*) AS n FROM local_files WHERE collection_id = ?");
+  const countCollectionItems = db.prepare(
+    `SELECT COUNT(*) AS n FROM (
+       SELECT item_kind, item_id FROM collection_items WHERE collection_id = ?
+       UNION
+       SELECT 'local', id FROM local_files WHERE collection_id = ?
+     )`,
+  );
   const countFolderFiles = db.prepare("SELECT COUNT(*) AS n FROM local_files WHERE folder_id = ?");
 
   const listFolderRows = db.prepare(
@@ -151,17 +152,17 @@ export function createCollectionRepository(db: Database): CollectionRepository {
       dropMember.run(collectionId, kind, itemId);
     },
     collectionsOfItem(kind, itemId) {
-      const ids: string[] = [];
+      const rows: CollectionMembership[] = [];
       for (const raw of memberships.all(kind, itemId, kind, itemId)) {
-        const row = z.object({ id: z.string() }).safeParse(raw);
-        if (row.success) ids.push(row.data.id);
+        const row = z
+          .object({ collection_id: z.string(), source: z.enum(["manual", "folder"]) })
+          .safeParse(raw);
+        if (row.success) rows.push({ collectionId: row.data.collection_id, source: row.data.source });
       }
-      return ids;
+      return rows;
     },
     itemCount(collectionId) {
-      const manual = Number((countItems.get(collectionId) as { n: number }).n);
-      const files = Number((countFiles.get(collectionId) as { n: number }).n);
-      return manual + files;
+      return Number((countCollectionItems.get(collectionId, collectionId) as { n: number }).n);
     },
 
     listFolders(collectionId) {

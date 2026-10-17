@@ -124,10 +124,37 @@ test("view=collection answers members and folder files; unknown is 404, a missin
   const made = await send(t.app, "POST", "/api/collections", { name: "Lane", type: "local" });
   const collectionId = String(pick(made.body, "data.id"));
   await send(t.app, "PUT", `/api/collections/${collectionId}/items`, { kind: "title", id: "movie-603" });
-  localFile(t, "Reel.mkv", { height: 720, collectionId });
+  const localId = localFile(t, "Reel.mkv", { height: 720, collectionId });
   const page = await send(t.app, "GET", `/api/library?view=collection&collectionId=${collectionId}`);
   assert.equal(pick(page.body, "data.items.length"), 2);
   assert.equal(pick(page.body, "data.total"), 2);
+  const collectionItems = pick(page.body, "data.items") as Array<Record<string, unknown>>;
+  assert.equal(
+    pick(collectionItems.find((item) => pick(item, "ref.kind") === "title"), "collectionSource"),
+    "manual",
+  );
+  assert.equal(
+    pick(collectionItems.find((item) => pick(item, "ref.id") === localId), "collectionSource"),
+    "folder",
+  );
+
+  await send(t.app, "PUT", `/api/collections/${collectionId}/items`, { kind: "local", id: localId });
+  const both = await send(t.app, "GET", `/api/library?view=collection&collectionId=${collectionId}`);
+  assert.equal(pick(both.body, "data.items.length"), 2, "manual and folder paths produce one row");
+  const bothLocal = (pick(both.body, "data.items") as Array<Record<string, unknown>>).find(
+    (item) => pick(item, "ref.id") === localId,
+  );
+  assert.equal(pick(bothLocal, "collectionSource"), "manual");
+
+  await send(t.app, "DELETE", `/api/collections/${collectionId}/items/local/${localId}`);
+  const revealed = await send(t.app, "GET", `/api/library?view=collection&collectionId=${collectionId}`);
+  const revealedLocal = (pick(revealed.body, "data.items") as Array<Record<string, unknown>>).find(
+    (item) => pick(item, "ref.id") === localId,
+  );
+  assert.equal(pick(revealedLocal, "collectionSource"), "folder");
+
+  const all = await send(t.app, "GET", "/api/library?type=local");
+  assert.equal(pick(all.body, "data.items.0.collectionSource"), undefined, "source is absent outside collection view");
   const unknown = await send(t.app, "GET", "/api/library?view=collection&collectionId=no-such");
   assert.equal(unknown.status, 404);
   assert.equal(pick(unknown.body, "error.code"), "collection.not_found");

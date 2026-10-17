@@ -87,7 +87,7 @@ export function createLocalMediaService(deps: {
             message: row.facts.problem ?? "ffprobe could not read this file.",
           },
         }),
-        collectionIds: collections.collectionsOfItem("local", row.id),
+        collectionIds: collections.collectionsOfItem("local", row.id).map((membership) => membership.collectionId),
         folderName: folder?.name ?? "",
       };
     },

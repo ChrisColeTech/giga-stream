@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { Collection, CollectionType, Folder, ItemRef } from "../types/collection.js";
+import type { Collection, CollectionMembership, CollectionType, Folder, ItemRef } from "../types/collection.js";
 import { AppError } from "../lib/app-error.js";
 import type { CollectionRepository, FolderRow } from "../store/collection-repository.js";
 import type { FsDialogService } from "./fs-dialog-service.js";
@@ -40,7 +40,7 @@ export interface CollectionService {
   addItem: (collectionId: string, kind: string, itemId: string) => Collection;
   removeItem: (collectionId: string, kind: string, itemId: string) => Collection;
   /** `GET /api/items/:kind/:itemId/collections` — manual or through a folder (3.7). */
-  itemCollections: (kind: string, itemId: string) => { collectionIds: string[] };
+  itemCollections: (kind: string, itemId: string) => { memberships: CollectionMembership[] };
   /** `{ token }` of `POST /api/fs/dialog`; attaches the folder and queues its scan (3.8). */
   attachFolder: (collectionId: string, token: unknown) => Promise<Folder>;
   /** `{ token }` of `PUT /api/folders/:folderId`: new location, then a fresh scan (3.8). */
@@ -137,7 +137,7 @@ export function createCollectionService(deps: {
     },
 
     itemCollections(kind, itemId) {
-      return { collectionIds: collections.collectionsOfItem(readKind(kind), itemId) };
+      return { memberships: collections.collectionsOfItem(readKind(kind), itemId) };
     },
 
     async attachFolder(collectionId, token) {
