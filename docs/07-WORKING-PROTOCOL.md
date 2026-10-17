@@ -9,8 +9,8 @@ rules are in `01`; this document is about process.
 - **The owner** decides what the product is and how it looks. The owner's words are the authority;
   a rule from an earlier session or document never outranks something the owner said.
 - **The coordinator** is the session working with the owner. It writes the docs, briefs workers, lands
-  their work, runs every check, reviews every visual result in the browser, and reports to the owner. It
-  builds visual work itself unless the owner directs a split under section 6.1.
+  their work, runs every check, reviews every visual result in the browser, packages each wave, and
+  reports to the owner. It does not implement wave code (owner, 2026-10-17); code work goes to workers.
 - **A worker** is a subagent given one brief. It writes and compiles code in its own worktree, and
   stops.
 
@@ -100,9 +100,11 @@ rules are in `01`; this document is about process.
 - **The owner may direct a finer split for a named plan**, for example one worker per surface of the
   interface. The plan's document records the split, the owner of every path, and the landing order. The
   coordinator still lands every branch, runs every check and reviews every visual result (section 6.5).
-- **Never delegate:** docs and contracts (one voice, the coordinator's), visual work unless the owner has
-  directed it under the point above, anything another piece waits on that the coordinator can finish
-  directly, and any check that needs a running service.
+- **Every code wave is delegated** (owner, 2026-10-17). A foundation another wave needs gets its own
+  worker and is landed, checked and committed before dependent worktrees are cut. This preserves the
+  dependency order without making the coordinator an implementer.
+- **Never delegate:** docs and contracts (one voice, the coordinator's), landing and review, packaging,
+  and any check that needs a running service.
 
 ### 6.2 The brief
 

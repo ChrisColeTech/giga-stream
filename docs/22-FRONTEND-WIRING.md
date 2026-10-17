@@ -389,22 +389,22 @@ fix), so the status bar draws an indeterminate bar instead of a false 0 %.
 ## 6. Waves
 
 Each wave wires one surface's controls. The frontend work follows the per-surface owners of `21` §5 (the owner's
-directed split); the backend and fileserver waves are one worker each (`07` §6.1). The coordinator builds wave 2.0
-and 2.1 directly on the baseline — everything else waits on them (`07` §6.1: never delegate what another piece
-waits on).
+directed split); every code wave has a worker (`07` §6.1, owner 2026-10-17). Foundation waves are delegated and
+landed sequentially before dependent worktrees are cut; the coordinator documents, briefs, reviews, lands, checks
+and packages, but does not implement wave code.
 
 | Wave | Worker | Delivers | Proof |
 |---|---|---|---|
 | A | backend worker | the provider fields, migration, CRUD, the sources fill on detail and season answers, `scripts/seed-providers.ts` upgraded to the full catalog (all of `18` §2's embed hosts + the stream-family rows with their own `source` values), tests | the gate's backend steps; sources on a title answer for every active provider whose template applies, in order; no source without a template; a fresh seeded database lists the whole catalog with distinct sources |
 | B | fileserver worker | the 11 settings keys; `sources` pass-through (schemas, types, service); provider records stop being attached; static whitelist `assets` + SPA entry; scan percent `null`; `watchedPercent`/`liveOnOpen` read their settings; tests | the gate's fileserver steps; settings round trip over HTTP; a built `assets` bundle served; sources on title and episode answers |
-| 2.0 | coordinator | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, `lib/event-log.ts`, the rule that refuses the admin backend's address in `src/frontend` (`01` §1.1) | `test/api.test.ts`, `test/event-log.test.ts` pass; the rule checker reports the new rule |
-| 2.1 | coordinator | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the statusbar connection word, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
+| 2.0 | foundation worker | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, `lib/event-log.ts`, the rule that refuses the admin backend's address in `src/frontend` (`01` §1.1) | `test/api.test.ts`, `test/event-log.test.ts` pass; the rule checker reports the new rule |
+| 2.1 | state worker | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the statusbar connection word, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
 | 2.2 | live worker | `services/channels.ts`, `services/stream-player.ts`, the channel search and the stage | Live opens on the last channel; Refresh updates the dots; a test channel plays |
 | 2.3 | collections worker | `services/collections.ts`, `services/folders.ts`, `services/jobs.ts`, `services/desktop.ts`, `services/scan-stream.ts` | settings survive a restart; a collection is created and removed; a folder's scan streams and the indeterminate bar shows |
 | 2.4 | library worker | `services/library.ts`, `services/titles.ts`, `services/favorites.ts`, `services/watch.ts`; the menu's `Collections ▸` wired | the views show their counts; a favourite persists; a collection toggled from the card's menu is listed after a restart |
 | 2.5 | player worker | `services/local-media.ts`, the progress hook, the tabs, `lib/embed-url.ts`, `lib/embed-messages.ts`, `lib/frame-guard.ts`, the embed host component, the stage Source control | a local file plays and seeks; progress survives a restart; Resume works; with the seeder run, a title's first source plays in the embed and switching sources clean-stops and re-hosts |
 | 2.6 | events worker | the events wiring of §3.7 across api, stream player, embed host and `pocHost.onGuard`; the drawer UI | a connection loss, a failed stream, a refused popup and a blocked ad each produce a row; host only, no paths |
-| 2.7 | coordinator | fixtures deleted; `web:build`; the full walks | `grep` finds no import of `fixtures/`; the gate passes; the walks of `05` §3–5 run against the fileserver; the Electron window runs the embed with the guards and the blocked-ad rows |
+| 2.7 | cleanup worker | fixtures deleted; `web:build`; the full walks | `grep` finds no import of `fixtures/`; the gate passes; the walks of `05` §3–5 run against the fileserver; the Electron window runs the embed with the guards and the blocked-ad rows |
 
 Landing order: A and B land first (independent programs, disjoint paths), then 2.0/2.1, then 2.6's drawer rides
 last among the frontend waves only if its sources exist — in practice 2.2, 2.3 and 2.4 land in any order (disjoint

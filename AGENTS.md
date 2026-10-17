@@ -91,5 +91,7 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   Ask before starting a program the owner did not ask for. Stop processes by PID, never by name.
 - A worker works only in its own worktree and branch, compiles clean, writes tests but does not run
   them, never edits a doc, commits without pushing, and reports in the format of `docs/07` section 6.4.
+- Every code wave, including foundations other waves wait on, is implemented by a worker. The coordinator
+  writes docs and briefs, reviews and lands branches, runs checks and real drives, packages, and reports.
 - After every wave lands, the coordinator runs `npm run dist:win` and gives the owner the exe's path, so
   the owner tests the wave without disturbing development (`docs/07` section 6.5).
