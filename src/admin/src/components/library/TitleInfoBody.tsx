@@ -1,9 +1,11 @@
 import { Clapperboard } from "lucide-react";
-import { Group, Row, Wide } from "@/components/ui/Form";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Wide } from "@giga/ui/form/Wide";
 import { NAME_CHIP } from "@/components/ui/name-chip";
 import { PosterImage } from "@/components/ui/PosterImage";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { cn } from "@/lib/cn";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
+import { cn } from "@giga/ui/lib/cn";
 import { durationLabel, identityLine, ratingLabel, seasonsLabel } from "@/lib/library-facts";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { ROWS_COPY } from "./rows-constants";
 
 export interface ShelfHeadingProps {

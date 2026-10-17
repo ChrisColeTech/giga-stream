@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { FIELD_LABEL, FIELD_ROW, labelColumn } from "@/components/ui/NumberField";
-import { cn } from "@/lib/cn";
+import { FIELD_LABEL, FIELD_ROW, labelColumn } from "@giga/ui/form/NumberField";
+import { cn } from "@giga/ui/lib/cn";
 
 /* Every inspector fact shares one label column, sized to the longest label the inspector renders (Year, Quality, Rating,
    Runtime, Seasons, Duration), so the values line up down the pane (LoRA Studio's rail rows, ui/NumberField.tsx). */

@@ -1,9 +1,12 @@
 import { FolderInput, FolderOpen } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Field";
-import { Actions, FIELD_CONTROL, Group, Row } from "@/components/ui/Form";
-import { Segmented } from "@/components/ui/Segmented";
+import { Button } from "@giga/ui/controls/Button";
+import { Input } from "@giga/ui/controls/Input";
+import { Actions } from "@giga/ui/form/Actions";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Segmented } from "@giga/ui/controls/Segmented";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";

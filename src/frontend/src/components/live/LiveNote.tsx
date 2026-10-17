@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 
 export interface LiveNoteProps {
   readonly icon: LucideIcon;

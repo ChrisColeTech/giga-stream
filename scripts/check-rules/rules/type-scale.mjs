@@ -8,11 +8,14 @@ import { lineAt } from "../load-files.mjs";
  * held to the same scale: any `.tsx` it gains is a surface (it has no family ui layer). It has none today.
  */
 const ARBITRARY_SIZE = /\btext-\[\d+(?:\.\d+)?px\]/g;
-const SURFACE = /^src\/frontend\/src\/(components|pages)\/|^src\/backend\/.*\.tsx$/;
+const SURFACE = /^src\/(frontend|admin)\/src\/(components|pages)\/|^src\/backend\/.*\.tsx$/;
+/** The family UI layer: the library (`src/shared/ui`, not a surface) and each app's `components/ui` copies (docs/27). */
+const UI_LAYER = /\/components\/ui\/|^src\/shared\/ui\//;
 
 /** Surface files that copy a LoRA surface's classes verbatim, arbitrary size included. Each names its source. */
 const VERBATIM = new Set([
   "src/frontend/src/components/settings/SettingsRail.tsx", // LoRA components/settings/SettingsOverlay.tsx NAV_BUTTON
+  "src/admin/src/components/settings/SettingsRail.tsx", // the admin's copy until step 7 of docs/27 replaces it
 ]);
 
 export const typeScale = {
@@ -21,7 +24,7 @@ export const typeScale = {
     const findings = [];
     for (const file of files) {
       if (file.isTest || !SURFACE.test(file.rel)) continue;
-      if (file.rel.startsWith("src/frontend/src/components/ui/") || VERBATIM.has(file.rel)) continue;
+      if (UI_LAYER.test(file.rel) || VERBATIM.has(file.rel)) continue;
       for (const match of file.code.matchAll(ARBITRARY_SIZE)) {
         findings.push({
           file: file.rel,

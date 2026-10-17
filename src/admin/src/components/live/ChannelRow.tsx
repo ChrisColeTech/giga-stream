@@ -1,7 +1,7 @@
 import type { KeyboardEvent, Ref } from "react";
-import { ACCENT } from "@/components/ui/Form";
+import { ACCENT } from "@giga/ui/form/form-classes";
 import { LogoImage } from "@/components/ui/LogoImage";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { PLAYING_MARKER } from "@/lib/live-constants";
 import { statusBar, statusWord } from "@/lib/live-status";
 import type { Channel } from "@/types/channel";

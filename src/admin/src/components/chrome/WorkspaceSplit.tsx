@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Allotment } from "allotment";
 import { STAGE_MIN_HEIGHT, SURFACES, limitsOf } from "@/constants/surfaces";
 import { useWorkspaceSplit } from "@/hooks/useWorkspaceSplit";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { usePaneOpen } from "@/store/selectors";
 import type { Surface } from "@/types/shell";
 

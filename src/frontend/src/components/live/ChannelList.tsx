@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { useRef } from "react";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { channelListRender, keyTarget, tabStopId } from "@/lib/live-channels";
 import { CHANNEL_LIST_LABEL, LIST_SKELETON_ROWS } from "@/lib/live-constants";
 import type { Channel } from "@/types/channel";

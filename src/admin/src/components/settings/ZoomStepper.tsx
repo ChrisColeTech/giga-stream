@@ -1,5 +1,5 @@
 import { Minus, Plus } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { ZOOM_AT_MAX, ZOOM_AT_MIN } from "@/constants/settings-sections";
 import { canStepZoom, formatZoom, stepZoom } from "@/lib/settings-zoom";
 

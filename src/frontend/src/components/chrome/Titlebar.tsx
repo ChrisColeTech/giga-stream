@@ -1,9 +1,9 @@
 import { MonitorPlay, PanelBottom, PanelLeft, PanelRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@giga/ui/controls/Button";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { SURFACES } from "@/constants/surfaces";
 import { barTone } from "@/lib/bar-tone";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { usePaneOpen, useSurface, useWorkSurfaceOpen } from "@/store/selectors";
 import type { PaneSide } from "@/types/shell";

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { TWO_STEP_MS } from "@/constants/surfaces";
 import { useArmedAction } from "@/hooks/useArmedAction";
-import { Button, type ButtonSize } from "./Button";
+import { Button, type ButtonSize } from "@giga/ui/controls/Button";
 
 export interface ArmedButtonProps {
   readonly children: ReactNode;

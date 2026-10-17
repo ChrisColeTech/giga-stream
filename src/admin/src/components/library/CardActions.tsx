@@ -1,5 +1,5 @@
 import { Ellipsis, Info, Play } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { playRef } from "./library-service";

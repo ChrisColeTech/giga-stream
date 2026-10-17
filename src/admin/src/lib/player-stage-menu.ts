@@ -1,4 +1,4 @@
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@giga/ui/menus/types";
 
 type Submenu = Extract<MenuItem, { kind: "submenu" }>;
 

@@ -9,7 +9,7 @@
 // A program whose folder has no package.json yet is reported as not built, by name, never silently
 // passed; every program that exists is checked (docs/07 section 5).
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,12 +22,23 @@ const root =
 
 const STEP_TIMEOUT_MS = 180_000;
 
+/*
+ * `needs` names a folder the step cannot run without: the family library and the request layer are scaffolds
+ * until their code lands (docs/27 steps 0 to 2), so their steps report "not built yet" until that folder holds
+ * a TypeScript source (CSS alone does not count: `tsc` has no inputs without one).
+ */
 const STEPS = [
   { name: "typecheck shared/media", cwd: "src/shared/media", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
+  { name: "typecheck shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
   { name: "typecheck backend", cwd: "src/backend", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck fileserver", cwd: "src/fileserver", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck admin", cwd: "src/admin", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "lint shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "lint"], needs: "src" },
+  { name: "lint shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "lint"], needs: "src" },
   { name: "lint frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "lint"] },
+  { name: "lint admin", cwd: "src/admin", cmd: "npm", args: ["run", "lint"] },
   {
     name: "rules",
     cwd: ".",
@@ -35,15 +46,28 @@ const STEPS = [
     args: ["scripts/check-rules.mjs"],
   },
   { name: "test checker", cwd: ".", cmd: "node", args: ["--test", "scripts/check-rules/test/*.test.mjs"] },
+  { name: "test shared-http", cwd: "src/shared/http", cmd: "npm", args: ["test"], needs: "src" },
+  { name: "test shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["test"], needs: "src" },
   { name: "test shared/media", cwd: "src/shared/media", cmd: "npm", args: ["test"] },
   { name: "test backend", cwd: "src/backend", cmd: "npm", args: ["test"] },
   { name: "test fileserver", cwd: "src/fileserver", cmd: "npm", args: ["test"] },
   { name: "test frontend", cwd: "src/frontend", cmd: "npm", args: ["test"] },
+  { name: "test admin", cwd: "src/admin", cmd: "npm", args: ["test"] },
   // Last: against a stack that is already running, every enabled channel must really play. No stack = SKIPPED.
   { name: "live smoke", cwd: ".", cmd: "node", args: ["scripts/check/live-smoke.mjs", "--optional"], skipMarker: "SKIPPED" },
 ];
 
 const PASSED_TESTS = /ℹ pass (\d+)/;
+
+/** True when a folder holds at least one `.ts` or `.tsx` file, at any depth (node_modules aside). */
+function hasTypeScript(dir) {
+  if (!existsSync(dir)) return false;
+  return readdirSync(dir, { withFileTypes: true }).some((entry) =>
+    entry.isDirectory()
+      ? entry.name !== "node_modules" && hasTypeScript(path.join(dir, entry.name))
+      : /\.tsx?$/.test(entry.name),
+  );
+}
 
 /** Run one step; resolve with its output, exit code and whether the limit was exceeded. */
 function runStep(step) {
@@ -75,7 +99,11 @@ let tests = 0;
 const notBuilt = new Set();
 
 for (const step of STEPS) {
-  if (step.cwd !== "." && !existsSync(path.join(root, step.cwd, "package.json"))) {
+  const built =
+    step.cwd === "." ||
+    (existsSync(path.join(root, step.cwd, "package.json")) &&
+      (step.needs === undefined || hasTypeScript(path.join(root, step.cwd, step.needs))));
+  if (!built) {
     notBuilt.add(step.cwd);
     console.log(`${step.name.padEnd(22)} SKIP  (${step.cwd} not built yet)`);
     continue;

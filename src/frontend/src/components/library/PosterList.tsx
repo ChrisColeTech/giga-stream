@@ -1,4 +1,4 @@
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { SKELETON_ROWS } from "@/lib/library-limits";
 import type { ResolvedItem } from "@/lib/library-marks";

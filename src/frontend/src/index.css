@@ -1,203 +1,16 @@
 @import "tailwindcss";
+/* Tailwind scans only under the Vite root; the family UI library's classes must be scanned too (docs/27 section 3). */
+@source "../../shared/ui/src";
 
-@import "./styles/fonts.css";
+/* The family library's tokens and fonts (docs/27 section 2). Every token and the theme and accent families live in tokens.css. */
+@import "../../shared/ui/src/styles/fonts.css";
+@import "../../shared/ui/src/styles/tokens.css";
 
-/* ============ tokens (ported from merge-ui's family shell) ============
- *
- * Tailwind v4 is CSS-first: the complete token set lives here under @theme and
- * there is no tailwind.config.ts. This is also the ONLY place hex values may
- * appear — retheming means editing tokens, never components.
- *
- * The values below are the dark theme. Light and the four alternate accent
- * families override the same variables from a data-attribute on <html>, so a
- * theme switch is a variable change and nothing re-renders to achieve it.
- */
+/* ============ the interface's delta (docs/27 section 1) ============
+ * Theatre's spotlight (owner, 2026-10-17): theme-independent, so it reads on the black stage in every
+ * theme; workspace.css mixes its outer stops down from this one value. */
 @theme {
-  --color-bg: #111113;
-  --color-panel: #18181b;
-  --color-surface: #0a0a0b;
-  /* Giga Stream delta (docs/23): the video stage is dark in every theme, as a video app's picture area is; the light
-     theme does not override it. */
-  --color-stage: #0a0a0b;
-  --color-border: #2a2a2f;
-  --color-hair: #202024;
-
-  --color-text: #f2f2f3;
-  --color-muted: #c2c2c8;
-  --color-faint: #a3a3ac;
-  --color-dim: #8b8b94;
-
-  /* accent: amber (default) — [data-accent="violet"] swaps the family */
-  --color-accent: #ffb224;
-  --color-accent-strong: #ffc95e;
-  --color-accent-ink: #1f1300; /* text ON the accent fill — never white */
-  --color-accent-text: color-mix(in srgb, var(--color-accent) 70%, white);
-  --color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  --color-accent-edge: color-mix(in srgb, var(--color-accent) 40%, transparent);
-  --color-aurora: color-mix(in srgb, var(--color-accent) 6%, transparent);
-
-  /* download-state ramp — ≤8px dots + status text ONLY */
-  --color-st-queued: #85858e;
-  --color-st-loading: #fbbf24;
-  --color-st-generating: #38bdf8;
-  --color-st-done: #34d399;
-  --color-st-failed: #fb7185;
-  --color-danger: #e5484d;
-
-  --color-hov: rgba(242, 242, 243, 0.05);
-  --color-scrim: rgba(0, 0, 0, 0.55);
-
-  --color-ctl: #202023;
-  --color-ctl-hov: #28282c;
-  --color-ctl-edge: #35353b;
-  /* Top-lit gradient stop. A control is lit from above, so its fill runs from
-     this down to --color-ctl rather than sitting flat. */
-  --color-ctl-hi: color-mix(in srgb, var(--color-ctl-hov) 70%, var(--color-ctl));
-
-  /* Swatch display colours (Settings ▸ Appearance). Each chip always shows its
-     own family, independent of the active accent. */
-  --color-sw-amber: #ffb224;
-  --color-sw-violet: #a78bfa;
-  --color-sw-blue: #4cc2ff;
-  --color-sw-green: #34d399;
-  --color-sw-rose: #fb7185;
-
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  /* Control heights are a fixed three-step scale, not free-form spacing. */
-  --spacing-ctl-sm: 24px;
-  --spacing-ctl-md: 28px;
-  --spacing-ctl-lg: 32px;
-
-  /* Family radii (giga-images frontend values): controls 4px, cards/docks 8px. */
-  --radius-ctl: 4px;
-  --radius-card: 8px;
-  --radius-dock: 8px;
-
-  --shadow-stroke-hi: inset 0 1px 0 rgba(242, 242, 243, 0.05);
-  /* Soft 1px drop under a raised control; removed on press so the control
-     visibly flattens into the surface. */
-  --shadow-ctl: 0 1px 2px rgba(0, 0, 0, 0.32);
-  --shadow-ctl-accent: 0 1px 3px color-mix(in srgb, var(--color-accent) 28%, transparent);
-  /* The ONE real drop-shadow in the app, worn by the context menu and the
-     confirm dialog. */
-  --shadow-menu: 0 8px 16px rgba(0, 0, 0, 0.28), 0 1px 4px rgba(0, 0, 0, 0.18);
-
-  --ease-in: cubic-bezier(0, 0, 0, 1);
-  --ease-p2p: cubic-bezier(0.55, 0.55, 0, 1);
-
-  /* Motion durations are the whole vocabulary: every duration-* resolves to
-     one of these four. */
-  --duration-fade: 70ms;
-  --duration-fast: 140ms;
-  --duration-move: 200ms;
-  --duration-page: 280ms;
-
-  /* Animation vocabulary (keyframes.css defines these and nothing else, and
-     none of them is a spinner). */
-  --animate-surface-in: surface-in var(--duration-move) var(--ease-in);
-  --animate-overlay-in: surface-in var(--duration-page) var(--ease-in);
-  --animate-pulse-busy: pulse-busy 1.6s ease-in-out infinite;
-  --animate-menu-in: menu-in var(--duration-fade) var(--ease-in);
-  --animate-fade-in: fade-in var(--duration-fast) var(--ease-in);
-  /* The skeleton sweep the skeletons have always asked for and never had (scroll audit 2026-09-06, plan §6). */
-  --animate-skel-shimmer: skel-shimmer 1.6s linear infinite;
-
-  /* Theatre's spotlight (owner, 2026-10-17): theme-independent, so it reads on the black stage in every
-     theme; workspace.css mixes its outer stops down from this one value. */
   --color-spot: rgba(255, 255, 255, 0.045);
-}
-
-/* ============ theme + accent families (ported from merge-ui) ============
- * Overrides of the @theme values above, selected by the attributes the app
- * stamps on <html>. Same variable names, so every Tailwind utility built from
- * a token follows the switch with no re-render. They live HERE because this
- * file is the only place a hex value may appear (docs/02 §14).
- * `color-scheme` rides along so native scrollbars, form controls and the
- * caption strip match the app instead of contradicting it. */
-:root {
-  color-scheme: dark;
-}
-
-:root[data-accent="violet"] {
-  --color-accent: #a78bfa;
-  --color-accent-strong: #c4b5fd;
-  --color-accent-ink: #17093a;
-}
-:root[data-accent="blue"] {
-  --color-accent: #4cc2ff;
-  --color-accent-strong: #82d4ff;
-  --color-accent-ink: #04202f;
-}
-:root[data-accent="green"] {
-  --color-accent: #34d399;
-  --color-accent-strong: #6ee7b7;
-  --color-accent-ink: #032117;
-}
-:root[data-accent="rose"] {
-  --color-accent: #fb7185;
-  --color-accent-strong: #fda4af;
-  --color-accent-ink: #300109;
-}
-
-:root[data-theme="light"] {
-  --color-bg: #ececee;
-  --color-panel: #f7f7f8;
-  --color-surface: #ffffff;
-  --color-border: #d4d4d9;
-  --color-hair: #e4e4e8;
-
-  --color-text: #1b1b1f;
-  --color-muted: #4f4f57;
-  --color-faint: #66666e;
-  --color-dim: #7b7b83;
-
-  --color-accent: #b07300;
-  --color-accent-strong: #8f5e00;
-  --color-accent-ink: #ffffff;
-  /* Light backgrounds already carry the contrast, so accent text is the accent
-     itself rather than a lightened mix. */
-  --color-accent-text: var(--color-accent);
-  --color-aurora: color-mix(in srgb, var(--color-accent) 5%, transparent);
-
-  --color-hov: rgba(27, 27, 31, 0.05);
-  --color-scrim: rgba(255, 255, 255, 0.6);
-
-  --color-ctl: #ffffff;
-  --color-ctl-hov: #f0f0f2;
-  --color-ctl-edge: #d4d4d9;
-
-  --shadow-stroke-hi: inset 0 -1px 0 rgba(27, 27, 31, 0.06);
-
-  --color-sw-amber: #b07300;
-  --color-sw-violet: #6d28d9;
-  --color-sw-blue: #0069b4;
-  --color-sw-green: #047857;
-  --color-sw-rose: #be123c;
-
-  color-scheme: light;
-}
-
-:root[data-theme="light"][data-accent="violet"] {
-  --color-accent: #6d28d9;
-  --color-accent-strong: #5b21b6;
-  --color-accent-ink: #ffffff;
-}
-:root[data-theme="light"][data-accent="blue"] {
-  --color-accent: #0069b4;
-  --color-accent-strong: #005a9b;
-  --color-accent-ink: #ffffff;
-}
-:root[data-theme="light"][data-accent="green"] {
-  --color-accent: #047857;
-  --color-accent-strong: #065f46;
-  --color-accent-ink: #ffffff;
-}
-:root[data-theme="light"][data-accent="rose"] {
-  --color-accent: #6d28d9;
-  --color-accent-strong: #5b21b6;
-  --color-accent-ink: #ffffff;
 }
 
 /* ============ theatre (owner, 2026-10-17) ============
@@ -215,14 +28,14 @@
   --color-border: #000;
 }
 
-@import "./styles/base.css";
+@import "../../shared/ui/src/styles/base.css";
 /* Giga Stream delta (docs/23 section 3.1): the pane layout keeps its own classes. */
 @import "./styles/workspace.css";
-@import "./styles/video.css";
-@import "./styles/keyframes.css";
+@import "../../shared/ui/src/styles/video.css";
+@import "../../shared/ui/src/styles/keyframes.css";
 
 /* LAST: a kill-switch has to win the cascade. */
-@import "./styles/motion-reduce.css";
+@import "../../shared/ui/src/styles/motion-reduce.css";
 
 /* ============ workspace split ============
  * The ONE grid that sizes panes (family shell pattern). A component class,

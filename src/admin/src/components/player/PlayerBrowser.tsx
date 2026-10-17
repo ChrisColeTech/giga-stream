@@ -1,7 +1,7 @@
 import { EpisodeBrowser } from "@/components/player/EpisodeBrowser";
 import { EpisodeRow } from "@/components/player/EpisodeRow";
-import { Select } from "@/components/ui/Field";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { Select } from "@giga/ui/controls/Select";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { progressRatio } from "@/lib/library-facts";
 import { BROWSER_SKELETON_COUNT, NO_SEASONS_REASON } from "@/lib/player-copy";
 import { episodeMarker, type EpisodeMarker, type PlayerView } from "@/lib/player-view";

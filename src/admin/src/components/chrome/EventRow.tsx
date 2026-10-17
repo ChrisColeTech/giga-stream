@@ -1,4 +1,4 @@
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import type { EventRow as EventRowData } from "@/types/events";
 
 /* The tone is a colored word (never a dot): it says the same thing the color does. */

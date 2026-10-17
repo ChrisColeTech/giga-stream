@@ -1,5 +1,5 @@
 import { FolderCog } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { useAppStore } from "@/store/app-store";
 
 /** The rail's footer, as Giga Images has it (`docs/reference/giga-images-real/01-gallery.png`): one full-width

@@ -1,4 +1,4 @@
-import { Segmented } from "@/components/ui/Segmented";
+import { Segmented } from "@giga/ui/controls/Segmented";
 import { SCOPE_OPTIONS } from "@/lib/library-copy";
 import type { Scope } from "@/lib/library-query";
 

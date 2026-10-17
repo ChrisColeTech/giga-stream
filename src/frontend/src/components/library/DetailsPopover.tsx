@@ -1,8 +1,8 @@
 import { Star } from "lucide-react";
 import { PopupPanel } from "@/components/popups/PopupPanel";
 import { NAME_CHIP } from "@/components/ui/name-chip";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
-import { cn } from "@/lib/cn";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
+import { cn } from "@giga/ui/lib/cn";
 import { detailFacts, ratingOutOfTen } from "@/lib/card-details";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { useTitleDetail } from "@/hooks/useTitleDetail";

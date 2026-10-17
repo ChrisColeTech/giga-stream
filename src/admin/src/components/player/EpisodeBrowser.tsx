@@ -1,5 +1,5 @@
 import { EpisodeRow } from "@/components/player/EpisodeRow";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { EPISODE_SKELETON_COUNT } from "@/lib/player-copy";
 import type { EpisodeMarker } from "@/lib/player-view";
 import type { Episode } from "@/types/title";

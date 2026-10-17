@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRef } from "react";
 import type { ReactNode } from "react";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { BORDER, HEADER_GAP, INSET, TITLE_HEIGHT } from "@/constants/child-window";
 import { EASE_OUT } from "@/constants/timing";
 import { useChildWindowBox } from "@/hooks/useChildWindowBox";

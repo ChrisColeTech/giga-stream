@@ -1,0 +1,18 @@
+{
+  "name": "@giga/http",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "The one request layer shared by the interface and the admin app (docs/27 step 5). React-free.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "oxlint",
+    "test": "tsx --tsconfig tsconfig.json --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "oxlint": "^1.75.0",
+    "tsx": "^4.23.12",
+    "typescript": "~6.0.2"
+  }
+}

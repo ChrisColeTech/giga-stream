@@ -1,5 +1,5 @@
-import { Select } from "@/components/ui/Field";
-import { FIELD_CONTROL } from "@/components/ui/NumberField";
+import { Select } from "@giga/ui/controls/Select";
+import { FIELD_CONTROL } from "@giga/ui/form/NumberField";
 import { EMPTY_VALUE, PICTURE_FIT_LABEL, PLAYBACK_SECTION_TITLES, REASON_NEEDS_PLAYING } from "@/lib/live-constants";
 import { PICTURE_FIT_OPTIONS, type PictureFit } from "@/lib/live-picture";
 import {

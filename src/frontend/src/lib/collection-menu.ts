@@ -1,5 +1,5 @@
 import type { CollectionRow } from "@/types/collection";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@giga/ui/menus/types";
 import type { MembershipSource } from "@/types/library";
 
 type Submenu = Extract<MenuItem, { kind: "submenu" }>;

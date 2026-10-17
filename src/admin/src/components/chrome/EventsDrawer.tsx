@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
-import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { COLLAPSE_S, EASE_P2P } from "@/constants/timing";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { EventRow } from "./EventRow";
 

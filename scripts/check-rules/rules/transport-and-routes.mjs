@@ -2,6 +2,11 @@ import { lineAt } from "../load-files.mjs";
 
 /** `01` §4.4: one request layer, one renderer socket, no browser storage, no SQL outside store/. */
 
+/** Programs that make requests or hold UI: no storage, WebSocket only in the interface's events file. */
+const CLIENTS = ["frontend", "admin", "shared-ui", "shared-http"];
+/** Where `fetch` may appear: each app's services/ and the one shared request layer (docs/27 section 4.1). */
+const FETCH_HOMES = /^src\/(frontend|admin)\/src\/services\/|^src\/shared\/http\/src\//;
+
 const ROUTE_LITERAL = /\bapp\.(get|post|patch|put|delete|head)\(\s*["'`]([^"'`]+)["'`]/g;
 const ROOT_ALLOWED = new Set(["/healthz", "/ws"]);
 
@@ -32,9 +37,10 @@ export const transportAndRoutes = {
       const push = (offset, source, message) =>
         findings.push({ file: file.rel, line: lineAt(source, offset), message });
 
-      if (file.program === "frontend" && !file.isTest) {
+      // The clients: the interface, the admin app, the family UI library and the request layer (docs/27 section 4).
+      if (CLIENTS.includes(file.program) && !file.isTest) {
         for (const m of file.bare.matchAll(/\bfetch\s*\(/g)) {
-          if (!file.rel.startsWith("src/frontend/src/services/")) push(m.index, file.bare, "fetch belongs in services/");
+          if (!FETCH_HOMES.test(file.rel)) push(m.index, file.bare, "fetch belongs in services/ or the shared request layer");
         }
         for (const m of file.bare.matchAll(/\bnew\s+(WebSocket|EventSource)\b/g)) {
           if (file.rel !== "src/frontend/src/services/events.ts") {

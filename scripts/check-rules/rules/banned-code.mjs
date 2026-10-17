@@ -31,8 +31,8 @@ export const bannedCode = {
           message: "type-checker suppressions are forbidden",
         });
       }
-      // Colours are tokens in index.css; a component never writes a hex literal.
-      if (file.program === "frontend" && !file.isTest) {
+      // Colours are tokens in index.css; a component never writes a hex literal (the admin and the library included).
+      if (["frontend", "admin", "shared-ui"].includes(file.program) && !file.isTest) {
         for (const match of file.code.matchAll(HEX_COLOR)) {
           findings.push({
             file: file.rel,

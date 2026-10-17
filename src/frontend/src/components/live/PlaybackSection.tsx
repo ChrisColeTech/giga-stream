@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { labelColumn } from "@/components/ui/NumberField";
+import { labelColumn } from "@giga/ui/form/NumberField";
 import { Section } from "@/components/ui/Section";
 import { useAppStore } from "@/store/app-store";
 

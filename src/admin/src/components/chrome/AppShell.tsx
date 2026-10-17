@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { OverlayHost } from "@/components/overlays/OverlayHost";
-import { ContextMenu } from "@/components/ui/ContextMenu";
+import { ContextMenu } from "@giga/ui/menus/ContextMenu";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LivePage } from "@/pages/LivePage";

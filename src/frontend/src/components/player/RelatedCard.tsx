@@ -1,5 +1,5 @@
 import { RelatedPicture } from "@/components/player/RelatedPicture";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import type { LibraryItem } from "@/types/library";
 
 export interface RelatedCardProps {

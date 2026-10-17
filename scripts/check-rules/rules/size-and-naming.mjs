@@ -21,14 +21,16 @@ const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PASCAL = /^[A-Z][A-Za-z0-9]*$/;
 const HOOK = /^use[A-Z][A-Za-z0-9]*$/;
 
+/** The React trees: the interface, the admin app and the family UI library (every `.tsx` the library holds is a component). */
+const COMPONENT_TREE = /^src\/(frontend|admin)\/src\/(components|pages)\/|^src\/shared\/ui\/src\//;
+const HOOK_TREE = /^src\/(frontend|admin)\/src\/hooks\/|^src\/shared\/ui\/src\/hooks\//;
+
 function nameProblem(file) {
   const stem = stemOf(file.rel);
-  const inFrontendComponents = /^src\/frontend\/src\/(components|pages)\//.test(file.rel);
-  const inHooks = file.rel.startsWith("src/frontend/src/hooks/");
-  if (file.rel.endsWith(".tsx") && inFrontendComponents) {
+  if (file.rel.endsWith(".tsx") && COMPONENT_TREE.test(file.rel)) {
     return PASCAL.test(stem) ? null : "a component file is PascalCase.tsx";
   }
-  if (inHooks) return HOOK.test(stem) ? null : "a hook file is useThing.ts";
+  if (HOOK_TREE.test(file.rel)) return HOOK.test(stem) ? null : "a hook file is useThing.ts";
   return KEBAB.test(stem) ? null : "source files are kebab-case";
 }
 

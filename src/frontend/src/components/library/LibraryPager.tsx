@@ -1,6 +1,6 @@
 import { useLibraryPager } from "@/hooks/useLibraryPager";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 
 export function LibraryPager({
   hasMore,

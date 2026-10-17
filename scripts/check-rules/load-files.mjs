@@ -8,11 +8,17 @@ const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".cts", ".mjs"]);
 // transport streams end in .ts); it is never source, and reading it exhausted the heap once.
 const SKIPPED_DIRS = new Set(["node_modules", "dist", "out", "release", "public", ".git", "data"]);
 
-/** The programs, the shared libraries and the tools; a file belongs to the first root that contains it. */
+/**
+ * The programs, the shared libraries and the tools; a file belongs to the first root that contains it. The
+ * nested libraries (`shared-ui`, `shared-http`) come before `shared`, which would otherwise walk them too (docs/27 section 2).
+ */
 const PROGRAM_ROOTS = [
   ["frontend", "src/frontend"],
   ["fileserver", "src/fileserver"],
   ["backend", "src/backend"],
+  ["admin", "src/admin"],
+  ["shared-ui", "src/shared/ui"],
+  ["shared-http", "src/shared/http"],
   ["shared", "src/shared"],
   ["scripts", "scripts"],
 ];
@@ -36,8 +42,9 @@ function walk(dir, found) {
  */
 export function loadFiles(root, skippedPrograms = []) {
   const files = [];
+  // A file is claimed by the first root that walks it, even a skipped one, so a nested skipped root never leaks into its parent.
+  const claimed = new Set();
   for (const [program, rel] of PROGRAM_ROOTS) {
-    if (skippedPrograms.includes(program)) continue;
     const dir = path.join(root, rel);
     const found = [];
     try {
@@ -45,7 +52,13 @@ export function loadFiles(root, skippedPrograms = []) {
     } catch {
       continue; // a program that does not exist yet has nothing to check
     }
+    if (skippedPrograms.includes(program)) {
+      for (const abs of found) claimed.add(abs);
+      continue;
+    }
     for (const abs of found) {
+      if (claimed.has(abs)) continue;
+      claimed.add(abs);
       const relPath = path.relative(root, abs).split(path.sep).join("/");
       const text = readFileSync(abs, "utf-8");
       files.push({

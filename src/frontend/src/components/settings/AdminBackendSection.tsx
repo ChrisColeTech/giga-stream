@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Activity, HardDrive } from "lucide-react";
-import { Input } from "@/components/ui/Field";
-import { FIELD_CONTROL, Group, Row, Workspace } from "@/components/ui/Form";
+import { Input } from "@giga/ui/controls/Input";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Workspace } from "@giga/ui/form/Workspace";
 import { FACT_UNKNOWN, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
 import { initialAdminDraft, reconcileAdminDraft } from "@/lib/settings-admin-draft";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import type { StateSnapshot } from "@/services/state";
 
 /* A read-only fact, in LoRA's About pane style. */

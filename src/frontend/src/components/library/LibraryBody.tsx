@@ -8,7 +8,7 @@ import { PosterList } from "./PosterList";
 import { TypeStrip } from "./TypeStrip";
 import { LibraryPager } from "./LibraryPager";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
-import { SkeletonRows } from "@/components/ui/SkeletonRows";
+import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { SKELETON_CARDS, SKELETON_ROWS } from "@/lib/library-limits";
 
 export interface LibraryBodyProps {

@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { useRef, type MouseEvent } from "react";
 import { PosterImage } from "@/components/ui/PosterImage";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";

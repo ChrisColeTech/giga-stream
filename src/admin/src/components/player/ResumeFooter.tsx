@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "@giga/ui/controls/Button";
 import { formatClock } from "@/lib/player-format";
 import type { Progress } from "@/types/library";
 

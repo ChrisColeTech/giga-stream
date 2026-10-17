@@ -1,5 +1,5 @@
 import { CircleAlert, PanelBottom, Settings } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { RunningWork } from "./RunningWork";
 

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { cn } from "@giga/ui/lib/cn";
 import { ROWS_COPY } from "./rows-constants";
 
 export interface RowChevronProps {

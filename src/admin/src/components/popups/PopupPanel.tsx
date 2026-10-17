@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { IconButton } from "@/components/ui/IconButton";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { POPUP_BORDER, POPUP_CLASSES, POPUP_PAD } from "@/constants/popups";
 import { usePopupFrame } from "@/hooks/usePopupFrame";
 import type { PopupPanelProps } from "@/types/overlays";

@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import { labelColumn } from "@/components/ui/Form";
-import { NavItem, NavRail } from "@/components/ui/NavRail";
+import { labelColumn } from "@giga/ui/lib/label-column";
+import { NavItem } from "@giga/ui/lists/NavItem";
+import { NavRail } from "@giga/ui/lists/NavRail";
 import { COLLECTION_FOLDERS, COLLECTION_MEMBERS } from "@/fixtures/collections";
 import { LIBRARY_ITEMS } from "@/fixtures/titles";
-import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { LIST_LABEL } from "@/lib/collections-copy";
 import { memberRows } from "@/lib/collections-members";
 import type { CollectionRow } from "@/types/collection";
