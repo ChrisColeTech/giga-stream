@@ -196,6 +196,7 @@
 @import "./styles/base.css";
 /* Giga Stream delta (docs/23 section 3.1): the pane layout keeps its own classes. */
 @import "./styles/workspace.css";
+@import "./styles/video.css";
 @import "./styles/keyframes.css";
 
 /* LAST: a kill-switch has to win the cascade. */

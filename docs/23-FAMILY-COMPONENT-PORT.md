@@ -98,7 +98,10 @@ use in Giga Stream.
 - `index.css`: the accent family `emerald` is named `green`, because the fileserver's setting is `themeAccent: green`
   (`03` section 3.2). Four selectors and one swatch token change; no value changes.
 - `index.css`: one `@import "./styles/workspace.css";` stays, because Giga Stream's pane layout (`WorkspaceSplit`, the
-  collapse tween) keeps its own classes. LoRA's own `.workspace-split` layer is copied and unused.
+  collapse tween) keeps its own classes. LoRA's own `.workspace-split` layer is copied and unused. Its `.pane`
+  background is `bg`, as LoRA's panes sit on `bg` (owner, 2026-10-16: the shell was too light for a video app).
+- `index.css`: one `@import "./styles/video.css";`, which makes Chrome's native video-control layers transparent so
+  a stage with no picture stays the canvas's dark surface instead of a grey sheet. LoRA has no video element.
 
 ### 3.2 Kept (Giga Stream's own; no family equivalent)
 

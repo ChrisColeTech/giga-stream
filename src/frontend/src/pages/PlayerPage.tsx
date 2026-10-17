@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
@@ -30,6 +30,8 @@ function reportRefusal(result: ServiceResult, say: (sentence: string, tone: "war
  *  change the session only when it accepts. With nothing open the panes are skeletons and the stage is the player alone. */
 export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, INITIAL_SESSION);
+  /* The video's paused state, reported by the stage; a video that has not started is paused. */
+  const [paused, setPaused] = useState(true);
   const say = useAppStore((state) => state.say);
   const setSurface = useAppStore((state) => state.setSurface);
   const view = viewOf(session);
@@ -77,8 +79,8 @@ export function PlayerPage({ active }: { active: boolean }) {
           onEpisode={(season, episode) => dispatch({ type: "episode", season, episode })}
         />
       }
-      center={<PlayerStage view={view} commands={commands} />}
-      right={<PlayerInspector view={view} commands={commands} />}
+      center={<PlayerStage view={view} commands={commands} onPausedChange={setPaused} />}
+      right={<PlayerInspector view={view} commands={commands} paused={paused} />}
       bottom={<PlayerRelated view={view} commands={commands} />}
     />
   );

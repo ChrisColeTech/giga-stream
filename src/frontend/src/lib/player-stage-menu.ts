@@ -1,15 +1,35 @@
 import type { MenuItem } from "@/types/menu";
 
+type Submenu = Extract<MenuItem, { kind: "submenu" }>;
+
 export interface StageMenuInput {
+  readonly fullscreen: boolean;
+  readonly favorite: boolean;
+  /** The `Collections ▸` submenu for the open item. */
+  readonly collections: Submenu;
+  /** Present when the item has a watch entry to remove. */
+  readonly onRemoveHistory?: () => void;
+  readonly onRetry: () => void;
+  readonly onFullscreen: () => void;
   readonly onReveal: () => void;
+  readonly onFavorite: () => void;
   readonly onClose: () => void;
 }
 
-/** The stage toolbar's menu (`06` section 5.1): Reveal in Library and Close. Both act at once, so neither is off. */
-export function stageMenuItems({ onReveal, onClose }: StageMenuInput): MenuItem[] {
-  return [
-    { kind: "action", label: "Reveal in Library", onSelect: onReveal },
+/** The stage's context menu (`06` sections 5.1 and 5.3): the verbs that had a toolbar of their own, summoned on the
+ *  picture instead, so the canvas is the video alone. Playback verbs first, then the item's marks, then Close. */
+export function stageMenuItems(input: StageMenuInput): MenuItem[] {
+  const items: MenuItem[] = [
+    { kind: "action", label: "Retry", onSelect: input.onRetry },
+    { kind: "action", label: input.fullscreen ? "Exit full screen" : "Full screen", onSelect: input.onFullscreen },
+    { kind: "action", label: "Reveal in Library", onSelect: input.onReveal },
     { kind: "separator" },
-    { kind: "action", label: "Close", onSelect: onClose },
+    { kind: "action", label: input.favorite ? "Unfavorite" : "Favorite", onSelect: input.onFavorite },
+    input.collections,
   ];
+  if (input.onRemoveHistory !== undefined) {
+    items.push({ kind: "action", label: "Remove from History", danger: true, onSelect: input.onRemoveHistory });
+  }
+  items.push({ kind: "separator" }, { kind: "action", label: "Close", onSelect: input.onClose });
+  return items;
 }

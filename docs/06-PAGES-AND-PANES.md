@@ -369,7 +369,7 @@ Favourite and Collections apply at once, so there is no footer and nothing to ca
 
 ### 4.5 Add to collection (the `Collections ▸` menu, not a popup)
 
-It is not a popup and has no flow of its own. It is the `Collections ▸` submenu of §4.2, summoned from a card's menu, from Title information's **Collections** button, or from the Player's Watch block, and it is the app's one context menu (§9). Its rows are the collections, each with a check for membership. A click toggles membership at once, inline, with no dialog.
+It is not a popup and has no flow of its own. It is the `Collections ▸` submenu of §4.2, summoned from a card's menu, from Title information's **Collections** button, or from the Player stage's context menu, and it is the app's one context menu (§9). Its rows are the collections, each with a check for membership. A click toggles membership at once, inline, with no dialog.
 With no collection yet, the submenu's one row says so, disabled with its reason, and **Manage collections** in the Library rail is the way to create one.
 
 ---
@@ -378,10 +378,10 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 
 ```
 ┌──────────────────┬────────────────────────────────┬──────────────────┐
-│ Seasons and      │ Tabs                           │ Details          │
-│ episodes         │ Stage                          │ Overview         │
-│                  │ the video and its controls     │ Details          │
-│                  │                                │ Watch            │
+│ Seasons and      │ Stage                          │ Overview         │
+│ episodes         │ the video, filling the pane    │ Details          │
+│                  │                                │                  │
+│                  │                                │ Resume (paused)  │
 ├──────────────────┴────────────────────────────────┴──────────────────┤
 │ Related titles across the full width                                 │
 └──────────────────────────────────────────────────────────────────────┘
@@ -400,14 +400,13 @@ The Player has no tabs. It plays one title or one local file at a time, and the 
 | Opening | a title or file opens in place, replacing the current one. The current item's final progress write settles first |
 | Reopening | opening the item that is already playing does nothing but show Player |
 | Episodes | choosing another episode of the same series loads it in place; the season select starts nothing |
-| Closing | **Close** in the stage's toolbar empties the Player back to its idle state, after the final progress write settles or a short timeout expires |
-| Context menu | the stage toolbar's menu holds **Reveal in Library** and **Close** |
+| Closing | **Close** in the stage's context menu empties the Player back to its idle state, after the final progress write settles or a short timeout expires |
+| Context menu | the stage's own menu, on a right click on the picture: **Retry**, **Full screen**, **Reveal in Library**; **Favorite**, **Collections ▸**, **Remove from History** when a watch entry exists; **Close** |
 | Not here | no tab strip, no tab limit, no channel: a channel plays in Live |
 
 ### 5.2 Episode browser (left)
 
-**Series** — a header with the title as a readout and a season select (each season with its episode count),
-then `EpisodeCard` rows.
+**Series** — a season select (`Season 1`, `Season 2`; the title is Overview's), then episode rows.
 
 | Row element | Behaviour |
 |---|---|
@@ -429,17 +428,15 @@ folder it belongs to. Never a path and never invented chapters.
 
 ### 5.3 Stage (centre)
 
-| Left | Centre | Right |
-|---|---|---|
-| a media kind icon | the title, with the episode or file name beneath | **Retry**, **Reveal in Library**, **Fullscreen** |
+There is no toolbar and no banner (owner, 2026-10-16: two toolbars on the canvas were redundant and repeated the
+title). The `<video>` fills the stage on the canvas's dark surface, exactly as on Live (§3.1); the browser's own
+controls appear once media has loaded, since with no source they draw a grey layer over the picture. Loading shows
+the player alone, a stream that fails shows a centred note with the reason and **Retry**, and the picture is fitted
+whole by default. The stage's verbs are its context menu (§5.1).
 
-Only the icons are controls. Under the toolbar a `<video>` fills the stage with the browser's own controls,
-exactly as on Live (§3.1): loading shows the player alone, a stream that fails shows a centred note with the
-reason and **Retry**, and the picture is fitted whole by default.
-
-- **Resume.** When the title was left partway, a banner above the player's control bar offers **Resume**
-  and **Start over** once the media has loaded; autoplay may choose Resume itself only when that setting is
-  on.
+- **Resume.** When the title was left partway, **Resume** and **Start over** are pinned at the foot of the
+  details pane while the video is paused, and hidden while it plays; autoplay may choose Resume itself only
+  when that setting is on.
 - **Progress** is written about every 30 seconds while playing (never more often) and immediately on pause,
   ended, seek settle and close. Each playback numbers its writes from 1 and a lower number can
   never replace a higher one.
@@ -453,14 +450,16 @@ reason and **Retry**, and the picture is fitted whole by default.
 
 ### 5.4 Details (right)
 
-Three collapsible blocks (§2.8) of mono key and value facts, a dash with no title open. They stay stable for
-the open item's kind.
+Two collapsible blocks (§2.8) of mono key and value facts, skeletons with no title open, and Resume pinned at
+the foot while paused (§5.3). Nothing is written twice: the title appears once, in Overview.
 
 | Block | Contents |
 |---|---|
-| **Overview** | a poster at the pane's width, ratio 2:3; title, year, kind and quality; the plot with its line wrapping; rating and the top genres |
-| **Details** | genres, cast chips, runtime or the season count, the selected season and episode for a series, a local file's duration, dimensions and codec; revision facts in a tooltip, not as noise |
-| **Watch** | progress and watched state; last watched; a **Favorite** toggle; the collections the item is in, from the item's membership; **Collections** (the `Collections ▸` menu of §4.5); **Remove from History** when a watch entry exists |
+| **Overview** | the art at the pane's full width, 16:9 (a poster is cropped from its top), with no words on it; the title, with the episode, year or `Local file` beneath; the year for a series, quality and rating; the plot |
+| **Details** | runtime or the season count, genres and cast chips, a local file's duration, dimensions and codec; revision facts in a tooltip, not as noise |
+
+The read-only Watch block is gone (owner, 2026-10-16). Favorite, Collections and Remove from History are the
+stage's context menu; the episode marker in the browser shows progress.
 
 There is no Clear History here: it belongs to Library.
 
@@ -485,7 +484,7 @@ A band across the full work area. It is Giga LoRA Studio's bottom rail, `compone
 | a series card's Play or Open | the Player shows the series in place, the episode browser shows the last or resumable season with that episode focused, and **nothing loads** until an exact episode is chosen |
 | a local card's Play | the Player shows the file in place and it plays through its Range route |
 | a related card | as above, and the current item is replaced |
-| **Reveal in Library** (stage toolbar menu) | Library is shown with the item selected, in the current collection if it holds the item, otherwise History, All or a collection that does, and scrolled into view; Player stays loaded |
+| **Reveal in Library** (the stage's context menu) | Library is shown with the item selected, in the current collection if it holds the item, otherwise History, All or a collection that does, and scrolled into view; Player stays loaded |
 
 A failed load leaves the item in place with a failed stage and **Retry**; it does not bounce back to Library.
 

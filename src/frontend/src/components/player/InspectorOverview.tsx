@@ -1,45 +1,32 @@
-import { CHIP } from "@/components/player/inspector-chip";
+import { InspectorArt } from "@/components/player/InspectorArt";
 import { PlayerFact } from "@/components/player/PlayerFact";
-import { PosterImage } from "@/components/ui/PosterImage";
-import type { PlayerView } from "@/lib/player-view";
-
-const KIND_LABEL = { movie: "Movie", tv: "Series", local: "Local file" } as const;
-const TOP_GENRES = 3;
+import { stageSubtitle, type PlayerView } from "@/lib/player-view";
 
 export interface InspectorOverviewProps {
   readonly view: PlayerView;
 }
 
-/** The Overview block (`06` section 5.4): a 2:3 poster, capped at 120 px wide so Details and Watch fit beneath it, the
- *  identity, the plot, the rating and the top genres. Quality is drawn only when the library holds a real value. */
+/** The Overview block (`06` section 5.4): the art, the title once with the episode or file under it, the year and rating,
+ *  and the plot. Quality is drawn only when the library holds a real value. */
 export function InspectorOverview({ view }: InspectorOverviewProps) {
   const { tab, item, detail } = view;
   if (tab === undefined) return null;
   const year = detail?.year ?? item?.year;
   const quality = item?.quality;
-  const genres = (detail?.genres ?? item?.genres ?? []).slice(0, TOP_GENRES);
+  const subtitle = stageSubtitle(view);
   return (
     <>
-      <div className="w-[120px] max-w-full">
-        <PosterImage src={detail?.posterUrl ?? item?.posterUrl} alt={tab.title} />
+      <InspectorArt src={detail?.posterUrl ?? item?.posterUrl} title={tab.title} />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-sm leading-5 font-semibold text-text">{tab.title}</span>
+        {subtitle !== undefined && <span className="truncate font-mono text-xs text-faint">{subtitle}</span>}
       </div>
-      <span className="text-sm leading-5 font-semibold text-text">{tab.title}</span>
       <div className="flex flex-col gap-1.25">
-        {year !== undefined && <PlayerFact label="Year" value={String(year)} />}
-        <PlayerFact label="Kind" value={KIND_LABEL[tab.kind]} />
+        {year !== undefined && tab.kind === "tv" && <PlayerFact label="Year" value={String(year)} />}
         {quality !== undefined && <PlayerFact label="Quality" value={quality} />}
         {detail?.rating !== undefined && <PlayerFact label="Rating" value={`${detail.rating.toFixed(1)} / 10`} />}
       </div>
       {detail?.plot !== undefined && <p className="m-0 text-sm leading-5 text-muted">{detail.plot}</p>}
-      {genres.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {genres.map((genre) => (
-            <span key={genre} className={CHIP}>
-              {genre}
-            </span>
-          ))}
-        </div>
-      )}
     </>
   );
 }

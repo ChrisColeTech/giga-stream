@@ -52,7 +52,7 @@ export function PlayerBrowser({ view, onSeason, onEpisode }: PlayerBrowserProps)
               >
                 {seasons.map((entry) => (
                   <option key={entry.season} value={String(entry.season)}>
-                    {`Season ${entry.season} · ${entry.episodeCount}`}
+                    {`Season ${entry.season}`}
                   </option>
                 ))}
               </Select>

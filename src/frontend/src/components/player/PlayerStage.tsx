@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ResumeBanner } from "@/components/player/ResumeBanner";
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { StageNote } from "@/components/player/StageNote";
-import { StageToolbar } from "@/components/player/StageToolbar";
+import { collectionsSubmenu } from "@/lib/collection-menu";
+import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
-import { resumeOf, stageSubtitle, type PlayerView } from "@/lib/player-view";
+import { stageMenuItems } from "@/lib/player-stage-menu";
+import type { PlayerView } from "@/lib/player-view";
 
 export interface PlayerStageProps {
   readonly view: PlayerView;
   readonly commands: PlayerCommands;
+  /** Reports the video's paused state, so the inspector offers Resume only while nothing plays. */
+  readonly onPausedChange: (paused: boolean) => void;
 }
 
 /** Whether a key press belongs to a text field or a select, where `F` must type rather than toggle the stage. */
@@ -16,14 +19,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
 }
 
-/** The stage (`06` section 5.3): a toolbar over the `<video>`, which fills the stage with the picture fitted whole inside
- *  a 16 px pad and the browser's own controls. The stage element is the fullscreen element. With no tab open, the stage
- *  is the player alone. */
-export function PlayerStage({ view, commands }: PlayerStageProps) {
+/** The stage (`06` section 5.3): the `<video>` fills the canvas, as Live's does, on the canvas's dark surface. There is
+ *  no toolbar; Retry, Full screen, Reveal in Library, the item's marks and Close are the picture's context menu, and `F`
+ *  toggles full screen. The browser's own controls sit on the dark surface (`styles/video.css`). */
+export function PlayerStage({ view, commands, onPausedChange }: PlayerStageProps) {
   const stageRef = useRef<HTMLElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
 
-  /* The stage's own fullscreen events keep the button in step with Escape, which the browser handles. */
+  /* The stage's own fullscreen events keep the menu's label in step with Escape, which the browser handles. */
   useEffect(() => {
     const node = stageRef.current;
     if (node === null) return undefined;
@@ -35,11 +38,8 @@ export function PlayerStage({ view, commands }: PlayerStageProps) {
   const toggleFullscreen = () => {
     const node = stageRef.current;
     if (node === null) return;
-    if (document.fullscreenElement === node) {
-      void document.exitFullscreen().catch(() => undefined);
-    } else {
-      void node.requestFullscreen().catch(() => undefined);
-    }
+    if (document.fullscreenElement === node) void document.exitFullscreen().catch(() => undefined);
+    else void node.requestFullscreen().catch(() => undefined);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -49,8 +49,26 @@ export function PlayerStage({ view, commands }: PlayerStageProps) {
     toggleFullscreen();
   };
 
-  const { tab, stage } = view;
-  const resume = resumeOf(view);
+  const { tab, stage, item, favorite, memberIds, collections } = view;
+  const watchId = item?.progress === undefined ? undefined : item.watchId;
+
+  const onContextMenu = (event: MouseEvent<HTMLElement>) => {
+    if (tab === undefined) return;
+    openMenu(
+      event,
+      stageMenuItems({
+        fullscreen,
+        favorite,
+        collections: collectionsSubmenu(collections, (id) => memberIds.includes(id), commands.toggleMember),
+        onRemoveHistory: watchId === undefined ? undefined : () => commands.removeHistory(watchId),
+        onRetry: commands.retry,
+        onFullscreen: toggleFullscreen,
+        onReveal: commands.reveal,
+        onFavorite: () => commands.favorite(!favorite),
+        onClose: commands.close,
+      }),
+    );
+  };
 
   return (
     <section
@@ -58,27 +76,19 @@ export function PlayerStage({ view, commands }: PlayerStageProps) {
       tabIndex={-1}
       aria-label="Stage"
       onKeyDown={onKeyDown}
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg outline-none fullscreen:bg-black"
+      onContextMenu={onContextMenu}
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface outline-none fullscreen:bg-black"
     >
-      {tab !== undefined && (
-        <StageToolbar
-          kind={tab.kind}
-          title={tab.title}
-          subtitle={stageSubtitle(view)}
-          fullscreen={fullscreen}
-          onFullscreen={toggleFullscreen}
-          onRetry={commands.retry}
-          onReveal={commands.reveal}
-          onClose={commands.close}
-        />
-      )}
-      {tab !== undefined && resume !== undefined && (
-        <ResumeBanner progress={resume} onResume={commands.resume} onStartOver={commands.startOver} />
-      )}
-      <div className="relative min-h-0 flex-1">
-        <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"} className="size-full bg-bg object-contain" />
-        {stage.kind === "failed" && <StageNote reason={stage.reason} onRetry={commands.retry} />}
-      </div>
+      <video
+        controls
+        playsInline
+        preload="none"
+        aria-label={tab?.title ?? "Player"}
+        className="size-full bg-surface object-contain"
+        onPlay={() => onPausedChange(false)}
+        onPause={() => onPausedChange(true)}
+      />
+      {stage.kind === "failed" && <StageNote reason={stage.reason} onRetry={commands.retry} />}
     </section>
   );
 }

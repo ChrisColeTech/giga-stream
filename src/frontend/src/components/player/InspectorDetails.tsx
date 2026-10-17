@@ -1,7 +1,7 @@
 import { CHIP } from "@/components/player/inspector-chip";
 import { PlayerFact } from "@/components/player/PlayerFact";
 import { FIELD_LABEL } from "@/components/ui/NumberField";
-import { formatEpisodeCode, formatRuntime } from "@/lib/player-format";
+import { formatRuntime } from "@/lib/player-format";
 import type { PlayerView } from "@/lib/player-view";
 
 export interface InspectorDetailsProps {
@@ -25,10 +25,10 @@ function Names({ label, names }: { readonly label: string; readonly names: reado
   );
 }
 
-/** The Details block (`06` section 5.4): genres, cast chips, the runtime or the season count, the selected season and
- *  episode for a series, and a local file's facts, all as read-only facts. */
+/** The Details block (`06` section 5.4): the runtime or the season count, the genres and the cast. The episode on show is
+ *  Overview's subtitle, so it is not repeated here. */
 export function InspectorDetails({ view }: InspectorDetailsProps) {
-  const { tab, item, detail, season, episode, seasons } = view;
+  const { tab, item, detail, seasons } = view;
   if (tab === undefined) return null;
 
   return (
@@ -37,10 +37,6 @@ export function InspectorDetails({ view }: InspectorDetailsProps) {
         <PlayerFact label="Runtime" value={formatRuntime(detail.runtimeMs)} />
       )}
       {tab.kind === "tv" && <PlayerFact label="Seasons" value={String(seasons.length)} />}
-      {tab.kind === "tv" && season !== undefined && episode !== undefined && (
-        <PlayerFact label="Selected" value={formatEpisodeCode(season, episode)} />
-      )}
-      {tab.kind === "local" && item?.quality !== undefined && <PlayerFact label="Quality" value={item.quality} />}
       <Names label="Genres" names={detail?.genres ?? item?.genres ?? []} />
       <Names label="Cast" names={detail?.cast ?? []} />
     </>
