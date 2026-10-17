@@ -59,7 +59,7 @@ export function createProviderService(deps: {
       const record: Omit<ProviderRecord, "id"> = {
         name: input.name,
         source: input.source,
-        api_key: input.api_key ?? null,
+        api_key: input.api_key ?? "",
         is_active: 1,
         created_at: createdAt,
         ...fieldsOf(input),
@@ -79,7 +79,7 @@ export function createProviderService(deps: {
         id,
         name: patch.name ?? current.name,
         source: patch.source ?? current.source,
-        api_key: patch.api_key ?? current.api_key ?? null,
+        api_key: patch.api_key ?? current.api_key,
         is_active: current.is_active ? 1 : 0,
         created_at: current.created_at,
         ...fieldsOf({
