@@ -116,7 +116,7 @@ interface TitleSource {
 
 - **The frontend talks only to the fileserver.** Every request is relative (`/api/...`), proxied to the fileserver in
   development (`03` section 1). The interface never contacts the admin backend, its port, TMDB, OMDb or the
-  live server's own API (`01` sections 1.1 and 4.4). The addresses the player loads — a channel's `streamUrl`, a
+  backend's live-channel API (`01` sections 1.1 and 4.4). The addresses the player loads — a channel's `streamUrl`, a
   local file's Range route, a source's embed `url` — are the one external exception (`01` section 1.1), published
   data, never an application API.
 - **The Settings Address row edits `adminUrl` through `PATCH /api/settings`** (`03` section 3.2). The interface sends

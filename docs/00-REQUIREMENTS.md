@@ -24,7 +24,7 @@ player can show the provider's ads (`14` check 14).
  Admin backend (a server)
 
  The video player in the interface loads the stream address it is given.
- A live server streams channels of real video files: the test channels in development, or your own videos.
+ The admin backend streams channels of real video files as live HLS: the test channels in development, or your own videos.
 ```
 
 - **The interface** shows things and plays video. It never talks to the admin backend.
@@ -38,9 +38,9 @@ player can show the provider's ads (`14` check 14).
   channel or title first. A channel and a local file always play in the app's own player. **A title
   plays through its provider's embedded player** inside the Player stage, because the providers offer
   only embed pages (owner, 2026-10-16; `12` section 7). How that works is proved first by `14`.
-- **The live server** runs channels of real video files as continuous live streams, each a looping
-  playlist, managed through its own routes (`10`). The backend's seeded channels point at its test
-  channels; it can as well run a channel of your own videos around the clock.
+- **The live engine** inside the admin backend runs channels of real video files as continuous live streams, each a
+  looping playlist, managed through the backend's routes (`10`, `26`; there is no separate live server). The seeded test
+  channels are live channels of the backend; it can as well run a channel of your own videos around the clock.
 
 ## 3. The three surfaces
 
@@ -88,7 +88,7 @@ The window has three tabs.
 | `07-WORKING-PROTOCOL.md` | how the work is done: roles, editing, running things, verification, delegation |
 | `08-IMPLEMENTATION-PLAN.md` | the build phases, in order, and how each is accepted |
 | `09-FFMPEG-BUILD.md` | the bundled FFmpeg: what is in it, rebuilding and verifying it |
-| `10-LIVE-STREAM-SERVER.md` | the live server: channels of real videos as live HLS, its store and CRUD routes |
+| `10-LIVE-STREAM-SERVER.md` | the live engine (now inside the admin backend): channels of real videos as live HLS, its store and CRUD routes |
 | `11-TMDB-API.md` | how title metadata comes from TMDB: the decisions, the terms and the API as observed |
 | `12-PROVIDER-RESEARCH.md` | the provider API reference: VidSrc, VixSrc and VidZee, verified live |
 | `13-GO-LIVE-PLAN.md` | the stages from seeded data to real channels and titles |

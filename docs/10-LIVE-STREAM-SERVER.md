@@ -1,13 +1,19 @@
 # 10 - Live Server
 
-**Status: 2026-10-16.** A program, `src/live-server` (owner, 2026-10-16: "this should follow our
-convention ... a node sqlite database for this server, and crud routes"). It runs channels of real video
-files as live HLS, around the clock: the four test channels the admin backend points at during
-development, and any channel of your own videos. Channels live in its own `node:sqlite` database and are
-managed through CRUD routes; a change is live without a restart. Built and verified: 40 tests over the
-real store, ffprobe and encoder (CRUD, persistence, playlists, the switch between videos in every
-rendition, Range, CORS, faults, encode mode), and the opt-in headless-Chrome tests (real-time playback,
-playback across a switch, every fault and its recovery). It replaced the earlier `scripts/live-server` tool.
+**Status: 2026-10-17. The standalone program `src/live-server` NO LONGER EXISTS.** Its engine was merged into the admin
+backend (`src/backend/src/live`, the routes in `src/backend/src/api/live-*.ts` and `admin-channels.ts`) and its channels
+are rows of the backend's own database (`kind: live`, migrations 008 to 016; `26` sections 2 to 3, which are the current
+description of the merged backend, its routes, auth, configuration and ports: 8091 in development, 8191 in production).
+Everything below describes the engine's behaviour (HLS shape, loop and encode modes, playlists, faults, the test channels)
+and is still accurate for that; where it says "the live server", its own port 8097/8197, its own database
+`live-server.db`, `live:start`/`live:dev`, the loopback-only write gate (`access.loopback_only`, retired: writes need a
+signed-in admin) or "run it separately", read the backend instead, as each place below now says.
+
+It runs channels of real video files as live HLS, around the clock: the four test channels (`SEED_TEST_CHANNELS`) and any
+channel of your own videos, managed through the backend's CRUD routes; a change is live without a restart. Verified: the
+engine's `live-*.test.ts` files in `src/backend/test` over the real store, ffprobe and encoder (CRUD, persistence,
+playlists, the switch between videos in every rendition, Range, CORS, faults, encode mode), and the opt-in
+headless-Chrome tests. It replaced the earlier `scripts/live-server` tool.
 
 The admin backend's seeded channels point straight at it (`03` section 7.7); nothing sits between the
 player and it. It is never imported by the interface, the fileserver or the backend, and it is not part
@@ -31,7 +37,7 @@ fixture files):
 
 1. **Real live HLS.** Playlists without `EXT-X-ENDLIST`, a moving media sequence, program date-time,
    two or more video qualities, an audio group, and channels with WebVTT captions.
-2. **Channels are data.** Each channel is a row in the live server's own database (section 3.2), created,
+2. **Channels are data.** Each channel is a row in the backend's database (section 3.2), created,
    read, changed and deleted through its routes (section 3.1). A change is live at once: the channel is
    rebuilt in the background and keeps playing its old stream until the new one is ready.
 3. **Each channel plays a playlist of videos** (owner, 2026-10-16), like a broadcast schedule: an ordered list
@@ -99,7 +105,8 @@ script makes the Library's folder fixtures when phase 6 of `08` needs them; they
 ## 3. Shape
 
 ```text
-src/live-server/                 a program (01 section 1.4); Node runs its TypeScript directly
+src/live-server/                 (the former program's layout, kept for the file names: the code now lives under
+                                 src/backend/src/live, api/live-*.ts, store/ and test/live-*.test.ts)
   package.json, tsconfig.json    start, dev:test-channels, typecheck, test
   test-channels.env              the development setup: the seed, the player page, its own data folder
   src/
@@ -129,11 +136,11 @@ src/live-server/                 a program (01 section 1.4); Node runs its TypeS
 ### 3.1 Routes
 
 Every answer that is not stream bytes is the standard envelope (`01` section 8). Reads are open; the
-writes (POST, PATCH, PUT, DELETE) answer `403 access.loopback_only` unless the peer is this computer.
+writes (POST, PATCH, PUT, DELETE) need a signed-in admin (the loopback-only gate and `access.loopback_only` are retired).
 
 | Route | Purpose |
 |---|---|
-| `GET /healthz` | `{ role: "live-server", channels }` |
+| `GET /healthz` | the backend's: `{ role: "admin-backend", version, revision, tmdb, liveChannels }` (`03` section 7.1) |
 | `GET /api/channels` | Every channel, by number (the shape below) |
 | `GET /api/channels/:id` | One channel |
 | `POST /api/channels` | Create: `{ id, name, category, number, mode?, captions?, variants?, folder | videos }`; 201, state `preparing` |
@@ -157,11 +164,12 @@ exist), `channel.taken` (409, the id or the number), `channel.not_found`, `fault
 `access.loopback_only`, `path.invalid`, `media.not_found`, `playlist.unavailable`, `range.unsatisfiable`,
 `request.invalid`, `route.not_found`, `internal.failure`. Playlists are `application/vnd.apple.mpegurl`;
 segments `video/mp2t`; subtitles `text/vtt`. CORS answers loopback origins and those in `CORS_ORIGINS`, and
-it is load-bearing: the interface loads playlists and segments from this port directly.
+it is load-bearing: the interface loads playlists and segments from the backend's port directly.
 
 ### 3.2 Store
 
-One `node:sqlite` database, `<DATA_DIR>/live-server.db`, owned by the store (`01` section 4.1); forward-only
+The backend's one `node:sqlite` database, `<DATA_DIR>/admin.db` (the old `live-server.db` is only read by the one-shot
+importer `src/backend/scripts/import-live-server-db.ts`), owned by the store (`01` section 4.1); forward-only
 numbered migrations. `channels` holds each channel's fields (`number` unique, `variants` as JSON, `folder`
 or null); `channel_videos` holds a `videos` channel's paths with their positions, deleted with the channel.
 Loop mode's encodes are files, not rows: `<CACHE_DIR>/items/<hash>/`, one per video, keyed by its path,
@@ -171,7 +179,7 @@ video share its encode and a changed file is encoded again. Encode mode writes i
 
 ### 3.3 The test channels
 
-With `SEED_TEST_CHANNELS=true`, a live server with no channels creates these, each a list of its three
+With `SEED_TEST_CHANNELS=true`, a backend with no channels creates these, each a list of its three
 fixture files from `FIXTURE_DIR`; a missing fixture stops the start with the command that makes them.
 
 | Id | Name | Category | Number | Videos (section 2.1) | Captions | Variants |
@@ -185,15 +193,15 @@ fixture files from `FIXTURE_DIR`; a missing fixture stops the start with the com
 
 | Context | Command | Behaviour |
 |---|---|---|
-| Your channels | `npm run live:start` (`npm start` in `src/live-server`) | production: port 8197 (`production.env`, `03` section 1), data in `~/.giga-stream-live`, `.env` read if present |
-| App development | `npm run live:dev` | makes the fixtures, then the four test channels with the player page, data in `src/live-server/data/test-channels` (gitignored) |
-| Tests | `npm test` in `src/live-server`; `LIVE_SERVER_BROWSER=1 npm test` adds Chrome | temporary data folders; encodes cached in `<temp>/giga-stream-live-test-cache` |
+| Your channels | `npm start` in `src/backend` | production: port 8191 (`production.env`, `03` section 1), data in `~/.giga-stream-admin`, `.env` read if present |
+| App development | `npm run dev` at the root | makes the fixtures, then starts the backend with `src/backend/dev.env` (the four test channels and the player page) beside the interface and the app |
+| Tests | `npm test` in `src/backend`; `LIVE_ENGINE_TESTS=1` adds the engine and Chrome tests | temporary data folders and free ports |
 
 | Setting | Default | |
 |---|---|---|
-| `PORT` | 8097; 8197 when `NODE_ENV=production` | 0 picks a free port |
+| `PORT` | 8091; 8191 when `NODE_ENV=production` | 0 picks a free port |
 | `HOST` | `127.0.0.1` | `0.0.0.0` serves the LAN; changes stay this-computer-only |
-| `DATA_DIR` | `~/.giga-stream-live` | the database and encode mode's output |
+| `DATA_DIR` | `~/.giga-stream-admin` | the database and encode mode's output |
 | `CACHE_DIR` | `<DATA_DIR>/cache` | loop mode's encodes; large |
 | `SEED_TEST_CHANNELS` | `false` | the four test channels on an empty database |
 | `FIXTURE_DIR` | `<temp>/giga-stream-fixtures` | where the seed finds the fixture files |
@@ -205,11 +213,12 @@ channel's state says how far it got; the first start of a large folder takes as 
 
 ### 4.1 Adding and editing channels and videos
 
-From this computer, with any HTTP client. A channel of your videos, listed:
+From the admin app (`28`, `29`) or any HTTP client with a signed-in admin's bearer token. A channel of your videos,
+listed (`"kind": "live"`; the number is a string):
 
 ```http
-POST http://127.0.0.1:8097/api/channels
-{ "id": "home", "name": "Home Videos", "category": "Entertainment", "number": 5,
+POST http://127.0.0.1:8091/api/channels
+{ "kind": "live", "id": "home", "name": "Home Videos", "category": "Entertainment", "number": "5",
   "videos": ["D:/Videos/2019-beach.mp4", "D:/Videos/2021-birthday.mp4"] }
 ```
 
@@ -222,8 +231,8 @@ or a folder: `"folder": "D:/Videos/home"` in place of `videos`. Then:
 - **Delete:** `DELETE /api/channels/home`.
 - **Watch:** `masterUrl` in any HLS player, or `/test/player.html?channel=home` with `TEST_PAGE=true`.
 - `GET /api/channels/home` shows `state`; a `failed` channel's `problem` names the file and the reason.
-- The app sees a channel only once the admin backend has it (`03` section 7.2): add it there with this
-  server's `masterUrl`.
+- The app sees the channel at once: a live row is a channel of the same backend (`03` section 7.2), and the
+  fileserver reads it from there.
 
 ## 5. Acceptance
 

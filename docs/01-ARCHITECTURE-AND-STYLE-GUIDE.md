@@ -37,7 +37,7 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
  Poster and still bytes: image.tmdb.org -> FILESERVER only (its image cache,
  fetched lazily on first request), never through the backend (section 7).
  Player in the interface --loads the stream address--> stream origin
- (in development: the live server's test channels, src/live-server, 10);
+ (in development: the backend's live test channels, 10);
  provider titles play in the provider's embedded player in the stage (14).
 ```
 
@@ -88,14 +88,14 @@ program that calls TMDB, and it gives each title its stream address from a rule 
 Providers, when they come (`13`), live here and nowhere else. It never stores user-local paths,
 watch history or collections, and never serves local files or video bytes.
 
-### 1.4 Live server - `src/live-server`
+### 1.4 The live engine - inside the admin backend (`src/backend/src/live`)
 
-A stream origin (`10`), port 8097, on its own `node:sqlite` database (`~/.giga-stream-live`): channels of
-real video files, each a looping playlist, served as live HLS around the clock, managed through its own
-CRUD routes. In development its seeded test channels are what the backend's test channels point at; it
-can as well run your own videos. The interface's player loads its stream addresses like any published
-stream address; no program imports it or calls its API. Changes are accepted from its own computer only.
-Node runs its TypeScript directly, like the shared libraries; it is not packaged with the app.
+There is no separate live server any more (merged into the backend and `src/live-server` deleted, 2026-10-17, `26`). The
+backend is also a stream origin (`10`): channels of real video files, each a looping playlist, served as live HLS around
+the clock from `/live/<id>/...` and `/logos/<id>.png` on the backend's own port and database, managed through its CRUD
+routes (a signed-in admin writes). The seeded test channels are live channels of the backend. The interface's player
+loads their stream addresses like any published stream address; no program imports the backend or calls its engine API.
+It is not packaged with the app.
 
 ### 1.5 Not in the system
 
@@ -112,7 +112,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | UI state | One Zustand store, narrow selectors |
 | Validation | Zod at every HTTP, WebSocket, backend-published and persisted-value boundary |
 | Servers | Fastify 5 |
-| Local data | `node:sqlite` (fileserver, backend and live server), separate databases |
+| Local data | `node:sqlite` (fileserver and backend), separate databases |
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
 | Icons | lucide-react |
@@ -133,8 +133,8 @@ giga-stream/
 |-- src/
 |   |-- frontend/src/           components, hooks, lib, pages, services, store, styles, types, constants
 |   |-- fileserver/src/         app, routes, services, store, types
-|   |-- backend/src/            api, services, store, events, types, constants
-|   |-- live-server/src/        api, services, store, stream, types, constants (`10`)
+|   |-- backend/src/            api, services, store, live (the engine, `10`), types, constants
+|   |-- admin/src/              the admin app (`26`, `28`, `29`; planned)
 |   |-- shared/                 libraries any program or tool may import (section 4.2); not programs
 |   `-- mockup/                 the provider playback proof of concept (`14`): plain HTML, CSS, JS; not a
 |                               program, never packaged, and outside the rules below
@@ -177,9 +177,9 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 
 Every route does exactly: parse and validate input, make one service or repository call, map the
 result to the standard envelope. A route never opens files, queries SQLite, creates sockets or
-spawns processes. Every route begins `/api`; `/healthz` and `/ws` are the only root exceptions, besides
-the live server's stream addresses (`/live/...`, `/logos/...` and its test page, all in its
-`api/media.ts`), which players load directly and which answer bytes, not the envelope.
+spawns processes. Every route begins `/api`; `/healthz` is the only root exception, besides the backend's stream
+addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`) and its static `/admin/` app
+(`api/admin-static.ts`), which players and the browser load directly and which answer bytes, not the envelope.
 
 ### 4.4 Interface transport boundary
 
@@ -194,11 +194,11 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
 - One exception for streamed answers: a long-running operation (a folder scan, `03` section 3.8)
   answers with a single streamed NDJSON body that reports progress as the work happens — one
   request, one answer, not polling.
-- The system's timer exception covers the admin backend's two internal schedulers (`03` sections
-  7.6b and 7.2c): the catalog-sync scheduler, armed by `TMDB_SYNC_SCHEDULE`, which pulls **title
-  metadata** into the title store, and the playlist-sync scheduler, armed by
-  `PLAYLIST_SYNC_SCHEDULE`, which refreshes the sync-owned channels from the configured M3U
-  playlists (`03` section 7.2c). Both are audited with the actor `system`. Images are never part
+- The system's timer exception covers the admin backend's one internal timer (`sync-scheduler.ts`, `26` section
+  3.11): it is armed for the earliest due enabled sync job (a catalog job pulls **title metadata** into the title
+  store, a playlist job refreshes the sync-owned channels from an M3U playlist, `03` sections 7.6b and 7.2c); the
+  `TMDB_SYNC_SCHEDULE` and `PLAYLIST_SYNC_SCHEDULE` settings only seed the first job records. Every run is audited
+  with the actor `system`. Images are never part
   of either: image bytes are fetched and served by the fileserver's image cache (`03` section
   3.11) lazily on first request — the backend never stores or serves a media byte (section 7). No
   other timer exists anywhere.

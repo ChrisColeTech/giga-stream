@@ -27,7 +27,7 @@ The repository was restarted from empty on 2026-10-16. The earlier work is in
 - **Titles play through the providers' embedded players** (owner, 2026-10-16; `12` section 7). How is
   proved first by the provider proof of concept (phase P, `14`), against the real services. Its results
   are written into `03` and `06` before phases 7 and 9 build title playback.
-- **Until then**, the backend's address rule (`03` section 7.5) points titles at the live server's test channels
+- **Until then**, the backend's address rule (`03` section 7.5) points titles at the backend's live test channels
   (`10`), so the rest of the Player can be built and checked against a real stream.
 
 The TMDB calls Library needs were checked live on 2026-10-16 (`11` section 3). Tests use hand-written
@@ -43,7 +43,7 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 | FFmpeg | `tools/ffmpeg/bin` restored (`09`) | `scripts/ffmpeg/verify-ffmpeg.ps1` passes |
 | Shared media library | `src/shared/media` (`01` section 4.2): find and run the bundled FFmpeg and ffprobe, read a file's facts, find the video files in a folder | its tests pass; the live server and the fixture script use it |
 | Fixture files | `scripts/fixtures/make-fixtures.mjs` (`10` section 2.1): three programmes per test channel and the news captions, cached per machine | a fresh cache is made and each file probes as H.264 + AAC at its listed length |
-| Live server | `src/live-server` (`10`): channels as playlists of real videos, live HLS in loop and encode mode, its own `node:sqlite` store, channel CRUD live without a restart, faults, the four seeded test channels | built 2026-10-16: its tests pass (CRUD, persistence, the switch between videos in every rendition, encode mode) and the headless-Chrome tests pass, including playback across a switch |
+| Live engine | `src/backend/src/live` (`10`, `26`; formerly the program `src/live-server`, merged and deleted 2026-10-17): channels as playlists of real videos, live HLS in loop and encode mode, in the backend's `node:sqlite` store, channel CRUD live without a restart, faults, the four seeded test channels | built 2026-10-16 as a program and merged into the backend 2026-10-17: the engine's tests pass in `src/backend/test` (`live-*.test.ts`) |
 | Rule checker and gate | `scripts/check-rules` to `01`; `scripts/check/gate.mjs` | the checker's tests pass; the gate prints `gate: PASS` |
 | Browser harness | `scripts/browser`: headless Chrome over DevTools, screenshots, page evaluation | it captures a screenshot of a running page (needed from phase 3) |
 
@@ -67,8 +67,8 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 |---|---|---|
 | Store | `channels`, the revision counter, `admin_accounts`, `refresh_tokens`, `audit_log`; numbered migrations | tests; data survives a restart |
 | Sign-in | login, refresh with rotation and reuse detection, logout, me, change password; HS256 access tokens; sign-in limits and lockout | tests; a real run signs in, refreshes and signs out |
-| Admin accounts | owner-only CRUD, roles, revocation on change, the last-owner guard, the bootstrap owner | tests |
-| Audit log | an entry per sign-in and change; owner-only reads | tests |
+| Admin accounts | signed-in CRUD (no roles, owner 2026-10-17), revocation on change, the last-admin guard, the bootstrap admin | tests |
+| Audit log | an entry per sign-in and change; reads for any signed-in admin | tests |
 | Network | TLS from certificate files, or behind a trusted proxy; refuses plain `http` off loopback; `CORS_ORIGINS` | tests; a real run over `https` on a LAN address |
 | Channel routes | public reads; `POST`, `PATCH`, `DELETE` with an access token | tests; a real run: a change is listed at once |
 | Provider CRUD | requested by the owner (2026-10-16); **not specified and not built by the coordinator**, which declined provider integration (`12` section 7, `14`). The routes, auth and storage above take a further resource without redesign | - |

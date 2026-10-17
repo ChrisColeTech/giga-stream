@@ -42,7 +42,7 @@ disabled merely because it needs the fileserver. *Phase 2* replaces the stub bod
 - **The family standard comes first.** Where a family app has solved a surface, its files are ported near-verbatim
   and edited only where Giga Stream's spec differs (`07` section 2, "port from source, not from docs"). The
   sources checked are in section 2.1.
-- **The admin backend is never contacted.** No backend address, port `8091`, TMDB, OMDb or live-server URL appears
+- **The admin backend is never contacted.** No backend address, port `8091`, TMDB, OMDb or live-channel URL appears
   in `src/frontend` (`01` sections 1.1 and 4.4). The Settings Address field is drawn from a fixture with no value;
   it is enabled, and a committed address is sent to the fileserver's `saveSetting` stub, never to the backend.
 - **A control works or is visibly disabled.** Since phase 1a a control that needs the fileserver is enabled and calls

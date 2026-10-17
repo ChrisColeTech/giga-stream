@@ -27,7 +27,7 @@ Status: **2026-10-15.** Walks the surfaces of `06`. Requirements: `00`. Navigati
                     TMDB titles on demand, each with an address from a rule
 
    stream origin ── HLS, loaded straight into the player ──▶ the interface
-   (in development: the live server's test channels, src/live-server, :8097)
+   (in development: the backend's live test channels, /live on the backend, :8091)
 ```
 
 The fileserver and the interface never see a provider. The admin backend never carries video.
