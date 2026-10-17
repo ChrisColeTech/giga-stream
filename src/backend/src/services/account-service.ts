@@ -69,12 +69,13 @@ export function createAccountService(deps: {
         if (revokes) revokeAll(id);
       });
       const changed = Object.keys(patch).filter((k) => k !== "password");
+      const saved = existing(id).account;
       audit.record(actor, {
         action: "account.updated",
         subject: id,
-        detail: { fields: patch.password === undefined ? changed : [...changed, "password"] },
+        detail: { name: saved.name, fields: patch.password === undefined ? changed : [...changed, "password"] },
       });
-      return existing(id).account;
+      return saved;
     },
 
     remove(id: string, actor: Actor): { id: string } {

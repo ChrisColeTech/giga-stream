@@ -6,8 +6,17 @@ import {
   PLAYLIST_FETCH_TIMEOUT_MS,
   PLAYLIST_SYNC_EXAMPLES_MAX,
 } from "../constants/limits.js";
-import { isAcceptedAddress } from "./address-rule.js";
+import { isAcceptedAddress, withoutQuery } from "./address-rule.js";
 import { m3uKeyOf, parseM3U, type M3uEntry } from "./m3u-parser.js";
+
+/** An accepted entry as the store keeps it: its addresses without query strings, fragments or credentials. */
+function storedForm(entry: M3uEntry): M3uEntry {
+  return {
+    ...entry,
+    streamUrl: withoutQuery(entry.streamUrl),
+    ...(entry.logoUrl !== undefined && { logoUrl: withoutQuery(entry.logoUrl) }),
+  };
+}
 
 export interface FetchedPlaylist {
   host: string;
@@ -45,12 +54,15 @@ export async function fetchPlaylist(options: {
   const refusalExamples: string[] = [];
   let skipped = 0;
   let refused = 0;
-  for (const entry of parseM3U(new TextDecoder().decode(bytes))) {
-    if (!isAcceptedAddress(entry.streamUrl, allowLoopback)) {
+  for (const parsed of parseM3U(new TextDecoder().decode(bytes))) {
+    if (!isAcceptedAddress(parsed.streamUrl, allowLoopback)) {
       refused += 1;
-      if (refusalExamples.length < PLAYLIST_SYNC_EXAMPLES_MAX) refusalExamples.push(`${entry.name} (${entry.streamUrl})`);
+      if (refusalExamples.length < PLAYLIST_SYNC_EXAMPLES_MAX) {
+        refusalExamples.push(`${parsed.name} (${withoutQuery(parsed.streamUrl)})`);
+      }
       continue;
     }
+    const entry = storedForm(parsed);
     const unusable =
       entry.name === "" || entry.name.length > CHANNEL_NAME_MAX || entry.streamUrl.length > ADDRESS_MAX ||
       (entry.groupTitle !== undefined && entry.groupTitle.length > CHANNEL_CATEGORY_MAX);

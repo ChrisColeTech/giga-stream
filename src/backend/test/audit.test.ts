@@ -51,3 +51,19 @@ test("a live channel's rebuild and its fault entries name the channel", async ()
   }
   assert.equal(pick(await latest(t.app, token, "channel.fault_set"), "detail.fault"), "stall");
 });
+
+test("an update of a sync job or of an admin account names it", async () => {
+  const t = await makeApp();
+  const token = (await signIn(t.app)).access;
+  const job = await send(t.app, "POST", "/api/jobs", {
+    type: "catalog", name: "Series", schedule: "6h", config: { scope: "popular", kind: "tv" },
+  }, token);
+  await send(t.app, "PATCH", `/api/jobs/${pick(job.body, "data.id")}`, { name: "Series 2" }, token);
+  assert.equal(pick(await latest(t.app, token, "job.updated"), "detail.name"), "Series 2");
+
+  const made = await send(t.app, "POST", "/api/admin-accounts", {
+    email: "ed@example.test", name: "Ed", password: "ed-password-12345",
+  }, token);
+  await send(t.app, "PATCH", `/api/admin-accounts/${pick(made.body, "data.id")}`, { name: "Edward" }, token);
+  assert.equal(pick(await latest(t.app, token, "account.updated"), "detail.name"), "Edward");
+});
