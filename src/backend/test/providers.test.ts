@@ -199,3 +199,46 @@ test("a template refusal names the field and names the missing placeholder", asy
   const badShape = await send(t.app, "PUT", `/api/providers/1`, { messageShape: "media-data" }, access);
   assert.equal(pick(badShape.body, "error.details.field"), "messageShape");
 });
+
+test("enabled is written on create and on update, and an absent enabled keeps the stored value", async () => {
+  const t = await makeApp();
+  const access = (await signIn(t.app)).access;
+  const off = await send(t.app, "POST", "/api/providers", { ...provider, enabled: false }, access);
+  assert.equal(pick(off.body, "data.is_active"), false);
+  const id = Number(pick(off.body, "data.id"));
+  const on = await send(t.app, "PUT", `/api/providers/${id}`, { enabled: true }, access);
+  assert.equal(pick(on.body, "data.is_active"), true);
+  const renamed = await send(t.app, "PUT", `/api/providers/${id}`, { name: "Renamed" }, access);
+  assert.deepEqual([pick(renamed.body, "data.name"), pick(renamed.body, "data.is_active")], ["Renamed", true]);
+  const read = await send(t.app, "GET", `/api/providers/${id}`);
+  assert.equal(pick(read.body, "data.is_active"), true);
+});
+
+test("null in a PUT clears an optional field; an absent field keeps it", async () => {
+  const t = await makeApp();
+  const access = (await signIn(t.app)).access;
+  const made = await send(t.app, "POST", "/api/providers", {
+    ...provider,
+    family: "embed",
+    movieTemplate: "https://embed.example/movie/{tmdbId}",
+    startParam: "start",
+    origin: "https://embed.example",
+  }, access);
+  const id = Number(pick(made.body, "data.id"));
+  const cleared = await send(t.app, "PUT", `/api/providers/${id}`, { movieTemplate: null, origin: null }, access);
+  assert.equal(cleared.status, 200);
+  const field = (name: string) => pick(cleared.body, `data.${name}`);
+  assert.deepEqual([field("movieTemplate"), field("origin"), field("startParam")], [undefined, undefined, "start"]);
+});
+
+test("a bad template or origin is refused on a PUT too, naming the field", async () => {
+  const t = await makeApp();
+  const access = (await signIn(t.app)).access;
+  await send(t.app, "POST", "/api/providers", provider, access);
+  const plainTemplate = { movieTemplate: "http://embed.example/{tmdbId}" };
+  const plain = await send(t.app, "PUT", "/api/providers/1", plainTemplate, access);
+  const refusal = [plain.status, pick(plain.body, "error.code"), pick(plain.body, "error.details.field")];
+  assert.deepEqual(refusal, [422, "provider.invalid", "movieTemplate"]);
+  const nulled = await send(t.app, "PUT", "/api/providers/1", { origin: null, movieTemplate: null }, access);
+  assert.equal(nulled.status, 200, "null is a clear, not a value to check");
+});

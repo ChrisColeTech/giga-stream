@@ -14,7 +14,13 @@ export const stateOf = (row: StoredTitle): TitleState =>
  */
 export function viewOf(row: StoredTitle, withEnabled = true): Record<string, unknown> {
   const { listSnapshot: _snapshot, ...payload } = asRecord(row.payload);
-  return { ...payload, id: row.id, kind: row.kind, state: stateOf(row), ...(withEnabled && { enabled: row.enabled }) };
+  return {
+    ...payload,
+    id: row.id,
+    kind: row.kind,
+    state: stateOf(row),
+    ...(withEnabled && { enabled: row.enabled, editedFields: row.editedFields }),
+  };
 }
 
 const yearDesc = (a: Record<string, unknown>, b: Record<string, unknown>): number =>
@@ -40,7 +46,11 @@ export function createTitleOverlay(store: Store) {
       }
       if (!row.enabled && !includeDisabled) continue;
       const edited = row.editedFields.length > 0 ? applyFields(item, row.payload, row.editedFields) : item;
-      out.push({ ...edited, state: stateOf(row), ...(includeDisabled && { enabled: row.enabled }) });
+      out.push({
+        ...edited,
+        state: stateOf(row),
+        ...(includeDisabled && { enabled: row.enabled, editedFields: row.editedFields }),
+      });
     }
     return out;
   }

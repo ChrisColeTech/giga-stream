@@ -46,7 +46,19 @@ test("migrations 015 and 016 drop role and api_key and keep every row, id and th
   try {
     createStore(oldDatabase(dataDir)).close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
-    assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 16 });
+    try {
+      // Migration 017 (account UI state) runs after 015 and 016, so the schema is at 17 here.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 17 });
+      verifyRows(db);
+    } finally {
+      db.close();
+    }
+  } finally {
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+function verifyRows(db: DatabaseSync): void {
 
     assert.equal(columnsOf(db, "admin_accounts").includes("role"), false);
     assert.equal(columnsOf(db, "providers").includes("api_key"), false);
@@ -67,11 +79,7 @@ test("migrations 015 and 016 drop role and api_key and keep every row, id and th
         origin: "https://c.example", message_shape: "player-event" },
       { id: 9, name: "Other", source: "other", is_active: 0, order: 5, family: "stream", movie_template: null, origin: null, message_shape: null },
     ]);
-    db.close();
-  } finally {
-    rmSync(dataDir, { recursive: true, force: true });
-  }
-});
+}
 
 test("after the migrations the store reads the old accounts and providers, and a new provider takes the next id", () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-migrate-"));

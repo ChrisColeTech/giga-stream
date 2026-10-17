@@ -37,6 +37,7 @@ export const ERRORS = {
   accountNotFound: { code: "account.not_found", status: 404, message: "That account does not exist." },
   accountInvalid: { code: "account.invalid", status: 422, message: "That account is not valid." },
   accountEmailTaken: { code: "account.email_taken", status: 409, message: "Another account already uses that email." },
+  accountStateInvalid: { code: "account_state.invalid", status: 422, message: "That saved account state is not valid." },
   accountLastAdmin: {
     code: "account.last_admin",
     status: 409,

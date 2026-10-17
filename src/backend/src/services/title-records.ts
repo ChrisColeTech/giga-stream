@@ -8,12 +8,15 @@ import type { SeasonInput, TitleInput, TitlePatch } from "../types/title-input.j
 import { addressRefusal, isAcceptedAddress } from "./address-rule.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { viewOf } from "./title-overlay.js";
-import { type Kind, mapTitle404, parseTitleId } from "./title-shapes.js";
+import { type Kind, asRecord, mapTitle404, parseTitleId, str } from "./title-shapes.js";
 
 const MANUAL_PREFIX = "custom-";
 export const isManualId = (titleId: string): boolean => titleId.startsWith(MANUAL_PREFIX);
 
 const invalid = (field: string, message: string): AppError => new AppError(ERRORS.titleInvalid, { field }, message);
+
+/** A title's name as the audit log names it (docs/29 B5). */
+const nameOf = (row: StoredTitle): string | undefined => str(asRecord(row.payload).title);
 
 /** A manual series' seasons as the detail and season routes answer them: every episode knows its season. */
 const seasonsOf = (seasons: SeasonInput[]): unknown[] =>
@@ -113,8 +116,10 @@ export function createTitleRecords(deps: {
       }
       store.titles.updateRecord(titleId, { payload, editedFields, tmdbId: nextTmdbId, enabled: enabled ?? row.enabled });
       const touched = [...fields, ...(tmdbId === undefined ? [] : ["tmdbId"]), ...(enabled === undefined ? [] : ["enabled"])];
-      audit.record(actor, { action: "title.updated", subject: titleId, detail: { fields: touched } });
-      return viewOf(found(titleId));
+      const saved = found(titleId);
+      const detail = { name: nameOf(saved), fields: touched };
+      audit.record(actor, { action: "title.updated", subject: titleId, detail });
+      return viewOf(saved);
     },
 
     /** A real delete. A synced title may come back with a later sync or read; `enabled` is how to keep it hidden. */
@@ -137,8 +142,10 @@ export function createTitleRecords(deps: {
         store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId, enabled: row.enabled });
         return mapTitle404(error, titleId);
       }
-      audit.record(actor, { action: "title.reverted", subject: titleId, detail: { fields: row.editedFields } });
-      return viewOf(found(titleId));
+      const saved = found(titleId);
+      const detail = { name: nameOf(saved), fields: row.editedFields };
+      audit.record(actor, { action: "title.reverted", subject: titleId, detail });
+      return viewOf(saved);
     },
   };
 }

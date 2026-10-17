@@ -75,7 +75,7 @@ test("one timer serves every job: two playlists' jobs each run, and a job that n
   await until(() => asked.includes(ONE) && asked.includes(TWO), "both jobs");
   const jobs = pick((await send(t.app, "GET", "/api/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
   const mine = jobs.filter((j) => j.type === "playlist");
-  assert.deepEqual(mine.map((j) => j.lastOutcome), ["ok", "ok"]);
+  assert.deepEqual(mine.map((j) => String(j.lastOutcome).startsWith("Synced:")), [true, true]);
   assert.ok(mine.every((j) => typeof j.lastRunAt === "number"));
   const status = await send(t.app, "GET", "/api/playlist-sync", undefined, token);
   assert.equal(pick(status.body, "data.schedule"), "150ms", "the wrapper's schedule is the first enabled playlist job's");

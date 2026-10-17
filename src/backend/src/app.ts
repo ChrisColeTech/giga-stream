@@ -2,6 +2,7 @@ import path from "node:path";
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 
+import { registerAccountState } from "./api/account-state.js";
 import { registerAccounts } from "./api/accounts.js";
 import { registerAdminChannels } from "./api/admin-channels.js";
 import { registerAdminStatic } from "./api/admin-static.js";
@@ -124,6 +125,7 @@ export async function buildApp(
     });
     registerHealth(app, ready);
     registerAuth(app, ready);
+    registerAccountState(app, ready);
     registerAccounts(app, ready);
     registerAudit(app, ready);
     registerChannels(app, ready);

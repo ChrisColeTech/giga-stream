@@ -78,7 +78,7 @@ export function createPlaylistService(deps: {
       audit.record(actor, {
         action: "playlist.updated",
         subject: String(id),
-        detail: { fields: Object.keys(patch), host },
+        detail: { name: next.name, fields: Object.keys(patch), host },
       });
       if (next.enabled !== current.enabled) onChange();
       return viewOf(existing(id));

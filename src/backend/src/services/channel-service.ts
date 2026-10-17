@@ -33,6 +33,10 @@ export function createChannelService(deps: {
 }) {
   const { store, audit, live, allowLoopback, now } = deps;
 
+  /** One audit line about a channel, named: the log shows the channel's name, not only its id (docs/29 B5). */
+  const named = (actor: Actor, action: string, id: string, name: string, detail: Record<string, unknown> = {}): void =>
+    audit.record(actor, { action, subject: id, detail: { name, ...detail } });
+
   function existing(id: string): ChannelRecord {
     const found = store.channels.find(id);
     if (!found) throw new AppError(ERRORS.channelNotFound);
@@ -82,7 +86,7 @@ export function createChannelService(deps: {
     create(input: ChannelInput, actor: Actor, base: string): AdminChannel {
       const record = createRecord(input);
       store.transaction(() => store.channels.insert({ ...record, revision: store.revisions.next() }, now()));
-      audit.record(actor, { action: "channel.created", subject: record.id, detail: { name: record.name, kind: record.kind } });
+      named(actor, "channel.created", record.id, record.name, { kind: record.kind });
       const saved = existing(record.id);
       if (saved.kind === "live") live.apply(liveSpecOf(saved));
       return adminChannel(saved, base, live);
@@ -104,7 +108,7 @@ export function createChannelService(deps: {
       }
       const next: ChannelRecord = { ...record, enabled: patch.enabled ?? current.enabled };
       store.transaction(() => store.channels.update({ ...next, revision: store.revisions.next() }));
-      audit.record(actor, { action: "channel.updated", subject: id, detail: { fields: Object.keys(patch) } });
+      named(actor, "channel.updated", id, next.name, { fields: Object.keys(patch) });
       const saved = existing(id);
       // A disabled live channel is not running: it stops, and an edit does not start it.
       if (saved.kind === "live") {
@@ -114,7 +118,7 @@ export function createChannelService(deps: {
       return adminChannel(saved, base, live);
     },
 
-    /** Stops a live row's runtime first, then deletes the row. A synced row is really deleted: a later sync may add it again. */
+    /** Stops a live row's runtime, then deletes the row. A synced row is deleted for real; a sync may add it back. */
     async remove(id: string, actor: Actor): Promise<{ id: string }> {
       const current = existing(id);
       if (current.kind === "live") await live.remove(id);
@@ -122,7 +126,7 @@ export function createChannelService(deps: {
         store.channels.remove(id);
         store.revisions.next();
       });
-      audit.record(actor, { action: "channel.deleted", subject: id, detail: { name: current.name, kind: current.kind } });
+      named(actor, "channel.deleted", id, current.name, { kind: current.kind });
       return { id };
     },
 
@@ -136,7 +140,7 @@ export function createChannelService(deps: {
         throw invalid("source", "Only a channel the playlist sync owns can be reverted.");
       }
       store.transaction(() => store.channels.update({ ...current, editedFields: [] }));
-      audit.record(actor, { action: "channel.reverted", subject: id, detail: { fields: current.editedFields } });
+      named(actor, "channel.reverted", id, current.name, { fields: current.editedFields });
       return adminChannel(existing(id), base, live);
     },
 
@@ -146,22 +150,22 @@ export function createChannelService(deps: {
       if (!current.enabled) throw invalid("enabled", "A disabled channel is not running; enable it first.");
       checkLiveSource(current.live);
       live.apply(liveSpecOf(current));
-      audit.record(actor, { action: "channel.rebuilt", subject: id });
+      named(actor, "channel.rebuilt", id, current.name);
       return adminChannel(current, base, live);
     },
 
     /** Faults are an in-memory test tool on a live channel (docs/10 section 2, item 5). */
     setFault(id: string, fault: Fault, durationMs: number | undefined, delayMs: number | undefined, actor: Actor) {
-      existingLive(id);
+      const channel = existingLive(id);
       const described = live.setFault(id, fault, durationMs, delayMs);
-      audit.record(actor, { action: "channel.fault_set", subject: id, detail: { fault } });
+      named(actor, "channel.fault_set", id, channel.name, { fault });
       return { id, fault: described };
     },
 
     clearFault(id: string, actor: Actor) {
-      existingLive(id);
+      const channel = existingLive(id);
       live.clearFault(id);
-      audit.record(actor, { action: "channel.fault_cleared", subject: id });
+      named(actor, "channel.fault_cleared", id, channel.name);
       return { id, fault: null };
     },
 
@@ -175,7 +179,7 @@ export function createChannelService(deps: {
         store.channels.remove(input.id);
         store.channels.insert({ ...record, revision: store.revisions.next() }, now());
       });
-      audit.record(actor, { action: "channel.updated", subject: input.id, detail: { fields: ["kind"], from: "stream" } });
+      named(actor, "channel.updated", input.id, input.name, { fields: ["kind"], from: "stream" });
       live.apply(liveSpecOf({ ...record, revision: existing(input.id).revision }));
     },
     /** The row with this id, if any (the seed's read). */

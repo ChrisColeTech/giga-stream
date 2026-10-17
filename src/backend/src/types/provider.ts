@@ -82,23 +82,43 @@ const httpsOrigin = (value: string): boolean => {
 const originField = text(ADDRESS_MAX).refine(httpsOrigin, "an origin is an https address with no path");
 const paramField = text(PARAM_MAX);
 
-/** The fields an operator sets (docs/03 section 7.2b). */
+const movieTemplate = template(MOVIE_TEMPLATE_PLACEHOLDERS);
+const episodeTemplate = template(EPISODE_TEMPLATE_PLACEHOLDERS);
+const frameOriginList = z.array(originField).min(1).max(FRAME_ORIGINS_MAX);
+const messageShape = z.enum(MESSAGE_SHAPES);
+
+/** The fields an operator sets (docs/03 section 7.2b). `enabled` is the provider's `is_active`; absent means on. */
 export const ProviderInputSchema = z
   .object({
     name: text(PROVIDER_NAME_MAX),
     source: text(SOURCE_MAX),
     order: z.number().int().min(0).optional(),
     family: z.enum(PROVIDER_FAMILIES).default("embed"),
-    movieTemplate: template(MOVIE_TEMPLATE_PLACEHOLDERS).optional(),
-    episodeTemplate: template(EPISODE_TEMPLATE_PLACEHOLDERS).optional(),
+    enabled: z.boolean().optional(),
+    movieTemplate: movieTemplate.optional(),
+    episodeTemplate: episodeTemplate.optional(),
     startParam: paramField.optional(),
     subtitlesParam: paramField.optional(),
     origin: originField.optional(),
-    frameOrigins: z.array(originField).min(1).max(FRAME_ORIGINS_MAX).optional(),
-    messageShape: z.enum(MESSAGE_SHAPES).optional(),
+    frameOrigins: frameOriginList.optional(),
+    messageShape: messageShape.optional(),
   })
   .strict();
 export type ProviderInput = z.infer<typeof ProviderInputSchema>;
 
-export const ProviderPatchSchema = ProviderInputSchema.partial().strict();
+/**
+ * A PATCH: any field may be absent (it keeps the stored value); `null` clears an optional field, which a PUT could not
+ * do before (docs/29 section 9.2, B2).
+ */
+export const ProviderPatchSchema = ProviderInputSchema.partial()
+  .extend({
+    movieTemplate: movieTemplate.nullable().optional(),
+    episodeTemplate: episodeTemplate.nullable().optional(),
+    startParam: paramField.nullable().optional(),
+    subtitlesParam: paramField.nullable().optional(),
+    origin: originField.nullable().optional(),
+    frameOrigins: frameOriginList.nullable().optional(),
+    messageShape: messageShape.nullable().optional(),
+  })
+  .strict();
 export type ProviderPatch = z.infer<typeof ProviderPatchSchema>;

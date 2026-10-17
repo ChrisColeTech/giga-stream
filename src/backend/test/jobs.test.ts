@@ -154,10 +154,17 @@ test("running a playlist job syncs only its playlist and keeps how it went; a dr
   await playlist("https://other.example/all.m3u8");
   const id = Number(pick((await playlistJob()).body, "data.id"));
   const dry = await send(t.app, "POST", `/api/jobs/${id}/run`, { dryRun: true }, token);
-  assert.deepEqual([dry.status, pick(dry.body, "data.lastOutcome"), pick(dry.body, "data.lastCounts.created")], [202, "ok", 2]);
+  const dryCounts = [pick(dry.body, "data.lastCounts.created"), pick(dry.body, "data.lastCounts.createdIds")];
+  assert.deepEqual([dry.status, pick(dry.body, "data.lastOutcome")], [202, "Dry run. 2 to create, 0 to update."]);
+  assert.deepEqual(dryCounts, [2, []], "a dry run names no created id");
   assert.equal(itemsOf((await send(t.app, "GET", "/api/channels")).body).length, 0, "a dry run writes nothing");
   const real = await send(t.app, "POST", `/api/jobs/${id}/run`, undefined, token);
   assert.deepEqual([pick(real.body, "data.lastCounts.created"), pick(real.body, "data.running")], [2, false]);
+  assert.equal(pick(real.body, "data.lastOutcome"), "Synced: 2 created, 0 updated.");
+  const createdIds = pick(real.body, "data.lastCounts.createdIds");
+  assert.ok(Array.isArray(createdIds) && createdIds.length === 2, "the two created ids are kept");
+  const examples = pick(real.body, "data.lastCounts.refusalExamples");
+  assert.ok(Array.isArray(examples), "refusal examples are kept, even when empty");
   assert.deepEqual(feed.asked, [URL_ONE, URL_ONE], "never the other playlist");
   assert.equal(pick((await send(t.app, "GET", "/api/playlists/1", undefined, token)).body, "data.channels"), 2);
   assert.equal(pick((await send(t.app, "GET", "/api/playlists/2", undefined, token)).body, "data.channels"), 0);
