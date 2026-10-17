@@ -39,10 +39,12 @@ test("a refused start creates no database file", async () => {
 });
 
 test("sign-in, account and audit answers are never cached; channel reads may be", () => {
-  for (const url of ["/api/auth/login", "/api/auth/me", "/api/admin-accounts", "/api/admin-accounts/x", "/api/audit?limit=5"]) {
+  for (const url of ["/api/auth/login", "/api/auth/me", "/api/admin-accounts", "/api/admin-accounts/x", "/api/audit?limit=5", "/api/admin-channels"]) {
     assert.equal(isPrivateRoute(url), true, url);
   }
-  for (const url of ["/api/channels", "/healthz", "/api/authority"]) assert.equal(isPrivateRoute(url), false, url);
+  for (const url of ["/api/channels", "/healthz", "/api/authority", "/live/home/master.m3u8"]) {
+    assert.equal(isPrivateRoute(url), false, url);
+  }
 });
 
 test("a browser page on another origin may call the backend only when CORS_ORIGINS lists it", async () => {

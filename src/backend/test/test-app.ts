@@ -6,6 +6,8 @@ import type { FastifyInstance } from "fastify";
 
 import { buildApp } from "../src/app.js";
 import type { Config } from "../src/config.js";
+import type { LiveEngine, LiveSeams } from "../src/live/engine/live-engine.js";
+import { fakeBuild, type FakeTally } from "./live-fake-source.js";
 
 export const OWNER_EMAIL = "owner@example.test";
 export const OWNER_PASSWORD = "owner-password-123";
@@ -21,22 +23,55 @@ export interface TestApp {
   app: FastifyInstance;
   dataDir: string;
   clock: ReturnType<typeof testClock>;
+  /** The live engine, to wait for the builds in progress (`live.settled()`) or read a channel's state. */
+  live: LiveEngine;
+  /** What the fake build made and stopped, and the delays the slow-segments fault asked to sleep. */
+  tally: FakeTally;
+  sleeps: number[];
   dispose(): Promise<void>;
+}
+
+export interface MakeAppOptions {
+  seed?: boolean;
+  loopback?: boolean;
+  dataDir?: string;
+  config?: Partial<Config>;
+  fetch?: typeof fetch;
+  /** `real` runs the real build (ffprobe, ffmpeg); the default is a fake source, so no program runs. */
+  engine?: "fake" | "real";
+  live?: LiveSeams;
+  /** Replaces the hand-moved clock (the opt-in browser tests need real time). */
+  now?: () => number;
 }
 
 const created: TestApp[] = [];
 
 /** A fresh app on a fresh temporary data folder, with the bootstrap owner: no shared state, no network. */
-export async function makeApp(
-  options: { seed?: boolean; loopback?: boolean; dataDir?: string; config?: Partial<Config>; fetch?: typeof fetch } = {},
-): Promise<TestApp> {
+export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-backend-test-"));
   const clock = testClock();
+  const now = options.now ?? clock.now;
+  const tally: FakeTally = { built: 0, stopped: 0 };
+  const sleeps: number[] = [];
+  let engine: LiveEngine | undefined;
+  const seams: LiveSeams = {
+    ...(options.engine === "real" ? {} : { build: fakeBuild(now, tally), sleep: async (ms: number) => void sleeps.push(ms) }),
+    ...options.live,
+    onEngine: (made) => {
+      engine = made;
+      options.live?.onEngine?.(made);
+    },
+  };
   const app = await buildApp(
     {
       NODE_ENV: "test",
       HOST: "127.0.0.1",
       DATA_DIR: dataDir,
+      // Never the environment's: everything the live engine writes stays inside the temporary data folder.
+      CACHE_DIR: path.join(dataDir, "cache"),
+      FIXTURE_DIR: path.join(dataDir, "fixtures"),
+      ADMIN_DIST: path.join(dataDir, "admin-dist"),
+      TEST_PAGE: false,
       JWT_SECRET,
       ADMIN_BOOTSTRAP_EMAIL: OWNER_EMAIL,
       ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
@@ -47,17 +82,22 @@ export async function makeApp(
       CORS_ORIGINS: "",
       TMDB_READ_TOKEN: "",
       SEED_TEST_CHANNELS: options.seed ?? false,
-      ALLOW_LOOPBACK_STREAMS: options.loopback ?? options.seed ?? false,
+      ALLOW_LOOPBACK_STREAMS: options.loopback ?? false,
       ...options.config,
     },
-    clock.now,
+    now,
     options.fetch,
+    seams,
   );
+  if (engine === undefined) throw new Error("the live engine was not created");
   let disposed = false;
   const testApp: TestApp = {
     app,
     dataDir,
     clock,
+    live: engine,
+    tally,
+    sleeps,
     async dispose() {
       if (disposed) return;
       disposed = true;
@@ -77,11 +117,43 @@ export interface Answer {
   status: number;
   body: unknown;
   headers: Record<string, unknown>;
+  /** The bytes, for playlists, segments and pages. */
+  raw: Buffer;
 }
 
-type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+type Method = "GET" | "HEAD" | "POST" | "PATCH" | "PUT" | "DELETE" | "OPTIONS";
 
-export async function send(
+export interface RequestOptions {
+  method: Method;
+  url: string;
+  body?: unknown;
+  token?: string;
+  headers?: Record<string, string>;
+  address?: string;
+}
+
+/** One request through Fastify's injector, as a peer at `address` (default this computer). */
+export async function request(app: FastifyInstance, options: RequestOptions): Promise<Answer> {
+  const headers: Record<string, string> = { ...options.headers };
+  if (options.token !== undefined) headers.authorization = `Bearer ${options.token}`;
+  if (options.body !== undefined) headers["content-type"] = "application/json";
+  const reply = await app.inject({
+    method: options.method,
+    url: options.url,
+    headers,
+    remoteAddress: options.address ?? "127.0.0.1",
+    ...(options.body !== undefined && { payload: JSON.stringify(options.body) }),
+  });
+  const json = String(reply.headers["content-type"] ?? "").startsWith("application/json");
+  return {
+    status: reply.statusCode,
+    body: json && reply.body !== "" ? JSON.parse(reply.body) : null,
+    headers: reply.headers,
+    raw: reply.rawPayload,
+  };
+}
+
+export function send(
   app: FastifyInstance,
   method: Method,
   url: string,
@@ -89,17 +161,7 @@ export async function send(
   token?: string,
   address = "127.0.0.1",
 ): Promise<Answer> {
-  const headers: Record<string, string> = {};
-  if (token !== undefined) headers.authorization = `Bearer ${token}`;
-  if (body !== undefined) headers["content-type"] = "application/json";
-  const reply = await app.inject({
-    method,
-    url,
-    headers,
-    remoteAddress: address,
-    ...(body !== undefined && { payload: JSON.stringify(body) }),
-  });
-  return { status: reply.statusCode, body: reply.body === "" ? null : JSON.parse(reply.body), headers: reply.headers };
+  return request(app, { method, url, address, ...(body !== undefined && { body }), ...(token !== undefined && { token }) });
 }
 
 /** Reads `a.b.0.c` out of parsed JSON; undefined when any step is missing. */
