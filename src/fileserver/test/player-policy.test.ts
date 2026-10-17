@@ -4,12 +4,13 @@ import assert from "node:assert/strict";
 import {
   parsePlayerPolicy,
   PlayerPolicyAuthority,
+  judgeUnmanagedFrame,
   type FrameIdentity,
   type PlayerPolicy,
 } from "../src/app/player-policy.js";
 
 const POLICY: PlayerPolicy = {
-  sourceOrigin: "https://player.example",
+  origin: "https://player.example",
   frameOrigins: ["https://media.example:8443"],
 };
 
@@ -20,17 +21,18 @@ function frame(frameTreeNodeId: number, parent: FrameIdentity | null, url = ""):
 test("player policy accepts only its exact data-only origin shape", () => {
   assert.deepEqual(parsePlayerPolicy(POLICY), POLICY);
   assert.deepEqual(
-    parsePlayerPolicy({ sourceOrigin: "https://player.example", frameOrigins: ["https://media.example"] }),
-    { sourceOrigin: "https://player.example", frameOrigins: ["https://media.example"] },
+    parsePlayerPolicy({ origin: "https://player.example", frameOrigins: ["https://media.example"] }),
+    { origin: "https://player.example", frameOrigins: ["https://media.example"] },
   );
   const invalid: unknown[] = [
     null,
-    { sourceOrigin: "https://player.example" },
-    { sourceOrigin: "https://player.example/path", frameOrigins: [] },
-    { sourceOrigin: "https://user@player.example", frameOrigins: [] },
-    { sourceOrigin: "file://player.example", frameOrigins: [] },
-    { sourceOrigin: "https://player.example", frameOrigins: "https://media.example" },
-    { sourceOrigin: "https://player.example", frameOrigins: [], script: "alert = () => {}" },
+    { origin: "https://player.example" },
+    { origin: "https://player.example/path", frameOrigins: [] },
+    { origin: "https://user@player.example", frameOrigins: [] },
+    { origin: "file://player.example", frameOrigins: [] },
+    { origin: "https://player.example", frameOrigins: "https://media.example" },
+    { origin: "https://player.example", frameOrigins: [], script: "alert = () => {}" },
+    { sourceOrigin: "https://player.example", frameOrigins: [] },
   ];
   for (const value of invalid) assert.throws(() => parsePlayerPolicy(value), TypeError);
 });
@@ -74,12 +76,8 @@ test("set, clear and source switch revoke stale frame identities", () => {
   const authority = new PlayerPolicyAuthority(app.frameTreeNodeId);
   authority.set(POLICY);
   assert.equal(authority.judge(stale, "https://player.example/embed"), "allow");
-  authority.markInstalled(staleLoaded, authority.revision);
-  assert.equal(authority.isInstalled(stale.frameTreeNodeId), true);
-
-  authority.set({ sourceOrigin: "https://next.example", frameOrigins: [] });
+  authority.set({ origin: "https://next.example", frameOrigins: [] });
   assert.equal(authority.owns(stale), false);
-  assert.equal(authority.isInstalled(stale.frameTreeNodeId), false);
   assert.equal(authority.judge(staleLoaded, "https://next.example/embed"), "refuse", "a loaded stale frame cannot claim");
   assert.equal(
     authority.judge(frame(24, staleLoaded), "https://player.example/tracker"),
@@ -92,4 +90,18 @@ test("set, clear and source switch revoke stale frame identities", () => {
   assert.equal(authority.owns(fresh), false);
   assert.equal(authority.judge(frame(23, app), "https://next.example/embed"), "refuse");
   assert.equal(authority.judge(frame(23, app), "about:blank"), "allow");
+});
+
+test("without product policy, unrelated direct frames keep first-origin containment", () => {
+  const app = frame(30, null);
+  const direct = frame(31, app);
+  const nested = frame(32, direct);
+  const origins = new Map<number, string>();
+  assert.equal(judgeUnmanagedFrame(direct, "https://static.example/page", app.frameTreeNodeId, origins), "allow");
+  assert.equal(judgeUnmanagedFrame(direct, "https://static.example/next", app.frameTreeNodeId, origins), "allow");
+  assert.equal(judgeUnmanagedFrame(direct, "https://other.example/", app.frameTreeNodeId, origins), "refuse");
+  assert.equal(judgeUnmanagedFrame(direct, "javascript:alert(1)", app.frameTreeNodeId, origins), "refuse");
+  assert.equal(judgeUnmanagedFrame(nested, "https://nested.example/", app.frameTreeNodeId, origins), "allow");
+  assert.equal(judgeUnmanagedFrame(direct, "about:blank", app.frameTreeNodeId, origins), "allow");
+  assert.equal(origins.size, 0, "clean stop releases the unmanaged frame identity");
 });

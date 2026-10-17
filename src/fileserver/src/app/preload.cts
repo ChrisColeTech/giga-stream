@@ -11,7 +11,7 @@ const { contextBridge, ipcRenderer } = electron;
  * them. `ipcRenderer` itself is never exposed.
  */
 type GuardReport = { kind: string; url?: string; permission?: string; origin?: string; blocked: boolean };
-type PlayerPolicy = { sourceOrigin: string; frameOrigins: readonly string[] };
+type PlayerPolicy = { origin: string; frameOrigins: string[] };
 
 contextBridge.exposeInMainWorld("pocHost", {
   runtime: "electron",

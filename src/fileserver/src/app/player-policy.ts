@@ -1,4 +1,4 @@
-export type PlayerPolicy = { sourceOrigin: string; frameOrigins: readonly string[] };
+export type PlayerPolicy = { origin: string; frameOrigins: readonly string[] };
 
 export type FrameIdentity = {
   readonly frameTreeNodeId: number;
@@ -28,15 +28,15 @@ export function parsePlayerPolicy(value: unknown): PlayerPolicy {
     throw new TypeError("Player policy must be an object.");
   }
   const keys = Object.keys(value);
-  if (keys.length !== 2 || !keys.includes("sourceOrigin") || !keys.includes("frameOrigins")) {
+  if (keys.length !== 2 || !keys.includes("origin") || !keys.includes("frameOrigins")) {
     throw new TypeError("Player policy has an unexpected shape.");
   }
-  const sourceValue = "sourceOrigin" in value ? value.sourceOrigin : undefined;
+  const sourceValue = "origin" in value ? value.origin : undefined;
   const frameValues = "frameOrigins" in value ? value.frameOrigins : undefined;
   if (!Array.isArray(frameValues)) throw new TypeError("Player frame origins must be an array.");
-  const sourceOrigin = exactWebOrigin(sourceValue);
+  const origin = exactWebOrigin(sourceValue);
   const frameOrigins = frameValues.map(exactWebOrigin);
-  return { sourceOrigin, frameOrigins: [...new Set(frameOrigins)] };
+  return { origin, frameOrigins: [...new Set(frameOrigins)] };
 }
 
 function navigationOrigin(target: string): string | null {
@@ -54,35 +54,38 @@ function isInitialization(target: string): boolean {
 }
 
 export class PlayerPolicyAuthority {
-  readonly #appFrameId: number;
+  #appFrameId: number;
   #allowedOrigins = new Set<string>();
-  #installedFrames = new Set<number>();
+  readonly #onReset: () => void;
   #playerFrameId: number | null = null;
   #policy: PlayerPolicy | null = null;
-  #revision = 0;
 
-  constructor(appFrameId: number) {
+  constructor(appFrameId: number, onReset: () => void = () => undefined) {
     this.#appFrameId = appFrameId;
+    this.#onReset = onReset;
   }
 
-  get revision(): number {
-    return this.#revision;
+  get active(): boolean {
+    return this.#policy !== null;
   }
 
   set(policy: PlayerPolicy): void {
     this.#policy = policy;
-    this.#allowedOrigins = new Set([policy.sourceOrigin, ...policy.frameOrigins]);
+    this.#allowedOrigins = new Set([policy.origin, ...policy.frameOrigins]);
     this.#playerFrameId = null;
-    this.#installedFrames.clear();
-    this.#revision++;
+    this.#onReset();
   }
 
   clear(): void {
     this.#policy = null;
     this.#allowedOrigins.clear();
     this.#playerFrameId = null;
-    this.#installedFrames.clear();
-    this.#revision++;
+    this.#onReset();
+  }
+
+  replaceAppFrame(appFrameId: number): void {
+    this.#appFrameId = appFrameId;
+    this.clear();
   }
 
   judge(frame: FrameIdentity, target: string): FrameVerdict {
@@ -104,24 +107,12 @@ export class PlayerPolicyAuthority {
     return this.owns(frame) && this.#allowsOrigin(frame.url);
   }
 
-  markInstalled(frame: FrameIdentity, revision: number): void {
-    if (revision === this.#revision && this.allowsFrame(frame)) this.#installedFrames.add(frame.frameTreeNodeId);
-  }
-
-  forgetInstallation(frameId: number): void {
-    this.#installedFrames.delete(frameId);
-  }
-
-  isInstalled(frameId: number): boolean {
-    return this.#installedFrames.has(frameId);
-  }
-
   #judgeDirect(frame: FrameIdentity, target: string): FrameVerdict {
     if (isInitialization(target)) {
       if (frame.frameTreeNodeId === this.#playerFrameId) this.#playerFrameId = null;
       return "allow";
     }
-    if (this.#policy === null || navigationOrigin(target) !== this.#policy.sourceOrigin) return "refuse";
+    if (this.#policy === null || navigationOrigin(target) !== this.#policy.origin) return "refuse";
     if (frame.frameTreeNodeId === this.#playerFrameId) return "allow";
     if (this.#playerFrameId === null && isInitialization(frame.url)) {
       this.#playerFrameId = frame.frameTreeNodeId;
@@ -141,4 +132,25 @@ export class PlayerPolicyAuthority {
     }
     return false;
   }
+}
+
+export function judgeUnmanagedFrame(
+  frame: FrameIdentity,
+  target: string,
+  appFrameId: number,
+  directOrigins: Map<number, string>,
+): FrameVerdict {
+  if (frame.parent?.frameTreeNodeId !== appFrameId) return "allow";
+  if (isInitialization(target)) {
+    directOrigins.delete(frame.frameTreeNodeId);
+    return "allow";
+  }
+  const origin = navigationOrigin(target);
+  if (origin === null) return "refuse";
+  const first = directOrigins.get(frame.frameTreeNodeId);
+  if (first === undefined) {
+    directOrigins.set(frame.frameTreeNodeId, origin);
+    return "allow";
+  }
+  return origin === first ? "allow" : "refuse";
 }

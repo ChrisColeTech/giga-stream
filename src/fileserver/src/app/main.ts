@@ -80,13 +80,19 @@ function createWindow(url: string): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       allowRunningInsecureContent: false,
+      disableDialogs: true,
     },
   });
   const report = (entry: GuardReport): void => {
     if (!window.isDestroyed()) window.webContents.send("poc:guard", entry);
   };
   const playerPolicy = installGuards(window, session.defaultSession, new URL(url).origin, report);
-  installPlayerPolicyIpc(window.webContents.ipc, window.webContents.mainFrame.frameTreeNodeId, playerPolicy);
+  installPlayerPolicyIpc(
+    window.webContents.ipc,
+    () => window.webContents.mainFrame.frameTreeNodeId,
+    playerPolicy.canAcceptPolicy,
+    playerPolicy.authority,
+  );
   window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
     mainWindow = null;

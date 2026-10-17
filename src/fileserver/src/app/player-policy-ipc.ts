@@ -16,16 +16,19 @@ function requireAppFrame(appFrameId: number, senderFrameId: number | undefined):
 
 export function installPlayerPolicyIpc(
   ipc: PolicyIpc,
-  appFrameId: number,
+  currentAppFrameId: () => number,
+  canAcceptPolicy: () => boolean,
   authority: PlayerPolicyAuthority,
 ): void {
   ipc.handle(SET_PLAYER_POLICY_CHANNEL, (event, value: unknown, ...extra: unknown[]) => {
-    requireAppFrame(appFrameId, event.senderFrame?.frameTreeNodeId);
+    requireAppFrame(currentAppFrameId(), event.senderFrame?.frameTreeNodeId);
+    if (!canAcceptPolicy()) throw new Error("Player policy is unavailable while the app document is changing.");
     if (extra.length !== 0) throw new TypeError("Player policy accepts one value.");
     authority.set(parsePlayerPolicy(value));
   });
   ipc.handle(CLEAR_PLAYER_POLICY_CHANNEL, (event, ...extra: unknown[]) => {
-    requireAppFrame(appFrameId, event.senderFrame?.frameTreeNodeId);
+    requireAppFrame(currentAppFrameId(), event.senderFrame?.frameTreeNodeId);
+    if (!canAcceptPolicy()) throw new Error("Player policy is unavailable while the app document is changing.");
     if (extra.length !== 0) throw new TypeError("Clearing player policy accepts no values.");
     authority.clear();
   });

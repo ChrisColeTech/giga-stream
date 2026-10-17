@@ -2,7 +2,8 @@ import { webFrameMain, type BrowserWindow, type Session, type WebFrameMain } fro
 
 import { DialogGuardInstaller } from "./dialog-guard.js";
 import { describeTarget, judgeMainFrame } from "./navigation.js";
-import { PlayerPolicyAuthority } from "./player-policy.js";
+import { PlayerPolicyAuthority, judgeUnmanagedFrame } from "./player-policy.js";
+import { playerPolicyLifecycle } from "./player-policy-lifecycle.js";
 
 export type GuardReport = { kind: string; url?: string; permission?: string; origin?: string; blocked: boolean };
 
@@ -18,9 +19,11 @@ export function installGuards(
   session: Session,
   appOrigin: string,
   report: (entry: GuardReport) => void,
-): PlayerPolicyAuthority {
-  const authority = new PlayerPolicyAuthority(window.webContents.mainFrame.frameTreeNodeId);
+): { authority: PlayerPolicyAuthority; canAcceptPolicy: () => boolean } {
+  const legacyOrigins = new Map<number, string>();
+  const authority = new PlayerPolicyAuthority(window.webContents.mainFrame.frameTreeNodeId, () => legacyOrigins.clear());
   const dialogs = new DialogGuardInstaller(authority, report);
+  const lifecycle = playerPolicyLifecycle(authority);
   const mainFrameGuard = (details: { preventDefault: () => void; url: string }): void => {
     if (judgeMainFrame(appOrigin, details.url) === "allow") return;
     details.preventDefault();
@@ -28,6 +31,11 @@ export function installGuards(
   };
 
   window.webContents.on("will-navigate", mainFrameGuard);
+  window.webContents.on("did-start-navigation", (details) => lifecycle.didStartNavigation(details));
+  window.webContents.on("frame-created", (_event, details) => {
+    if (details.frame !== null) lifecycle.frameCreated(details.frame);
+  });
+  window.webContents.on("render-process-gone", lifecycle.renderProcessGone);
   const frameGuard = (details: {
     preventDefault: () => void;
     url: string;
@@ -39,7 +47,17 @@ export function installGuards(
       mainFrameGuard(details);
       return;
     }
-    if (frame !== null && authority.judge(frame, details.url) === "allow") return;
+    if (frame !== null) {
+      const verdict = authority.active
+        ? authority.judge(frame, details.url)
+        : judgeUnmanagedFrame(frame, details.url, window.webContents.mainFrame.frameTreeNodeId, legacyOrigins);
+      if (verdict === "allow") {
+        if (!authority.active && frame.parent?.frameTreeNodeId !== window.webContents.mainFrame.frameTreeNodeId) {
+          report({ kind: "frame navigate", url: describeTarget(details.url), blocked: false });
+        }
+        return;
+      }
+    }
     details.preventDefault();
     const direct = frame?.parent?.frameTreeNodeId === window.webContents.mainFrame.frameTreeNodeId;
     report({ kind: direct ? "player hijack" : "frame navigate", url: describeTarget(details.url), blocked: true });
@@ -47,9 +65,10 @@ export function installGuards(
   window.webContents.on("will-frame-navigate", frameGuard);
   window.webContents.on("will-redirect", frameGuard);
   window.webContents.on("did-frame-navigate", (_event, _url, _code, _status, isMain, processId, routingId) => {
-    if (isMain) return;
     const frame = webFrameMain.fromId(processId, routingId);
-    if (frame !== undefined) dialogs.install(frame);
+    if (frame === undefined) return;
+    if (isMain) lifecycle.didCommitMainFrame(frame);
+    else dialogs.install(frame);
   });
   window.webContents.setWindowOpenHandler(({ url, disposition }) => {
     report({ kind: "popup", url: `${describeTarget(url)} (${disposition})`, blocked: true });
@@ -61,5 +80,5 @@ export function installGuards(
     report({ kind: "permission", permission, origin: describeTarget(details.requestingUrl ?? ""), blocked: !allowed });
     callback(allowed);
   });
-  return authority;
+  return { authority, canAcceptPolicy: lifecycle.canAcceptPolicy };
 }

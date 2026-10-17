@@ -9,9 +9,9 @@ export type GuardedFrame = FrameIdentity & {
 
 export const DIALOG_GUARD_SCRIPT = `(() => {
   Object.defineProperties(globalThis, {
-    alert: { configurable: true, value: () => undefined },
-    confirm: { configurable: true, value: () => false },
-    prompt: { configurable: true, value: () => null }
+    alert: { configurable: false, writable: false, value: () => undefined },
+    confirm: { configurable: false, writable: false, value: () => true },
+    prompt: { configurable: false, writable: false, value: () => null }
   });
   return true;
 })()`;
@@ -27,9 +27,7 @@ export class DialogGuardInstaller {
 
   install(frame: GuardedFrame): void {
     if (frame.isDestroyed() || !this.#authority.allowsFrame(frame)) return;
-    const revision = this.#authority.revision;
     const target = describeTarget(frame.url);
-    this.#authority.forgetInstallation(frame.frameTreeNodeId);
     let execution: Promise<unknown>;
     try {
       execution = frame.executeJavaScript(DIALOG_GUARD_SCRIPT);
@@ -38,7 +36,7 @@ export class DialogGuardInstaller {
       return;
     }
     void execution.then(
-      () => this.#authority.markInstalled(frame, revision),
+      () => undefined,
       () => this.#reportFailure(target),
     );
   }
