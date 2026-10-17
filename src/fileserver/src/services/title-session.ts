@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { AVAILABILITY_TTL_MS, PROVIDERS_TTL_MS, TITLE_SESSION_CAP } from "../constants/titles.js";
-import type { BackendProvider, TitleDetail } from "../types/library.js";
+import { AVAILABILITY_TTL_MS, TITLE_SESSION_CAP } from "../constants/titles.js";
+import type { TitleDetail } from "../types/library.js";
 import type { AdminResult } from "./admin-client.js";
 import type { AdminTitles, TitleKind } from "./admin-titles.js";
 
@@ -22,8 +22,8 @@ const HealthSchema = z.object({ tmdb: z.enum(["configured", "absent"]) });
 
 /**
  * The session's in-memory view of the backend's titles (docs/03 sections 3.6 and 5.1): title
- * details for card facts, TMDB's genre lists, the active providers, and the availability the
- * library's flags report. Nothing here is ever written to disk.
+ * details for card facts, TMDB's genre lists, and the availability the library's flags report.
+ * Nothing here is ever written to disk.
  */
 export function createTitleSession(deps: {
   admin: AdminTitles;
@@ -38,7 +38,6 @@ export function createTitleSession(deps: {
   const genres = new Map<TitleKind, GenreView>();
   /** The read in flight, so a page of rows decodes through one genre read. */
   const genreReads = new Map<TitleKind, Promise<GenreView | undefined>>();
-  let providersView: { items: BackendProvider[]; readAt: number } | undefined;
   let availabilityView: TitlesAvailability | undefined;
   let healthView: { reachable: boolean; tmdbConfigured: boolean; readAt: number } | undefined;
 
@@ -80,17 +79,6 @@ export function createTitleSession(deps: {
         void read.then(() => genreReads.delete(kind));
       }
       return read;
-    },
-
-    /** The active providers, read on demand and kept for the TTL (03 section 3.6, 5.1). */
-    async activeProviders(): Promise<BackendProvider[] | undefined> {
-      if (providersView !== undefined && now() - providersView.readAt < PROVIDERS_TTL_MS) {
-        return providersView.items.filter((provider) => provider.is_active);
-      }
-      const answer = await admin.providers(adminUrl());
-      if (!answer.ok) return undefined;
-      providersView = { items: answer.value.items, readAt: now() };
-      return answer.value.items.filter((provider) => provider.is_active);
     },
 
     /** The last known availability; unknown before any read (03 section 4: a fact of the last read). */

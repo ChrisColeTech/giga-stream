@@ -1,15 +1,24 @@
-/** The library query and the titles pass-through (docs/03 sections 3.5, 3.6 and 7.2b). */
+/** The library query and the titles pass-through (docs/03 sections 3.5 and 3.6). */
 import type { ItemRef } from "./collection.js";
 
-/** A provider as the backend answers it (docs/03 section 7.2b), passed through unchanged. */
-export interface BackendProvider {
-  id: number;
+/** One playable provider source, filled by the backend (docs/03 sections 3.6 and 7.5). */
+export interface TitleSource {
+  providerId: number;
+  /** The display name ("VidSrc"). */
   name: string;
-  source: string;
-  /** The provider's API credential, snake_case as the backend's record carries it (7.2b). */
-  api_key: string;
-  is_active: boolean;
-  created_at: string;
+  /** The embed address for this exact title or episode, https (7.3). */
+  url: string;
+  /** The origin allowed to post messages. */
+  origin: string;
+  order: number;
+  /** The resume parameter, seconds, when documented. */
+  startParam?: string;
+  /** The subtitle-language parameter, when documented. */
+  subtitlesParam?: string;
+  /** The nested-frame origins the player really uses (`14` section 2.4). */
+  frameOrigins?: string[];
+  /** Absent: no documented messages. */
+  messageShape?: "vidsrc-status" | "player-event";
 }
 
 /** `GET /api/titles/:titleId` (docs/03 section 3.6); nothing here is stored. */
@@ -33,6 +42,8 @@ export interface TitleDetail {
   backdropUrl?: string;
   /** A movie's stream address as the backend's rule filled it (7.5); absent when no rule is set. */
   streamUrl?: string;
+  /** The playable provider sources, in preference order (7.5); provider records stop at the fileserver. */
+  sources?: TitleSource[];
 }
 
 /** One episode of a season (docs/03 section 3.6). */
@@ -46,16 +57,15 @@ export interface Episode {
   stillUrl?: string;
   /** This exact episode's stream address as the backend's rule filled it (7.5). */
   streamUrl?: string;
+  /** This exact episode's playable sources (7.5). */
+  sources?: TitleSource[];
 }
 
-/** A detail or season answer with the active providers attached (docs/03 section 3.6's last bullet). */
-export interface TitleAnswer extends TitleDetail {
-  providers?: BackendProvider[];
-}
+/** `GET /api/titles/:titleId` (docs/03 section 3.6): the detail as the backend filled it. */
+export type TitleAnswer = TitleDetail;
 
 export interface SeasonAnswer {
   episodes: Episode[];
-  providers?: BackendProvider[];
 }
 
 export type RelatedBasis = "tmdb" | "genre-year" | "genre" | "year";

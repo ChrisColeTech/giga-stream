@@ -17,12 +17,41 @@ const STILL = "https://image.tmdb.org/t/p/w300/ep1.jpg";
 const STREAM = "https://streams.example.test/movie-603.m3u8";
 const cast = (name: string, at: number): string => `${name} ${at}`;
 
+const MOVIE_SOURCES = [
+  {
+    providerId: 2,
+    name: "VidSrc",
+    url: "https://vidsrc.example/embed/movie?tmdbId=603",
+    origin: "https://vidsrc.example",
+    order: 1,
+    startParam: "startAt",
+  },
+  {
+    providerId: 4,
+    name: "VidZee",
+    url: "https://vidzee.example/embed/movie-603",
+    origin: "https://vidzee.example",
+    order: 2,
+    frameOrigins: ["https://vidzee.example"],
+  },
+];
+const EPISODE_SOURCES = [
+  {
+    providerId: 2,
+    name: "VidSrc",
+    url: "https://vidsrc.example/embed/tv?tmdbId=1399&season=1&episode=1",
+    origin: "https://vidsrc.example",
+    order: 1,
+  },
+];
+
 const MATRIX = {
   ok: true,
   data: {
     id: "movie-603", tmdbId: 603, kind: "movie", title: "The Matrix", year: 1999,
     genres: ["Science Fiction"], rating: 8.2, plot: "A computer hacker learns the truth.",
     posterUrl: POSTER, backdropUrl: BACKDROP, runtimeMs: 8_160_000, streamUrl: STREAM,
+    sources: MOVIE_SOURCES,
     cast: Array.from({ length: 11 }, (_, at) => cast("Actor", at)),
   },
 };
@@ -39,17 +68,7 @@ const SEASON = {
   data: {
     episodes: [
       { season: 1, episode: 2, title: "The Kingsroad", airDate: "2011-04-24", runtimeMs: 3_300_000, stillUrl: "https://image.tmdb.org/t/p/w300/ep2.jpg", streamUrl: "https://streams.example.test/tv-1399-1-2.m3u8" },
-      { season: 1, episode: 1, title: "Winter Is Coming", airDate: "2011-04-17", runtimeMs: 3_720_000, stillUrl: STILL, streamUrl: "https://streams.example.test/tv-1399-1-1.m3u8" },
-    ],
-  },
-};
-const PROVIDERS = {
-  ok: true,
-  data: {
-    items: [
-      { id: 1, name: "Off", source: "off-source", api_key: "k1", is_active: false, created_at: "2026-10-16T00:00:00Z" },
-      { id: 2, name: "Live One", source: "live-source", api_key: "k2", is_active: true, created_at: "2026-10-16T00:00:00Z" },
-      { id: 4, name: "Live Two", source: "two-source", api_key: "k4", is_active: true, created_at: "2026-10-16T00:00:00Z" },
+      { season: 1, episode: 1, title: "Winter Is Coming", airDate: "2011-04-17", runtimeMs: 3_720_000, stillUrl: STILL, streamUrl: "https://streams.example.test/tv-1399-1-1.m3u8", sources: EPISODE_SOURCES },
     ],
   },
 };
@@ -70,7 +89,6 @@ function titlesSeam(overrides: Record<string, unknown> = {}): typeof fetch {
     const at = url.pathname;
     if (overrides[at] !== undefined) return json(overrides[at]);
     if (at === "/healthz") return json({ ok: true, data: { role: "admin-backend", version: "t", revision: 1, tmdb: "configured" } });
-    if (at === "/api/providers") return json(PROVIDERS);
     if (at === "/api/titles/genres") return json(url.searchParams.get("kind") === "tv" ? TV_GENRES : GENRES);
     if (at === "/api/titles/movie-603") return json(MATRIX);
     if (at === "/api/titles/tv-1399") return json(GOT);
@@ -92,7 +110,7 @@ async function seamApp(overrides: Record<string, unknown> = {}): Promise<{ app: 
   return { app, close: async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); } };
 }
 
-test("a detail passes through with rewritten images, cast of ten, and the active providers", async () => {
+test("a detail passes through with rewritten images, cast of ten, and the backend's sources", async () => {
   const t = await seamApp();
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   assert.equal(detail.status, 200);
@@ -102,7 +120,8 @@ test("a detail passes through with rewritten images, cast of ten, and the active
   assert.equal(pick(detail.body, "data.cast.length"), 10, "at most ten names (03 section 3.6)");
   assert.equal(pick(detail.body, "data.runtimeMs"), 8_160_000);
   assert.equal(pick(detail.body, "data.streamUrl"), STREAM, "passed through as the backend filled it");
-  assert.deepEqual((pick(detail.body, "data.providers") as Array<{ id: number }>).map((one) => one.id), [2, 4]);
+  assert.deepEqual(pick(detail.body, "data.sources"), MOVIE_SOURCES, "in the backend's preference order (03 section 7.5)");
+  assert.equal(pick(detail.body, "data.providers"), undefined, "provider records stop at the fileserver (22 section 8.4)");
   await t.close();
 });
 
@@ -112,11 +131,13 @@ test("a series answers seasons; a season answers episodes in order with rewritte
   assert.deepEqual(pick(series.body, "data.seasons"), [{ season: 1, episodeCount: 2 }]);
   assert.equal(pick(series.body, "data.runtimeMs"), undefined, "a series carries no movie runtime");
   const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
-  const episodes = pick(season.body, "data.episodes") as Array<{ episode: number; stillUrl?: string; streamUrl?: string }>;
+  const episodes = pick(season.body, "data.episodes") as Array<{ episode: number; stillUrl?: string; streamUrl?: string; sources?: unknown }>;
   assert.deepEqual(episodes.map((one) => one.episode), [1, 2], "in episode order (03 section 3.6)");
   assert.equal(episodes[0]?.stillUrl, `/api/images/${imageIdOf(STILL)}`);
   assert.equal(episodes[0]?.streamUrl, "https://streams.example.test/tv-1399-1-1.m3u8");
-  assert.ok(Array.isArray(pick(season.body, "data.providers")));
+  assert.deepEqual(episodes[0]?.sources, EPISODE_SOURCES, "the episode's own sources (03 section 7.5)");
+  assert.equal(episodes[1]?.sources, undefined, "an episode without sources answers none");
+  assert.equal(pick(season.body, "data.providers"), undefined);
   await t.close();
 });
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { BackendProvider } from "../types/library.js";
+import type { TitleSource } from "../types/library.js";
 import {
   decodeData,
   errorCodeOf,
@@ -32,6 +32,8 @@ export interface BackendTitle {
   /** A season only after the backend filled its episodes (7.4); mapped defensively. */
   seasons?: unknown;
   streamUrl?: string;
+  /** The playable sources the backend filled (7.5), passed through untouched. */
+  sources?: TitleSource[];
 }
 
 /** One episode as the backend answers it (docs/03 section 7.4). */
@@ -43,6 +45,8 @@ export interface BackendEpisode {
   runtimeMs?: number;
   stillUrl?: string;
   streamUrl?: string;
+  /** This exact episode's playable sources (7.5). */
+  sources?: TitleSource[];
 }
 
 /** The shape of every list the backend answers (docs/03 section 7.4). */
@@ -59,6 +63,20 @@ export interface BackendGenre {
   name: string;
 }
 
+/** One source as the backend fills it (docs/03 section 7.5): the shape every answer must carry. */
+const SourceSchema = z.object({
+  providerId: z.number(),
+  name: z.string(),
+  url: z.string(),
+  origin: z.string(),
+  order: z.number(),
+  startParam: z.string().optional(),
+  subtitlesParam: z.string().optional(),
+  frameOrigins: z.array(z.string()).optional(),
+  messageShape: z.enum(["vidsrc-status", "player-event"]).optional(),
+});
+const SourcesSchema = z.array(SourceSchema).optional();
+
 const TitleSchema = z.object({
   id: z.string().min(1),
   kind: z.enum(["movie", "tv"]),
@@ -73,6 +91,7 @@ const TitleSchema = z.object({
   runtimeMs: z.number().optional(),
   seasons: z.unknown().optional(),
   streamUrl: z.string().optional(),
+  sources: SourcesSchema,
 });
 const PageSchema = z.object({
   items: z.array(TitleSchema),
@@ -91,22 +110,11 @@ const SeasonSchema = z.object({
       runtimeMs: z.number().optional(),
       stillUrl: z.string().optional(),
       streamUrl: z.string().optional(),
+      sources: SourcesSchema,
     }),
   ),
 });
 const RecommendationsSchema = z.object({ items: z.array(TitleSchema) });
-const ProvidersSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.number(),
-      name: z.string(),
-      source: z.string(),
-      api_key: z.string(),
-      is_active: z.boolean(),
-      created_at: z.string(),
-    }),
-  ),
-});
 
 const titleNotFound = { code: "title.not_found", message: "There is no such title.", status: 404 } as const;
 
@@ -126,8 +134,6 @@ export interface AdminTitles {
   titleSeason(baseUrl: string, titleId: string, season: number): Promise<AdminResult<{ episodes: BackendEpisode[] }>>;
   /** `GET /api/titles/:titleId/recommendations` — TMDB's recommendations, first page. */
   titleRecommendations(baseUrl: string, titleId: string): Promise<AdminResult<{ items: BackendTitle[] }>>;
-  /** `GET /api/providers` — every provider, public read (docs/03 section 7.2b). */
-  providers(baseUrl: string): Promise<AdminResult<{ items: BackendProvider[] }>>;
 }
 
 function withQuery(baseUrl: string, path: string, params: Record<string, string | number | undefined>): string {
@@ -175,6 +181,5 @@ export function createAdminTitles(options: { fetch?: typeof fetch } = {}): Admin
       get(`${baseUrl}/api/titles/${encodeURIComponent(titleId)}/seasons/${season}`, SeasonSchema),
     titleRecommendations: (baseUrl, titleId) =>
       get(`${baseUrl}/api/titles/${encodeURIComponent(titleId)}/recommendations`, RecommendationsSchema),
-    providers: (baseUrl) => get(`${baseUrl}/api/providers`, ProvidersSchema),
   };
 }

@@ -29,8 +29,9 @@ function failureOf(failure: AdminFailure): AppError {
 
 /**
  * The titles pass-through (docs/03 section 3.6): the backend's answers with every image address
- * rewritten through the cache (3.11), the active providers attached, and the session's title
- * details kept in memory. Nothing is stored.
+ * rewritten through the cache (3.11) and the session's title details kept in memory. The sources
+ * the backend filled (7.5) ride inside the payload; provider records stop at the fileserver.
+ * Nothing is stored.
  */
 export function createTitlesService(deps: {
   admin: AdminTitles;
@@ -76,6 +77,7 @@ export function createTitlesService(deps: {
       ...(row.posterUrl !== undefined && { posterUrl: image(row.posterUrl) }),
       ...(row.backdropUrl !== undefined && { backdropUrl: image(row.backdropUrl) }),
       ...(row.streamUrl !== undefined && { streamUrl: row.streamUrl }),
+      ...(row.sources !== undefined && { sources: row.sources }),
     };
   }
 
@@ -127,9 +129,7 @@ export function createTitlesService(deps: {
   return {
     /** `GET /api/titles/:titleId` (docs/03 section 3.6). */
     async detail(titleId: string): Promise<TitleAnswer> {
-      const detail = await fetchDetail(titleId);
-      const providers = await session.activeProviders();
-      return providers === undefined ? detail : { ...detail, providers };
+      return fetchDetail(titleId);
     },
 
     /** `GET /api/titles/:titleId/seasons/:season` (docs/03 section 3.6), in episode order. */
@@ -150,9 +150,9 @@ export function createTitlesService(deps: {
           ...(row.runtimeMs !== undefined && { runtimeMs: row.runtimeMs }),
           ...(row.stillUrl !== undefined && { stillUrl: image(row.stillUrl) }),
           ...(row.streamUrl !== undefined && { streamUrl: row.streamUrl }),
+          ...(row.sources !== undefined && { sources: row.sources }),
         }));
-      const providers = await session.activeProviders();
-      return providers === undefined ? { episodes } : { episodes, providers };
+      return { episodes };
     },
 
     /** `GET /api/titles/:titleId/related` (docs/03 section 3.6, `06` section 5.5). */
