@@ -5,6 +5,7 @@ import { SETTINGS_VALUES } from "@/fixtures/settings";
 import type { EventRow } from "@/types/events";
 import { appendEvent, type EventInput } from "@/lib/event-log";
 import { navigationSlice, type NavigationSlice } from "./navigation-slice";
+import { shellSlice, type ShellSlice } from "./slices/shell-slice";
 import type { Box } from "@/types/child-window";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";
@@ -22,7 +23,7 @@ export interface Notice {
 
 /** The one store (`01` section 6). Serializable shell state only: no nodes, refs, promises or timers.
  *  Nothing here reads or writes browser storage; persistence arrives with the fileserver's settings rows. */
-export interface AppState extends NavigationSlice {
+export interface AppState extends NavigationSlice, ShellSlice {
   surface: Surface;
   /** Committed visibility per pane. A pane a surface does not have is never in this record. */
   open: Partial<Record<PaneKey, boolean>>;
@@ -101,6 +102,7 @@ function initialPanes(): Pick<AppState, "open" | "sizes"> {
 export const useAppStore = create<AppState>()((set, get) => ({
   surface: DEFAULT_SURFACE,
   ...initialPanes(),
+  ...shellSlice(set, get),
   openVersion: 0,
   eventsOpen: false,
   overlay: null,
@@ -137,23 +139,28 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
   marks: { favourites: {}, memberships: {} },
 
-  setSurface: (surface) => set({ surface }),
+  setSurface: (surface) => set({ surface, shellRevision: get().shellRevision + 1 }),
 
   togglePane: (side) => {
     const { surface, open, openVersion } = get();
     /* A surface without this pane has a disabled toggle; ignore the press. */
     if (SURFACES[surface].panes[side] === null) return;
     const key = paneKey(surface, side);
-    set({ open: { ...open, [key]: !(open[key] ?? true) }, openVersion: openVersion + 1 });
+    set({
+      open: { ...open, [key]: !(open[key] ?? true) },
+      openVersion: openVersion + 1,
+      shellRevision: get().shellRevision + 1,
+    });
   },
 
   /* Called once on drag end, never per pointer move. A size change is not an open change. */
-  commitSizes: (patch) => set({ sizes: { ...get().sizes, ...patch } }),
+  commitSizes: (patch) => set({ sizes: { ...get().sizes, ...patch }, shellRevision: get().shellRevision + 1 }),
 
   toggleEvents: () => set({ eventsOpen: !get().eventsOpen }),
   openOverlay: (id, anchor = null, item = null) => set({ overlay: id, overlayAnchor: anchor, overlayItem: item }),
   closeOverlay: () => set({ overlay: null, overlayAnchor: null, overlayItem: null }),
-  setZoom: (uiZoom) => set({ uiZoom: Math.min(3, Math.max(0.5, uiZoom)) }),
+  setZoom: (uiZoom) =>
+    set({ uiZoom: Math.min(3, Math.max(0.5, uiZoom)), settingsRevision: get().settingsRevision + 1 }),
   rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
   toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
   say: (sentence, tone = "info") => {
@@ -164,11 +171,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ notice: { sentence, tone, serial }, ...(row === null ? {} : { events: appendEvent(get().events, row) }) });
   },
   ...navigationSlice(set, get),
-  setTheme: (theme) => set({ theme }),
-  setAccent: (accent) => set({ accent }),
-  setMotion: (motion) => set({ motion }),
-  setPlayback: (change) => set({ playback: { ...get().playback, ...change } }),
-  setLibraryPrefs: (change) => set({ library: { ...get().library, ...change } }),
+  setTheme: (theme) => set({ theme, settingsRevision: get().settingsRevision + 1 }),
+  setAccent: (accent) => set({ accent, settingsRevision: get().settingsRevision + 1 }),
+  setMotion: (motion) => set({ motion, settingsRevision: get().settingsRevision + 1 }),
+  setPlayback: (change) =>
+    set({ playback: { ...get().playback, ...change }, settingsRevision: get().settingsRevision + 1 }),
+  setLibraryPrefs: (change) =>
+    set({ library: { ...get().library, ...change }, settingsRevision: get().settingsRevision + 1 }),
   setFavourite: (key, favourite) => {
     const { marks } = get();
     set({ marks: { ...marks, favourites: { ...marks.favourites, [key]: favourite } } });

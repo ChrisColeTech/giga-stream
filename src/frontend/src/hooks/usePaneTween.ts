@@ -107,13 +107,26 @@ export function usePaneTween(keys: readonly PaneKey[], repaint: () => void): Pan
   useEffect(
     () =>
       useAppStore.subscribe((state, previous) => {
+        if (state.hydrationVersion !== previous.hydrationVersion) {
+          for (const key of keysRef.current) {
+            const pane = stop(key);
+            const committed = state.sizes[key] ?? limitsOfKey(key).preferred;
+            const value = state.open[key] ? committed : 0;
+            pane.committed = committed;
+            pane.target = value;
+            pane.painted.set(value);
+          }
+          notifyStatus();
+          requestAnimationFrame(() => apply.current());
+          return;
+        }
         if (state.openVersion === previous.openVersion) return;
         for (const key of keysRef.current) {
           if (state.open[key] === previous.open[key]) continue;
           travel(key, state.open[key] ? (state.sizes[key] ?? limitsOfKey(key).preferred) : 0);
         }
       }),
-    [travel],
+    [notifyStatus, stop, travel],
   );
 
   return {

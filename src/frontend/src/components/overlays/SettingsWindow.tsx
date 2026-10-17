@@ -7,7 +7,6 @@ import { PlaybackSection } from "@/components/settings/PlaybackSection";
 import { SettingsRail } from "@/components/settings/SettingsRail";
 import { workSpec } from "@/constants/child-window";
 import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/constants/settings-sections";
-import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { useAppStore } from "@/store/app-store";
 import { saveSetting } from "@/services/settings";
 import { ChildWindow } from "./ChildWindow";
@@ -22,6 +21,7 @@ export function SettingsWindow() {
   const openCollections = useAppStore((state) => state.openCollections);
   const requestLibrary = useAppStore((state) => state.requestLibrary);
   const say = useAppStore((state) => state.say);
+  const adminUrl = useAppStore((state) => state.adminUrl);
   const [section, setSection] = useState<SettingsSectionId>("appearance");
 
   /* Closes Settings and shows the library on its History view (the request closes the window with it). */
@@ -29,8 +29,12 @@ export function SettingsWindow() {
 
   /* A refused save is reported once on the notice line; the section keeps the draft in its field. */
   const commitAddress = (address: string) => {
+    const revision = useAppStore.getState().settingsRevision;
     void saveSetting("adminUrl", address)
-      .then(() => say("The admin address was saved."))
+      .then((settings) => {
+        useAppStore.getState().applyCommittedSettings(settings, revision);
+        say("The admin address was saved.");
+      })
       .catch((error: unknown) => say(error instanceof Error ? error.message : "The admin address was not saved.", "warn"));
   };
 
@@ -47,7 +51,7 @@ export function SettingsWindow() {
           {section === "library" && (
             <LibrarySection onOpenCollections={() => openCollections()} onOpenHistory={openHistory} />
           )}
-          {section === "admin" && <AdminBackendSection adminUrl={SETTINGS_VALUES.adminUrl} onCommit={commitAddress} />}
+          {section === "admin" && <AdminBackendSection adminUrl={adminUrl} onCommit={commitAddress} />}
           {section === "about" && <AboutSection />}
         </div>
       </div>
