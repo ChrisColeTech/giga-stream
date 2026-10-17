@@ -15,8 +15,8 @@ export function GateBrand() {
           <i className="text-sm font-medium text-faint not-italic">STREAM ADMIN</i>
         </span>
       </div>
-      <h1 className="m-0 font-mono text-[22px] leading-[1.3] font-semibold text-text">{GATE_BRAND_HEADLINE}</h1>
-      <p className="m-0 max-w-80 text-[13px] leading-[1.6] text-faint">{GATE_BRAND_TEXT}</p>
+      <h1 className="m-0 font-mono text-2xl leading-[1.3] font-semibold text-text">{GATE_BRAND_HEADLINE}</h1>
+      <p className="m-0 max-w-80 text-sm leading-[1.6] text-faint">{GATE_BRAND_TEXT}</p>
     </div>
   );
 }

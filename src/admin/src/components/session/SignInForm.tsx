@@ -37,7 +37,7 @@ export function SignInForm() {
 
   return (
     <Form ariaLabel="Sign in" onSubmit={() => void submit()} className="gap-3">
-      <h2 className="m-0 mb-1 font-mono text-[15px] font-semibold text-text">{GATE_HEADING}</h2>
+      <h2 className="m-0 mb-1 font-mono text-base font-semibold text-text">{GATE_HEADING}</h2>
       <Row label="Email">
         <Input
           type="email"

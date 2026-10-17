@@ -6,7 +6,7 @@ import { GATE_NOTICE_TITLE } from "@/constants/sign-in-copy";
 export function GateNotice({ sentence }: { sentence: string }) {
   return (
     <div className="flex flex-col gap-2 rounded-card border border-border bg-panel p-3" role="status">
-      <div className="flex items-center gap-2 text-[13px] font-semibold text-text">
+      <div className="flex items-center gap-2 text-sm font-semibold text-text">
         <LogOut className="size-3.75 flex-none text-faint" aria-hidden />
         <span>{GATE_NOTICE_TITLE}</span>
       </div>
