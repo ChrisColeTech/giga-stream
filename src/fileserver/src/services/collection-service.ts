@@ -116,7 +116,10 @@ export function createCollectionService(deps: {
 
     remove(collectionId) {
       collectionOf(collectionId);
-      for (const folder of collections.listFolders(collectionId)) scans.cancel(folder.id);
+      for (const folder of collections.listFolders(collectionId)) {
+        scans.cancel(folder.id);
+        scans.discard(folder.id);
+      }
       collections.deleteCollection(collectionId);
       return { removed: collectionId };
     },
@@ -163,6 +166,7 @@ export function createCollectionService(deps: {
     detachFolder(folderId) {
       requireFolder(folderId);
       scans.cancel(folderId);
+      scans.discard(folderId);
       collections.deleteFolder(folderId);
       return { removed: folderId };
     },

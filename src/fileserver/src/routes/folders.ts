@@ -51,7 +51,7 @@ export function registerFoldersRoutes(app: FastifyInstance, services: AppService
 }
 
 /** One NDJSON line per event: the snapshot first, then everything the scan still yields. */
-function streamScan(
+export function streamScan(
   stream: NonNullable<ReturnType<AppServices["scans"]["readStream"]>>,
   raw: FastifyReply["raw"],
 ): void {

@@ -13,7 +13,7 @@ export type PublicScanEvent =
   | { type: "found"; file: PublicScanFile }
   | { type: "probed"; file: PublicScanFile; facts: MediaFacts }
   | { type: "progress"; found: number; probed: number; total: number | null }
-  | { type: "done"; files: PublicScanFile[]; found: number; probed: number; unplayable: number }
+  | { type: "done"; found: number; probed: number; unplayable: number }
   | { type: "cancelled"; found: number; probed: number };
 
 const publicFile = (file: Extract<ScanEvent, { type: "found" }>['file'] & { facts?: MediaFacts }): PublicScanFile => ({
@@ -27,6 +27,8 @@ const publicFile = (file: Extract<ScanEvent, { type: "found" }>['file'] & { fact
 export function publicScanEvent(event: ScanEvent): PublicScanEvent {
   if (event.type === "found") return { type: "found", file: publicFile(event.file) };
   if (event.type === "probed") return { type: "probed", file: publicFile(event.file), facts: event.facts };
-  if (event.type === "done") return { ...event, files: event.files.map(publicFile) };
+  if (event.type === "done") {
+    return { type: "done", found: event.found, probed: event.probed, unplayable: event.unplayable };
+  }
   return event;
 }

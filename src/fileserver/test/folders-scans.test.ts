@@ -124,11 +124,12 @@ test("the scan streams NDJSON lines, `found` per file, and ends on `done`", asyn
   const lines = body
     .split("\n")
     .filter((line) => line !== "")
-    .map((line) => JSON.parse(line) as { type: string });
+    .map((line) => JSON.parse(line) as Record<string, unknown> & { type: string });
   const kinds = lines.map((line) => line.type);
   assert.ok(kinds.filter((one) => one === "found").length >= 2);
   assert.equal(kinds.at(-1), "done");
   assert.ok(kinds.every((one) => ["found", "probed", "progress", "done", "cancelled"].includes(one)));
+  assert.deepEqual(Object.keys(lines.at(-1) ?? {}).sort(), ["found", "probed", "type", "unplayable"]);
   assertPathFree(lines, folderRoot);
   await awaitScansSettled(t);
   await t.dispose();

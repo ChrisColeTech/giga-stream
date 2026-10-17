@@ -29,6 +29,8 @@ export interface ScanService {
   scanning: (folderId: string) => boolean;
   readStream: (folderId: string) => ScanStream | undefined;
   cancel: (folderId: string) => void;
+  /** Ends and forgets a folder's process-local channel before its persisted folder is removed. */
+  discard: (folderId: string) => void;
 }
 
 const notFound = (): AppError =>
@@ -65,7 +67,7 @@ export function createScanService(deps: {
     if (run.events.length > SCAN_EVENT_BUFFER) run.events.shift();
     if (event.type === "found") run.found += 1;
     if (event.type === "probed") run.probed += 1;
-    for (const reader of run.readers.values()) reader.onEvent(event);
+    for (const reader of [...run.readers.values()]) reader.onEvent(event);
   }
 
   function end(run: ScanRun): void {
@@ -87,6 +89,7 @@ export function createScanService(deps: {
       announce(run, { type: "cancelled", found: run.found, probed: run.probed });
     }
     end(run);
+    if (job.state !== "done" && job.state !== "cancelled") runs.delete(job.folderId);
   });
 
   const requireFolder = (folderId: string): FolderRow => {
@@ -114,6 +117,10 @@ export function createScanService(deps: {
       requireFolder(folderId);
       const run = runs.get(folderId);
       if (run === undefined) return undefined;
+      if (run.ended && !run.events.some((event) => event.type === "done" || event.type === "cancelled")) {
+        runs.delete(folderId);
+        return undefined;
+      }
       return {
         snapshot: run.events.slice(),
         subscribe(onEvent, onEnd) {
@@ -138,6 +145,12 @@ export function createScanService(deps: {
       }
     },
 
+    discard(folderId) {
+      const run = runs.get(folderId);
+      if (run !== undefined) end(run);
+      runs.delete(folderId);
+    },
+
     runner: async (context): Promise<void> => {
       if (!("folderId" in context.request)) {
         throw new AppError("internal.failure", 500, "A scan job needs a folder id.");
@@ -149,7 +162,6 @@ export function createScanService(deps: {
       const keepPaths: string[] = [];
       try {
         for await (const event of scanFolder(folder.path, { signal: context.signal })) {
-          announce(run, publicScanEvent(event));
           if (event.type === "found") {
             keepPaths.push(event.file.path);
             const row = files.recordFileInfo({
@@ -175,6 +187,8 @@ export function createScanService(deps: {
             folders.setFolderScannedAt(folder.id, now());
             files.deleteMissing(folder.id, keepPaths);
           }
+          // A terminal success is public only after its database consequences have committed.
+          announce(run, publicScanEvent(event));
         }
       } finally {
         end(run);

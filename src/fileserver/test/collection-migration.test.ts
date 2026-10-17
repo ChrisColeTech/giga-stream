@@ -20,12 +20,16 @@ test("migration 004 safely types old collections and uses only conclusive title 
     );
     INSERT INTO collections VALUES
       ('empty', 'Empty', 0, 0), ('movies', 'Movies', 0, 0), ('tv', 'TV', 0, 0),
-      ('mixed', 'Mixed', 0, 0), ('folder', 'Folder', 0, 0), ('local-member', 'Local member', 0, 0);
+      ('mixed', 'Mixed', 0, 0), ('folder', 'Folder', 0, 0), ('local-member', 'Local member', 0, 0),
+      ('uppercase', 'Uppercase', 0, 0), ('empty-suffix', 'Empty suffix', 0, 0),
+      ('malformed', 'Malformed', 0, 0), ('bad-tv', 'Bad TV', 0, 0);
     INSERT INTO collection_items VALUES
       ('i1', 'movies', 'title', 'movie-1', 0), ('i2', 'movies', 'title', 'movie-2', 0),
       ('i3', 'tv', 'title', 'tv-1', 0), ('i4', 'mixed', 'title', 'movie-3', 0),
       ('i5', 'mixed', 'title', 'tv-2', 0), ('i6', 'folder', 'title', 'movie-4', 0),
-      ('i7', 'local-member', 'title', 'movie-5', 0), ('i8', 'local-member', 'local', 'file-1', 0);
+      ('i7', 'local-member', 'title', 'movie-5', 0), ('i8', 'local-member', 'local', 'file-1', 0),
+      ('i9', 'uppercase', 'title', 'Movie-6', 0), ('i10', 'empty-suffix', 'title', 'movie-', 0),
+      ('i11', 'malformed', 'title', 'movie-7x', 0), ('i12', 'bad-tv', 'title', 'tv-8x', 0);
     INSERT INTO collection_folders VALUES ('f1', 'folder', 'C:\\private', 'private', 0, NULL);
     PRAGMA user_version = 3;
   `);
@@ -37,12 +41,16 @@ test("migration 004 safely types old collections and uses only conclusive title 
     type: string;
   }>;
   assert.deepEqual(Object.fromEntries(rows.map((row) => [row.id, row.type])), {
+    "bad-tv": "local",
     empty: "local",
+    "empty-suffix": "local",
     folder: "local",
     "local-member": "local",
+    malformed: "local",
     mixed: "local",
     movies: "movie",
     tv: "tv",
+    uppercase: "local",
   });
   db.close();
 });
