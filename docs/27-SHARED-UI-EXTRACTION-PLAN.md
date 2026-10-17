@@ -27,8 +27,8 @@ acceptance), `Done` (visually accepted on the real stack).
 
 | Wave | What | Worker | Plan | Starts when | Status | Landed in (commit) |
 |---|---|---|---|---|---|---|
-| 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below | Not started | |
-| **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **now** | **Not started** | |
+| 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below | Done | `5749213`, `6432525` (no stripping, reverted `a0f4460`, `553d1cf`), `9045a8d` (no-store) |
+| **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **done** | **Done** (interface, panes, windows and Library checked on the real stack, 2026-10-17) | `d1aa570`, `51e2cec`, `6914728`, `4f21c11` |
 | 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | Not started | |
 | 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 accepted | Not started | |
 | 4 | Providers and Titles | A | `28` | Wave 3 accepted | Not started | |
@@ -182,10 +182,10 @@ the deletion of the copy it replaces. No admin page work, no stripping of the de
 
 | Worker | Steps | Status | Landed in | Creates | Updates | Deletes (same commit) |
 |---|---|---|---|---|---|---|
-| U1 | 0, 1, 2a, 2b, 2c | Not started | | `src/shared/ui/**` (`package.json`, `tsconfig.json`, `styles/`, `controls/`, `form/`, `lists/`, `menus/`, `hooks/`, `lib/`, fonts), `src/shared/http/` scaffold, the rule-checker tests of 6.2 | `scripts/check-rules/*`, `scripts/check/gate.mjs`, both apps' `vite.config.mts`, `tsconfig.app.json`, `index.css`, and every import of a moved UI file | the frontend's and admin's copies listed in 6.3 for steps 0 to 2c |
-| U2 | 3, 4 | Not started | | `shell/`, `Swatches`, `ArmedButton`, the motion constants in the library | `components/chrome/*` of the interface (become adapters), `test/theatre-mode.test.ts` | the admin's chrome copies of 6.3 for steps 3 and 4 |
-| U3 | 5, 6 | Not started | | `src/shared/http/src/*`, `store/chrome-slice.ts`, `useTheme`, `useShellKeys`, `EventsDrawer` | `services/api.ts`, `lib/error-sentence.ts`, `store/slices/shell-slice.ts`, `test/api.test.ts` (moved) | the admin's copies of 6.3 for steps 5 and 6 |
-| U4 | 7, 8 | Not started | | `windows/`, `panes/` | `components/overlays/*`, `popups/*`, `settings/*`, the pane engine files, `styles/workspace.css` | the admin's copies of 6.3 for steps 7 and 8 |
+| U1 | 0, 1, 2a, 2b, 2c | Done | `d1aa570` | `src/shared/ui/**` (`package.json`, `tsconfig.json`, `styles/`, `controls/`, `form/`, `lists/`, `menus/`, `hooks/`, `lib/`, fonts), `src/shared/http/` scaffold, the rule-checker tests of 6.2 | `scripts/check-rules/*`, `scripts/check/gate.mjs`, both apps' `vite.config.mts`, `tsconfig.app.json`, `index.css`, and every import of a moved UI file | the frontend's and admin's copies listed in 6.3 for steps 0 to 2c |
+| U2 | 3, 4 | Done | `51e2cec` | `shell/`, `Swatches`, `ArmedButton`, the motion constants in the library | `components/chrome/*` of the interface (become adapters), `test/theatre-mode.test.ts` | the admin's chrome copies of 6.3 for steps 3 and 4 |
+| U3 | 5, 6 | Done | `6914728` | `src/shared/http/src/*`, `store/chrome-slice.ts`, `useTheme`, `useShellKeys`, `EventsDrawer` | `services/api.ts`, `lib/error-sentence.ts`, `store/slices/shell-slice.ts`, `test/api.test.ts` (moved) | the admin's copies of 6.3 for steps 5 and 6 |
+| U4 | 7, 8 | Done | `4f21c11` | `windows/`, `panes/` | `components/overlays/*`, `popups/*`, `settings/*`, the pane engine files, `styles/workspace.css` | the admin's copies of 6.3 for steps 7 and 8 |
 
 ### 6.2 Tests each worker writes (fast, `node:test`, written not run)
 
