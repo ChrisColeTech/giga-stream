@@ -31,12 +31,12 @@ export function LibrarySection({ libraryView, onLibraryView, onOpenCollections, 
           <Segmented aria-label="Default view" options={VIEWS} value={libraryView} onChange={onLibraryView} />
         </Row>
         <Row label="Collections" tip="Open the collections window.">
-          <Button size="sm" onClick={onOpenCollections}>
+          <Button size="sm" variant="ghost" onClick={onOpenCollections}>
             Manage collections
           </Button>
         </Row>
         <Row label="History" tip="Close Settings and show the library's history.">
-          <Button size="sm" onClick={onOpenHistory}>
+          <Button size="sm" variant="ghost" onClick={onOpenHistory}>
             Open History
           </Button>
         </Row>

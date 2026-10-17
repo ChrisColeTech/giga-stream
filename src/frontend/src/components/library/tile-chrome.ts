@@ -15,8 +15,8 @@ export const TILE_IDLE = "border-border hover:border-dim";
 export const TILE_BADGE =
   "absolute grid size-5 place-items-center rounded-ctl bg-[color-mix(in_srgb,var(--color-bg)_70%,transparent)]";
 
-/** One of the verbs under the art: MediaGrid's `BTN`, verbatim. */
+/** One of the verbs under the art: MediaGrid's `BTN`, made ghost (`01` §9 Buttons and surfaces: no edge in the body). */
 export const TILE_BUTTON =
-  "inline-flex h-6 flex-1 cursor-pointer items-center justify-center gap-1 rounded-ctl border border-ctl-edge " +
+  "inline-flex h-6 flex-1 cursor-pointer items-center justify-center gap-1 rounded-ctl border border-transparent " +
   "bg-transparent font-sans text-xs text-muted hover:bg-hov hover:text-text disabled:cursor-default " +
   "disabled:opacity-40 [&_svg]:size-3";

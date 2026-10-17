@@ -19,7 +19,6 @@ export function ZoomStepper({ value, onChange }: ZoomStepperProps) {
     <span role="group" aria-label="UI zoom" className="inline-flex items-center gap-2">
       <span title={lower} className="inline-flex">
         <IconButton
-          bordered
           aria-label="Zoom out"
           title={lower ?? "Zoom out"}
           disabled={lower !== undefined}
@@ -31,7 +30,6 @@ export function ZoomStepper({ value, onChange }: ZoomStepperProps) {
       <span className="w-10 text-center font-mono text-sm tabular-nums text-text">{formatZoom(value)}</span>
       <span title={higher} className="inline-flex">
         <IconButton
-          bordered
           aria-label="Zoom in"
           title={higher ?? "Zoom in"}
           disabled={higher !== undefined}

@@ -48,6 +48,7 @@ export function Titlebar() {
     return (
       <span className="inline-flex" title={reason}>
         <IconButton
+          bordered
           title={reason ?? `Toggle ${label}`}
           aria-label={`Toggle ${label}`}
           aria-pressed={lit}

@@ -21,7 +21,7 @@ export function ResumeFooter({ progress, onResume, onStartOver }: ResumeFooterPr
         <Button variant="primary" full onClick={onResume}>
           Resume
         </Button>
-        <Button full onClick={onStartOver}>
+        <Button variant="ghost" full onClick={onStartOver}>
           Start over
         </Button>
       </div>

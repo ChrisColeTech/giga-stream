@@ -66,7 +66,6 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
         </span>
       </button>
       <IconButton
-        bordered
         on={item.favorite}
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
@@ -79,14 +78,13 @@ export function PosterListRow({ item, selected, inHistory, collections, onSelect
           aria-hidden
         />
       </IconButton>
-      <Button size="sm" onClick={() => playRef(item.ref)}>
+      <Button size="sm" variant="ghost" onClick={() => playRef(item.ref)}>
         <Play className="text-muted" aria-hidden /> {item.kind === "tv" ? LIBRARY_COPY.open : LIBRARY_COPY.play}
       </Button>
-      <Button size="sm" ref={infoRef} onClick={context.onInfo}>
+      <Button size="sm" variant="ghost" ref={infoRef} onClick={context.onInfo}>
         <Info className="text-muted" aria-hidden /> {LIBRARY_COPY.info}
       </Button>
       <IconButton
-        bordered
         aria-label={LIBRARY_COPY.moreActions}
         title={LIBRARY_COPY.moreActions}
         onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context)}

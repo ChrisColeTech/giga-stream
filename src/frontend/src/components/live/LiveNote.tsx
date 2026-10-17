@@ -20,7 +20,7 @@ export function LiveNote({ icon: Icon, title, sentence, action, onAction }: Live
       <Icon className="size-5 text-muted" aria-hidden />
       <p className="text-sm leading-5 font-semibold text-text">{title}</p>
       <p className="text-sm leading-5 text-muted">{sentence}</p>
-      <Button size="sm" onClick={onAction} className="pointer-events-auto">
+      <Button size="sm" variant="ghost" onClick={onAction} className="pointer-events-auto">
         {action}
       </Button>
     </div>

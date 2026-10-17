@@ -39,6 +39,7 @@ export function CollectionFolders({
       )}
       <Actions>
         <Button
+          variant="ghost"
           title="Attach a folder this collection is built from. Files on disk are only read, never changed."
           onClick={() => verbs.attach(collectionId)}
         >

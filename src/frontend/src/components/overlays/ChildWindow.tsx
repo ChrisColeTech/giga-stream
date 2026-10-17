@@ -65,7 +65,7 @@ export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
           {...move}
         >
           <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-sm font-semibold text-text">{spec.title}</h2>
-          <IconButton title={`Close ${spec.title}`} aria-label={`Close ${spec.title}`} onClick={onClose}>
+          <IconButton bordered title={`Close ${spec.title}`} aria-label={`Close ${spec.title}`} onClick={onClose}>
             <X className="size-3.5" aria-hidden />
           </IconButton>
         </div>

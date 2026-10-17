@@ -46,7 +46,7 @@ export function NewCollectionForm() {
         label="Folder"
         tip="Start the collection from a folder: its videos join as it is scanned. Files on disk are only read, never changed."
         trailing={
-          <Button onClick={() => verbs.chooseFolder()}>
+          <Button variant="ghost" onClick={() => verbs.chooseFolder()}>
             <FolderOpen aria-hidden /> Choose
           </Button>
         }

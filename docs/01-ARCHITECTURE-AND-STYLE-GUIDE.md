@@ -293,6 +293,25 @@ actions are an inline two-step: the first press arms the same control and names 
 second confirms; a timeout, focus loss or Escape disarms. `alert`, `confirm`, `prompt`, ad hoc modals
 and feature-built focus traps are forbidden.
 
+### Buttons and surfaces
+
+The family rule, from Giga Cut (`D:\Projects\giga-cut\docs\01-ARCHITECTURE-AND-STYLE-GUIDE.md` §Buttons and
+surfaces, owner decisions 2026-09-30; its audit and screenshot sources are Giga Cut `22` §A1). The owner's words
+there: *"the buttons should be the modern ghost buttons"* (2026-09-20). **Ghost in the body; edged only in the
+chrome; at most one filled accent per surface, as a form's commit.**
+
+| Variant (`components/ui`) | Allowed only here |
+|---|---|
+| Ghost (`Button variant="ghost"`, `IconButton` plain); the default | Everywhere in the body: pane content, rails, `Group`/`Row`/`Wide`/`Actions` verbs, row and card verbs, popovers, panel footers, notes over a stage |
+| Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | The titlebar (pane toggles) and window and popup headers (the close `X`). Nothing in a body |
+| Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`), at most one per surface |
+| Danger (`Button variant="danger"`) | Only the armed state of a two-step (`TwoStep`, an armed remove); never resting |
+| Icon-only (`IconButton`) | Toolbars, row ends, panel footers; an `aria-label` and a tooltip always. `bordered` only in the chrome |
+| Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
+
+A lit toggle outside the titlebar is tint and an accent glyph, not an edge. A control that is not a verb (a
+select, a field, the genre picker that opens like one) is a field, not a button, and follows `Field`.
+
 ### Overlays
 
 Use the smallest surface that fits: a menu or select for a choice; a tooltip for an explanation; an

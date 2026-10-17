@@ -15,7 +15,7 @@ export function StageNote({ reason, onRetry }: StageNoteProps) {
       <div className="pointer-events-auto flex max-w-[320px] flex-col items-center gap-2.5 rounded-card border border-border bg-panel p-4 text-center shadow-menu">
         <CircleAlert className="size-5 text-st-failed" aria-hidden />
         <p className="m-0 text-sm leading-5 text-text">{reason}</p>
-        <Button size="sm" onClick={onRetry}>
+        <Button size="sm" variant="ghost" onClick={onRetry}>
           Retry
         </Button>
       </div>

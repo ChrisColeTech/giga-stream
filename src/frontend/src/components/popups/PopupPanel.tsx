@@ -29,7 +29,7 @@ export function PopupPanel({ title, size, policy, anchor, onClose, footer, statu
     >
       <div className="flex h-7 flex-none items-center gap-2 border-b border-hair pr-1 pl-2">
         <h2 className="m-0 min-w-0 flex-1 truncate font-sans text-xs font-semibold text-text">{title}</h2>
-        <IconButton className="size-5.5" title={`Close ${title}`} aria-label={`Close ${title}`} onClick={onClose}>
+        <IconButton bordered className="size-5.5" title={`Close ${title}`} aria-label={`Close ${title}`} onClick={onClose}>
           <X className="size-3.25" aria-hidden />
         </IconButton>
       </div>

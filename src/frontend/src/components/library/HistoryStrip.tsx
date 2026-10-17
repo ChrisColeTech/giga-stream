@@ -34,7 +34,7 @@ export function HistoryStrip({ empty, onClear }: HistoryStripProps) {
     >
       <Button
         size="sm"
-        variant={armed ? "danger" : "default"}
+        variant={armed ? "danger" : "ghost"}
         disabled={empty}
         title={empty ? LIBRARY_COPY.clearEmpty : armed ? LIBRARY_COPY.clearHint : undefined}
         onClick={press}
