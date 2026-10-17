@@ -1,5 +1,4 @@
 import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
-import { Hub } from "../events/hub.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistSyncStatus } from "../types/playlist-sync.js";
 import { createAccountService } from "./account-service.js";
@@ -35,7 +34,6 @@ export interface ServiceOptions {
 /** Every service, built once from the store; routes receive this and call one service each. */
 export function createServices(store: Store, options: ServiceOptions) {
   const { now } = options;
-  const hub = new Hub(() => store.revisions.current(), now);
   const audit = createAuditService(store, now);
   const auth = createAuthService({ store, audit, limiter: createSignInLimiter(now), secret: options.jwtSecret, now });
   const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now });
@@ -43,7 +41,6 @@ export function createServices(store: Store, options: ServiceOptions) {
   const logos = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours, fetchImpl: options.fetchImpl, now });
   const playlistSyncService = createPlaylistSyncService({
     store,
-    events: hub,
     audit,
     logos,
     playlistUrls: options.playlistUrls,
@@ -55,15 +52,14 @@ export function createServices(store: Store, options: ServiceOptions) {
   });
   const playlistSchedule = createPlaylistSchedule({ sync: playlistSyncService, now });
   return {
-    hub,
     audit,
     auth,
     tmdb,
     omdb,
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
-    channels: createChannelService({ store, events: hub, audit, allowLoopback: options.allowLoopback, now }),
-    providers: createProviderService({ store, events: hub, audit, now }),
-    titles: createTitleService({ store, events: hub, audit, tmdb, omdb, now }),
+    channels: createChannelService({ store, audit, allowLoopback: options.allowLoopback, now }),
+    providers: createProviderService({ store, audit, now }),
+    titles: createTitleService({ store, audit, tmdb, omdb, now }),
     playlistSync: {
       run: playlistSyncService.run,
       status: (): PlaylistSyncStatus => ({ ...playlistSyncService.status(), schedule: playlistSchedule.describe() }),

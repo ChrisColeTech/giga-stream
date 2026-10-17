@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { omdbOn, settled, stubOmdb, stubTmdb, tmdbOn } from "./title-stubs.js";
 
-test("sync is admin-only, single-flight, audited, and announces titles.synced", async () => {
+test("sync is admin-only, single-flight, audited, and reports its outcome in the status", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) });
   const access = (await signIn(t.app)).access;

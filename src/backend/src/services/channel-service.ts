@@ -4,7 +4,6 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { ChannelRecord } from "../store/channel-repository.js";
 import type { Store } from "../store/store.js";
 import type { BackendChannel, ChannelInput, ChannelList, ChannelPatch } from "../types/channel.js";
-import type { EventSink } from "../types/events.js";
 import { addressRefusal, isAcceptedAddress } from "./address-rule.js";
 import type { Actor, AuditService } from "./audit-service.js";
 
@@ -13,16 +12,16 @@ const invalid = (field: string, message: string): AppError =>
 
 /**
  * The channels (docs/03 section 7.2). Every change is live as soon as it is saved: it raises the one
- * revision in the same transaction and is announced on the socket after it commits.
+ * revision in the same transaction. Nothing is pushed: a reader learns of a change from the revision in the next
+ * answer it reads (`01` section 4.4).
  */
 export function createChannelService(deps: {
   store: Store;
-  events: EventSink;
   audit: AuditService;
   allowLoopback: boolean;
   now: () => number;
 }) {
-  const { store, events, audit, allowLoopback, now } = deps;
+  const { store, audit, allowLoopback, now } = deps;
 
   function checkAddresses(record: ChannelRecord): void {
     if (!isAcceptedAddress(record.streamUrl, allowLoopback)) {
@@ -31,10 +30,6 @@ export function createChannelService(deps: {
     if (record.logoUrl !== null && !isAcceptedAddress(record.logoUrl, allowLoopback)) {
       throw invalid("logoUrl", addressRefusal("logo address", allowLoopback));
     }
-  }
-
-  function announce(revision: number): void {
-    events.publish({ type: "channels.changed", data: { revision } });
   }
 
   function existing(id: string): BackendChannel {
@@ -64,13 +59,10 @@ export function createChannelService(deps: {
         revision: 0,
       };
       checkAddresses(record);
-      const revision = store.transaction(() => {
-        const next = store.revisions.next();
-        store.channels.insert({ ...record, revision: next }, now());
-        return next;
+      store.transaction(() => {
+        store.channels.insert({ ...record, revision: store.revisions.next() }, now());
       });
       audit.record(actor, { action: "channel.created", subject: id, detail: { name: record.name } });
-      announce(revision);
       return existing(id);
     },
 
@@ -88,24 +80,20 @@ export function createChannelService(deps: {
         revision: current.revision,
       };
       checkAddresses(record);
-      const revision = store.transaction(() => {
-        const next = store.revisions.next();
-        store.channels.update({ ...record, revision: next });
-        return next;
+      store.transaction(() => {
+        store.channels.update({ ...record, revision: store.revisions.next() });
       });
       audit.record(actor, { action: "channel.updated", subject: id, detail: { fields: Object.keys(patch) } });
-      announce(revision);
       return existing(id);
     },
 
     remove(id: string, actor: Actor): { id: string } {
       const current = existing(id);
-      const revision = store.transaction(() => {
+      store.transaction(() => {
         store.channels.remove(id);
-        return store.revisions.next();
+        store.revisions.next();
       });
       audit.record(actor, { action: "channel.deleted", subject: id, detail: { name: current.name } });
-      announce(revision);
       return { id };
     },
 

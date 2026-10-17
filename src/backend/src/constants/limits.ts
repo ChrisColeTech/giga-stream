@@ -39,12 +39,4 @@ export const PLAYLIST_SYNC_EXAMPLES_MAX = 10;
 export const LOGO_INDEX_TIMEOUT_MS = 15_000;
 export const LOGO_INDEX_MAX_BYTES = 8 * 1024 * 1024;
 
-// The socket (section 7.8): a client may send only `ping`, so frames are tiny.
-export const SOCKET_MAX_PAYLOAD_BYTES = 1024;
-export const SOCKET_QUEUE_LIMIT = 64;
-export const SOCKET_VIOLATION_LIMIT = 5;
-export const SOCKET_CLOSE_POLICY = 1008;
-export const SOCKET_CLOSE_OVERLOAD = 1013;
-export const SOCKET_CLOSE_GOING_AWAY = 1001;
-
 export const DATABASE_BUSY_TIMEOUT_MS = 5000;

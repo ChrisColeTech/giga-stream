@@ -74,7 +74,7 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 | Provider CRUD | requested by the owner (2026-10-16); **not specified and not built by the coordinator**, which declined provider integration (`12` section 7, `14`). The routes, auth and storage above take a further resource without redesign | - |
 | Stream-address rule | `https` only, loopback with `ALLOW_LOOPBACK_STREAMS` | a real run refuses an `http` address without the flag |
 | Test channels | `SEED_TEST_CHANNELS` creates the four channels of `10` | a real run lists them |
-| Socket | `/ws`: hello, `channels.changed` | a real run: a change is announced |
+| ~~Socket~~ | built, then removed on 2026-10-17: nothing connected to it; a change raises the revision readers see on their next read | - |
 
 ### Phase 2 - Fileserver: Live
 
@@ -164,7 +164,7 @@ The Library row (Default view, Collections, Open History) is wired in phase 8, w
 |---|---|---|
 | TMDB proxy | title pages in each sort with genre and year, search, genres, detail, seasons and episodes, recommendations; at most about 5 requests a second, backed off on `429` | tests with hand-written TMDB answers; then a real run |
 | Title store | migration `004-titles.sql` (`03` section 7.6b): `titles` and `title_lists`; every route answers from the store when fresh, fills through on a miss, and answers from the store when TMDB cannot be reached | a restart answers everything already synced without touching TMDB; a stale entry refetches |
-| Catalog sync | the sync service: fill-through, `POST /api/titles/sync` (trending/popular per kind, or explicit ids) as a single-flight background job, `GET /api/titles/sync` status, the `titles.synced` socket event, audit entries, and the `TMDB_SYNC_SCHEDULE` hook (default off) | a bulk run walks the lists within the rate limit; a second start is `409 sync.busy`; a scheduled run is audited as `system`; no revision bump |
+| Catalog sync | the sync service: fill-through, `POST /api/titles/sync` (trending/popular per kind, or explicit ids) as a single-flight background job, `GET /api/titles/sync` status (the only report of a finished run; the `titles.synced` socket event was removed with the socket), audit entries, and the `TMDB_SYNC_SCHEDULE` hook (default off) | a bulk run walks the lists within the rate limit; a second start is `409 sync.busy`; a scheduled run is audited as `system`; no revision bump |
 | Title playback fields | as phase P wrote them into `03`: the providers' embed addresses per title and episode, and the test-server address rule for development | every title and episode answered carries them |
 | Fileserver pass-through | `GET /api/library` with titles, the title routes, session memory; nothing stored on the fileserver | with the backend stopped, title regions are skeletons and local data still works |
 

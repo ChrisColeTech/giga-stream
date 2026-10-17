@@ -130,6 +130,18 @@ test("a surface file sets no arbitrary pixel text size; the family ui layer and 
   assert.equal(found[0].file, "src/frontend/src/components/live/Note.tsx");
 });
 
+test("the admin backend is held to one component per file and the type scale", () => {
+  const found = violations({
+    "src/backend/src/admin/AccountsScreen.tsx":
+      'export function AccountsScreen() { return <p className="text-[13px]" />; }\nexport function Extra() {}\n',
+    "src/backend/src/admin/AuditScreen.tsx": 'export function AuditScreen() { return <p className="text-sm" />; }\n',
+  });
+  assert.equal(found.filter((f) => f.rule === "frontend-structure" && f.message.includes("one per file")).length, 1);
+  const scale = found.filter((f) => f.rule === "type-scale");
+  assert.equal(scale.length, 1);
+  assert.equal(scale[0].file, "src/backend/src/admin/AccountsScreen.tsx");
+});
+
 test("--skip leaves a program out entirely", () => {
   const entries = {
     "src/frontend/src/a.ts": "export const x: any = 1;\n",

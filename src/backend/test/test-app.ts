@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { after } from "node:test";
 import type { FastifyInstance } from "fastify";
-import WebSocket from "ws";
 
 import { buildApp } from "../src/app.js";
 import type { Config } from "../src/config.js";
@@ -11,9 +10,6 @@ import type { Config } from "../src/config.js";
 export const OWNER_EMAIL = "owner@example.test";
 export const OWNER_PASSWORD = "owner-password-123";
 export const JWT_SECRET = "test-secret-that-is-at-least-32-characters";
-
-/** Longest a test waits for one frame; a frame that never comes fails the test, it does not hang it. */
-const FRAME_TIMEOUT_MS = 5000;
 
 /** A clock tests move by hand; nothing sleeps. */
 export function testClock(start = Date.UTC(2026, 9, 16, 12)) {
@@ -29,7 +25,6 @@ export interface TestApp {
 }
 
 const created: TestApp[] = [];
-const sockets: WebSocket[] = [];
 
 /** A fresh app on a fresh temporary data folder, with the bootstrap owner: no shared state, no network. */
 export async function makeApp(
@@ -75,7 +70,6 @@ export async function makeApp(
 }
 
 after(async () => {
-  for (const socket of sockets) socket.terminate();
   for (const testApp of created) await testApp.dispose();
 });
 
@@ -128,47 +122,4 @@ export async function signIn(app: FastifyInstance, email = OWNER_EMAIL, password
 /** A request as the bootstrap owner. */
 export async function asOwner(app: FastifyInstance, method: Method, url: string, body?: unknown): Promise<Answer> {
   return send(app, method, url, body, (await signIn(app)).access);
-}
-
-export interface SocketProbe {
-  next(): Promise<unknown>;
-  send(text: string): void;
-  closed(): Promise<number>;
-  close(): void;
-}
-
-/** Listens on a free port and opens the socket; frames are awaited, never slept for. */
-export async function connectSocket(app: FastifyInstance): Promise<SocketProbe> {
-  if (!app.server.listening) await app.listen({ port: 0, host: "127.0.0.1" });
-  const address = app.server.address();
-  if (address === null || typeof address === "string") throw new Error("the test server has no port");
-  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/ws`);
-  sockets.push(socket);
-  const frames: unknown[] = [];
-  const waiting: Array<(frame: unknown) => void> = [];
-  socket.on("message", (data) => {
-    const frame: unknown = JSON.parse(data.toString());
-    const waiter = waiting.shift();
-    if (waiter) waiter(frame);
-    else frames.push(frame);
-  });
-  const closedCode = new Promise<number>((resolve) => socket.on("close", (code) => resolve(code)));
-  await new Promise<void>((resolve, reject) => {
-    socket.once("open", () => resolve());
-    socket.once("error", reject);
-  });
-  const within = <T>(wait: Promise<T>, what: string): Promise<T> =>
-    new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`timed out waiting for ${what}`)), FRAME_TIMEOUT_MS);
-      wait.then(resolve, reject).finally(() => clearTimeout(timer));
-    });
-  return {
-    next: () =>
-      frames.length > 0
-        ? Promise.resolve(frames.shift())
-        : within(new Promise<unknown>((resolve) => waiting.push(resolve)), "the next frame"),
-    send: (text) => socket.send(text),
-    closed: () => within(closedCode, "the socket to close"),
-    close: () => socket.close(),
-  };
 }

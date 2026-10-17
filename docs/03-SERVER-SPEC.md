@@ -25,8 +25,8 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 7.4 Titles (TMDB proxy routes) | B | **done** (`titles.test.ts`: browse, search, genres, detail, seasons, recommendations; detail enriches thin rows and, with `OMDB_API_KEY`, carries the `omdb` block — `11` section 7) |
 | 7.5 The stream address rule | B | **in progress** — the dev template rule is built; the sources rule is specified (see 7.5, from `14`'s results) and lands with wave A of `22` |
 | 7.6 TMDB client | B | **done** (read token, ~5/s pacing, `429` backoff, merged in-flight requests) |
-| 7.6b The catalog sync | B | **done** (`titles.test.ts`: store fill-through, restart from store, single-flight admin sync, `titles.synced`, audit as `system`, `TMDB_SYNC_SCHEDULE` warm-up, no revision bump; `404` from TMDB is `title.not_found`) |
-| 7.7-7.9 Test channels, socket, storage | B | **done** |
+| 7.6b The catalog sync | B | **done** (`titles.test.ts`: store fill-through, restart from store, single-flight admin sync, the outcome in the status, audit as `system`, `TMDB_SYNC_SCHEDULE` warm-up, no revision bump; `404` from TMDB is `title.not_found`) |
+| 7.7-7.9 Test channels, socket, storage | B | **done** (the socket removed 2026-10-17, `7.8`) |
 | 7.10-7.12 Network, accounts, sign-in | B | **done** (`network.test.ts`, `accounts.test.ts`, `auth.test.ts`) |
 | 7.13 Audit log | B | **done** (sync entries included) |
 | 8 Errors | B | **done** |
@@ -576,9 +576,9 @@ host or a cloud host (section 7.10). It holds:
 - **the audit log** (section 7.13): who changed what, and when.
 
 It is also the only program that calls TMDB (`11`). A change is live as soon as it is saved; there are no
-drafts. Every channel or provider change raises the backend's `revision` counter by one and is announced
-on its socket. The routes are the backend's whole interface; a screen for administrators is not part of
-this document.
+drafts. Every channel or provider change raises the backend's `revision` counter by one, which a reader
+sees in its next answer (the backend has no socket, `7.8`). The routes are the backend's whole interface; a screen for administrators is not part
+of this document.
 
 ### 7.1 Health
 
@@ -609,7 +609,7 @@ interface BackendChannel {
 | `DELETE /api/channels/:channelId` | owner, editor | removes it; answers `{ id }` |
 
 An unknown id is `404 channel.not_found`; an invalid field is `422 channel.invalid`, naming the field.
-Each change emits `channels.changed` and writes an audit entry.
+Each change raises the revision and writes an audit entry.
 
 ### 7.2b Providers
 
@@ -645,9 +645,8 @@ interface BackendProvider {
 | `DELETE /api/providers/:providerId` | owner, editor | removes it; answers `{ id }` |
 
 An unknown id is `404 provider.not_found`; an invalid field is `422 provider.invalid`, naming the field.
-Each change emits `providers.changed` and writes an audit entry. Provider changes raise the backend
-revision by one, so the fileserver's provider cache is invalidated automatically by the existing socket
-change notification.
+Each change raises the backend revision by one and writes an audit entry. The fileserver reads providers
+live on demand, as it reads channels (`3.4`), so its next read has the change.
 
 **Seeding.** `src/backend/scripts/seed-providers.ts` is the seeder: run by hand, it signs in with the
 bootstrap owner, skips when any provider exists, and creates the catalog through these routes — every
@@ -682,8 +681,8 @@ are never updated or removed by it.
   disk-cached under the data folder with a TTL (`LOGO_INDEX_TTL_HOURS`, *(default 24)*). An existing
   `logoUrl` always wins; a miss imports the row with no logo. Enrichment happens at write time only,
   never per read.
-- **Revision and events.** One run bumps the revision once and emits one `channels.changed` frame,
-  whatever it changed; channels are channel data (`7.6b` is the contrast).
+- **Revision.** One run bumps the revision once, whatever it changed; channels are channel data (`7.6b`
+  is the contrast).
 
 | Route | Who | Behaviour |
 |---|---|---|
@@ -784,10 +783,10 @@ nobody "adds a title" — the store only ever mirrors TMDB.
   when set, the backend runs the trending and popular warm-up for both kinds on that interval after
   start-up and every interval after. A scheduled run is audited with the actor `system`; a manual run
   with the admin's account.
-- **Events.** A finished sync emits `titles.synced` on `/ws` with `{ titles, stale, ms, triggered }` for
-  any listening client (the backend's socket stays public and read-only, `7.8`). The revision counter and
-  `channels.changed` are untouched: titles are not channel data. The fileserver no longer listens: it
-  reads titles on demand (`3.5`, `3.6`) and warms its image cache lazily on first request (`3.11`).
+- **Outcome.** A finished sync is reported only by `GET /api/titles/sync` (`lastRunAt`, `lastOutcome`,
+  `titles`, `stale`) and its audit entries. The revision counter is untouched: titles
+  are not channel data. The fileserver reads titles on demand (`3.5`, `3.6`) and warms its image cache
+  lazily on first request (`3.11`).
 - **Audit.** Every start, finish and failure is an audit entry (`7.13`), with the scope, kind, page
   counts and the outcome sentence; never a token. This scheduler and the playlist-sync scheduler
   (`7.2c`) are the system's only background timers (`01` section 4.4).
@@ -807,11 +806,11 @@ and `fx-kids`, with the names, numbers and categories of `10` section 3.2, `stre
 `ALLOW_LOOPBACK_STREAMS=true`; without it the backend refuses to start, naming the variable, before it
 creates any database file.
 
-### 7.8 The socket - `/ws`
+### 7.8 The socket (removed)
 
-Public and read-only. The first frame is `{ type: "hello", data: { version, revision } }`; after that,
-`{ type: "channels.changed", data: { revision } }` after every channel change. A client sends only `ping`
-and gets `pong`. There is no replay: a reconnect gets a fresh hello.
+The backend's read-only `/ws` (a `hello` with the revision, then a frame per change) was removed on
+2026-10-17: no program connected to it, and the fileserver already reads channels, providers and titles
+live, taking the `revision` from each answer. `GET /healthz` reports the current revision.
 
 ### 7.9 Storage
 

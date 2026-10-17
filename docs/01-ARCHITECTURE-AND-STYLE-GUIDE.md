@@ -111,7 +111,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | Motion | framer-motion |
 | UI state | One Zustand store, narrow selectors |
 | Validation | Zod at every HTTP, WebSocket, backend-published and persisted-value boundary |
-| Servers | Fastify 5 (the admin backend adds `@fastify/websocket` for its read-only socket) |
+| Servers | Fastify 5 |
 | Local data | `node:sqlite` (fileserver, backend and live server), separate databases |
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
@@ -253,7 +253,8 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
 
 - Reads are public; every change needs a signed-in admin's JWT and writes an audit entry (`03` sections
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
-- The backend's socket, where a client still wants one, carries the revision only; the reader reads again.
+- The backend has no socket (its read-only `/ws` was removed on 2026-10-17; nothing connected to it). Each
+  change raises its `revision`, which channel and provider answers and `GET /healthz` carry.
 - No route accepts, uploads or serves video, local files or media bytes.
 
 ## 8. Contract grammar

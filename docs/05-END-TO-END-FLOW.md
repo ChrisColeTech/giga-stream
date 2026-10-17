@@ -17,7 +17,7 @@ Status: **2026-10-15.** Walks the surfaces of `06`. Requirements: `00`. Navigati
 │    node:sqlite — settings · layout · collections · favorites · history  │
 │    · local files · jobs      image cache (the only thing from the       │
 │    backend that is kept)     in-memory live view of the backend's data  │
-│                     │ HTTP + the backend's socket, read-only            │
+│                     │ HTTP reads, on demand                             │
 │                     ▼                                                   │
 │  folders of your own video files — read in place, never written         │
 └────────────────────────────────────┬────────────────────────────────────┘

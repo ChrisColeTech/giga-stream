@@ -50,7 +50,7 @@ Read in full: `src/backend/src` (all of it), `src/fileserver/src` (all of it), `
 | TMDB client (paced, backed off, merged), OMDb client (budgeted) | `services/tmdb-client.ts`, `omdb-client.ts` | done (`03` §7.6) |
 | Catalog sync: single-flight job, audited, `TMDB_SYNC_SCHEDULE` | `services/title-sync.ts`, armed in `app.ts` | done (`03` §7.6b). `01` §4.4 and `03` §7.6b both name it the system's **only** background timer |
 | Audit log, owner-only | `api/audit.ts`, `services/audit-service.ts` | done (`03` §7.13) |
-| Socket `/ws`: hello + `channels.changed` / `providers.changed` / `titles.synced` | `api/socket.ts`, `events/*` | done (`03` §7.8) |
+| ~~Socket `/ws`~~ | removed 2026-10-17 (nothing connected to it) | removed (`03` §7.8) |
 | Store: numbered forward-only migrations, one revision counter | `store/*`, migrations `001-init.sql`…`004-titles.sql` | done (`03` §7.9) |
 
 Not present anywhere in the backend, planned or built: EPG, playlist import, logo/category
@@ -428,7 +428,7 @@ Create:
   match against sync-owned rows (same host first, then `tvgId`, then exact `name`), update changed
   fields in place, create unmatched entries, count vanished rows as `removed`, delete them only
   with `prune: true`; `dryRun` computes the counts without writing. Single-flight: a second start
-  is `409 playlist.busy`. One revision bump and one `channels.changed` frame per run, one audit
+  is `409 playlist.busy`. One revision bump per run (no frame: the backend has no socket), one audit
   entry (`channel.imported`, counts + hosts only, never queries).
 - `src/backend/src/services/logo-resolver.ts` — the iptv-org `logos.json`/`channels.json` indexes
   (CDN failover), resolved by `tvgId` first and normalized `name` second, disk-cached under the
@@ -463,7 +463,7 @@ Modify:
   `playlist.unreachable`), `src/backend/src/constants/limits.ts`.
 
 Out of scope: the fileserver and the interface (channels flow through the existing live view,
-revision and `channels.changed`); EPG (F2, deferred); anything in `16`'s provider path.
+and the revision in each answer); EPG (F2, deferred); anything in `16`'s provider path.
 
 ### 9.2 F3 — logo and category enrichment
 

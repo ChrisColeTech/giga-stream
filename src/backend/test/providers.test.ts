@@ -73,18 +73,16 @@ test("an invalid field is provider.invalid, naming the field", async () => {
   assert.equal(pick(longKey.body, "error.details.field"), "api_key");
 });
 
-test("a provider change is announced on the socket with providers.changed", async () => {
+test("a provider change raises the revision a reader sees on its next read", async () => {
   const t = await makeApp();
-  const { connectSocket } = await import("./test-app.js");
-  const probe = await connectSocket(t.app);
-  await probe.next(); // hello
+  const before = Number(pick((await send(t.app, "GET", "/healthz")).body, "data.revision"));
 
   const access = (await signIn(t.app)).access;
   const created = await send(t.app, "POST", "/api/providers", provider, access);
   assert.equal(created.status, 201);
 
-  const frame = await probe.next();
-  assert.equal(pick(frame, "type"), "providers.changed");
+  const after = Number(pick((await send(t.app, "GET", "/healthz")).body, "data.revision"));
+  assert.equal(after, before + 1);
 });
 
 test("an editor can manage providers", async () => {

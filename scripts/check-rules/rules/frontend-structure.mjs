@@ -3,7 +3,8 @@ import { lineAt } from "../load-files.mjs";
 
 /**
  * One exported React component per file, named for the file; named exports only; one Zustand store
- * (`01` sections 4.1 and 5).
+ * (`01` sections 4.1 and 5). The one-component rule also covers the admin backend: any `.tsx` it gains (an admin
+ * screen, an email template) is held to it. The backend has none today.
  */
 const COMPONENT_EXPORT = /\bexport\s+(?:function|const)\s+([A-Z][A-Za-z0-9]*)\b/g;
 const CREATE_STORE = /\bcreate\s*(?:<[^>]*>)?\s*\(\s*\)?\s*\(/g;
@@ -18,9 +19,11 @@ export const frontendStructure = {
     const findings = [];
     let stores = 0;
     for (const file of files) {
-      if (file.program !== "frontend") continue;
+      if (file.program !== "frontend" && file.program !== "backend") continue;
 
-      const componentFile = file.rel.endsWith(".tsx") && /^src\/frontend\/src\/(components|pages)\//.test(file.rel);
+      const componentFile =
+        file.rel.endsWith(".tsx") &&
+        (/^src\/frontend\/src\/(components|pages)\//.test(file.rel) || file.program === "backend");
       if (componentFile && !file.isTest && !isFamilyFile(file.rel)) {
         const exported = [...file.bare.matchAll(COMPONENT_EXPORT)].map((match) => match[1]);
         if (exported.length > 1) {

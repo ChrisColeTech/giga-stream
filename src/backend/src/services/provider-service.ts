@@ -2,7 +2,6 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { ProviderRecord } from "../store/provider-repository.js";
 import type { Store } from "../store/store.js";
 import type { BackendProvider, ProviderInput, ProviderList, ProviderPatch } from "../types/provider.js";
-import type { EventSink } from "../types/events.js";
 import type { Actor, AuditService } from "./audit-service.js";
 
 const invalid = (field: string, message: string): AppError =>
@@ -10,19 +9,15 @@ const invalid = (field: string, message: string): AppError =>
 
 /**
  * The providers (docs/03 section 7.2b). Every change is live as soon as it is saved: it raises the one
- * revision in the same transaction and is announced on the socket after it commits.
+ * revision in the same transaction. Nothing is pushed: a reader learns of a change from the revision in the next
+ * answer it reads (`01` section 4.4).
  */
 export function createProviderService(deps: {
   store: Store;
-  events: EventSink;
   audit: AuditService;
   now: () => number;
 }) {
-  const { store, events, audit, now } = deps;
-
-  function announce(revision: number): void {
-    events.publish({ type: "providers.changed", data: { revision } });
-  }
+  const { store, audit, now } = deps;
 
   function existing(id: number): BackendProvider {
     const found = store.providers.find(id);
@@ -52,7 +47,6 @@ const record: Omit<ProviderRecord, "id"> = {
         return newId;
       });
       audit.record(actor, { action: "provider.created", subject: String(id), detail: { name: input.name, source: input.source } });
-      announce(store.revisions.current());
       return existing(id);
     },
 
@@ -71,7 +65,6 @@ const record: ProviderRecord = {
         store.revisions.next();
       });
       audit.record(actor, { action: "provider.updated", subject: String(id), detail: { fields: Object.keys(patch) } });
-      announce(store.revisions.current());
       return existing(id);
     },
 
@@ -82,7 +75,6 @@ const record: ProviderRecord = {
         store.revisions.next();
       });
       audit.record(actor, { action: "provider.deleted", subject: String(id), detail: { name: current.name } });
-      announce(store.revisions.current());
       return { id };
     },
 

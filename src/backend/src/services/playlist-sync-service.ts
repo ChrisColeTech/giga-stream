@@ -5,7 +5,6 @@ import { PLAYLIST_SYNC_EXAMPLES_MAX } from "../constants/limits.js";
 import type { ChannelRecord } from "../store/channel-repository.js";
 import type { Store } from "../store/store.js";
 import type { BackendChannel } from "../types/channel.js";
-import type { EventSink } from "../types/events.js";
 import type { PlaylistSyncAnswer, PlaylistSyncCounts, PlaylistSyncStatus } from "../types/playlist-sync.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { httpsLogoUrl, type LogoResolver } from "./logo-resolver.js";
@@ -16,13 +15,12 @@ import { fetchPlaylist } from "./playlist-fetch.js";
  * The playlist sync (docs/03 section 7.2c): each configured playlist is fetched once, parsed, run
  * through the address rule (https only — refusals are skipped and counted, never imported broken),
  * matched against the rows the sync owns (the same host first, then tvgId, then exact name), and
- * written in one transaction with one revision bump and one `channels.changed` frame. Hand-created
+ * written in one transaction with one revision bump, which readers see in their next channel read. Hand-created
  * rows (`source` absent) are never matched, updated or removed. Single flight: a second start is
  * `409 playlist.busy`. Every run — manual, dry or scheduled — is one `channel.imported` audit entry.
  */
 export function createPlaylistSyncService(deps: {
   store: Store;
-  events: EventSink;
   audit: AuditService;
   logos: LogoResolver;
   playlistUrls: string[];
@@ -32,7 +30,7 @@ export function createPlaylistSyncService(deps: {
   fetchImpl?: typeof fetch;
   now: () => number;
 }) {
-  const { store, events, audit, logos, playlistUrls, maxBytes, maxEntries, allowLoopback, now } = deps;
+  const { store, audit, logos, playlistUrls, maxBytes, maxEntries, allowLoopback, now } = deps;
   const fetchImpl = deps.fetchImpl ?? fetch;
 
   let running: { startedAt: number } | null = null;
@@ -111,14 +109,12 @@ export function createPlaylistSyncService(deps: {
     const vanished = owned.filter((c) => c.source !== undefined && hosts.includes(c.source) && !used.has(c.id));
     const counts: PlaylistSyncCounts = { created: creates.length, updated: updates.length, skipped, refused, removed: vanished.length };
     if (!options.dryRun && counts.created + counts.updated + counts.removed > 0) {
-      const revision = store.transaction(() => {
+      store.transaction(() => {
         const next = store.revisions.next();
         for (const { record } of creates) store.channels.insert({ ...record, revision: next }, now());
         for (const record of updates) store.channels.update({ ...record, revision: next });
         if (options.prune) for (const channel of vanished) store.channels.remove(channel.id);
-        return next;
       });
-      events.publish({ type: "channels.changed", data: { revision } });
     }
     auditSafe(actor, { ...counts, hosts, dryRun: options.dryRun, prune: options.prune });
     return {

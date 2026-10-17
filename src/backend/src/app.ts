@@ -1,6 +1,5 @@
 import path from "node:path";
 import cors from "@fastify/cors";
-import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerAccounts } from "./api/accounts.js";
@@ -11,11 +10,10 @@ import { registerErrorHandling } from "./api/envelope.js";
 import { registerHealth } from "./api/health.js";
 import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
-import { registerSocket } from "./api/socket.js";
 import { registerTitles } from "./api/titles.js";
 import { config, type Config } from "./config.js";
 import { DATABASE_FILE_NAME } from "./constants/deployment.js";
-import { REQUEST_BODY_LIMIT_BYTES, SOCKET_MAX_PAYLOAD_BYTES } from "./constants/limits.js";
+import { REQUEST_BODY_LIMIT_BYTES } from "./constants/limits.js";
 import { corsOrigins, isPrivateRoute, startRefusal, tlsOptions } from "./network-policy.js";
 import { bootstrapOwner } from "./services/bootstrap-owner.js";
 import { createServices } from "./services/service-registry.js";
@@ -25,10 +23,10 @@ import { createStore } from "./store/store.js";
 
 /**
  * The admin backend's composition root: one Fastify instance per process (`01` section 4.1), one store,
- * one hub. `overrides` replace config values without touching `process.env`, which is how tests pass a
- * temporary `DATA_DIR`, a secret and the flags; `now` is the one clock, `fetchImpl` the one fetch (the
- * test seam for the playlist sync's playlists and logo index). Every route begins `/api`; `/healthz`
- * and `/ws` are the only root exceptions.
+ * and no socket: readers learn of changes from the revision in each answer (`01` section 4.4). `overrides`
+ * replace config values without touching `process.env`, which is how tests pass a temporary `DATA_DIR`, a
+ * secret and the flags; `now` is the one clock, `fetchImpl` the one fetch (the test seam for the playlist
+ * sync's playlists and logo index). Every route begins `/api`; `/healthz` is the only root exception.
  */
 export async function buildApp(
   overrides: Partial<Config> = {},
@@ -94,7 +92,6 @@ export async function buildApp(
     app.addHook("onClose", async () => {
       services.titles.clearSchedule();
       services.playlistSchedule.clearSchedule();
-      services.hub.closeAll();
       store.close();
     });
     app.addHook("onSend", async (request, reply) => {
@@ -103,7 +100,6 @@ export async function buildApp(
     registerErrorHandling(app);
     const origins = corsOrigins(settings);
     await app.register(cors, { origin: origins.length > 0 ? origins : false, methods: ["GET", "POST", "PATCH", "DELETE"] });
-    await app.register(websocket, { options: { maxPayload: SOCKET_MAX_PAYLOAD_BYTES } });
     registerHealth(app, services);
     registerAuth(app, services);
     registerAccounts(app, services);
@@ -112,7 +108,6 @@ export async function buildApp(
     registerProviders(app, services);
     registerTitles(app, services);
     registerPlaylistSync(app, services);
-    registerSocket(app, services);
     return app;
   } catch (error) {
     store.close();

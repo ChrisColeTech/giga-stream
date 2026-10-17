@@ -1,6 +1,5 @@
 import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
-import { type EventSink } from "../types/events.js";
 import { type Actor, type AuditService } from "./audit-service.js";
 import { type OmdbClient } from "./omdb-client.js";
 import { type TmdbClient } from "./tmdb-client.js";
@@ -24,10 +23,9 @@ interface Job {
   triggered: "admin" | "system";
 }
 
-/** The catalog-sync job (docs/03 section 7.6b): single-flight, audited, announced on the socket. */
+/** The catalog-sync job (docs/03 section 7.6b): single-flight and audited; its outcome is read from the status. */
 export function createTitleSync(deps: {
   store: Store;
-  events: EventSink;
   audit: AuditService;
   tmdb: TmdbClient;
   omdb: OmdbClient;
@@ -35,7 +33,7 @@ export function createTitleSync(deps: {
   /** A full-detail fetch for the explicit-ids scope. */
   ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
 }) {
-  const { store, events, audit, tmdb, omdb, now } = deps;
+  const { store, audit, tmdb, omdb, now } = deps;
 
   let running: Job | null = null;
   let lastRun: { finishedAt: number; outcome: string; titles: number; triggered: "admin" | "system" } | null = null;
@@ -50,7 +48,6 @@ export function createTitleSync(deps: {
   }
 
   async function runSync(request: SyncRequest, triggered: "admin" | "system"): Promise<number> {
-    const startedAt = now();
     let pulled = 0;
     if (request.scope === "titles") {
       for (const id of request.ids ?? []) {
@@ -87,11 +84,6 @@ export function createTitleSync(deps: {
     }
     if (stopped) return pulled; // the store may already be closed at shutdown
     lastRun = { finishedAt: now(), outcome: "ok", titles: pulled, triggered };
-    const { stale } = store.titles.counts(TITLE_FRESH_MS);
-    events.publish({
-      type: "titles.synced",
-      data: { titles: pulled, stale, ms: now() - startedAt, triggered },
-    });
     return pulled;
   }
 
