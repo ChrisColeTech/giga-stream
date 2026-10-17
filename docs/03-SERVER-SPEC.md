@@ -18,7 +18,7 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 | 3.12-3.13 Favorites, watch history | A | **done** (`favorites-watch.test.ts`: idempotent favorites; seq-ordered watch writes, sticky watched at 95 percent, episode identity, remove one, clear all) |
 | 4-6 State and updates, live view, storage | A | **done** (`state.test.ts` now carries live collections and jobs; the live view keeps its TTL and clear-on-failure; migrations `001`/`002` ported unchanged, `003` new) |
 | 7.1 Health | B | **done** |
-| 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; `tvgId`/`source` landed with 7.2c) |
+| 7.2 Channels | B | **done** (`channels.test.ts`, `seed-and-store.test.ts`; `tvgId`/`source` landed with 7.2c; live channels, `enabled`, faults, rebuild and revert landed with the merge of the live server, 2026-10-17, `26`) |
 | 7.2b Providers | B | **done** (`providers.test.ts`) |
 | 7.2c Playlist sync | B | **done** (`playlist-sync.test.ts`: parse, dedupe, address-rule refusals, create/update/removed match paths, prune, dry run, single-flight, schedule, enrichment, one revision bump per run; landed 2026-10-16 and driven over HTTP against a live iptv-org playlist — boot run, dry run, update repair, prune, hand-row isolation, restart persistence) |
 | 7.3 Stream and image addresses | B | **done** (the address rule; part of every channel change) |
@@ -38,7 +38,7 @@ There are two servers, and they are separate programs:
   files) and reads the backend's channels and titles live, without storing them.
 - **The admin backend** (Part B) holds the channels, and is the app's window onto TMDB's titles (`11`):
   it browses, searches and describes them, and gives each movie and episode its stream address from a
-  rule. Only the fileserver reads from it; an operator with the admin key changes the channels.
+  rule. Only the fileserver reads from it; a signed-in admin changes the channels.
 
 Values marked *(default)* were chosen while writing this document, not decided by the owner; they can
 change without a design discussion.
@@ -47,7 +47,7 @@ change without a design discussion.
 
 Development and production never share a port (owner, 2026-10-17), so the installed app runs beside
 the dev stack. `NODE_ENV=production` selects the production column: the packaged Electron app sets it
-(`src/app/production-env.ts`), and the backend's and live server's `npm start` load it from their
+(`src/app/production-env.ts`), and the backend's `npm start` loads it from its
 `production.env`, which also pins the port over a development `PORT` in a local `.env`. `PORT` set in the
 environment overrides either.
 
@@ -56,7 +56,6 @@ environment overrides either.
 | Interface (Vite; proxies `/api` and `/ws` to the fileserver) | 5171 (`npm run dev`) | 5271 (`npm run preview`, proxying to 8190) |
 | Fileserver | 8090 | 8190 (the packaged app) |
 | Admin backend | 8091 | 8191 |
-| Live server (`10`) | 8097 | 8197 |
 
 The fileserver's default admin address follows the same column: `http://127.0.0.1:8091` in development,
 `http://127.0.0.1:8191` in the packaged app, until Settings ▸ Admin backend names another. Both servers
@@ -73,17 +72,22 @@ own origin: `index.html`, `favicon.svg`/`favicon.ico` and Vite's `assets/`. A GE
 `/api` or `/healthz` address and no file answers `index.html`; everything else keeps the JSON 404. With no
 `index.html` in `WEB_DIST`, nothing is served there. The Electron window loads `GIGA_APP_URL` when it is set;
 otherwise, unpackaged, the Vite dev server on 5171 when it answers within three seconds, so edits reload in
-place; otherwise the fileserver's own origin. The root `npm run dev` starts Vite beside the backend, the
-Electron app and the live server, so the development window always loads it.
+place; otherwise the fileserver's own origin. The root `npm run dev` starts Vite beside the backend and the
+Electron app, so the development window always loads it.
 
 **Admin backend environment:** `PORT`, `HOST`, `DATA_DIR` (default `~/.giga-stream-admin`),
 `JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`
-(the first owner, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
+(the first admin account, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
 `CORS_ORIGINS` (serving over the network, section 7.10), `TMDB_READ_TOKEN` (`11`), `TMDB_SYNC_SCHEDULE`
 (the catalog-sync interval, section 7.6b; default off), `PLAYLIST_URLS` and `PLAYLIST_SYNC_SCHEDULE`
 (the playlist sync, section 7.2c; both default off/absent), `OMDB_API_KEY` (detail enrichment, `11`
 section 7; absent means details stay TMDB-shaped), `MOVIE_STREAM_TEMPLATE` and
-`EPISODE_STREAM_TEMPLATE` (the stream address rule, section 7.5), `SEED_TEST_CHANNELS`, `ALLOW_LOOPBACK_STREAMS`.
+`EPISODE_STREAM_TEMPLATE` (the stream address rule, section 7.5), `SEED_TEST_CHANNELS` (seeds the four live test
+channels, section 7.7), `ALLOW_LOOPBACK_STREAMS`, `TEST_PAGE` (serves `/test/player.html`), `FIXTURE_DIR` (the test
+videos, default `<tmp>/giga-stream-fixtures`), `CACHE_DIR` (default `<DATA_DIR>/cache`), `ADMIN_DIST` (the built
+admin app served at `/admin/`, default `src/admin/dist`), `PLAYLIST_SYNC_MAX_BYTES`, `PLAYLIST_SYNC_MAX`,
+`LOGO_INDEX_TTL_HOURS`, and the TMDB/OMDb base and daily-limit settings (`src/backend/src/config.ts` is the list).
+`dev.env` loads first in development, then `.env`.
 
 ## 2. Conventions
 
@@ -605,7 +609,8 @@ of this document.
 
 ### 7.1 Health
 
-`GET /healthz` returns `{ role: "admin-backend", version, revision, tmdb: "configured" | "absent" }`.
+`GET /healthz` returns `{ role: "admin-backend", version, revision, tmdb: "configured" | "absent", liveChannels }`
+(`liveChannels` counts the live channels the engine holds; `testPage: boolean` is added by the admin wiring plan `29`).
 
 ### 7.2 Channels
 
@@ -633,6 +638,16 @@ interface BackendChannel {
 
 An unknown id is `404 channel.not_found`; an invalid field is `422 channel.invalid`, naming the field.
 Each change raises the revision and writes an audit entry.
+
+**Since the merge of the live server (`26`, built)** a channel row also carries `kind` (`stream` or `live`), `enabled`,
+`editedFields`, `syncName`, `playlistId`, and for `kind: live` its mode, captions, variants, folder or videos; the live
+channels are served by this backend itself. The table above is the stream rows' shape; the complete route table is
+`26` section 3.3: `POST`/`PATCH` take a body discriminated by `kind`, and signed-in admins also have
+`GET /api/admin-channels` (state, problem, renditions, playlist, now playing, fault), `PUT`/`DELETE /api/channels/:id/fault`,
+`POST /api/channels/:id/rebuild`, `POST /api/channels/:id/revert`, `GET|HEAD /live/:id/master.m3u8` (and its renditions and
+segments, with `Range`), `GET /logos/:id.png`, `GET /test/player.html` (only with `TEST_PAGE=true`), and the static
+`/admin/` app. Further codes: `channel.taken` (409), `fault.invalid` (400), `path.invalid` (400), `playlist.unavailable`
+(500), `range.unsatisfiable` (416).
 
 ### 7.2b Providers
 
@@ -671,7 +686,7 @@ Each change raises the backend revision by one and writes an audit entry. The fi
 live on demand, as it reads channels (`3.4`), so its next read has the change.
 
 **Seeding.** `src/backend/scripts/seed-providers.ts` is the seeder: run by hand, it signs in with the
-bootstrap owner, skips when any provider exists, and creates the catalog through these routes — every
+bootstrap admin, skips when any provider exists, and creates the catalog through these routes — every
 embed host of `18` section 2 with its templates and parameters as captured (TV shapes marked verified or
 presumed there), and the stream-family records with their own `source` values and no templates. A provider
 of the stream family produces no source until one is proven playable without a resolve step (`00`
@@ -724,8 +739,9 @@ Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and imag
 
 ### 7.4 Titles
 
-The backend browses, searches and describes TMDB's titles on demand (`11` section 5). Nobody adds titles:
-any movie or series TMDB has can be listed. A title id is the kind and TMDB id, `movie-603` or `tv-1399`.
+The backend browses, searches and describes TMDB's titles on demand (`11` section 5). Titles are also ordinary records
+an admin can create, edit and delete (`POST`, `PATCH`, `DELETE /api/titles`, `26` section 3.11; a sync never overwrites
+an edited title). Any movie or series TMDB has can be listed. A title id is the kind and TMDB id, `movie-603` or `tv-1399`.
 
 ```ts
 interface BackendTitle {
@@ -781,9 +797,9 @@ an address in which `{tmdbId}` is replaced; `EPISODE_STREAM_TEMPLATE` is one in 
 `{season}` and `{episode}` are replaced. The backend fills them in on every title and episode it answers;
 a template that is not set leaves `streamUrl` absent. Each address must pass 7.3.
 
-- **For development**, the templates point at the streaming test server (for example every movie at
-  `http://127.0.0.1:8097/live/fx-sports/master.m3u8` and every episode at
-  `http://127.0.0.1:8097/live/fx-kids/master.m3u8`), so any TMDB title plays a test stream in the app's
+- **For development**, the templates point at one of the backend's own live test channels (for example every movie at
+  `http://127.0.0.1:8091/live/fx-sports/master.m3u8` and every episode at
+  `http://127.0.0.1:8091/live/fx-kids/master.m3u8`; the port the local `.env` gives the backend), so any TMDB title plays a test stream in the app's
   own `<video>` and Player can be built and checked end to end.
 - **With providers**, a title plays in a provider's embedded player, not from a stream address (owner,
   2026-10-16; `12` section 7; `14`). The backend fills, on every title detail and every episode it
@@ -842,11 +858,13 @@ answer from `titles` within their days.
 
 ### 7.7 Test channels
 
-With `SEED_TEST_CHANNELS=true`, a backend with no channels creates four: `fx-news`, `fx-sports`, `fx-music`
-and `fx-kids`, with the names, numbers and categories of `10` section 3.2, `streamUrl`
-`http://127.0.0.1:8097/live/<id>/master.m3u8` and `logoUrl` `http://127.0.0.1:8097/logos/<id>.png`. It needs
-`ALLOW_LOOPBACK_STREAMS=true`; without it the backend refuses to start, naming the variable, before it
-creates any database file.
+With `SEED_TEST_CHANNELS=true`, a backend with no channels creates four `kind: live` channels: `fx-news`, `fx-sports`,
+`fx-music` and `fx-kids`, with the names, numbers and categories of `10` section 3.2, each a list of three fixture
+videos from `FIXTURE_DIR` (made by `npm run fixtures`), served by the backend itself at `/live/<id>/master.m3u8` and
+`/logos/<id>.png`. It needs no `ALLOW_LOOPBACK_STREAMS`: a live row stores no address. A database from before the
+merge that holds these ids as legacy `stream` rows (loopback address on the retired live server's port, never
+edited) has them converted to live rows in place, keeping the ids, on the next start; any other row is left alone.
+Missing fixture files refuse to start, naming `npm run fixtures`.
 
 ### 7.8 The socket (removed)
 
@@ -857,7 +875,8 @@ live, taking the `revision` from each answer. `GET /healthz` reports the current
 ### 7.9 Storage
 
 Forward-only, numbered migrations, as the fileserver's (section 6). Tables: `channels`, the `revision`
-counter, `admin_accounts`, `refresh_tokens` (hashes only), `audit_log`, and the title store (`7.6b`). It holds no
+counter, `admin_accounts`, `refresh_tokens` (hashes only), `audit_log`, `providers`, `channel_videos`, `playlists`,
+`sync_jobs`, `sync_seed`, and the title store (`7.6b`). It holds no
 Giga Stream user data, no local paths and no media.
 
 ### 7.10 Running over the network
@@ -876,7 +895,7 @@ three settings. The fileserver accepts a plain `http` backend address only on lo
 
 `CORS_ORIGINS` (comma-separated origins, default none) lets a browser page on those origins call the
 backend; other programs (the fileserver, an operator's scripts) do not need it. Answers to the sign-in and
-account routes carry `Cache-Control: no-store`.
+account, audit and admin-channel routes carry `Cache-Control: no-store`.
 
 ### 7.11 Admin accounts
 
@@ -958,7 +977,10 @@ interface Session {
 An entry is `{ id, at, actorId?, actorEmail?, action, subject?, detail?, address? }`. Actions:
 `auth.login`, `auth.login_failed`, `auth.logout`, `auth.password_changed`, `account.created`,
 `account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`,
-`channel.imported`. A password, token or hash is never written to it.
+`channel.imported`, `channel.fault_set`, `channel.fault_cleared`, `channel.rebuilt`, `channel.reverted`,
+`provider.created`, `provider.updated`, `provider.deleted`, `title.created`, `title.updated`, `title.deleted`,
+`title.reverted`, `playlist.created`, `playlist.updated`, `playlist.deleted`, `job.created`, `job.updated`,
+`job.deleted`, `sync.started`. A password, token or hash is never written to it.
 
 ## 8. Errors
 
@@ -978,15 +1000,20 @@ auth.rate_limited      auth.locked
 account.not_found      account.invalid        account.email_taken    account.last_admin
 ```
 
+The admin backend also owns these (not in the fileserver): `channel.taken`, `fault.invalid`, `path.invalid`,
+`playlist.unavailable`, `playlist.unreachable`, `playlist.not_found`, `range.unsatisfiable`, `job.invalid`,
+`job.disabled`, `title.invalid`, `title.manual`, `provider.not_found`, `provider.invalid`, `sync.busy`, `sync.invalid`.
+`job.not_found` is the backend's missing sync job and the fileserver's missing scan job: two meanings, one code.
+
 | Status | Used for |
 |---|---|
 | 400 | `request.invalid` |
 | 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid` |
 | 404 | the `*.not_found` codes |
-| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.email_taken`, `account.last_admin` |
+| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.email_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.busy` |
 | 429 | `auth.rate_limited`, `auth.locked` |
-| 416 | `playback.range_invalid` |
-| 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection` |
+| 416 | `playback.range_invalid`, `range.unsatisfiable` |
+| 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection`, `playlist.invalid`, `job.invalid`, `job.disabled`, `title.invalid`, `provider.invalid`, `sync.invalid` |
 | 502 | `backend.bad_response` |
 | 503 | `backend.unreachable`, `tmdb.unavailable`, `playlist.unreachable` |
 | 500 | `internal.failure` and the `store.*` codes |
