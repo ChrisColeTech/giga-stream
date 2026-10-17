@@ -31,10 +31,8 @@ export const RETRY_LABEL = "Retry";
 export const NO_CHANNELS_TITLE = "No channels";
 export const NO_CHANNELS_SENTENCE = "The channel list is empty.";
 
-/** `06` section 3.1 and 3.2 tooltips for the phase 1 disabled controls. */
+/** The `06` section 3.3 reason shown on each playback row that has no playing stream to act on. */
 export const REASON_NEEDS_PLAYING = "Available once a channel is playing.";
-export const REASON_NEEDS_STREAM_FAILURE = "Available once a channel's stream has failed to start.";
-export const REASON_NEEDS_FILESERVER = "The fileserver is not connected.";
 
 export const PLAYBACK_SECTION_TITLES = {
   video: "Video",

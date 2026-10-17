@@ -6,13 +6,12 @@ export interface LiveNoteProps {
   readonly title: string;
   readonly sentence: string;
   readonly action: string;
-  /** Why the action cannot be used yet; it rides on the disabled button as its tooltip. */
-  readonly reason: string;
+  readonly onAction: () => void;
 }
 
 /** The note drawn over the picture when the stage has a problem to report: an icon, a title, one sentence and one action.
  *  The card lets presses through; only its action takes them. */
-export function LiveNote({ icon: Icon, title, sentence, action, reason }: LiveNoteProps) {
+export function LiveNote({ icon: Icon, title, sentence, action, onAction }: LiveNoteProps) {
   return (
     <div
       role="status"
@@ -21,11 +20,9 @@ export function LiveNote({ icon: Icon, title, sentence, action, reason }: LiveNo
       <Icon className="size-5 text-muted" aria-hidden />
       <p className="font-sans text-sm font-semibold text-text">{title}</p>
       <p className="font-sans text-xs leading-snug text-muted">{sentence}</p>
-      <span title={reason} className="pointer-events-auto inline-flex">
-        <Button size="sm" disabled>
-          {action}
-        </Button>
-      </span>
+      <Button size="sm" onClick={onAction} className="pointer-events-auto">
+        {action}
+      </Button>
     </div>
   );
 }

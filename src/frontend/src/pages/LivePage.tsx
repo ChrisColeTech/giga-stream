@@ -8,11 +8,16 @@ import { filterChannels } from "@/lib/live-channels";
 import { ALL_CATEGORY } from "@/lib/live-constants";
 import { type PictureFit } from "@/lib/live-picture";
 import { stageStateFor } from "@/lib/live-stage";
+import { refreshChannels, retryStream } from "@/services/channels";
+import type { ServiceResult } from "@/services/not-connected";
+import { useAppStore } from "@/store/app-store";
 
-/** Live: playback settings on the left, the video stage in the centre, channels on the right. Phase 1 keeps the selection,
- *  the playing marker, the search, the category and the picture fit as local state over the fixture list; nothing loads. */
+/** Live: playback settings on the left, the video stage in the centre, channels on the right. Selection, the playing
+ *  marker, the search, the category and the picture fit are local state over the fixture list. Refresh and Retry call
+ *  the channel service; a refusal is reported once on the notice line. */
 export function LivePage({ active }: { active: boolean }) {
   const channels = CHANNEL_LIST.items;
+  const say = useAppStore((state) => state.say);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [selectedId, setSelectedId] = useState<string | null>(channels[0]?.id ?? null);
@@ -22,12 +27,23 @@ export function LivePage({ active }: { active: boolean }) {
   const rows = filterChannels(channels, query, category);
   const selected = channels.find((channel) => channel.id === selectedId) ?? null;
 
+  const report = (result: ServiceResult) => {
+    if (!result.ok) say(result.message, "warn");
+  };
+
   return (
     <WorkspaceSplit
       surface="live"
       active={active}
       left={<LiveSettingsPane fit={fit} onFitChange={setFit} />}
-      center={<LiveStage state={stageStateFor(channels.length)} fit={fit} />}
+      center={
+        <LiveStage
+          state={stageStateFor(channels.length)}
+          fit={fit}
+          onRetry={() => report(retryStream())}
+          onRefresh={() => report(refreshChannels())}
+        />
+      }
       right={
         <LiveChannelsPane
           list={CHANNEL_LIST}
@@ -44,6 +60,7 @@ export function LivePage({ active }: { active: boolean }) {
             setSelectedId(id);
             setPlayingId(id);
           }}
+          onRefresh={() => report(refreshChannels())}
         />
       }
     />
