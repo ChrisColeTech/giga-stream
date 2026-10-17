@@ -22,7 +22,7 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 | far left | **Left-pane toggle** | Shows or hides the active surface's left pane; pressed (accent outline) while it is shown; restores the committed size. A ghost icon button, transparent at rest (owner, 2026-10-17, matching Giga Cut's pane toggles). Tooltip "Toggle the left pane" |
 | left | **Brand** | A small accent icon tile and a two-line mono wordmark, `GIGA / STREAM` |
 | centre | **Live / Library / Player** | A recessed rounded track with a sliding chip; the active surface is the chip. The only navigation between surfaces |
-| right | **Theatre** | Giga Cut's Export slot (owner, 2026-10-17): a ghost icon-and-text button beside the pane toggles. Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the active surface's left, right and bottom panes collapse by the ordinary pane toggle. Pressing again exits: each pane returns to the state it had before entering (any pane changed by hand during Theatre is healed to that state). Pressed (accent) while on; not persisted — a fresh window always starts normal |
+| right | **Theatre** | Giga Cut's Export slot (owner, 2026-10-17): a ghost icon-and-text button beside the pane toggles. Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the left, right and bottom panes of EVERY surface collapse (one change, so the saved layout follows it). Pressing again leaves it by turning the lights back on and nothing else: the colours return, and no pane is touched or restored — a pane stays collapsed until its own toggle opens it (owner, 2026-10-17: "coming out of theatre mode it should only turn on the lights"). After 5 seconds without mouse movement or input in Theatre, the contents of both bars fade out (the bars keep their size and black), and any mouse, key, wheel or touch activity brings them back. Pressed (accent) while on; Theatre itself is not persisted — a fresh window always starts normal |
 | right | **Bottom-pane toggle** | Player's related band. On a surface with no bottom pane it stays in place, disabled, with the reason as its tooltip. Ghost, as the other pane toggles |
 | right | **Right-pane toggle** | Shows or hides the active surface's right pane. Ghost, as the other pane toggles |
 | far right | **Window controls** | Minimize, maximize or restore, close, in the platform's own caption metrics, through named preload capabilities. On Windows the caption strip follows the theme (owner, 2026-10-17): the page sends the strip its panel and text tones — read from the same tokens a theme switch or Theatre's remap changes — and a height that tracks the UI zoom, without which the fixed strip slid past the zoomed bar |
@@ -31,8 +31,15 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 - While a work window is open its scrim covers everything below the titlebar, and the pane toggles and the
   surface switch sleep with it.
 - **Theatre mode** (owner, 2026-10-17) paints the titlebar and statusbar black (`bg-black`) over the normal
-  panel colour and collapses the panes; the panes' collapse is the ordinary toggle, so the saved layout
-  follows it and exiting restores the remembered per-side state. Every surface goes black with the bars —
+  panel colour and collapses the panes of every surface in one change, so the saved layout follows it;
+  leaving Theatre only restores the colours and does not reopen any pane (there is no remembered layout).
+  While Theatre is on and the user is idle for 5 seconds (no pointer movement, press, wheel, touch or key),
+  the contents of the titlebar and statusbar fade out and `visibility` hides them from the tab order; the
+  bars themselves stay, black, so nothing shifts, and the cursor is hidden. The next input of any kind
+  brings them back. Nothing is hidden while a menu, a work window or a text field has focus. The Windows
+  caption symbols follow by being sent the bar's own colour. Input inside a provider's embedded player
+  (a cross-origin frame) never reaches the page, so it does not wake the bars; moving the mouse onto the
+  bars, which sit outside the stage, does. Every surface goes black with the bars —
   the black is the root token remap of `02` section 14 (`bg`, `panel`, `surface`, `stage`, `hair`,
   `border`), so panes, input backgrounds, borders, separators and scrollbars all follow; controls keep
   their own fill and edge, so buttons, chips and the rails' selected rows read as in the normal theme
