@@ -119,6 +119,17 @@ test("one component per file, named for the file; named exports only", () => {
   assert.equal(found.length, 5);
 });
 
+test("a surface file sets no arbitrary pixel text size; the family ui layer and comments may", () => {
+  const found = violations({
+    "src/frontend/src/components/live/Note.tsx": 'export function Note() { return <p className="text-[13px]" />; }\n',
+    "src/frontend/src/components/live/Fine.tsx":
+      '// text-[13px] in a comment\nexport function Fine() { return <p className="text-sm" />; }\n',
+    "src/frontend/src/components/ui/Field.tsx": 'export function Field() { return <p className="text-[13px]" />; }\n',
+  }).filter((f) => f.rule === "type-scale");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].file, "src/frontend/src/components/live/Note.tsx");
+});
+
 test("--skip leaves a program out entirely", () => {
   const entries = {
     "src/frontend/src/a.ts": "export const x: any = 1;\n",

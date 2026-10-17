@@ -8,6 +8,10 @@ those win and this document is corrected first.
 
 Phase 2 (wiring to the fileserver) is `22-FRONTEND-WIRING.md`. This document is the look only.
 
+**The component layer is `23`'s.** The ui components this document planned (sections 3.3a, 3.4a and 4.2) were replaced
+by Giga LoRA Studio's, copied verbatim (`23-FAMILY-COMPONENT-PORT.md`, section 3). Each retired name below points at
+its replacement; `23` section 3.3 is the full map.
+
 ---
 
 ## 1. Scope and rules
@@ -130,7 +134,7 @@ section 4 allows them. Items in the second list need the owner's decision first 
 
 | Item | Giga LoRA | Giga Stream |
 |---|---|---|
-| Left rail rows | 32 px tall, 13 px text, a 2 px accent bar on the selected row | the same, in `RailRow` and `RailSection` (`06` section 2.8 keeps the folding triangle) |
+| Left rail rows | 32 px tall, 13 px text, a 2 px accent bar on the selected row | the same: LoRA's `NavRail`, `NavGroup` and `NavItem`, copied (`23`) |
 | Centre strip | the flex-none strip with a bottom border (`HandoffStrip.tsx`) above the scroll area | the type strip sits in it (`06` section 4.2, "the shared strip surface") |
 | Grid | `repeat(auto-fill, minmax(…px, 1fr))`, gap 12, padding 12 | `minmax(144px, 1fr)`, gap 12, padding 12; six to eight across at 1600 px, as `06` section 4.2 requires |
 | Tile controls | shown on hover and on focus | Play and Info shown on hover and on keyboard focus, never hover alone (`06` section 4.2) |
@@ -203,8 +207,8 @@ are adopted where `06` section 5 allows them. Items in the second list need the 
 | Stage | the frame keeps its aspect and is contain-fitted inside a 16 px pad, in a scroll area | the picture fitted whole, with a 16 px pad (`06` section 3.1) |
 | Stage toolbar | left: a kind readout; centre: the title, with the name beneath; right: icon actions | left: the media kind icon; centre: the title and the episode or file name; right: Retry, Reveal in Library, Fullscreen (`06` section 5.3) |
 | Fullscreen | the viewer is repainted over the whole screen; the same button or Escape returns | `F` and the Fullscreen button, as `06` section 8 |
-| Inspector group | a folding header with a triangle, the title, and the info glyph; the state is kept by id | the same (`06` section 2, rule 8) |
-| Inspector row | a label, a control, and a tooltip for the reason when the row cannot be used; the row dims | the same (`06` section 5.4 and rule 3) |
+| Inspector group | a folding header with a triangle, the title, and the info glyph; the state is kept by id | superseded by `23`: LoRA's `Section` (a turning chevron and the title; the fold kept by id in the store) |
+| Inspector row | a label, a control, and a tooltip for the reason when the row cannot be used; the row dims | superseded by `23`: LoRA's rail row (`NumberField`'s `FIELD_ROW` and `FIELD_LABEL`), dimmed with its reason as the tooltip |
 | Read-only fact | a label and a mono value, with no control | the Details block's facts, as `06` section 5.4 |
 | Refused menu rows | listed and off, with the reason on the row | the same, for the tab menu and the card menu (`06` section 2, rule 3) |
 | Popups | the Compact, Standard and Wide classes and the Draft, Live and Operation policies | the same classes; no popup is in use until one is decided (section 8, question 5 decided: Title information is a work window) |
@@ -283,13 +287,13 @@ Before the install, `npm view @radix-ui/react-dropdown-menu@2.1.24 time` confirm
 | Action | File | Purpose |
 |---|---|---|
 | Create | `src/frontend/src/lib/collection-menu.ts` | pure: `collectionMenuRows(collections, isMember, toggle): MenuRow[]`, the `Collections ▸` submenu's rows; with no collection, one disabled row with its reason |
-| Create | `src/frontend/src/components/ui/SelectField.tsx` | the select: category, sort, season, year, watched, language |
-| Create | `src/frontend/src/components/ui/Switch.tsx` | the on/off switch for Autoplay |
-| Create | `src/frontend/src/components/ui/RailSection.tsx` | a collapsible rail group: filled triangle, title, whole header folds the body |
-| Create | `src/frontend/src/components/ui/RailRow.tsx` | a rail's label and control row; accent bar on the selected row |
-| Create | `src/frontend/src/components/ui/Skeleton.tsx` | one shimmer block on `SHIMMER` |
-| Create | `src/frontend/src/components/ui/SkeletonRows.tsx` | rows of skeletons with a count |
-| Create | `src/frontend/src/components/ui/SkeletonCards.tsx` | poster-card skeletons with a count |
+| Retired (`23`) | `SelectField.tsx` | replaced by LoRA's `Field` `Select` with `<option>`s |
+| Retired (`23`) | `Switch.tsx` | replaced by LoRA's `Toggle` |
+| Retired (`23`) | `RailSection.tsx` | replaced by LoRA's `Section` (controlled; the fold is the store's `folded[id]`) |
+| Retired (`23`) | `RailRow.tsx` | replaced by LoRA's `NavItem` (navigation) and the rail row of `NumberField` (settings) |
+| Retired (`23`) | `Skeleton.tsx` | replaced by `SHIMMER` from LoRA's `SkeletonRows` or `SkeletonCards` |
+| Copied (`23`) | `src/frontend/src/components/ui/SkeletonRows.tsx` | LoRA's, verbatim: rows in the queue row's shape |
+| Copied (`23`) | `src/frontend/src/components/ui/SkeletonCards.tsx` | LoRA's, verbatim, with `ThumbnailRailSkeleton` for the related band |
 | Create | `src/frontend/src/components/ui/PosterImage.tsx` | 2:3 image box; the fallback glyph when no image is given |
 | Create | `src/frontend/src/components/ui/LogoImage.tsx` | 4:3 logo box; a shimmer while loading and a glyph when none |
 | Create | `src/frontend/src/components/overlays/TitleInfoWindow.tsx` | the Title information work window of `06` 4.4, on the `ChildWindow` frame, reading its item from the store |

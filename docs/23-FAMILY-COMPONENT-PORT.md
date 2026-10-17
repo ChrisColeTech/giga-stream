@@ -178,8 +178,11 @@ Each wave ends with the checks of `07` section 5 and the visual gate of section 
 
 ### Wave 6 - Guard rails
 
-- The rule checker flags a raw text size or font class (`text-[...]`, `font-mono`, `text-xs`) in a surface file, outside the
-  family components and the poster and logo boxes, so the type cannot drift again.
+- The rule checker flags an arbitrary pixel text size (`text-[13px]`) in a surface file, outside `components/ui` (the
+  family components and the poster and logo boxes), so the type cannot drift again (`scripts/check-rules/rules/type-scale.mjs`).
+  It does not flag `font-mono` or `text-xs`: LoRA's own surfaces use those scale steps (QueueRow, JobDetails, the gallery
+  album header), and the rows copied from them would fail a rule the family itself does not keep. A surface file that
+  copies a LoRA surface's arbitrary size verbatim is listed in the rule with its source (the Settings rail).
 - The docs that still describe the old components are corrected (`21` sections 3 to 5).
 
 ## 5. The visual gate

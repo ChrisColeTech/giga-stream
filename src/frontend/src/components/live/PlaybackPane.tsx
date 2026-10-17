@@ -24,7 +24,7 @@ function IdleSelect({ label, value, text }: { readonly label: string; readonly v
  *  reason as its tooltip; Fit, Fill and Original always work. */
 export function PlaybackPane({ fit, onFitChange }: PlaybackPaneProps) {
   /* A readout is a value with no control, in the rail's mono, one control height tall. */
-  const unplayed = <span className="flex h-ctl-sm items-center font-mono text-[11px] text-muted">{EMPTY_VALUE}</span>;
+  const unplayed = <span className="flex h-ctl-sm items-center font-mono text-xs text-muted">{EMPTY_VALUE}</span>;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

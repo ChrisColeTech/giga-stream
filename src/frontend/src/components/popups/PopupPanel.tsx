@@ -37,7 +37,7 @@ export function PopupPanel({ title, size, policy, anchor, onClose, footer, statu
         {children}
       </div>
       {status != null && status !== "" && (
-        <p role="alert" className="m-0 flex-none border-t border-hair px-2 py-1.5 text-[11px] leading-snug text-st-failed">
+        <p role="alert" className="m-0 flex-none border-t border-hair px-2 py-1.5 text-xs leading-snug text-st-failed">
           {status}
         </p>
       )}

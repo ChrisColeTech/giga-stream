@@ -64,7 +64,7 @@ export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
           style={{ height: TITLE_HEIGHT, marginBottom: HEADER_GAP }}
           {...move}
         >
-          <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-[13px] font-semibold text-text">{spec.title}</h2>
+          <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-sm font-semibold text-text">{spec.title}</h2>
           <IconButton title={`Close ${spec.title}`} aria-label={`Close ${spec.title}`} onClick={onClose}>
             <X className="size-3.5" aria-hidden />
           </IconButton>

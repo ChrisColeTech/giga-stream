@@ -90,8 +90,8 @@ panes to them without a tween, and becomes visible two animation frames later, o
    navigation scrolls the selection into view. Focus rings stay visible.
 7. **Explanations are tooltips** on an info glyph or on the disabled control itself, placed against the
    window so no pane clips them. An info glyph belongs to a form group or row, not to a rail section.
-8. **Rail sections are collapsible**: a header with a filled triangle and a title; the whole header row
-   folds the body; the fold state is kept in the store by id and survives a surface switch.
+8. **Rail sections are collapsible**: the family `Section`, a header with a chevron that turns and a title; the
+   whole header row folds the body; the fold state is kept in the store by id and survives a surface switch.
 9. **Destructive actions are an inline two-step**, never a dialog.
 
 > Owner, 2026-10-15: *"why is there a label under the controls"* — and the rail printed a sentence under
@@ -557,10 +557,13 @@ Global keys yield to text fields, selects, menus, popups and IME composition.
 
 ## 9. Building blocks
 
-`ContextMenu` (the one context menu, summoned by `openMenu`, with one level of submenu), `Button`, `IconButton`, `Segmented`, `PillChoice`, `SelectField`, `TextField`, `Swatches`, `StatusDot`,
-`Disclosure`, `FoldBody`, `RailSection` (a collapsible rail group), `RailRow` (a rail's label and control),
-`Group` and `Row` (a window's form), `Tip` (the one tooltip), `Strip`, `DataTable`, `Rail`, `Workspace`. Each
-exists once; a surface uses these and does not build its own.
+The ui layer is Giga LoRA Studio's, copied verbatim (`23` section 3.1): `ContextMenu` (the one context menu, summoned
+by `openMenu`, with one level of submenu), `Button`, `IconButton`, `Segmented`, `Field` (`Input`, `Select`,
+`Textarea`), `Toggle`, `StatusDot`, `Section` (a collapsible rail group), `NumberField` (the rail row), `Form`
+(`Workspace`, `Group`, `Row`, `Wide`, `Actions`: a window's page), `NavRail` (`NavGroup`, `NavItem`), `Tooltip`
+(`InfoTip`), `SkeletonRows`, `SkeletonCards`, and the rest of that list. Giga Stream keeps its own `DataTable`,
+`Swatches`, `PosterImage` and `LogoImage`. Each exists once; a surface uses these and does not build its own, and sets
+no arbitrary text size of its own (the `type-scale` rule).
 
 ---
 

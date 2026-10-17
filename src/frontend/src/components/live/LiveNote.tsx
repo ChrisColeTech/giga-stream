@@ -18,8 +18,8 @@ export function LiveNote({ icon: Icon, title, sentence, action, onAction }: Live
       className="pointer-events-none flex w-full max-w-[320px] flex-col items-center gap-2 rounded-card border border-border bg-panel p-4 text-center shadow-menu"
     >
       <Icon className="size-5 text-muted" aria-hidden />
-      <p className="font-sans text-[13px] font-semibold text-text">{title}</p>
-      <p className="font-sans text-[13px] leading-snug text-text">{sentence}</p>
+      <p className="text-sm leading-5 font-semibold text-text">{title}</p>
+      <p className="text-sm leading-5 text-muted">{sentence}</p>
       <Button size="sm" onClick={onAction} className="pointer-events-auto">
         {action}
       </Button>

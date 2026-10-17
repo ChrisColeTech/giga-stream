@@ -35,14 +35,14 @@ export function Statusbar() {
       {/* THE DOT IS THE WORD: the sentence survives in the tooltip for the case that matters, the dot going grey. */}
       <span className="inline-flex items-center gap-1.5" title="The fileserver connection.">
         <StatusDot state={CONNECTION_DOT[PREVIEW_CONNECTION]} />
-        <span className="font-mono text-[11px] tabular-nums">{PREVIEW_CONNECTION}</span>
+        <span className="font-mono text-xs tabular-nums">{PREVIEW_CONNECTION}</span>
       </span>
       {notice !== null && (
         <span
           key={notice.serial}
           role="status"
           title={notice.sentence}
-          className={cn("min-w-0 truncate text-[13px]", TONE[notice.tone])}
+          className={cn("min-w-0 truncate text-xs", TONE[notice.tone])}
         >
           {notice.sentence}
         </span>

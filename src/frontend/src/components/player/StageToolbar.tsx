@@ -45,8 +45,8 @@ export function StageToolbar({
     >
       <Kind className="size-4 flex-none text-muted" aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col items-center leading-tight">
-        <span className="max-w-full truncate text-[13px] font-semibold text-text">{title}</span>
-        {subtitle !== undefined && <span className="max-w-full truncate font-mono text-[11px] text-muted">{subtitle}</span>}
+        <span className="max-w-full truncate text-sm font-semibold text-text">{title}</span>
+        {subtitle !== undefined && <span className="max-w-full truncate font-mono text-xs text-muted">{subtitle}</span>}
       </div>
       <div className="flex flex-none items-center gap-0.5">
         <IconButton aria-label="Retry" title="Retry" onClick={onRetry}>

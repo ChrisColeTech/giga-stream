@@ -27,8 +27,8 @@ export function EventsDrawer() {
       inert={!open}
     >
       <div className="flex h-7.5 flex-none items-center gap-2.5 border-b border-hair bg-panel px-2.5 py-1">
-        <span className="font-mono text-[11px] font-semibold text-faint">Events</span>
-        <span className="ml-auto truncate font-mono text-[11px] text-dim" />
+        <span className="text-xs text-muted">Events</span>
+        <span className="ml-auto truncate font-mono text-xs text-dim" />
       </div>
       <div className={SCROLL}>
         {/* Shimmer lines, not a sentence: the empty state of a log that has nothing to say yet. */}
