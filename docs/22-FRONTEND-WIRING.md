@@ -1,35 +1,101 @@
 # 22 - Frontend Wiring
 
-**Status: the plan for phase 2 of `src/frontend`: connecting the look that `21` builds to the fileserver.** It
-says which route each control reads or writes, which service and schema carry it, how the store and hydration work,
-and what proves it. The look is `21`; the window and surfaces are `02`, `04`, `05` and `06`; the wire is `03`; how
-work is run is `07`; the engineering rules are `01`. Where this document and those disagree, those win and this
-document is corrected first.
+**Status: the plan for phase 2 of `src/frontend`, revised 2026-10-17 with the owner's direction: the provider
+embed proven by `14`, a source control on the Player stage, the full network log in the events drawer, the ad
+blocker surfaced, and the settings round trip.** It says which route each control reads or writes, which service
+and schema carry it, how the store and hydration work, what the backend and fileserver must add, and what proves
+it. The look is `21`; the window and surfaces are `02`, `04`, `05` and `06`; the wire is `03`; how work is run is
+`07`; the engineering rules are `01`. Where this document and those disagree, those win and this document is
+corrected first.
 
-This plan is written now and is revised when phase 1 is signed off, since the signed-off look may change the
-control list in section 3.
+---
+
+## 0. What the source says today (checked 2026-10-17)
+
+- **Frontend.** Phase 1 is complete: every surface drawn, controls local or stubbed. Every service file returns
+  `notConnected()` synchronously (`services/not-connected.ts`); `state`, `shell-state`, `ndjson`, `scan-stream`,
+  `titles`, `favorites`, `watch`, `local-media`, `desktop` and `stream-player` do not exist yet. The store holds
+  no server state of any kind; the Statusbar has **no connection word** yet; the events drawer is a shimmer
+  placeholder; the stage renders a bare `<video>` with no source; `lib/player-view.ts` reads fixtures at module
+  scope. `hls.js`, `zod` and the Radix menu are already dependencies; tests run on `node:test` through `tsx`.
+  Vite serves 5171 and proxies `/api` to 8090.
+- **Fileserver.** Every route of `03` part A is built and tested (195 tests across the repo). It attaches the
+  backend's active provider records to title and season answers today. Its Electron host (`src/app`) already
+  runs the ad blocker (`app/ad-blocker.ts`, Ghostery's ads-and-tracking lists, with the `ad*`/`ads` name
+  backstop `app/ad-hosts.ts`), refuses popups, off-origin navigations, foreign player-frame navigations and
+  every permission but fullscreen (`app/guards.ts`), and reports each event to the page through the preload's
+  one named capability `window.pocHost.onGuard` (`app/preload.cts`, channel `poc:guard`). Static serving
+  whitelists only `/`, `/index.html` and first segments `html|css|js|data` — **a built React bundle
+  (`assets/...`) would be refused**, and there is no SPA fallback. Its `Settings` implements only 8 of the 19
+  keys of `03` section 3.2.
+- **Backend.** Providers are a table and CRUD (`7.2b`) with `id, name, source, api_key, is_active, created_at` —
+  no templates, no seed. The stream-address rule (`7.5`) fills `streamUrl` from `MOVIE_STREAM_TEMPLATE` /
+  `EPISODE_STREAM_TEMPLATE`.
+- **The PoC (`14`, proven in Electron).** The embed is a 16:9 iframe with
+  `allow="autoplay; fullscreen; encrypted-media; picture-in-picture"`, `referrerPolicy="origin"`, optional
+  `sandbox="allow-scripts allow-same-origin allow-presentation"`; the nested-frame guard and dialog no-ops
+  (`frame-guard.js`) are injected into the player frame and its children; the message decode table
+  (`messages.js`) reads `vidsrc-status`, VixSrc's `event`-object shape, the common `player-event` shape and
+  `MEDIA_DATA`, position and duration in seconds. `data/providers.json` carries, per provider, the movie and
+  episode templates, the `startAt` and subtitle parameter names, the allowed message origin, the frame origins
+  and the availability routes. The Electron runs (`14` section 6.2) played VixSrc and VidZee movies and exact
+  episodes with Ghostery on; VidSrc's episode played after the first ad-layer press.
+
+## 0.1 Amendments made with this revision (docs first, `07` section 2)
+
+| File | Change | Why |
+|---|---|---|
+| `03` §3.6 | `TitleDetail` and `Episode` gain `sources?: TitleSource[]` (the shape below). The fileserver attaches the title's **sources** instead of the raw provider records; provider records (and their `api_key`) stop at the fileserver | the credentials never belong in the renderer; the client loads addresses, it does not read provider rows |
+| `03` §7.2b | the provider record gains `order` (number), `family` (`"embed" \| "stream"`), `movieTemplate?`, `episodeTemplate?`, `startParam?`, `subtitlesParam?`, `origin?`, `frameOrigins?`, `messageShape?`; POST/PUT accept them; migration adds the columns | `16` §4's shape, trimmed to what `14` proved; the archive backend held templates (`12` §1.1) |
+| `03` §7.5 | the sources rule: the backend fills, per title and per episode, one `TitleSource` per active provider whose template applies, ordered by `order` then id; a provider without a template for the kind yields no source; the stream rule is unchanged for the dev lane | the promised "fields that carry it ... written here from the results of `14`" |
+| `03` §1 | `SEED_PROVIDERS` env (default false): with it, a backend with no providers creates VidSrc, VixSrc and VidZee from `12`, `18` and the PoC's `providers.json` | development needs the proven three without hand-run curl scripts |
+| `06` §5.3, §10 | the stage toolbar gains a **Source** control when a title has two or more playable sources; `06` §10's "no source or provider control" is replaced (owner, this session) | the owner asked for source switching on the player screen |
+| `22` §8 | resolved in place; no `01` change — the guard reports ride the preload's named capability (`01` §7), not an application transport | the one push in the system is the desktop shell's |
+
+```ts
+interface TitleSource {
+  providerId: number;
+  name: string;             // display name ("VidSrc")
+  url: string;              // the embed address for this exact title (or episode), https per 7.3
+  origin: string;           // the origin allowed to post messages
+  order: number;
+  startParam?: string;      // the resume parameter, seconds, when documented
+  subtitlesParam?: string;  // the subtitle-language parameter, when documented
+  frameOrigins?: string[];  // the nested-frame origins the player really uses (`14` §2.4)
+  messageShape?: "vidsrc-status" | "player-event";   // absent: no documented messages
+}
+```
 
 ---
 
 ## 1. Rules that hold
 
 - **The frontend talks only to the fileserver.** Every request is relative (`/api/...`), proxied to the fileserver in
-  development (`03` section 1). The interface never contacts the admin backend, its port `8091`, TMDB, OMDb or the
-  live server's own API (`01` sections 1.1 and 4.4). A stream address the fileserver gives a channel or title is the
-  one external address the player loads (`01` section 1.1).
+  development (`03` section 1). The interface never contacts the admin backend, its port, TMDB, OMDb or the
+  live server's own API (`01` sections 1.1 and 4.4). The addresses the player loads — a channel's `streamUrl`, a
+  local file's Range route, a source's embed `url` — are the one external exception (`01` section 1.1), published
+  data, never an application API.
 - **The Settings Address row edits `adminUrl` through `PATCH /api/settings`** (`03` section 3.2). The interface sends
   the address the person typed and nothing else; it never sends a request to that address.
 - **One request layer.** `services/api.ts` is the only `fetch` (`02` section 2.2). Components, pages, hooks and the
-  store never call `fetch` or construct a socket.
+  store never call `fetch` or construct a socket. The embed host loads the source's address in an iframe; it makes
+  no requests of its own except the provider availability check, which is a dev-harness concern and stays out of
+  the product (`16` §7 keeps the PoC's harness for that).
 - **No WebSocket, no polling, no timers that send requests** (`01` section 4.4, `03` section 4). The state is read on
   mount, on a surface switch, after an action, and on Refresh. The only timers are the ones `02` names: the 250 ms
   search pause, the 400 ms shell write-back, the 1.5 s hydration fallback, the 30 s progress write, and the active
-  tab's close timeout (`06` section 5.1).
+  tab's close timeout (`06` section 5.1). The one push in the system is the Electron preload's `pocHost.onGuard`
+  (`01` section 7) — the desktop shell reporting what it refused.
 - **The one streamed body is the folder scan** (`03` section 3.8). `services/ndjson.ts` reads it one line at a time;
   a body that ends without a `done` line is one error.
 - **No browser storage.** Saved state is a fileserver row (`02` section 2.3).
 - **Every wire value is `unknown` until Zod has validated it** (`01` section 2). A part of an answer the interface
   cannot read is one notice on the statusbar, and never costs the rest of the answer (`01` section 8).
+- **Embed containment is the PoC's, verbatim.** The frame allow list, the referrer policy, the browser-case
+  sandbox, the nested-frame guard and the dialog no-ops are ported from the PoC (`14` §2.2–2.4), not redesigned.
+  In Electron the frame runs unsandboxed (the proven configuration: Ghostery, the name backstop and the shell
+  guards contain it); in a browser it always runs sandboxed, and the interface says `unprotected` where the
+  mockup's statusbar said it (`14` §2.3; `16` §9.4 defaulted).
 
 ## 2. The service layer
 
@@ -37,15 +103,15 @@ One resource module holds one call each (`02` section 2.2). Every module is name
 
 | File | Routes (`03` section) |
 |---|---|
-| `services/api.ts` | the only `fetch`: relative URLs, the envelope, aborts, a refusal turned into an error with its code and sentence (`03` section 2) |
+| `services/api.ts` | the only `fetch`: relative URLs, the envelope, aborts, a refusal turned into an error with its code and sentence, and one events row per call (`03` section 2, `22` §3.7) |
 | `services/ndjson.ts` | reads a streamed NDJSON body line by line (`03` section 3.8) |
-| `services/state.ts` | `GET /api/state` (3, `03` section 4) |
+| `services/state.ts` | `GET /api/state` (`03` section 4) |
 | `services/shell-state.ts` | `GET` and `PATCH /api/shell-state` (`03` section 3.3) |
 | `services/settings.ts` | `GET` and `PATCH /api/settings` (`03` section 3.2) |
 | `services/channels.ts` | `GET /api/channels`, `POST /api/channels/refresh`, `PATCH /api/channels/last` (`03` section 3.4) |
-| `services/stream-player.ts` | attaches `hls.js` to the `<video>` when the browser can run it; the browser's own HLS is the fallback (`02` section 3.1) |
+| `services/stream-player.ts` | attaches `hls.js` to the `<video>` when the browser can run it; the browser's own HLS is the fallback; reports its events (`02` section 3.1, `22` §3.7) |
 | `services/library.ts` | `GET /api/library`, `GET /api/library/continue` (`03` section 3.5) |
-| `services/titles.ts` | `GET /api/titles/:id`, `.../seasons/:season`, `.../related` (`03` section 3.6) |
+| `services/titles.ts` | `GET /api/titles/:id`, `.../seasons/:season`, `.../related` (`03` section 3.6) — the detail and episodes carry `sources` |
 | `services/collections.ts` | `GET`, `POST`, `PATCH`, `DELETE` `/api/collections`; `PUT` and `DELETE` `.../items`; `GET /api/items/:kind/:id/collections` (`03` section 3.7) |
 | `services/folders.ts` | `POST /api/fs/dialog`, `POST /api/collections/:id/folders`, `PUT`, `POST .../rescan`, `DELETE /api/folders/:id` (`03` section 3.8) |
 | `services/scan-stream.ts` | `GET /api/folders/:id/scan` as NDJSON (`03` section 3.8) |
@@ -56,12 +122,20 @@ One resource module holds one call each (`02` section 2.2). Every module is name
 | `services/desktop.ts` | the folder picker and the window controls, through the preload's named capabilities only (`01` section 7); in a browser the picker answers `409 fs.desktop_required` and is shown disabled |
 
 **Schemas.** One Zod schema file per resource under `services/schemas/` (`envelope-schema.ts`, `state-schema.ts`,
-`settings-schema.ts`, `channel-schema.ts`, `library-schema.ts`, `title-schema.ts`, `collection-schema.ts`,
-`job-schema.ts`, `watch-schema.ts`). The phase 1 types in `src/types/` are checked against `03` in the wave that
-wires them; a mismatch is a phase 1 bug and is fixed in the same wave.
+`settings-schema.ts`, `channel-schema.ts`, `library-schema.ts`, `title-schema.ts` — with `source-schema.ts` for
+`TitleSource` — `collection-schema.ts`, `job-schema.ts`, `watch-schema.ts`). The phase 1 types in `src/types/` are
+checked against `03` in the wave that wires them; a mismatch is a phase 1 bug and is fixed in the same wave. The
+known mismatches to fix while wiring: the fileserver's `Settings` gains its 11 missing keys (§5.1); the
+`watchedPercent` values `90|95|100` are the literals `03` names; `LibraryPage.total` is absent more often than the
+phase 1 type says.
 
 **Errors.** `lib/error-sentence.ts` is the one mapping from dotted codes to sentences (`01` section 4.1). A refusal
 shows its sentence once on the notice line.
+
+**The embed library is not a service** (no REST): `lib/embed-url.ts` builds the address from a `TitleSource`,
+resume seconds and the subtitle language; `lib/embed-messages.ts` is the PoC decode table, seconds to
+milliseconds; `lib/frame-guard.ts` is the PoC's self-contained guard string and its installer. All three are pure
+or DOM-only, unit-tested (`14` §2.2–2.4 ported near-verbatim, `07` section 2).
 
 ## 3. What each surface reads and writes
 
@@ -74,9 +148,10 @@ disabled, or local, where the row says so.
 |---|---|---|
 | Hydration on mount | `GET /api/state` | the saved surface, pane visibility and sizes are applied once; the interface shows after two animation frames; a 1.5 s fallback shows defaults (`02` section 2.3) |
 | Pane toggles, pane sizes | `PATCH /api/shell-state` | written 400 ms after the last change, never before hydration (`02` section 2.3, item 6) |
-| Statusbar connection | the outcome of the last request | `connecting` while the first state read is in flight, `ready` after a request succeeds, `reconnecting` after one fails (`03` section 4; `06` section 1.2) |
+| Statusbar connection | the outcome of the last request | `connecting` while the first state read is in flight, `ready` after a request succeeds, `reconnecting` after one fails (`03` section 4; `06` section 1.2). The word does not exist yet — this wave creates it |
 | Notice line | any refusal or outcome | one sentence, the server's own, or `could not reach the fileserver` (`04` section 6) |
 | `Ctrl+0` and the zoom stepper | `PATCH /api/settings` `uiZoom` | applies at once |
+| Runtime facts (About, and the drawer's guard rows) | `window.pocHost` | `runtime` is `electron` when the capability exists, `browser` otherwise; in a browser the drawer opens with one info row saying the shell guards are absent (`14` §2.3) |
 
 ### 3.2 Live
 
@@ -101,7 +176,7 @@ disabled, or local, where the row says so.
 | Continue Watching | `GET /api/library/continue` | drawn only with progress (`06` section 4.2) |
 | Favourite | `PUT` and `DELETE /api/favorites/:kind/:itemId` | applies at once |
 | Card menu, `Collections ▸` | `GET /api/collections`; `GET /api/items/:kind/:id/collections`; `PUT` and `DELETE .../items` | each row is a check toggled at once, inline, with no dialog (`06` section 4.5, family standard) |
-| Title information | `GET /api/titles/:id`; `.../seasons/:season`; `.../related` | the wide popup reads the detail; Play is enabled when the title has a `streamUrl`, and disabled with `No stream source is set up for titles.` otherwise (`03` section 3.6) |
+| Title information | `GET /api/titles/:id`; `.../seasons/:season`; `.../related` | the wide popup reads the detail; Play is enabled when the title has a `streamUrl` or at least one source, and disabled with `No stream source is set up for titles.` otherwise (`03` section 3.6) |
 | Clear history | `DELETE /api/watch` | the two-step's second press clears all history; favourites, collections and files are untouched |
 | Remove from History | `DELETE /api/watch/:watchId` | removes one entry |
 | Rows shelves (`06` section 4.2) | the same `GET /api/library` answer, grouped in the client: the facets' genres, the kinds, the collections list, the favourites; no shelf adds a request | shelves are groups of the one query, so a change to the query changes every shelf; a group with no items is not drawn |
@@ -113,12 +188,32 @@ disabled, or local, where the row says so.
 |---|---|---|
 | Local file | `GET /api/media/local/:id/info`; the Range route `GET /api/media/local/:id` | the file plays in the `<video>` and seeks through byte ranges (`03` section 3.10) |
 | Test-server title and episode | the `streamUrl` from `GET /api/titles/:id` and `.../seasons/:season` | plays in the `<video>` like a channel (`06` section 5.3) |
-| Progress | `PUT /api/watch` | every 30 s while playing and on pause, end, seek settle, tab switch and close; each playback numbers its writes from 1, and a lower number never replaces a higher one (`03` section 3.13, `06` section 5.3) |
-| Resume and Start over | the watch entry in the title's detail | the banner shows where the title was left (`06` section 5.3) |
-| Episode browser | `GET /api/titles/:id/seasons/:season` | changing the season starts nothing; choosing an episode loads that exact episode |
+| **Provider source (embed)** | the `sources` on the same answers | the stage hosts the source's embed address in the iframe of §3.4a; resume passes the watched seconds through `startParam`; progress comes from the decoded messages (`03` §7.5, `14`, `12` §2.3) |
+| **Source control** | none (local choice) | on the stage toolbar when the title has two or more of {its sources, its `streamUrl` if any}: lists them, marks the active one; picking one clean-stops the current embed (src to `about:blank`, frame removed) and hosts the next (`06` §5.3 as amended). Default, no pick: the first source by order; the `streamUrl`, when present, is listed last as `App player` |
+| Progress | `PUT /api/watch` | every 30 s while playing and on pause, end, seek settle, tab switch and close; each playback numbers its writes from 1, and a lower number never replaces a higher one (`03` section 3.13, `06` section 5.3). For an embed the position is the last decoded message's, and the write also fires on `pause`/`ended` messages and on clean stop |
+| Resume and Start over | the watch entry in the title's detail | the banner shows where the title was left; Resume re-opens with `startAt` seconds for an embed, seek for the app's own media (`06` section 5.3) |
+| Episode browser | `GET /api/titles/:id/seasons/:season` | changing the season starts nothing; choosing an episode loads that exact episode — for an embed, the episode source's own address (`03` §3.6) |
 | Related band | `GET /api/titles/:id/related` | at most 20 cards; a local file's band stays collapsed with its reason (`06` section 5.5) |
 | Watch block: Favourite, Collections, Remove from History | as in 3.3 | as in 3.3 |
-| Provider titles | not in this phase | `06` section 5.3 is written from the results of `14` first; the stage's provider case stays disabled with its reason until then |
+
+Playback priority when both exist: sources win (the embed is the product path for titles); `streamUrl` plays when
+there are no sources, which is exactly the dev-template lane (`03` §7.5). Stated default, not an open question.
+
+### 3.4a The embed host (ported from the PoC, `14` §2.2–2.4)
+
+- The stage swaps the `<video>` for a 16:9 iframe: `allow="autoplay; fullscreen; encrypted-media;
+  picture-in-picture"`, `allowFullscreen`, `referrerPolicy="origin"`; `sandbox="allow-scripts allow-same-origin
+  allow-presentation"` in the browser case, no sandbox attribute in Electron (the proven configuration).
+- On frame load the nested-frame guard is installed: the source's `frameOrigins` are the allowed hosts, any other
+  nested frame is pointed at `about:blank` and logged, `alert`/`confirm`/`prompt` become no-ops
+  (`lib/frame-guard.ts`, the PoC's script verbatim).
+- Messages: only frames whose `origin` equals the source's `origin` are decoded; everything else is one events row
+  (`warn`). Decoded `timeupdate` positions feed progress; `pause` and `ended` fire their writes
+  (`lib/embed-messages.ts`, the PoC's decode table).
+- Retry re-creates the iframe with a fresh address. Tab switch, close and source switch clean-stop first: src to
+  `about:blank`, frame removed (`14` check 13).
+- A source whose frame never reports and never errors is the loading state, not a failure; the stage shows the
+  player alone while it loads (`06` §3.1's grammar).
 
 ### 3.5 Settings
 
@@ -130,6 +225,20 @@ disabled, or local, where the row says so.
 | State | `GET /api/state` `backend` | connected or not, the backend's revision, when the channels were read, the error if any (`03` section 4) |
 | Collections | opens the Collections window | as the Library rail |
 | Open History | closes Settings and selects History | as `04` section 2 |
+
+The Settings window reads the committed settings from the store (today it reads the fixture constant — a phase 1
+bug this plan fixes). The hydration applies the server's theme, accent, motion, zoom, playback and library values;
+a control writes through `PATCH` and applies the committed answer, so what the server refused never sticks.
+
+#### 5.1 Fileserver gap: the missing 11 settings keys
+
+The built `Settings` (`src/fileserver/src/types/settings.ts`) implements 8 of the 19 keys of `03` §3.2. This plan
+adds the missing 11 with their per-key schemas, defaults and refusal messages, and extends `settings.test.ts`:
+`videoQuality` (`auto|higher|saver`), `audioLanguage` (BCP-47 tag or null), `lowLatency` (boolean),
+`pictureFit` (`fit|fill|original`), `resumeMode` (`ask|resume|restart`), `watchedPercent` (`90|95|100`),
+`liveOnOpen` (`last|none`), `librarySort` (`newest|oldest|az|year`), `showContinue`, `pauseHistory`,
+`rescanOnStartup` (booleans). The watch threshold (`watchedPercent`) is read where the watch service marks
+`watched` (today a constant); `liveOnOpen` gates whether the state answer carries `lastChannelId`.
 
 ### 3.6 Collections window
 
@@ -144,12 +253,39 @@ disabled, or local, where the row says so.
 | Replace, Rescan, Cancel scan, Remove folder | `PUT`, `POST .../rescan`, `POST /api/jobs/:id/cancel`, `DELETE /api/folders/:id` | each acts on its folder; Cancel scan cancels the job (`03` section 3.9) |
 | Jobs | `GET /api/jobs` | the window reads the jobs of its folders |
 
-### 3.7 Events drawer
+### 3.7 Events drawer — the network log
 
-The drawer shows network traffic (`21` section 9). Its rows come from four sources: the interface's own REST calls
-(`services/api.ts`), the stream's HLS events (fragment loads, level switches, errors), the embed's load outcome, and the
-blocked-request counts Electron reports. A row keeps the method, host and status, and never a query string (`06` section 7).
-The row shape and the open decisions are section 8, question 1.
+The drawer shows the traffic the interface can truly see (`21` §9). Its rows come from five sources:
+
+| Source | Rows | Area |
+|---|---|---|
+| `services/api.ts` | one row per REST call: method, host (`fileserver`), status, ms; failures `warn`/`error` | Connection |
+| `services/stream-player.ts` | manifest load, level switch, fragment-load failures, fatal errors | Media |
+| The embed host | load outcome with the source's host; frame-guard refusals; dialog no-ops; a decoded-message summary (event, position, host) | Provider |
+| `window.pocHost.onGuard` (Electron) | `popup`, `navigate`, `frame navigate`, `player hijack`, `permission`, `ad blocked` — exactly what `guards.ts` and `ad-blocker.ts` already report, host only | Connection / Provider |
+| The hydration and Refresh outcomes | one row per state read that changed something the person can see | Connection |
+
+Rules: a row keeps the method, host and status, and **never a path, query, token or raw URL** (`06` section 7; the
+PoC logged full addresses — the port keeps host only). Areas gain `Provider` beside Connection, Catalog, Scan,
+Media, Playback (`19` §7). At most 200 rows, newest first; the severity filter and Clear are as `06` §7; Clear
+empties the list only. Honest limits, said in the row's tooltip where it matters: in a browser nothing inside a
+cross-origin iframe is visible; in Electron the ad blocker reports what it **blocked**, not what it allowed
+(`session.webRequest` is not used); `<img>` loads (posters, logos) are not logged. What is seeable is logged; what
+is not, is not claimed.
+
+The events log itself is `lib/event-log.ts` (append, cap, clear, filter — pure, unit-tested) plus a thin store
+slice for the drawer's open state; services, the stream player, the embed host and the guard receiver all append
+through it. Nothing polls.
+
+### 3.8 The ad blocker
+
+Already running in the Electron host (`app/ad-blocker.ts` + `app/ad-hosts.ts`): Ghostery's ads-and-tracking lists
+on the session, the `ad*`/`ads` host-resolver backstop, fail-soft (a first launch with no network starts
+unblocked and says so). This plan wires what the interface shows of it: every `ad blocked` report is an events row
+(host and request type), the About section's runtime facts say `Ad blocking: on` in Electron and `unprotected`
+in a browser, and provider embeds are always sandboxed in the browser case (`14` §2.3). No new setting: the
+blocker is on wherever the desktop shell runs (`16` §9.4 defaulted). The PoC's strict-mode allow lists stay a
+PoC instrument (`16` §7).
 
 ## 4. Store
 
@@ -159,12 +295,13 @@ So `02` section 2.1 is amended first, to add a `library` slice for collections a
 | File | Holds |
 |---|---|
 | `store/app-store.ts` | composes the slices |
-| `store/slices/shell-slice.ts` | surface, pane visibility and sizes, the events drawer, the open flow and its item, theme, accent, motion, zoom, notice, folds |
-| `store/slices/live-slice.ts` | the channel list as received, search and category, the selected and playing channel, the stage state, the connection |
-| `store/slices/playback-slice.ts` | what the player reports, the user's playback choices, the tabs and their stage state |
+| `store/slices/shell-slice.ts` | surface, pane visibility and sizes, the events drawer, the open flow and its item, theme, accent, motion, zoom, notice, folds, the connection word |
+| `store/slices/live-slice.ts` | the channel list as received, search and category, the selected and playing channel, the stage state |
+| `store/slices/playback-slice.ts` | what the player reports, the user's playback choices, the tabs and their stage state, **each tab's `sources` and active source id** |
 | `store/slices/library-slice.ts` | collections, the views' counts, the current library query |
 
-The store performs no I/O and holds no promise, timer, DOM node or media element (`02` section 2.1).
+The store performs no I/O and holds no promise, timer, DOM node or media element (`02` section 2.1). The events
+log is not store state: it is `lib/event-log.ts`, and the drawer subscribes.
 
 ## 5. Hydration and write-back
 
@@ -173,64 +310,82 @@ its parts are validated separately; the saved shell is applied once; the panes s
 frames; a 1.5 s fallback shows defaults without writing them back; later changes are written back 400 ms after the last
 change; a later state read never re-applies the saved shell.
 
+## 5.2 Fileserver gap: serving the built interface
+
+`build-app.ts` whitelists `/`, `/index.html` and first segments `html|css|js|data`. The React build emits
+`assets/...`, so the built interface cannot be served. This plan extends the whitelist with `assets` (and the
+favicon) and adds the SPA entry: a GET that is not `/api`, not `/healthz` and not a served file answers
+`index.html`. `WEB_DIST` keeps its meaning; the Electron and gateway lanes point it at `src/frontend/dist`
+(a root `web:build` script builds the interface first). The PoC's static folder and `/api/poc/results` are
+untouched. Also landed here: the scan walk reports `null` percent while the walk runs (`22` §7a.2, the one-line
+fix), so the status bar draws an indeterminate bar instead of a false 0 %.
+
 ## 6. Waves
 
-Each wave wires one surface's controls, using the owners and worktrees of `21` section 5, unless the owner directs a
-different split when phase 2 starts.
+Each wave wires one surface's controls. The frontend work follows the per-surface owners of `21` §5 (the owner's
+directed split); the backend and fileserver waves are one worker each (`07` §6.1). The coordinator builds wave 2.0
+and 2.1 directly on the baseline — everything else waits on them (`07` §6.1: never delegate what another piece
+waits on).
 
-| Wave | Delivers | Proof |
-|---|---|---|
-| 2.0 Boundary | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, the check that refuses the admin backend's address in `src/frontend` (`01` section 1.1) | `test/api.test.ts` passes; the rule checker reports the new rule |
-| 2.1 Store and hydration | the slices of section 4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
-| 2.2 Live | `services/channels.ts`, `services/stream-player.ts`, the channel search and the stage | Live opens on the last channel; Refresh updates the dots; a test channel plays |
-| 2.3 Settings and Collections | `services/settings.ts`, `services/collections.ts`, `services/folders.ts`, `services/jobs.ts`, `services/desktop.ts`, `services/scan-stream.ts` | settings survive a restart; a collection is created and removed; a folder's scan streams |
-| 2.4 Library | `services/library.ts`, `services/titles.ts`, `services/favorites.ts`, `services/watch.ts`; the menu's `Collections ▸` wired | the views show their counts; a favourite persists; a collection toggled from the card's menu is listed after a restart |
-| 2.5 Player | `services/local-media.ts`, the progress hook, the tabs | a local file plays and seeks; progress survives a restart; Resume works |
-| 2.6 Events | the events the interface records itself | a connection loss and a failed stream each produce a row |
-| 2.7 Fixtures gone | `src/fixtures/` deleted | `grep` finds no import of `fixtures/`; the gate's frontend steps pass |
+| Wave | Worker | Delivers | Proof |
+|---|---|---|---|
+| A | backend worker | the provider fields, migration, CRUD, the sources fill on detail and season answers, `SEED_PROVIDERS`, tests | the gate's backend steps; sources on a title answer, in order, honouring templates; no source without a template |
+| B | fileserver worker | the 11 settings keys; `sources` pass-through (schemas, types, service); provider records stop being attached; static whitelist `assets` + SPA entry; scan percent `null`; `watchedPercent`/`liveOnOpen` read their settings; tests | the gate's fileserver steps; settings round trip over HTTP; a built `assets` bundle served; sources on title and episode answers |
+| 2.0 | coordinator | `services/api.ts`, `services/ndjson.ts`, the schemas, `lib/error-sentence.ts`, `lib/event-log.ts`, the rule that refuses the admin backend's address in `src/frontend` (`01` §1.1) | `test/api.test.ts`, `test/event-log.test.ts` pass; the rule checker reports the new rule |
+| 2.1 | coordinator | the slices of §4, `services/state.ts`, `services/shell-state.ts`, `services/settings.ts`, the hydration and write-back hooks, the statusbar connection word, the Settings window reading the store | a fileserver on a free port with a temporary `DATA_DIR` restores the saved surface and layout, and writes nothing before it has restored them |
+| 2.2 | live worker | `services/channels.ts`, `services/stream-player.ts`, the channel search and the stage | Live opens on the last channel; Refresh updates the dots; a test channel plays |
+| 2.3 | collections worker | `services/collections.ts`, `services/folders.ts`, `services/jobs.ts`, `services/desktop.ts`, `services/scan-stream.ts` | settings survive a restart; a collection is created and removed; a folder's scan streams and the indeterminate bar shows |
+| 2.4 | library worker | `services/library.ts`, `services/titles.ts`, `services/favorites.ts`, `services/watch.ts`; the menu's `Collections ▸` wired | the views show their counts; a favourite persists; a collection toggled from the card's menu is listed after a restart |
+| 2.5 | player worker | `services/local-media.ts`, the progress hook, the tabs, `lib/embed-url.ts`, `lib/embed-messages.ts`, `lib/frame-guard.ts`, the embed host component, the stage Source control | a local file plays and seeks; progress survives a restart; Resume works; with `SEED_PROVIDERS` on, a title's first source plays in the embed and switching sources clean-stops and re-hosts |
+| 2.6 | events worker | the events wiring of §3.7 across api, stream player, embed host and `pocHost.onGuard`; the drawer UI | a connection loss, a failed stream, a refused popup and a blocked ad each produce a row; host only, no paths |
+| 2.7 | coordinator | fixtures deleted; `web:build`; the full walks | `grep` finds no import of `fixtures/`; the gate passes; the walks of `05` §3–5 run against the fileserver; the Electron window runs the embed with the guards and the blocked-ad rows |
 
-**Checks, every wave** (`07` sections 4 and 5): the gate's frontend steps pass; the rule checker finds no reference to
-the admin backend; the fileserver runs on a free port with a temporary `DATA_DIR`, never `~/.giga-stream`; the wired
-surface is driven in the browser against it and looked at at both sizes. The fileserver is started only with the
-owner's say (`07` section 4).
+Landing order: A and B land first (independent programs, disjoint paths), then 2.0/2.1, then 2.6's drawer rides
+last among the frontend waves only if its sources exist — in practice 2.2, 2.3 and 2.4 land in any order (disjoint
+folders), 2.5 after 2.4, 2.6 after 2.5, 2.7 last.
 
-**Workers.** A non-visual layer (services, schemas, store slices, tests) can be briefed to one worker under `07`
-section 6.2. The visual wiring of each surface is done by that surface's owner, as in `21`.
+**Checks, every wave** (`07` sections 4 and 5): the gate's steps pass; the rule checker finds no reference to
+the admin backend in `src/frontend`; the fileserver runs on a free port with a temporary `DATA_DIR`, never
+`~/.giga-stream`; the wired surface is driven in the browser against it and looked at at both sizes; the embed
+waves are also driven in the Electron window (that is where the guards live). The fileserver is started only with
+the owner's say (`07` section 4).
+
+**Workers.** One per wave, in worktrees under `D:\Projects\.giga-worktrees\` cut from the baseline the coordinator
+commits first (`07` §6.2). Workers write the tests their brief names and do not run them; the coordinator lands
+every branch, runs the gate and the real checks, and sends any failure back to the same worker with the exact
+output (`07` §6.5).
 
 ## 7. Done when
 
 Every control of `21` that was disabled or local in phase 1 either works against the fileserver or is disabled with the
-reason the fileserver gives; the walks of `05` section 3, 4 and 5 run in the browser against the fileserver; the
-fixtures are gone; and the gate's frontend steps pass. The Electron window is checked in phase 2's final wave (`08`
-phase 11), not here.
+reason the fileserver gives; a title plays through its provider's embedded player with resume, progress and source
+switching; the events drawer shows the network log of §3.7; the settings round trip persists every key of `03` §3.2;
+the walks of `05` section 3, 4 and 5 run in the browser against the fileserver; the fixtures are gone; and the gate's
+frontend steps pass. The Electron window is checked in wave 2.7 and again in `08` phase 11.
 
 ## 7a. Scan progress: what the server gives and what is missing (checked 2026-10-16)
 
 The shared scanner (`src/shared/media/src/scan/folder-scan.ts`) yields `found`, `probed`, `progress` (found,
 probed, total) and `done`. The fileserver's scan runner (`services/scan-service.ts`) records each found file at
 once, so a collection's item count rises during a scan, and `GET /api/folders/:folderId/scan` streams the events
-as NDJSON with a catch-up snapshot. That is enough for the rail's scanning state (the tooltip's "N videos so far")
-and the status bar's running work, once wave 2.3 builds `services/scan-stream.ts`. Three gaps:
+as NDJSON with a catch-up snapshot. Wave B fixes the one server gap: the walk reports percent `null`
+(indeterminate) while `total` is unknown, instead of `0`. The other two notes stand: a scan the interface did not
+start is learned of at the next state read, and `poster-fetch`/`media-probe` percent changes are seen at the next
+state read — enough for the rail and the status bar, by the no-polling rule.
 
-1. **No push.** There is no fileserver socket (`03` section 4), so the interface learns a scan is running only
-   from its own Attach / Rescan answer or the next `GET /api/state` (mount, surface switch, Refresh). A scan the
-   interface did not start (Rescan on startup) appears at that read; the interface then opens the folder's
-   stream. Decide whether that is enough before wave 2.3.
-2. **The walk reports 0%.** While the walk runs, `progress.total` is null and the runner calls
-   `context.report(0)`, so the job reads 0% and then jumps. It should report `null` (indeterminate), which the
-   status bar draws as a full pulsing bar. A one-line server fix.
-3. **Other jobs do not stream.** `poster-fetch` and `media-probe` percent changes are seen only at the next state
-   read; the status bar shows them as they were last read.
+## 8. Decisions taken (formerly open questions)
 
-## 8. Open questions
-
-1. **Events drawer rows (wave 2.6).** Decided in principle: network traffic (`21` section 9). Three decisions are open:
-   - **Path.** Host only (the probe's recommendation, and what the Electron host already reports), or host and path with
-     the query dropped. Paths of the fileserver's own API carry ids, not secrets; a stream address may carry a token.
-   - **Electron blocked counts.** They reach the renderer only by a push, which `01` section 1.2 forbids ("no push channel").
-     Either the counts are read by request, or `01` section 1.2 is amended first. Recommendation: read by request.
-   - **Embed traffic.** The interface cannot see what a provider's embed fetches, in a browser or in Electron. The drawer
-     shows the embed's load outcome and the blocked counts only, and says so in the row's tooltip. Confirm.
-   - **Missing data.** `data\providers.json` is not in `giga-stream-poc\src\mockup`. Provide it, or say where it is, before
-     the provider stage is built.
-2. **Provider stage (`06` 5.3).** Outside this phase. It waits for the write-up from `14`.
+1. **Events drawer rows.** Network traffic per §3.7: host only, never a path or query; the guard reports arrive
+   through `pocHost.onGuard` (the preload's named capability, `01` §7 — not an application push); the embed's
+   allowed requests are not visible in either runtime and the drawer does not claim them; `<img>` loads are not
+   logged. Provider records' `data/providers.json` question is dissolved: the backend now carries the templates
+   (§0.1), so the interface needs no provider catalog at all.
+2. **Provider stage.** Built in wave 2.5 from the PoC's proven mechanics, per §3.4a. Embed-family providers only;
+   stream-family sources wait until one is proven playable without a resolve step (`00` §5, `16` §3.2).
+3. **Source preference persistence.** In-session only in this phase: the pick lives in the playback slice, the next
+   open auto-selects the first source by order. A per-title stored preference (`16` §6.3) is user data and waits
+   for its own contract change in `03` (fileserver table) — noted, not built here.
+4. **Providers and `api_key`.** The fileserver stops attaching raw provider records; answers carry `sources`
+   (§0.1). The credentials never reach the renderer.
+5. **Browser-case containment.** Provider embeds are always sandboxed in a browser, unsandboxed in Electron; the
+   interface says `unprotected` in the browser case (`14` §2.3, `16` §9.4 defaulted).
