@@ -7,8 +7,8 @@
     "node": ">=24.11"
   },
   "scripts": {
-    "kill-ports": "npx --yes kill-port 8090 3001 8097",
-    "dev": "npm run kill-ports && concurrently --names backend,fileserver,live-server --prefix-colors cyan,yellow,green \"npm run dev --prefix src/backend\" \"npm run dev:gateway --prefix src/fileserver\" \"npm run live:dev\"",
+    "kill-ports": "npx --yes kill-port 8090 8091 3001 8097",
+    "dev": "npm run kill-ports && concurrently --kill-others --names backend,electron,live-server --prefix-colors cyan,yellow,green \"npm run dev --prefix src/backend\" \"npm run dev --prefix src/fileserver\" \"npm run live:dev\"",
     "fixtures": "node scripts/fixtures/make-fixtures.mjs",
     "live:dev": "npm run fixtures && npm run dev:test-channels --prefix src/live-server",
     "live:start": "npm start --prefix src/live-server",
