@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_QUERY, collectionSource } from "@/lib/library-query";
 import { memberRows, type MemberRow } from "@/lib/collections-members";
-import { readLibrary } from "@/services/library";
+import { readAllLibraryPages } from "@/services/library";
 import { useAppStore } from "@/store/app-store";
 
 export interface CollectionMembersData {
@@ -18,7 +18,7 @@ export function useCollectionMembers(collectionId: string): CollectionMembersDat
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    void readLibrary({ ...DEFAULT_QUERY, source: collectionSource(collectionId) }, controller.signal).then((answer) => {
+    void readAllLibraryPages({ ...DEFAULT_QUERY, source: collectionSource(collectionId) }, controller.signal).then((answer) => {
       setRows(memberRows(answer.items.map((item) => item.ref), answer.items));
       setLoading(false);
       useAppStore.getState().rememberLibraryItems(answer.items);

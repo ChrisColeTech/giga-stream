@@ -100,10 +100,10 @@ describe("collection routes", () => {
     });
     await removeMember("c-1", ref);
 
-    globalThis.fetch = answer({ collectionIds: ["c-1"] }, (input) => {
+    globalThis.fetch = answer({ memberships: [{ collectionId: "c-1", source: "folder" }] }, (input) => {
       assert.equal(input, "/api/items/title/movie%2F1/collections");
     });
-    assert.deepEqual(await readMemberships(ref), ["c-1"]);
+    assert.deepEqual(await readMemberships(ref), [{ collectionId: "c-1", source: "folder" }]);
   });
 });
 

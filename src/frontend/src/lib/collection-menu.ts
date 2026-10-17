@@ -1,7 +1,9 @@
 import type { CollectionRow } from "@/types/collection";
 import type { MenuItem } from "@/types/menu";
+import type { MembershipSource } from "@/types/library";
 
 type Submenu = Extract<MenuItem, { kind: "submenu" }>;
+export const FOLDER_MEMBERSHIP_REASON = "This video comes from an attached folder.";
 
 /**
  * The `Collections ▸` submenu of `06` section 4.5 (the family standard): one row per collection, with a check mark for
@@ -12,7 +14,7 @@ type Submenu = Extract<MenuItem, { kind: "submenu" }>;
  */
 export function collectionsSubmenu(
   collections: readonly CollectionRow[],
-  isMember: (collectionId: string) => boolean,
+  membership: (collectionId: string) => boolean | MembershipSource,
   toggle: (collectionId: string) => void,
 ): Submenu {
   const items: Submenu["items"] =
@@ -26,11 +28,17 @@ export function collectionsSubmenu(
             onSelect: () => undefined,
           },
         ]
-      : collections.map((collection) => ({
-          kind: "action" as const,
-          label: collection.name,
-          checked: isMember(collection.id),
-          onSelect: () => toggle(collection.id),
-        }));
+      : collections.map((collection) => {
+          const source = membership(collection.id);
+          const folder = source === "folder";
+          return {
+            kind: "action" as const,
+            label: collection.name,
+            checked: source !== false,
+            disabled: folder,
+            disabledReason: folder ? FOLDER_MEMBERSHIP_REASON : undefined,
+            onSelect: () => toggle(collection.id),
+          };
+        });
   return { kind: "submenu", label: "Collections", items };
 }

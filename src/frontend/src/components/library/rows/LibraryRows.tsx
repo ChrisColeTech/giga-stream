@@ -5,6 +5,7 @@ import type { Scope } from "@/lib/library-query";
 import { buildShelves, type ShelfGroup } from "@/lib/rows-shelves";
 import type { CollectionRow } from "@/types/collection";
 import { TypeStrip } from "../TypeStrip";
+import { LibraryPager } from "../LibraryPager";
 import { RowsShelf } from "./RowsShelf";
 import { RowsSkeleton } from "./RowsSkeleton";
 import { navigateRows } from "./rows-navigation";
@@ -25,6 +26,10 @@ export interface LibraryRowsProps {
   readonly onSeeAll: (group: ShelfGroup) => void;
   readonly onRefresh: () => void;
   readonly loading: boolean;
+  readonly paging: boolean;
+  readonly hasMore: boolean;
+  readonly onLoadMore: () => void;
+  readonly titleRegionsLoading: boolean;
   /** Drawn under the type strip: the History strip while History is open, as the grid draws it. */
   readonly strip?: ReactNode;
 }
@@ -45,6 +50,10 @@ export function LibraryRows({
   onSeeAll,
   onRefresh,
   loading,
+  paging,
+  hasMore,
+  onLoadMore,
+  titleRegionsLoading,
   strip,
 }: LibraryRowsProps) {
   const marks = useAppStore((state) => state.marks);
@@ -76,6 +85,8 @@ export function LibraryRows({
               onSeeAll={onSeeAll}
             />
           ))}
+          {titleRegionsLoading && shelves.length > 0 && <RowsSkeleton />}
+          <LibraryPager hasMore={hasMore} loading={paging} view="rows" onVisible={onLoadMore} />
         </div>
       )}
     </div>

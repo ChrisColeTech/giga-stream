@@ -8,6 +8,7 @@ import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
 import type { MemberRow } from "@/lib/collections-members";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { CollectionIconAction } from "./CollectionIconAction";
+import { FOLDER_MEMBERSHIP_REASON } from "@/lib/collection-menu";
 
 function memberColumns(remove: (row: MemberRow) => void): ReadonlyArray<Column<MemberRow>> {
   return [
@@ -29,7 +30,12 @@ function memberColumns(remove: (row: MemberRow) => void): ReadonlyArray<Column<M
       align: "right",
       width: "56px",
       cell: (row) => (
-        <CollectionIconAction icon={X} label={`Remove ${row.title}`} onPress={() => remove(row)} />
+        <CollectionIconAction
+          icon={X}
+          label={`Remove ${row.title}`}
+          reason={row.source === "folder" ? FOLDER_MEMBERSHIP_REASON : undefined}
+          onPress={() => remove(row)}
+        />
       ),
     },
   ];
@@ -50,6 +56,7 @@ export function CollectionMembers({
 }) {
   const verbs = useCollectionVerbs();
   const remove = (row: MemberRow): void => {
+    if (row.source !== "manual") return;
     void verbs.removeMember(collectionId, row.ref).then((removed) => { if (removed) onRemoved(); });
   };
   return (

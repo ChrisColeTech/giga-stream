@@ -2,6 +2,11 @@
 export type ItemRef = { readonly kind: "title"; readonly id: string } | { readonly kind: "local"; readonly id: string };
 
 export type LibraryKind = "movie" | "tv" | "local";
+export type MembershipSource = "manual" | "folder";
+export interface Membership {
+  readonly collectionId: string;
+  readonly source: MembershipSource;
+}
 
 export interface Progress {
   readonly positionMs: number;
@@ -24,6 +29,8 @@ export interface LibraryItem {
   readonly quality?: string;
   readonly genres: readonly string[];
   readonly favorite: boolean;
+  /** Present only in a collection view; manual wins while both sources include the item. */
+  readonly collectionSource?: MembershipSource;
   readonly progress?: Progress;
 }
 

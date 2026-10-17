@@ -107,10 +107,10 @@ export function continueItems(items: readonly ResolvedItem[], scope: Scope, sour
 }
 
 export interface ViewCounts {
-  readonly all: number;
-  readonly history: number;
-  readonly favorites: number;
-  readonly collections: Readonly<Partial<Record<string, number>>>;
+  readonly all?: number;
+  readonly history?: number;
+  readonly favorites?: number;
+  readonly collections: Readonly<Partial<Record<string, number | undefined>>>;
 }
 
 export function viewCounts(items: readonly ResolvedItem[], collections: readonly CollectionRow[]): ViewCounts {

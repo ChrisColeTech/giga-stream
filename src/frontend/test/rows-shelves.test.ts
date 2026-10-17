@@ -32,6 +32,7 @@ function item(
     favorite: false,
     collectionIds: [],
     ...extra,
+    collectionSources: extra.collectionSources ?? {},
   };
 }
 

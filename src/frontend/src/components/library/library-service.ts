@@ -2,16 +2,17 @@ import { addMember, readMemberships, removeMember } from "@/services/collections
 import { writeFavorite } from "@/services/favorites";
 import { clearWatch, removeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
-import type { ItemRef } from "@/types/library";
+import type { ItemRef, Membership, MembershipSource } from "@/types/library";
 import { itemKey } from "@/lib/library-marks";
 import type { ServiceResult } from "@/services/not-connected";
 
 const favoriteGeneration = new Map<string, number>();
 const membershipGeneration = new Map<string, number>();
+const membershipReadGeneration = new Map<string, number>();
 const favoriteQueue = new Map<string, Promise<void>>();
 const membershipQueue = new Map<string, Promise<void>>();
 const favoriteCommitted = new Map<string, boolean>();
-const membershipCommitted = new Map<string, boolean>();
+const membershipCommitted = new Map<string, MembershipSource | undefined>();
 const sentence = (error: unknown): string => error instanceof Error ? error.message : "Could not reach the fileserver.";
 
 function next(map: Map<string, number>, key: string): number {
@@ -42,7 +43,10 @@ export async function changeFavourite(ref: ItemRef, favorite: boolean): Promise<
     try {
       const answer = await writeFavorite(ref, favorite);
       favoriteCommitted.set(key, answer.favorite);
-      if (favoriteGeneration.get(key) === generation) useAppStore.getState().setFavourite(key, answer.favorite);
+      if (favoriteGeneration.get(key) === generation) {
+        useAppStore.getState().setFavourite(key, answer.favorite);
+        useAppStore.getState().requestLibraryRefresh();
+      }
     } catch (error: unknown) {
       if (favoriteGeneration.get(key) === generation) {
         useAppStore.getState().setFavourite(key, favoriteCommitted.get(key) ?? previous);
@@ -54,15 +58,23 @@ export async function changeFavourite(ref: ItemRef, favorite: boolean): Promise<
   await write;
 }
 
-export async function loadMemberships(ref: ItemRef, signal?: AbortSignal): Promise<readonly string[]> {
+function storedMemberships(key: string): Membership[] {
+  const state = useAppStore.getState();
+  return (state.marks.memberships[key] ?? []).map((collectionId) => ({
+    collectionId,
+    source: state.marks.membershipSources[key]?.[collectionId] ?? "manual",
+  }));
+}
+
+export async function loadMemberships(ref: ItemRef, signal?: AbortSignal): Promise<readonly Membership[]> {
   const key = itemKey(ref);
-  const generation = next(membershipGeneration, key);
-  const ids = await readMemberships(ref, signal);
-  if (membershipGeneration.get(key) === generation) {
-    useAppStore.getState().setMemberships(key, ids);
-    return ids;
+  const generation = next(membershipReadGeneration, key);
+  const memberships = await readMemberships(ref, signal);
+  if (membershipReadGeneration.get(key) === generation) {
+    useAppStore.getState().setMemberships(key, memberships);
+    return memberships;
   }
-  return useAppStore.getState().marks.memberships[key] ?? [];
+  return storedMemberships(key);
 }
 
 export async function changeMembership(
@@ -72,23 +84,34 @@ export async function changeMembership(
   _current?: readonly string[],
 ): Promise<void> {
   const item = itemKey(ref);
-  const generation = next(membershipGeneration, item);
   const queueKey = `${item}:${collectionId}`;
-  const current = useAppStore.getState().marks.memberships[item] ?? [];
-  const previous = current.includes(collectionId);
+  const generation = next(membershipGeneration, queueKey);
+  next(membershipReadGeneration, item);
+  const previous = useAppStore.getState().marks.membershipSources[item]?.[collectionId];
   if (!membershipCommitted.has(queueKey)) membershipCommitted.set(queueKey, previous);
-  useAppStore.getState().setMembership(item, collectionId, member);
+  useAppStore.getState().setMembership(item, collectionId, member, "manual");
   const pending = membershipQueue.get(queueKey) ?? Promise.resolve();
   const write = pending.catch(() => undefined).then(async () => {
+    let answer;
     try {
-      const answer = member ? await addMember(collectionId, ref) : await removeMember(collectionId, ref);
-      membershipCommitted.set(queueKey, member);
-      if (membershipGeneration.get(item) === generation) useAppStore.getState().upsertCollection(answer);
+      answer = member ? await addMember(collectionId, ref) : await removeMember(collectionId, ref);
     } catch (error: unknown) {
-      if (membershipGeneration.get(item) === generation) {
-        useAppStore.getState().setMembership(item, collectionId, membershipCommitted.get(queueKey) ?? previous);
+      if (membershipGeneration.get(queueKey) === generation) {
+        const committed = membershipCommitted.get(queueKey);
+        useAppStore.getState().setMembership(item, collectionId, committed !== undefined, committed);
         useAppStore.getState().say(sentence(error), "warn");
       }
+      return;
+    }
+    membershipCommitted.set(queueKey, member ? "manual" : undefined);
+    const state = useAppStore.getState();
+    state.upsertCollection(answer);
+    state.requestLibraryRefresh();
+    try {
+      const memberships = await readMemberships(ref);
+      if (membershipGeneration.get(queueKey) === generation) state.setMemberships(item, memberships);
+    } catch (error: unknown) {
+      if (membershipGeneration.get(queueKey) === generation) state.say(sentence(error), "warn");
     }
   });
   membershipQueue.set(queueKey, write);
@@ -103,6 +126,7 @@ export async function removeWatchEntry(
   optimistic();
   try {
     await removeWatch(watchId);
+    useAppStore.getState().requestLibraryRefresh();
     return true;
   } catch (error: unknown) {
     rollback();
@@ -118,6 +142,7 @@ export async function clearWatchHistory(
   optimistic();
   try {
     await clearWatch();
+    useAppStore.getState().requestLibraryRefresh();
     return true;
   } catch (error: unknown) {
     rollback();

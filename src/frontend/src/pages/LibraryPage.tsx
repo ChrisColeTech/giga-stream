@@ -11,7 +11,6 @@ import { useLibraryRequest } from "@/hooks/useLibraryRequest";
 import { collectionRow } from "@/lib/collections-model";
 import {
   NO_HISTORY,
-  itemKey,
   resolveItems,
   withCleared,
   withRemoved,
@@ -27,6 +26,7 @@ import {
   type SourceId,
 } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
+import { libraryRenderState } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
 
 export function LibraryPage({ active }: { active: boolean }) {
@@ -44,9 +44,10 @@ export function LibraryPage({ active }: { active: boolean }) {
     () => resolveItems(data.continuing, marks, history, {}),
     [data.continuing, marks, history],
   );
+  const render = libraryRenderState(items, data.page?.titlesAvailable ?? false, query.scope);
   const shown = query.source === "history"
-    ? items.filter((item) => item.progress !== undefined)
-    : query.source === "favorites" ? items.filter((item) => item.favorite) : items;
+    ? render.items.filter((item) => item.progress !== undefined)
+    : query.source === "favorites" ? render.items.filter((item) => item.favorite) : render.items;
   const patch = useCallback((change: Partial<LibraryQuery>) => setQuery((current) => ({ ...current, ...change })), []);
   useLibraryRequest({ patch, setView, setSelected });
   const onSource = (source: SourceId): void => patch({ source });
@@ -58,11 +59,11 @@ export function LibraryPage({ active }: { active: boolean }) {
 
   const onRemoveWatch = useCallback((item: ResolvedItem): void => {
     if (item.watchId === undefined) return;
-    const key = itemKey(item.ref);
+    const watchId = item.watchId;
     void removeWatchEntry(
-      item.watchId,
-      () => setHistory((current) => withRemoved(current, key)),
-      () => setHistory((current) => withRestored(current, key)),
+      watchId,
+      () => setHistory((current) => withRemoved(current, watchId)),
+      () => setHistory((current) => withRestored(current, watchId)),
     );
   }, []);
   const onClearHistory = useCallback((): void => {
@@ -70,17 +71,19 @@ export function LibraryPage({ active }: { active: boolean }) {
     void clearWatchHistory(
       () => setHistory((current) => {
         previous = current;
-        return { ...withCleared(), removed: current.removed };
+        return withCleared(items.flatMap((item) => item.watchId === undefined ? [] : [item.watchId]));
       }),
       () => setHistory(previous),
     );
-  }, []);
+  }, [items]);
   const rows = view === "rows";
   const center = rows ? (
     <LibraryRows
       scope={query.scope} items={shown} continuing={continuing} collections={collections} selected={selected}
       showContinue={prefs.showContinue && query.source !== "history"} onScope={onScope} onSelect={setSelected}
       onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll} onRefresh={data.refresh} loading={data.loading}
+      paging={data.paging} hasMore={data.page?.nextCursor !== undefined} onLoadMore={data.loadMore}
+      titleRegionsLoading={render.titleRegionsLoading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
   ) : (
@@ -89,6 +92,8 @@ export function LibraryPage({ active }: { active: boolean }) {
       shown={shown} continuing={continuing} collections={collections} selected={selected} onScope={onScope}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
       onRefresh={data.refresh} loading={data.loading}
+      paging={data.paging} hasMore={data.page?.nextCursor !== undefined} onLoadMore={data.loadMore}
+      titleRegionsLoading={render.titleRegionsLoading}
     />
   );
 

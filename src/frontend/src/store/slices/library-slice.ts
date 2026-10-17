@@ -5,9 +5,9 @@ import type { JobListSchema, JobSchema } from "@/services/schemas/job-schema";
 import type { z } from "zod";
 import type { ScanProgress } from "@/types/collection";
 import type { LibraryPrefs } from "@/types/settings";
-import type { LibraryItem } from "@/types/library";
+import type { LibraryItem, Membership, MembershipSource } from "@/types/library";
 
-const EMPTY_COUNTS: ViewCounts = { all: 0, history: 0, favorites: 0, collections: {} };
+const EMPTY_COUNTS: ViewCounts = { collections: {} };
 
 export interface LibrarySlice {
   collections: z.infer<typeof CollectionListSchema>;
@@ -18,6 +18,7 @@ export interface LibrarySlice {
   libraryCounts: ViewCounts;
   libraryQuery: LibraryQuery;
   libraryItems: readonly LibraryItem[];
+  libraryRefreshSerial: number;
   library: LibraryPrefs;
   setCollections: (collections: z.infer<typeof CollectionListSchema>) => void;
   beginCollectionsRead: () => number;
@@ -35,13 +36,15 @@ export interface LibrarySlice {
   setLibraryCounts: (counts: ViewCounts) => void;
   setLibraryQuery: (change: Partial<LibraryQuery>) => void;
   rememberLibraryItems: (items: readonly LibraryItem[]) => void;
+  requestLibraryRefresh: () => void;
   setLibraryPrefs: (change: Partial<LibraryPrefs>) => void;
   setFavourite: (key: string, favourite: boolean) => void;
-  setMembership: (key: string, collectionId: string, member: boolean) => void;
-  setMemberships: (key: string, collectionIds: readonly string[]) => void;
+  setMembership: (key: string, collectionId: string, member: boolean, source?: MembershipSource) => void;
+  setMemberships: (key: string, memberships: readonly Membership[]) => void;
   marks: {
     readonly favourites: Readonly<Record<string, boolean>>;
     readonly memberships: Readonly<Record<string, readonly string[]>>;
+    readonly membershipSources: Readonly<Record<string, Readonly<Record<string, MembershipSource>>>>;
   };
 }
 
@@ -62,6 +65,7 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
     libraryCounts: EMPTY_COUNTS,
     libraryQuery: { ...DEFAULT_QUERY },
     libraryItems: [],
+    libraryRefreshSerial: 0,
     library: {
       libraryView: DEFAULT_SETTINGS.libraryView,
       librarySort: DEFAULT_SETTINGS.librarySort,
@@ -134,24 +138,37 @@ export function librarySlice(set: Set, get: Get): LibrarySlice {
       for (const item of items) byKey.set(`${item.ref.kind}:${item.ref.id}`, item);
       set({ libraryItems: [...byKey.values()] });
     },
+    requestLibraryRefresh: () => set({ libraryRefreshSerial: get().libraryRefreshSerial + 1 }),
     setLibraryPrefs: (change) =>
       set({ library: { ...get().library, ...change }, settingsRevision: get().settingsRevision + 1 }),
-    marks: { favourites: {}, memberships: {} },
+    marks: { favourites: {}, memberships: {}, membershipSources: {} },
     setFavourite: (key, favourite) => {
       const marks = get().marks;
       set({ marks: { ...marks, favourites: { ...marks.favourites, [key]: favourite } } });
     },
-    setMembership: (key, collectionId, member) => {
+    setMembership: (key, collectionId, member, source = "manual") => {
       const marks = get().marks;
       const current = marks.memberships[key] ?? [];
       const next = member
         ? [...current.filter((id) => id !== collectionId), collectionId]
         : current.filter((id) => id !== collectionId);
-      set({ marks: { ...marks, memberships: { ...marks.memberships, [key]: next } } });
+      const sources = { ...marks.membershipSources[key] };
+      if (member) sources[collectionId] = source;
+      else delete sources[collectionId];
+      set({ marks: {
+        ...marks,
+        memberships: { ...marks.memberships, [key]: next },
+        membershipSources: { ...marks.membershipSources, [key]: sources },
+      } });
     },
-    setMemberships: (key, collectionIds) => {
+    setMemberships: (key, memberships) => {
       const marks = get().marks;
-      set({ marks: { ...marks, memberships: { ...marks.memberships, [key]: [...collectionIds] } } });
+      const sources = Object.fromEntries(memberships.map((row) => [row.collectionId, row.source]));
+      set({ marks: {
+        ...marks,
+        memberships: { ...marks.memberships, [key]: memberships.map((row) => row.collectionId) },
+        membershipSources: { ...marks.membershipSources, [key]: sources },
+      } });
     },
   };
 }

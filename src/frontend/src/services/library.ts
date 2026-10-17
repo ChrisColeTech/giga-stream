@@ -1,7 +1,8 @@
 import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
+import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
-import { ContinuePageSchema, LibraryPageSchema } from "./schemas/library-schema";
+import { CollectionLibraryPageSchema, ContinuePageSchema, LibraryPageSchema } from "./schemas/library-schema";
 import { notConnected, type ServiceResult } from "./not-connected";
 import type { ItemRef } from "@/types/library";
 
@@ -71,7 +72,7 @@ export class LibrarySearchSession {
   }
 }
 
-export function readLibrary(query: LibraryQuery, signal?: AbortSignal) {
+export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string) {
   const params = new URLSearchParams();
   const collectionId = collectionOf(query.source);
   params.set("view", collectionId === null ? query.source : "collection");
@@ -83,15 +84,46 @@ export function readLibrary(query: LibraryQuery, signal?: AbortSignal) {
   for (const genre of query.genres) params.append("genre", genre);
   if (query.year !== "") params.set("year", query.year);
   params.set("watched", query.watched);
-  return api(`/api/library?${params.toString()}`, LibraryPageSchema, { signal, area: "Catalog" });
+  if (cursor !== undefined) params.set("cursor", cursor);
+  const schema = collectionId === null ? LibraryPageSchema : CollectionLibraryPageSchema;
+  return api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
 }
 
 export function readContinue(signal?: AbortSignal) {
   return api("/api/library/continue", ContinuePageSchema, { signal, area: "Catalog" }).then((answer) => answer.items);
 }
 
+export function libraryRowIdentity(item: LibraryItem): string {
+  return item.watchId ?? `${item.ref.kind}:${item.ref.id}`;
+}
+
+export function appendLibraryPage(current: LibraryPage, next: LibraryPage): LibraryPage {
+  const seen = new Set(current.items.map(libraryRowIdentity));
+  return {
+    ...next,
+    items: [...current.items, ...next.items.filter((item) => !seen.has(libraryRowIdentity(item)))],
+    total: next.total ?? current.total,
+  };
+}
+
+export function knownLibraryCount(page: LibraryPage): number | undefined {
+  return page.total ?? (page.nextCursor === undefined ? page.items.length : undefined);
+}
+
+export async function readAllLibraryPages(query: LibraryQuery, signal?: AbortSignal): Promise<LibraryPage> {
+  let page: LibraryPage = await readLibrary(query, signal);
+  const cursors = new Set<string>();
+  while (page.nextCursor !== undefined) {
+    const cursor = page.nextCursor;
+    if (cursors.has(cursor)) throw new Error("The library returned the same page cursor twice.");
+    cursors.add(cursor);
+    const next = await readLibrary(query, signal, cursor);
+    page = appendLibraryPage(page, next);
+  }
+  return page;
+}
+
 /* Player and Settings retain their phase-1 calls until wave 2.5; Library uses the real modules above and `watch.ts`. */
 export const playItem = (_ref: ItemRef): ServiceResult => notConnected();
 export const playEpisode = (_ref: ItemRef, _season: number, _episode: number): ServiceResult => notConnected();
 export const removeHistoryEntry = (_watchId: string): ServiceResult => notConnected();
-export const clearHistory = (): ServiceResult => notConnected();

@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { DEFAULT_QUERY, collectionSource } from "@/lib/library-query";
 import { writeFavorite } from "@/services/favorites";
-import { LibrarySearchSession, readContinue, readLibrary } from "@/services/library";
+import {
+  LibrarySearchSession,
+  appendLibraryPage,
+  knownLibraryCount,
+  readAllLibraryPages,
+  readContinue,
+  readLibrary,
+} from "@/services/library";
+import { LibraryItemSchema } from "@/services/schemas/library-schema";
+import { EpisodeSchema, TitleSchema } from "@/services/schemas/title-schema";
 import { readRelated, readSeason, readTitle } from "@/services/titles";
 import { clearWatch, removeWatch, writeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
@@ -43,13 +52,23 @@ describe("library routes", () => {
 
   it("sends history, favorites and collection views exactly", async () => {
     const calls: string[] = [];
-    globalThis.fetch = async (input) => { calls.push(String(input)); return success(page); };
+    globalThis.fetch = async (input) => {
+      calls.push(String(input));
+      return success(calls.length === 3 ? { ...page, items: [{ ...item, collectionSource: "manual" }] } : page);
+    };
     await readLibrary({ ...DEFAULT_QUERY, source: "history" });
     await readLibrary({ ...DEFAULT_QUERY, source: "favorites" });
     await readLibrary({ ...DEFAULT_QUERY, source: collectionSource("kids/one") });
     assert.match(calls[0] ?? "", /^\/api\/library\?view=history&/);
     assert.match(calls[1] ?? "", /^\/api\/library\?view=favorites&/);
     assert.match(calls[2] ?? "", /^\/api\/library\?view=collection&collectionId=kids%2Fone&/);
+  });
+
+  it("requires collectionSource on collection-view rows", async () => {
+    globalThis.fetch = async () => success(page);
+    await assert.rejects(readLibrary({ ...DEFAULT_QUERY, source: collectionSource("c1") }), {
+      code: "response.invalid",
+    });
   });
 
   it("reads Continue and refuses malformed pages and server errors", async () => {
@@ -85,6 +104,47 @@ describe("latest-only Library search", () => {
     pending[1]?.resolve({ ...page, total: 2 });
     await Promise.resolve();
     assert.deepEqual(answers.map((answer) => answer.total), [undefined, 2]);
+  });
+});
+
+describe("library pagination", () => {
+  it("sends the cursor, drains pages, and deduplicates by watch row before item identity", async () => {
+    const calls: string[] = [];
+    const first = { ...page, items: [{ ...item, watchId: "w1" }], nextCursor: "page/2" };
+    const second = {
+      ...page,
+      items: [{ ...item, watchId: "w1" }, { ...item, watchId: "w2" }],
+      nextCursor: undefined,
+    };
+    globalThis.fetch = async (input) => {
+      calls.push(String(input));
+      return success(calls.length === 1 ? first : second);
+    };
+    const answer = await readAllLibraryPages({ ...DEFAULT_QUERY, source: "history" });
+    assert.equal(answer.items.length, 2);
+    assert.deepEqual(answer.items.map((row) => row.watchId), ["w1", "w2"]);
+    assert.match(calls[1] ?? "", /cursor=page%2F2/);
+  });
+
+  it("preserves the next cursor and never calls a partial first page a total", () => {
+    const first = { ...page, nextCursor: "next" };
+    const combined = appendLibraryPage(first, { ...page, items: [], nextCursor: "last" });
+    assert.equal(combined.nextCursor, "last");
+    assert.equal(knownLibraryCount(first), undefined);
+    assert.equal(knownLibraryCount({ ...page, total: 40, nextCursor: "next" }), 40);
+    assert.equal(knownLibraryCount(page), 1);
+  });
+});
+
+describe("image address schemas", () => {
+  it("accepts only same-origin image-cache paths", () => {
+    assert.equal(LibraryItemSchema.safeParse(item).success, true);
+    assert.equal(LibraryItemSchema.safeParse({ ...item, posterUrl: "https://images.test/poster.jpg" }).success, false);
+    const title = { id: "movie-1", kind: "movie", title: "One", genres: [], cast: [] };
+    assert.equal(TitleSchema.safeParse({ ...title, backdropUrl: "/api/images/backdrop" }).success, true);
+    assert.equal(TitleSchema.safeParse({ ...title, backdropUrl: "https://images.test/backdrop" }).success, false);
+    assert.equal(EpisodeSchema.safeParse({ season: 1, episode: 1, stillUrl: "/api/images/still" }).success, true);
+    assert.equal(EpisodeSchema.safeParse({ season: 1, episode: 1, stillUrl: "/relative/still" }).success, false);
   });
 });
 

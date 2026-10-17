@@ -1,5 +1,7 @@
 import { NavGroup, NavItem } from "@/components/ui/NavRail";
 import type { SourceId, ViewCounts } from "@/lib/library-query";
+import { SHIMMER } from "@/components/ui/SkeletonRows";
+import { cn } from "@/lib/cn";
 
 const VIEWS = [
   { id: "all", label: "All" },
@@ -18,7 +20,9 @@ export function ViewsSection({ source, counts, onSource }: ViewsSectionProps) {
   return (
     <NavGroup heading="Views">
       {VIEWS.map((view) => (
-        <NavItem key={view.id} selected={source === view.id} count={counts[view.id]} onClick={() => onSource(view.id)}>
+        <NavItem key={view.id} selected={source === view.id}
+          count={counts[view.id] ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
+          onClick={() => onSource(view.id)}>
           {view.label}
         </NavItem>
       ))}

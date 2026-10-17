@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { collectionOf, matchesQuery, type LibraryQuery, type ViewCounts } from "@/lib/library-query";
-import { LibrarySearchSession, readContinue, readLibrary } from "@/services/library";
+import { DEFAULT_QUERY, collectionOf, matchesQuery, type LibraryQuery, type ViewCounts } from "@/lib/library-query";
+import {
+  LibrarySearchSession,
+  appendLibraryPage,
+  knownLibraryCount,
+  readContinue,
+  readLibrary,
+} from "@/services/library";
 import { listCollections } from "@/services/collections";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem, LibraryPage } from "@/types/library";
@@ -12,21 +18,23 @@ export interface LibraryData {
   readonly page: LibraryPage | null;
   readonly continuing: readonly LibraryItem[];
   readonly loading: boolean;
+  readonly paging: boolean;
+  readonly loadMore: () => void;
   readonly refresh: () => void;
-}
-
-function countFor(page: LibraryPage): number {
-  return page.total ?? page.items.length;
 }
 
 export function useLibraryData(active: boolean, query: LibraryQuery, showContinue: boolean): LibraryData {
   const [page, setPage] = useState<LibraryPage | null>(null);
   const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paging, setPaging] = useState(false);
   const session = useRef<LibrarySearchSession | null>(null);
   const sideRequest = useRef<AbortController | null>(null);
+  const pageRequest = useRef<AbortController | null>(null);
+  const queryGeneration = useRef(0);
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
+  const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
 
   if (session.current === null) {
     session.current = new LibrarySearchSession(
@@ -35,17 +43,9 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
         setLoading(false);
         const store = useAppStore.getState();
         store.rememberLibraryItems(answer.items);
-        const source = store.libraryQuery.source;
-        const counts = store.libraryCounts;
-        const collectionId = collectionOf(source);
-        store.setLibraryCounts(collectionId === null
-          ? { ...counts, [source]: countFor(answer) }
-          : { ...counts, collections: { ...counts.collections, [collectionId]: countFor(answer) } });
+        acceptCount(store.libraryQuery, answer);
       },
-      (error) => {
-        setLoading(false);
-        useAppStore.getState().say(sentence(error), "warn");
-      },
+      (error) => { setLoading(false); useAppStore.getState().say(sentence(error), "warn"); },
     );
   }
 
@@ -53,33 +53,67 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     sideRequest.current?.abort();
     const controller = new AbortController();
     sideRequest.current = controller;
-    const base = { ...query, search: "", genres: [], year: "", watched: "all" as const };
-    void Promise.all([
+    const collectionsVersion = useAppStore.getState().beginCollectionsRead();
+    const neutral = { ...DEFAULT_QUERY, scope: "all" as const, sort: "newest" as const };
+    const reads = [
       showContinue ? readContinue(controller.signal) : Promise.resolve([]),
       listCollections(controller.signal),
-      readLibrary({ ...base, source: "all" }, controller.signal),
-      readLibrary({ ...base, source: "history" }, controller.signal),
-      readLibrary({ ...base, source: "favorites" }, controller.signal),
-    ]).then(([nextContinue, collections, all, history, favorites]) => {
+      readLibrary({ ...neutral, source: "all" }, controller.signal),
+      readLibrary({ ...neutral, source: "history" }, controller.signal),
+      readLibrary({ ...neutral, source: "favorites" }, controller.signal),
+    ] as const;
+    void Promise.allSettled(reads).then((results) => {
       if (sideRequest.current !== controller) return;
       const store = useAppStore.getState();
-      store.setCollections(collections);
-      store.rememberLibraryItems(nextContinue);
-      const collectionCounts = Object.fromEntries(collections.map((row) => [row.id, row.itemCount]));
+      const [nextContinue, collections, all, history, favorites] = results;
+      if (nextContinue.status === "fulfilled") {
+        setContinuing(nextContinue.value);
+        store.rememberLibraryItems(nextContinue.value);
+      }
+      const collectionsAccepted = collections.status === "fulfilled"
+        && store.acceptCollectionsRead(collectionsVersion, collections.value);
+      const collectionCounts = collections.status === "fulfilled" && collectionsAccepted
+        ? Object.fromEntries(collections.value.map((row) => [row.id, row.itemCount])) : store.libraryCounts.collections;
       const counts: ViewCounts = {
-        all: countFor(all), history: countFor(history), favorites: countFor(favorites), collections: collectionCounts,
+        all: resultCount(all, store.libraryCounts.all),
+        history: resultCount(history, store.libraryCounts.history),
+        favorites: resultCount(favorites, store.libraryCounts.favorites),
+        collections: collectionCounts,
       };
       store.setLibraryCounts(counts);
-      setContinuing(nextContinue);
-    }).catch((error: unknown) => {
-      if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
+      const failed = results.find((result) => result.status === "rejected" && !aborted(result.reason));
+      if (failed?.status === "rejected") store.say(sentence(failed.reason), "warn");
     });
   };
 
   const read = (debounce: boolean): void => {
+    queryGeneration.current += 1;
+    pageRequest.current?.abort();
+    setPaging(false);
     setLoading(true);
     if (debounce) session.current?.search(query);
     else session.current?.readNow(query);
+  };
+
+  const loadMore = (): void => {
+    const cursor = page?.nextCursor;
+    if (cursor === undefined || paging) return;
+    const generation = queryGeneration.current;
+    const controller = new AbortController();
+    pageRequest.current?.abort();
+    pageRequest.current = controller;
+    setPaging(true);
+    void readLibrary(query, controller.signal, cursor).then((next) => {
+      if (generation !== queryGeneration.current || pageRequest.current !== controller) return;
+      setPage((current) => {
+        const merged = current === null ? next : appendLibraryPage(current, next);
+        acceptCount(query, merged);
+        return merged;
+      });
+      useAppStore.getState().rememberLibraryItems(next.items);
+    }).catch((error: unknown) => {
+      if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
+    }).finally(() => { if (pageRequest.current === controller) setPaging(false); });
   };
 
   useEffect(() => {
@@ -88,27 +122,38 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     useAppStore.getState().setLibraryQuery(query);
     read(searchChanged);
   }, [query]);
-
   useEffect(() => {
-    if (active && !previousActive.current) {
-      read(false);
-      readSideData();
-    }
+    if (active && !previousActive.current) { read(false); readSideData(); }
     previousActive.current = active;
   }, [active]);
-
+  useEffect(() => { if (refreshSerial > 0) { read(false); readSideData(); } }, [refreshSerial]);
   useEffect(() => {
     readSideData();
-    return () => {
-      session.current?.cancel();
-      sideRequest.current?.abort();
-    };
+    return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };
   }, [showContinue]);
 
-  const continueSource = collectionOf(query.source) === null ? continuing : page?.items ?? [];
-  const filteredContinue = continueSource.filter((item) => item.progress?.state === "watching" && matchesQuery({
-    ...item,
-    collectionIds: [],
+  const source = collectionOf(query.source) === null ? continuing : page?.items ?? [];
+  const filtered = source.filter((item) => item.progress?.state === "watching" && matchesQuery({
+    ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
-  return { page, continuing: filteredContinue, loading, refresh: () => { read(false); readSideData(); } };
+  return { page, continuing: filtered, loading, paging, loadMore, refresh: () => { read(false); readSideData(); } };
+}
+
+function acceptCount(query: LibraryQuery, page: LibraryPage): void {
+  if (query.scope !== "all" || query.search.trim() !== "" || query.genres.length > 0
+    || query.year !== "" || query.watched !== "all") return;
+  const count = knownLibraryCount(page);
+  if (count === undefined) return;
+  const store = useAppStore.getState();
+  const collectionId = collectionOf(query.source);
+  store.setLibraryCounts(collectionId === null
+    ? { ...store.libraryCounts, [query.source]: count }
+    : { ...store.libraryCounts, collections: { ...store.libraryCounts.collections, [collectionId]: count } });
+}
+
+function resultCount(
+  result: PromiseSettledResult<LibraryPage>,
+  previous: number | undefined,
+): number | undefined {
+  return result.status === "fulfilled" ? knownLibraryCount(result.value) : previous;
 }

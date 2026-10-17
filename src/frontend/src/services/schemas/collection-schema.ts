@@ -23,5 +23,9 @@ export const CollectionSchema = z.object({
 export const CollectionListSchema = z.array(CollectionSchema);
 
 export const FolderSelectionSchema = z.object({ token: z.string().min(1), name: z.string().min(1) });
-export const CollectionIdsSchema = z.object({ collectionIds: z.array(z.string().min(1)) });
+export const MembershipSchema = z.object({
+  collectionId: z.string().min(1),
+  source: z.enum(["manual", "folder"]),
+});
+export const MembershipListSchema = z.object({ memberships: z.array(MembershipSchema) });
 export const RemovedSchema = z.object({ removed: z.string().min(1) });
