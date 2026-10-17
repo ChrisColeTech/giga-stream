@@ -204,6 +204,24 @@ reason the fileserver gives; the walks of `05` section 3, 4 and 5 run in the bro
 fixtures are gone; and the gate's frontend steps pass. The Electron window is checked in phase 2's final wave (`08`
 phase 11), not here.
 
+## 7a. Scan progress: what the server gives and what is missing (checked 2026-10-16)
+
+The shared scanner (`src/shared/media/src/scan/folder-scan.ts`) yields `found`, `probed`, `progress` (found,
+probed, total) and `done`. The fileserver's scan runner (`services/scan-service.ts`) records each found file at
+once, so a collection's item count rises during a scan, and `GET /api/folders/:folderId/scan` streams the events
+as NDJSON with a catch-up snapshot. That is enough for the rail's scanning state (the tooltip's "N videos so far")
+and the status bar's running work, once wave 2.3 builds `services/scan-stream.ts`. Three gaps:
+
+1. **No push.** There is no fileserver socket (`03` section 4), so the interface learns a scan is running only
+   from its own Attach / Rescan answer or the next `GET /api/state` (mount, surface switch, Refresh). A scan the
+   interface did not start (Rescan on startup) appears at that read; the interface then opens the folder's
+   stream. Decide whether that is enough before wave 2.3.
+2. **The walk reports 0%.** While the walk runs, `progress.total` is null and the runner calls
+   `context.report(0)`, so the job reads 0% and then jumps. It should report `null` (indeterminate), which the
+   status bar draws as a full pulsing bar. A one-line server fix.
+3. **Other jobs do not stream.** `poster-fetch` and `media-probe` percent changes are seen only at the next state
+   read; the status bar shows them as they were last read.
+
 ## 8. Open questions
 
 1. **Events drawer rows (wave 2.6).** Decided in principle: network traffic (`21` section 9). Three decisions are open:

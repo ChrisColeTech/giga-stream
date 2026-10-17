@@ -3,8 +3,9 @@ import { CONNECTION_DOT, PREVIEW_CONNECTION } from "@/fixtures/connection";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/store/app-store";
+import { RunningWork } from "./RunningWork";
 
-/* The status bar is for state: the connection dot and its word, the ONE notice line (an outcome or a refusal, as a
+/* The status bar is for state: the running work (LoRA's progress bar and Stop), the connection dot and its word, the ONE notice line (an outcome or a refusal, as a
  * sentence), then the two doors on the right, Events and Settings. Each door is a toggle: the button that opened a
  * panel is the button that closes it, and it wears the same pressed look while its panel is up. */
 const BAR =
@@ -32,6 +33,7 @@ export function Statusbar() {
 
   return (
     <footer className={BAR}>
+      <RunningWork />
       {/* THE DOT IS THE WORD: the sentence survives in the tooltip for the case that matters, the dot going grey. */}
       <span className="inline-flex items-center gap-1.5" title="The fileserver connection.">
         <StatusDot state={CONNECTION_DOT[PREVIEW_CONNECTION]} />
