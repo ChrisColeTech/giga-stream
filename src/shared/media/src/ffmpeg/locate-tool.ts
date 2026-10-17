@@ -5,8 +5,38 @@ import { fileURLToPath } from "node:url";
 import { TOOLS_BIN_DIR, TOOLS_DIR_ENV } from "../constants/media.ts";
 import type { LocateOptions, Tool } from "../types/tool.ts";
 
-/** The repository root: this file is `src/shared/media/src/ffmpeg/locate-tool.ts`. */
-export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
+/** The root `package.json` name that marks the repository (the library's own is `@giga-stream/media`). */
+const REPO_PACKAGE_NAME = "giga-stream";
+
+function isRepoRoot(folder: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path.join(folder, "package.json"), "utf-8"));
+    if (typeof parsed === "object" && parsed !== null && "name" in parsed && parsed.name === REPO_PACKAGE_NAME) {
+      return true;
+    }
+  } catch {
+    // no readable package.json here; try the tools folder
+  }
+  return existsSync(path.join(folder, ...TOOLS_BIN_DIR));
+}
+
+/**
+ * The repository root, found by walking up from `start` to the first folder that is one: its `package.json` is
+ * named `giga-stream`, or it holds `tools/ffmpeg/bin`. Independent of how deep the calling module sits, so the
+ * source file, a built `dist/ffmpeg/` file and a bundler-hoisted chunk at the root of `dist` all agree.
+ * Falls back to five folders above `start` (this file's depth in source) when nothing marks a root.
+ */
+export function findRepoRoot(start: string): string {
+  let folder = path.resolve(start);
+  for (;;) {
+    if (isRepoRoot(folder)) return folder;
+    const parent = path.dirname(folder);
+    if (parent === folder) return path.resolve(start, "..", "..", "..", "..", "..");
+    folder = parent;
+  }
+}
+
+export const REPO_ROOT = findRepoRoot(path.dirname(fileURLToPath(import.meta.url)));
 
 const executable = (tool: Tool): string => (process.platform === "win32" ? `${tool}.exe` : tool);
 

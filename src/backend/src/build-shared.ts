@@ -14,13 +14,12 @@ import { build } from "esbuild";
  * `test` and `dev`. The library's tsconfig looks for `@types` in the fileserver's folder; this passes the
  * backend's own, so it builds with only the backend installed.
  *
- * Code splitting must stay OFF. With `splitting: true` esbuild hoists shared code (locate-tool.ts among it) into
- * a `chunk-*.js` at the root of `dist`, one folder shallower than the source. locate-tool computes REPO_ROOT
- * from its own `import.meta.url` with a fixed number of `..`, so a hoisted copy resolves the wrong root and
- * cannot find ffmpeg or ffprobe. Without splitting every module is bundled on its own and keeps its folder.
+ * Code splitting stays OFF so `dist` keeps the source layout (no `chunk-*.js` at its root). locate-tool no
+ * longer depends on its depth (it walks up to the repository marker), but a stable layout is still the contract.
  *
- * The fileserver builds the same `dist`, and the dev stack starts both programs at once, so a `dist` that is
- * already newer than every source is left alone instead of being deleted under the other program's feet. A
+ * The fileserver builds the same `dist` with an identical script (`src/fileserver/src/build-shared.ts`), and the
+ * dev stack starts both programs at once, so the two must stay identical in what they produce, and a `dist` that
+ * is already newer than every source is left alone instead of being deleted under the other program's feet. A
  * `dist` holding any `chunk-*.js` was built by a splitting build and is never fresh: it is rebuilt here.
  */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
