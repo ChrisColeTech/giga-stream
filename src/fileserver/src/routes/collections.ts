@@ -6,8 +6,8 @@ import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
 
 const IdParams = z.object({ collectionId: z.string() });
-const CreateBody = z.object({ name: z.unknown(), type: z.unknown() }).passthrough();
-const PatchBody = z.object({ name: z.unknown().optional(), type: z.unknown().optional() }).passthrough();
+const CreateBody = z.object({ name: z.string(), type: z.string() }).passthrough();
+const PatchBody = z.object({ name: z.string().optional(), type: z.string().optional() }).passthrough();
 const ItemBody = z.object({ kind: z.string(), id: z.string() });
 const ItemParams = z.object({ collectionId: z.string(), kind: z.string(), itemId: z.string() });
 const ItemOfKind = z.object({ kind: z.string(), itemId: z.string() });

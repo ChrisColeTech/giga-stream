@@ -18,6 +18,10 @@ test("a collection is created, read, renamed and listed", async () => {
   assert.equal(pick(created.body, "data.itemCount"), 0);
   assert.deepEqual(pick(created.body, "data.folders"), []);
 
+  const retagged = await send(t.app, "PATCH", `/api/collections/${id}`, { type: "tv" });
+  assert.equal(pick(retagged.body, "data.name"), "Movies");
+  assert.equal(pick(retagged.body, "data.type"), "tv");
+
   const renamed = await send(t.app, "PATCH", `/api/collections/${id}`, { name: "  Films  ", type: "local" });
   assert.equal(pick(renamed.body, "data.name"), "Films");
   assert.equal(pick(renamed.body, "data.type"), "local");
@@ -31,7 +35,8 @@ test("a collection is created, read, renamed and listed", async () => {
 
 test("a name that is empty, too long, or a duplicate ignoring case is refused", async () => {
   const t = await makeApp();
-  await send(t.app, "POST", "/api/collections", createInput("Movies", "movie"));
+  const made = await send(t.app, "POST", "/api/collections", createInput("Movies", "movie"));
+  const id = String(pick(made.body, "data.id"));
   assert.equal((await send(t.app, "POST", "/api/collections", createInput("movies", "movie"))).status, 422);
   assert.equal(
     pick((await send(t.app, "POST", "/api/collections", createInput("movies", "movie"))).body, "error.code"),
@@ -40,6 +45,8 @@ test("a name that is empty, too long, or a duplicate ignoring case is refused", 
   assert.equal((await send(t.app, "POST", "/api/collections", createInput("   "))).status, 422);
   assert.equal((await send(t.app, "POST", "/api/collections", createInput("x".repeat(81)))).status, 422);
   assert.equal((await send(t.app, "POST", "/api/collections", createInput("Bad type", "other"))).status, 422);
+  assert.equal((await send(t.app, "PATCH", `/api/collections/${id}`, { type: "other" })).status, 422);
+  assert.equal((await send(t.app, "PATCH", `/api/collections/${id}`, {})).status, 422);
   await t.dispose();
 });
 
