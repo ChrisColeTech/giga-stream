@@ -62,7 +62,7 @@ absorb the remaining space and never collapse.
 | Player: browser (left) | width | 190 | 236 | 380 |
 | Player: stage (centre) | width | 520 | flex | - |
 | Player: inspector (right) | width | 220 | 280 | 420 |
-| Player: related (bottom) | height | 60 | 140 | 280 |
+| Player: related (bottom) | height | 60 | 210 | 280 |
 
 Allotment owns the sashes and the sizes. Collapsing commits the new visibility at once, then a short
 tween paints the travel by writing each frame into Allotment, so the pane visibly slides out and the

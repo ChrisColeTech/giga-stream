@@ -55,7 +55,7 @@ answer the interface could not read.
 | Player browser (left) | width | 190 | 236 | 380 | yes |
 | Player stage (centre) | width | 520 | flex | - | no |
 | Player inspector (right) | width | 220 | 280 | 420 | yes |
-| Player related (bottom) | height | 60 | 140 | 280 | yes |
+| Player related (bottom) | height | 60 | 210 | 280 | yes |
 | Events drawer | height | 160 | 160 | 160 | yes |
 
 - Allotment owns the sashes, pointer capture and the committed sizes; the sash is a 1px line.
