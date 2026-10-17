@@ -5,7 +5,7 @@ export interface PlayerFactProps {
   readonly value: string;
 }
 
-/** A read-only fact: a mono label and a mono value, with no control (`21` section 3.4a). */
+/** A read-only fact: a 12 px label and a mono 11 px value, with no control (`21` section 8a). */
 export function PlayerFact({ label, value }: PlayerFactProps) {
   return (
     <PlayerRow label={label}>

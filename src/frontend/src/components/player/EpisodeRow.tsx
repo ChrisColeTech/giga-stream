@@ -28,7 +28,7 @@ export function EpisodeRow({ episode, selected, marker, onSelect }: EpisodeRowPr
         selected ? "border-l-accent bg-accent-tint text-accent-text" : "border-l-transparent bg-transparent text-muted hover:bg-hov hover:text-text",
       )}
     >
-      <span className="relative flex aspect-video w-[88px] flex-none items-center justify-center overflow-hidden rounded-ctl bg-surface text-dim">
+      <span className="relative flex aspect-video w-[88px] flex-none items-center justify-center overflow-hidden rounded-ctl bg-surface text-muted">
         {episode.stillUrl !== undefined ? (
           <img src={episode.stillUrl} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
         ) : (
@@ -41,14 +41,14 @@ export function EpisodeRow({ episode, selected, marker, onSelect }: EpisodeRowPr
         )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex items-center gap-1.5 font-mono text-[11px] text-dim tabular-nums">
+        <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted tabular-nums">
           {label}
           {marker?.watched === true && <Check className="size-3 text-st-done" aria-label="Watched" />}
         </span>
-        <span className="truncate text-xs">{name}</span>
+        <span className="truncate text-[13px]">{name}</span>
       </span>
       {episode.runtimeMs !== undefined && (
-        <span className="flex-none font-mono text-[11px] text-dim tabular-nums">{formatRuntime(episode.runtimeMs)}</span>
+        <span className="flex-none font-mono text-[11px] text-muted tabular-nums">{formatRuntime(episode.runtimeMs)}</span>
       )}
     </button>
   );

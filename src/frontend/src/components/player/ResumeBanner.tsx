@@ -12,8 +12,8 @@ export interface ResumeBannerProps {
 export function ResumeBanner({ progress, onResume, onStartOver }: ResumeBannerProps) {
   return (
     <div role="status" className="flex h-9 flex-none items-center gap-2 border-b border-hair bg-panel px-2.5">
-      <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted tabular-nums">
-        Resume at {formatClock(progress.positionMs)}
+      <span className="min-w-0 flex-1 truncate font-sans text-xs text-muted">
+        Resume at <span className="font-mono text-[11px] tabular-nums">{formatClock(progress.positionMs)}</span>
       </span>
       <Button size="sm" variant="primary" onClick={onResume}>
         Resume
