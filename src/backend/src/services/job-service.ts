@@ -6,7 +6,6 @@ import type { Store } from "../store/store.js";
 import {
   type JobInput, type JobPatch, type JobRun, type JobView, CatalogConfigSchema, PlaylistConfigSchema,
 } from "../types/job.js";
-import { refusalWithoutQuery } from "./address-rule.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import type { JobRunner } from "./job-runner.js";
 import { normaliseSchedule } from "./job-schedule.js";
@@ -19,13 +18,6 @@ const configField = (issue: z.ZodIssue | undefined): string => {
   if (issue?.code === "unrecognized_keys") return `config.${issue.keys.join(",")}`;
   return `config.${issue?.path.join(".") ?? ""}`;
 };
-
-/** Counts as answered: a refusal example's address has no query or fragment (docs/29 section 18). */
-function answeredCounts(counts: Record<string, unknown>): Record<string, unknown> {
-  const examples = counts.refusalExamples;
-  if (!Array.isArray(examples)) return counts;
-  return { ...counts, refusalExamples: examples.map((e) => (typeof e === "string" ? refusalWithoutQuery(e) : e)) };
-}
 
 /**
  * The sync jobs (docs/26 section 3.11): records with a type, `Enabled`, a schedule and a config. A playlist job
@@ -55,7 +47,7 @@ export function createJobService(deps: {
       running: isRunning(job.id),
       ...(job.lastRunAt !== undefined && { lastRunAt: job.lastRunAt }),
       ...(job.lastOutcome !== undefined && { lastOutcome: job.lastOutcome }),
-      ...(job.lastCounts !== undefined && { lastCounts: answeredCounts(job.lastCounts) }),
+      ...(job.lastCounts !== undefined && { lastCounts: job.lastCounts }),
       createdAt: job.createdAt,
     };
   }
