@@ -1,101 +1,198 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
 import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
-import { WorkspaceSplit } from "@/components/chrome/WorkspaceSplit";
-import { changeFavourite, changeMembership, reportRefusal } from "@/components/library/library-service";
-import { INITIAL_ITEM } from "@/fixtures/player";
-import { LIBRARY_ITEMS } from "@/fixtures/titles";
+import { changeFavourite, changeMembership } from "@/components/library/library-service";
+import { usePlayerData } from "@/hooks/usePlayerData";
+import { usePlayerProgress } from "@/hooks/usePlayerProgress";
+import { collectionRow } from "@/lib/collections-model";
 import type { PlayerCommands } from "@/lib/player-commands";
+import { LOCAL_MEDIA_FAILURE, NO_TITLE_SOURCE_REASON } from "@/lib/player-copy";
+import { openingPosition } from "@/lib/player-opening";
+import { settleFinalProgress } from "@/lib/player-progress";
 import { createPlayerSession, isOpen, itemFromLibrary, reducePlayerSession } from "@/lib/player-session";
-import { viewOf } from "@/lib/player-view";
-import { retryStream } from "@/services/channels";
-import { playEpisode, playItem, removeHistoryEntry } from "@/services/library";
+import { localSource, playableSources } from "@/lib/player-sources";
+import { resumeOf, viewOf } from "@/lib/player-view";
+import { localMediaAddress } from "@/services/local-media";
+import { removeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
-import type { LibraryItem } from "@/types/library";
+import type { LibraryItem, ItemRef } from "@/types/library";
 
-const INITIAL_SESSION = createPlayerSession(INITIAL_ITEM);
+const fallbackItem = (ref: ItemRef): LibraryItem => ({
+  ref,
+  kind: ref.kind === "local" ? "local" : ref.id.startsWith("tv-") ? "tv" : "movie",
+  title: ref.id,
+  genres: [], favorite: false,
+});
 
-/** Asks the fileserver to start what opening an item starts. A movie or a local file starts at once; a series starts
- *  only when it was left partway on an exact episode, else the browser waits for an episode to be chosen. */
-function startOnOpen(item: LibraryItem): void {
-  const progress = item.progress;
-  if (item.kind !== "tv") reportRefusal(playItem(item.ref));
-  else if (progress?.season !== undefined && progress.episode !== undefined)
-    reportRefusal(playEpisode(item.ref, progress.season, progress.episode));
-}
-
-/** Player: the browser on the left, the stage in the centre, the inspector on the right, and the related band along the
- *  bottom. One title or file at a time. Local presses change the session here; fileserver presses call the service and
- *  report a refusal on the notice line. Favourites and memberships are the store's marks, shared with Library. With
- *  nothing open the panes are skeletons and the stage is the player alone. */
 export function PlayerPage({ active }: { active: boolean }) {
-  const [session, dispatch] = useReducer(reducePlayerSession, INITIAL_SESSION);
-  /* The serial of the last play request acted on, so a session change alone never re-runs one. */
-  const handled = useRef(0);
-  /* The video's paused state, reported by the stage; a video that has not started is paused. */
+  const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
   const [paused, setPaused] = useState(true);
+  const [retry, setRetry] = useState(0);
+  const [dataRetry, setDataRetry] = useState(0);
+  const [choice, setChoice] = useState<"ask" | "resume" | "restart">("ask");
+  const [userInitiated, setUserInitiated] = useState(false);
+  const handled = useRef(0);
+  const currentPosition = useRef(0);
+  const [sourcePosition, setSourcePosition] = useState(0);
+  const data = usePlayerData(session, dataRetry);
+  const progress = usePlayerProgress(active);
   const marks = useAppStore((state) => state.marks);
+  const collections = useAppStore((state) => state.collections).map(collectionRow);
+  const libraryItems = useAppStore((state) => state.libraryItems);
+  const media = useAppStore((state) => state.playerMedia);
+  const resumeMode = useAppStore((state) => state.playback.resumeMode);
+  const setPlayerItem = useAppStore((state) => state.setPlayerItem);
+  const setSources = useAppStore((state) => state.setPlayerSources);
+  const setSource = useAppStore((state) => state.setPlayerSource);
+  const setStage = useAppStore((state) => state.setPlayerStage);
   const setSurface = useAppStore((state) => state.setSurface);
   const requestLibrary = useAppStore((state) => state.requestLibrary);
-  const view = viewOf(session, marks);
-  const ref = view.tab?.ref;
+  const view = viewOf(session, marks, {
+    item: data.item,
+    detail: data.detail,
+    local: data.localInfo === undefined ? undefined : { info: data.localInfo },
+    episodes: data.episodes,
+    related: data.related,
+    collections,
+    stage: media.stage,
+  });
+  const episode = data.episodes.find((row) => row.episode === view.episode);
+  const sources = useMemo(() => {
+    if (session.current?.kind === "local") {
+      return data.localInfo?.playable === true ? [localSource(localMediaAddress(session.current.ref.id))] : [];
+    }
+    if (session.current?.kind === "tv") return playableSources(episode?.sources, episode?.streamUrl);
+    return playableSources(data.detail?.sources, data.detail?.streamUrl);
+  }, [data.detail, data.localInfo, episode, session.current]);
+  const activeSource = sources.find((source) => source.id === media.activeSourceId);
+  const resume = resumeOf(view);
+  const hostedSource = choice === "ask" && resume !== undefined ? undefined : activeSource;
+  const startPositionMs = choice === "resume" ? sourcePosition : 0;
+  const playbackKey = session.current === null
+    ? "idle"
+    : `${session.current.ref.kind}:${session.current.ref.id}:${view.season ?? 0}:${view.episode ?? 0}`;
 
-  /* A Play from anywhere opens the item here at once. The item already open is only shown; anything else is opened and
-     its stream asked for. */
+  const openItem = async (item: LibraryItem) => {
+    if (isOpen(session, item.ref)) return;
+    progress.playing(false);
+    await progress.flush();
+    const next = itemFromLibrary(item);
+    dispatch({ type: "open", item: next });
+    setPlayerItem(next);
+    setPaused(true);
+    setUserInitiated(true);
+  };
+
   const playRequest = useAppStore((state) => state.playRequest);
   useEffect(() => {
     if (playRequest === null || playRequest.serial === handled.current) return;
     handled.current = playRequest.serial;
-    if (isOpen(session, playRequest.ref)) return;
-    const item = LIBRARY_ITEMS.find((entry) => entry.ref.kind === playRequest.ref.kind && entry.ref.id === playRequest.ref.id);
-    if (item === undefined) return;
-    dispatch({ type: "open", item: itemFromLibrary(item) });
-    startOnOpen(item);
-  }, [playRequest, session]);
+    const item = libraryItems.find((row) => row.ref.kind === playRequest.ref.kind && row.ref.id === playRequest.ref.id);
+    void openItem(item ?? fallbackItem(playRequest.ref));
+  }, [playRequest, libraryItems]);
 
+  useEffect(() => {
+    if (session.current?.kind === "tv" && session.season === undefined && data.detail?.seasons?.[0] !== undefined) {
+      dispatch({ type: "season", season: data.detail.seasons[0].season });
+    }
+  }, [data.detail, session.current, session.season]);
+
+  useEffect(() => {
+    setChoice(resumeMode === "ask" ? "ask" : resumeMode);
+    const opening = openingPosition(resumeMode, resume);
+    currentPosition.current = opening;
+    setSourcePosition(opening);
+    setSources(sources, sources[0]?.id ?? null);
+    setPaused(true);
+    if (session.current === null || (session.current.kind === "tv" && view.episode === undefined)) return;
+    void progress.begin({
+      item: session.current.ref,
+      ...(view.season === undefined ? {} : { season: view.season }),
+      ...(view.episode === undefined ? {} : { episode: view.episode }),
+    });
+  }, [playbackKey, sources]);
+
+  useEffect(() => {
+    if (session.current === null || (session.current.kind === "tv" && view.episode === undefined)) return;
+    const ready = session.current.kind === "local"
+      ? data.localInfo !== undefined
+      : session.current.kind === "tv" ? episode !== undefined : data.detail !== undefined;
+    if (!ready) return;
+    if (sources.length === 0) {
+      const reason = data.localInfo?.error?.message ?? (
+        session.current.kind === "local" ? LOCAL_MEDIA_FAILURE : NO_TITLE_SOURCE_REASON
+      );
+      setStage({ kind: "failed", reason });
+    }
+  }, [data.detail, data.localInfo, episode, playbackKey, sources.length]);
+
+  const close = async () => {
+    progress.playing(false);
+    await settleFinalProgress(progress.flush());
+    dispatch({ type: "close" });
+    setPlayerItem(null);
+    setSources([], null);
+  };
+  const chooseEpisode = (season: number, number: number) => {
+    dispatch({ type: "episode", season, episode: number });
+    setUserInitiated(true);
+  };
   const commands: PlayerCommands = {
-    retry: () => reportRefusal(retryStream()),
-    reveal: () => (ref === undefined ? setSurface("library") : requestLibrary({ select: ref })),
-    close: () => dispatch({ type: "close" }),
+    retry: () => {
+      void progress.checkpoint();
+      if (activeSource === undefined) setDataRetry((value) => value + 1);
+      setSourcePosition(currentPosition.current);
+      setUserInitiated(true);
+      setRetry((value) => value + 1);
+    },
+    reveal: () => session.current === null ? setSurface("library") : requestLibrary({ select: session.current.ref }),
+    close: () => void close(),
     resume: () => {
-      if (ref !== undefined) reportRefusal(playItem(ref));
+      const position = resume?.positionMs ?? 0;
+      currentPosition.current = position;
+      setSourcePosition(position);
+      setChoice("resume");
+      setUserInitiated(true);
+      setRetry((value) => value + 1);
     },
     startOver: () => {
-      if (ref !== undefined) reportRefusal(playItem(ref));
+      currentPosition.current = 0;
+      setSourcePosition(0);
+      setChoice("restart");
+      setUserInitiated(true);
+      setRetry((value) => value + 1);
     },
-    favorite: (value) => {
-      if (ref !== undefined) changeFavourite(ref, value);
+    favorite: (value) => { if (session.current !== null) void changeFavourite(session.current.ref, value); },
+    toggleMember: (id) => {
+      if (session.current !== null) changeMembership(session.current.ref, id, !view.memberIds.includes(id), view.memberIds);
     },
-    toggleMember: (collectionId) => {
-      if (ref !== undefined) changeMembership(ref, collectionId, !view.memberIds.includes(collectionId), view.memberIds);
+    removeHistory: (id) => {
+      void removeWatch(id).catch((error: unknown) => useAppStore.getState().say(
+        error instanceof Error ? error.message : "History could not be changed.", "warn",
+      ));
     },
-    removeHistory: (watchId) => reportRefusal(removeHistoryEntry(watchId)),
-    openRelated: (item) => {
-      if (isOpen(session, item.ref)) return;
-      dispatch({ type: "open", item: itemFromLibrary(item) });
-      startOnOpen(item);
-    },
+    openRelated: (item) => { void openItem(item); },
   };
 
-  return (
-    <WorkspaceSplit
-      surface="player"
-      active={active}
-      left={
-        <PlayerBrowser
-          view={view}
-          onSeason={(season) => dispatch({ type: "season", season })}
-          onEpisode={(season, episode) => {
-            dispatch({ type: "episode", season, episode });
-            if (ref !== undefined) reportRefusal(playEpisode(ref, season, episode));
-          }}
-        />
-      }
-      center={<PlayerStage view={view} commands={commands} onPausedChange={setPaused} />}
-      right={<PlayerInspector view={view} commands={commands} paused={paused} />}
-      bottom={<PlayerRelated view={view} commands={commands} />}
-    />
-  );
+  return <WorkspaceSplit surface="player" active={active}
+    left={<PlayerBrowser view={view} onSeason={(season) => dispatch({ type: "season", season })} onEpisode={chooseEpisode} />}
+    center={<PlayerStage view={view} commands={commands} sources={sources} activeSource={hostedSource}
+      selectedSourceId={media.activeSourceId ?? ""}
+      startPositionMs={startPositionMs} retry={retry} userInitiated={userInitiated}
+      onSource={(id) => {
+        void progress.flush();
+        setSourcePosition(currentPosition.current);
+        setSource(id);
+        setUserInitiated(true);
+      }} onState={setStage}
+      onProgress={(position, duration) => {
+        currentPosition.current = position;
+        progress.update(position, duration);
+      }} onPlaying={progress.playing} onBoundary={() => void progress.checkpoint()}
+      onPausedChange={setPaused} />}
+    right={<PlayerInspector view={view} commands={commands} paused={paused} />}
+    bottom={<PlayerRelated view={view} commands={commands} />} />;
 }

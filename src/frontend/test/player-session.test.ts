@@ -77,6 +77,24 @@ describe("episode and season choices", () => {
     const idle = playing(null);
     assert.equal(reducePlayerSession(idle, { type: "episode", season: 1, episode: 1 }).current, null);
   });
+
+  it("projects the real visible season, exact episode rows, and related titles for the one open item", () => {
+    const session = reducePlayerSession(playing(series), { type: "season", season: 2 });
+    const related: LibraryItem = {
+      ref: { kind: "title", id: "movie-8" }, kind: "movie", title: "Eight", genres: [], favorite: false,
+    };
+    const view = viewOf(session, NO_MARKS, {
+      detail: {
+        id: "tv-1396", kind: "tv", title: "Series", genres: [], cast: [],
+        seasons: [{ season: 1, episodeCount: 2 }, { season: 2, episodeCount: 1 }],
+      },
+      episodes: [{ season: 2, episode: 1, title: "Return" }],
+      related: [related],
+    });
+    assert.equal(view.season, 2);
+    assert.equal(view.episodes[0]?.title, "Return");
+    assert.equal(view.related[0]?.ref.id, "movie-8");
+  });
 });
 
 describe("opening where it was left", () => {

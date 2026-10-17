@@ -1,21 +1,16 @@
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
-import type { TitleSource } from "@/services/schemas/source-schema";
 import type { PlaybackPrefs } from "@/types/settings";
-import type { PlayerTab, StageState } from "@/types/player";
-
-export interface PlaybackTabState extends PlayerTab {
-  readonly sources: readonly TitleSource[];
-  readonly activeSourceId: number | null;
-  readonly stage: StageState;
-}
+import type { PlayerMediaState, PlayerTab, StageState } from "@/types/player";
 
 export interface PlaybackSlice {
   playback: PlaybackPrefs;
-  playerTabs: readonly PlaybackTabState[];
-  activePlayerTabId: string | null;
+  playerItem: PlayerTab | null;
+  playerMedia: PlayerMediaState;
   setPlayback: (change: Partial<PlaybackPrefs>) => void;
-  setPlayerTabs: (tabs: readonly PlaybackTabState[]) => void;
-  setActivePlayerTab: (id: string | null) => void;
+  setPlayerItem: (item: PlayerTab | null) => void;
+  setPlayerSources: (sources: PlayerMediaState["sources"], activeSourceId: string | null) => void;
+  setPlayerSource: (id: string) => void;
+  setPlayerStage: (stage: StageState) => void;
 }
 
 interface Host extends PlaybackSlice {
@@ -38,11 +33,14 @@ export function playbackSlice(set: Set, get: Get): PlaybackSlice {
       watchedPercent: DEFAULT_SETTINGS.watchedPercent,
       liveOnOpen: DEFAULT_SETTINGS.liveOnOpen,
     },
-    playerTabs: [],
-    activePlayerTabId: null,
+    playerItem: null,
+    playerMedia: { sources: [], activeSourceId: null, stage: { kind: "idle" } },
     setPlayback: (change) =>
       set({ playback: { ...get().playback, ...change }, settingsRevision: get().settingsRevision + 1 }),
-    setPlayerTabs: (playerTabs) => set({ playerTabs }),
-    setActivePlayerTab: (activePlayerTabId) => set({ activePlayerTabId }),
+    setPlayerItem: (playerItem) => set({ playerItem }),
+    setPlayerSources: (sources, activeSourceId) =>
+      set({ playerMedia: { sources, activeSourceId, stage: sources.length > 0 ? { kind: "loading" } : { kind: "idle" } } }),
+    setPlayerSource: (activeSourceId) => set({ playerMedia: { ...get().playerMedia, activeSourceId, stage: { kind: "loading" } } }),
+    setPlayerStage: (stage) => set({ playerMedia: { ...get().playerMedia, stage } }),
   };
 }

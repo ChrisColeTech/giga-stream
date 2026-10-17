@@ -35,7 +35,8 @@ export function itemFromLibrary(item: LibraryItem): PlayerTab {
 }
 
 export function createPlayerSession(current: PlayerTab | null): PlayerSession {
-  return { current, season: undefined };
+  const chosen = current?.subtitle === undefined ? undefined : current.subtitle.match(/^S(\d+) E\d+$/);
+  return { current, season: chosen === undefined || chosen === null ? undefined : Number(chosen[1]) };
 }
 
 /** Whether a session already has this item open: opening it again only shows the Player. */
@@ -46,7 +47,7 @@ export function isOpen(session: PlayerSession, ref: ItemRef): boolean {
 /** Opening the item already playing does nothing but show the Player; opening another replaces the current one. */
 function openItem(session: PlayerSession, item: PlayerTab): PlayerSession {
   if (isOpen(session, item.ref)) return session;
-  return { current: item, season: undefined };
+  return createPlayerSession(item);
 }
 
 /** Choosing an exact episode loads it in place; the season select alone starts nothing. */
@@ -62,7 +63,9 @@ export function reducePlayerSession(session: PlayerSession, action: PlayerAction
     case "close":
       return { current: null, season: undefined };
     case "season":
-      return session.current === null ? session : { ...session, season: action.season };
+      return session.current === null
+        ? session
+        : { current: { ...session.current, subtitle: undefined }, season: action.season };
     case "episode":
       return chooseEpisode(session, action.season, action.episode);
   }

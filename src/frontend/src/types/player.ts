@@ -1,6 +1,8 @@
 import type { ItemRef } from "./library";
+import type { LocalMediaInfo } from "@/services/local-media";
+import type { PlayerSource } from "@/lib/player-sources";
 
-/** What a Player tab holds (`06` section 5.1): one per movie, one per series, one per local file. */
+/** The one item Player holds. Opening another replaces it (`06` section 5.1). */
 export interface PlayerTab {
   readonly id: string;
   readonly ref: ItemRef;
@@ -16,3 +18,13 @@ export type StageState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready" }
   | { readonly kind: "failed"; readonly reason: string };
+
+export interface PlayerMediaState {
+  readonly sources: readonly PlayerSource[];
+  readonly activeSourceId: string | null;
+  readonly stage: StageState;
+}
+
+export interface PlayerLocalState {
+  readonly info?: LocalMediaInfo;
+}

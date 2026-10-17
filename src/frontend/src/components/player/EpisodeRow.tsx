@@ -1,5 +1,5 @@
-import { Clapperboard } from "lucide-react";
 import { ACCENT } from "@/components/ui/Form";
+import { EpisodePicture } from "@/components/player/EpisodePicture";
 import { cn } from "@/lib/cn";
 import { formatRuntime } from "@/lib/player-format";
 import type { EpisodeMarker } from "@/lib/player-view";
@@ -32,11 +32,7 @@ export function EpisodeRow({ episode, selected, marker, onSelect, code }: Episod
     <>
       {watched && <span className={cn("absolute top-2 bottom-2 left-0 w-1 rounded-full", ACCENT.success)} aria-hidden />}
       <span className="relative grid aspect-4/3 w-full place-items-center overflow-hidden rounded-ctl border border-hair bg-surface">
-        {episode.stillUrl !== undefined ? (
-          <img src={episode.stillUrl} alt="" loading="lazy" className="absolute inset-0 block size-full object-cover" />
-        ) : (
-          <Clapperboard className="size-4 text-dim" aria-hidden />
-        )}
+        <EpisodePicture key={episode.stillUrl} src={episode.stillUrl} />
       </span>
       <span className="grid min-w-0 gap-1.25">
         <span className="min-w-0 truncate font-mono text-xs text-text">{name}</span>
