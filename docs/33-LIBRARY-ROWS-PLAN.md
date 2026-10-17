@@ -78,9 +78,8 @@ the bounded fill of 3.1.
 
 ## 4. Failure modes
 
-- A page read fails: `loading`/`paging` clear, the hook says the sentence; the snapshot becomes ready with what is held
-  (a short set groups as shelves) once no further page is pending, instead of a skeleton forever. The fill effect asks
-  at most once per page change.
+- A page read fails: the hook says its sentence, the fill effect does not ask again for the same cursor (no retry
+  loop), and Rows stays on the skeleton; Refresh, or any invalidation, retries.
 - Titles unavailable (`titleRegionsLoading`): skeleton (as the grid shows its tail), shelves once they answer.
 - Empty result: a settled empty snapshot is zero shelves; `RowsSkeleton` stays (skeleton for empty, per AGENTS.md).
 - Hidden surface: the fill effect does nothing while `active` is false (no paging out of sight).

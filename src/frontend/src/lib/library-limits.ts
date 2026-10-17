@@ -22,3 +22,10 @@ export const PAGER_LOOK_AHEAD = 240;
 
 /** Cards whose top edges differ by less than this share one row. */
 export const ROW_EPSILON = 2;
+
+/** The Rows view groups the first this many items of the query (`docs/33` section 3.1): three All pages (40 each) or
+ *  six single-kind pages (20 each), far over what six genre shelves of three titles need. */
+export const ROWS_READ_ITEMS = 120;
+
+/** A shelf in the Rows view mounts at most this many cards; See all opens the grid for the rest. */
+export const ROWS_SHELF_CARDS = 10;

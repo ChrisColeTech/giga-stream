@@ -27,6 +27,10 @@ export interface LibraryData {
   /** Requests the next page; answers whether one really was requested. */
   readonly loadMore: () => boolean;
   readonly refresh: () => void;
+  /** Continue watching and the collections have answered (the Rows view groups only once they have). */
+  readonly sideReady: boolean;
+  /** The query key and refresh serial the held page was read for; null before any page. */
+  readonly pageFor: { readonly queryKey: string | null; readonly serial: number | null };
 }
 
 /** `ready` holds the first read until the saved Library state has been applied to `query`. */
@@ -38,6 +42,9 @@ export function useLibraryData(
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
   const [acceptedQueryKey, setAcceptedQueryKey] = useState<string | null>(null);
+  const [acceptedSerial, setAcceptedSerial] = useState<number | null>(null);
+  const [sideReady, setSideReady] = useState(false);
+  const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
   const session = useRef<LibrarySearchSession | null>(null);
   const sideRequest = useRef<AbortController | null>(null);
@@ -59,6 +66,7 @@ export function useLibraryData(
         pageRef.current = answer;
         setPage(answer);
         setAcceptedQueryKey(libraryQueryKey(useAppStore.getState().libraryQuery));
+        setAcceptedSerial(readSerial.current);
         firstPagePending.current = false;
         pagesLoaded.current = 1;
         setLoading(false);
@@ -108,11 +116,13 @@ export function useLibraryData(
       store.setLibraryCounts(counts);
       const failed = results.find((result) => result.status === "rejected" && !aborted(result.reason));
       if (failed?.status === "rejected") store.say(sentence(failed.reason), "warn");
+      setSideReady(true);
     });
   };
 
   const read = (debounce: boolean): void => {
     queryGeneration.current += 1;
+    readSerial.current = refreshSerial;
     firstPagePending.current = true;
     pageRequest.current?.abort();
     setPaging(false);
@@ -171,6 +181,7 @@ export function useLibraryData(
     if (active && (shownNow || serialChanged) && !decision.reload) readSideData();
   }, [query, refreshSerial, active, ready]);
   useEffect(() => {
+    setSideReady(false);
     readSideData();
     return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };
   }, [showContinue]);
@@ -179,20 +190,8 @@ export function useLibraryData(
   const filtered = source.filter((item) => item.progress?.state === "watching" && matchesQuery({
     ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
-  const hasMore = canLoadLibraryPage(
-    acceptedQueryKey,
-    libraryQueryKey(query),
-    loading,
-    paging,
-    page?.nextCursor,
-  );
-  return {
-    page,
-    continuing: filtered,
-    loading,
-    paging,
-    hasMore,
-    loadMore,
-    refresh: () => { read(false); readSideData(); },
-  };
+  const hasMore = canLoadLibraryPage(acceptedQueryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
+  const pageFor = { queryKey: acceptedQueryKey, serial: acceptedSerial };
+  const refresh = (): void => { read(false); readSideData(); };
+  return { page, continuing: filtered, loading, paging, hasMore, loadMore, refresh, sideReady, pageFor };
 }
