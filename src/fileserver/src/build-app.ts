@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 
@@ -23,12 +26,13 @@ import { createAppServices, type ServiceOptions } from "./services/app-services.
 import { createPocResultsService } from "./services/poc-results-service.js";
 
 /** The parts of the served folder a browser may load; the PoC's scripts and results are not among them. */
-const SERVED_TOP = new Set(["html", "css", "js", "data"]);
+const SERVED_TOP = new Set(["html", "css", "js", "data", "assets"]);
+const SERVED_FILES = new Set(["index.html", "favicon.ico"]);
 
 function isServed(pathName: string): boolean {
   const parts = pathName.split("/").filter(Boolean);
   if (parts.length === 0) return true;
-  if (parts.length === 1) return parts[0] === "index.html";
+  if (parts.length === 1) return SERVED_FILES.has(parts[0] ?? "");
   return SERVED_TOP.has(parts[0] ?? "");
 }
 
@@ -48,6 +52,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     bodyLimit: 8 * 1024 * 1024,
   });
 
+  const webDist = path.resolve(overrides.webDist ?? config.webDist);
   const services = createAppServices({
     dataDir: overrides.dataDir ?? config.dataDir,
     allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
@@ -64,14 +69,20 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     await services.close();
   });
 
+  // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file
+  // answers index.html when the dist has one; everything else stays the JSON 404 envelope.
+  const spaEntry = path.join(webDist, "index.html");
+  registerErrorHandling(
+    app,
+    existsSync(spaEntry) ? (pathName: string) => (isServed(pathName) ? undefined : spaEntry) : undefined,
+  );
+
   await app.register(fastifyStatic, {
-    root: overrides.webDist ?? config.webDist,
+    root: webDist,
     index: ["index.html"],
     cacheControl: false,
     allowedPath: (pathName) => isServed(pathName),
   });
-
-  registerErrorHandling(app);
   registerHealth(app, services);
   registerSettingsRoutes(app, services);
   registerShellStateRoutes(app, services);

@@ -39,7 +39,9 @@ after(async () => {
 });
 
 /** The real fileserver on a fresh temporary data folder, or on `options.dataDir` for restart tests. */
-export async function makeApp(options: { dataDir?: string; probeFetch?: typeof fetch } = {}): Promise<FileserverApp> {
+export async function makeApp(
+  options: { dataDir?: string; probeFetch?: typeof fetch; webDist?: string } = {},
+): Promise<FileserverApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-fileserver-test-"));
   const clock = testClock();
   const app = await buildApp({
@@ -47,6 +49,7 @@ export async function makeApp(options: { dataDir?: string; probeFetch?: typeof f
     now: clock.now,
     logger: false,
     ...(options.probeFetch !== undefined && { probeFetch: options.probeFetch }),
+    ...(options.webDist !== undefined && { webDist: options.webDist }),
   });
   const owned = options.dataDir === undefined;
   const created: FileserverApp = {
