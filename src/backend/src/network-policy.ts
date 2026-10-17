@@ -39,9 +39,19 @@ export function tlsOptions(settings: Config): { cert: Buffer; key: Buffer } | un
 export const corsOrigins = (settings: Config): string[] =>
   settings.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
 
-/** Routes whose answers must never be cached: they carry tokens, account details or a live row's local paths. */
-export const isPrivateRoute = (url: string): boolean =>
-  /^\/api\/(auth|admin-accounts|audit|admin-channels)(\/|\?|$)/.test(url);
+/** The public reads the fileserver makes (docs/03 sections 7.2 and 7.4): channels, providers and the title browse routes. */
+const PUBLIC_READ = /^\/api\/(channels|providers|titles(?!\/sync(\/|\?|$)))(\/|\?|$)/;
+
+/**
+ * Routes whose answers must never be cached: every `/api` route, since each carries tokens, account details,
+ * playlist addresses or a row's local paths. The one exception is a public read (`PUBLIC_READ`) made without
+ * a token, which keeps its caching headers; the same read with a token is the admin's view and is `no-store`.
+ */
+export const isPrivateRoute = (url: string, method = "GET", hasToken = false): boolean => {
+  if (!/^\/api(\/|\?|$)/.test(url)) return false;
+  const read = method === "GET" || method === "HEAD";
+  return hasToken || !read || !PUBLIC_READ.test(url);
+};
 
 const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 

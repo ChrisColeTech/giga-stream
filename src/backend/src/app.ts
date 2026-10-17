@@ -112,7 +112,7 @@ export async function buildApp(
       store.close();
     });
     app.addHook("onSend", async (request, reply) => {
-      if (isPrivateRoute(request.url)) reply.header("cache-control", "no-store");
+      if (isPrivateRoute(request.url, request.method, request.headers.authorization !== undefined)) reply.header("cache-control", "no-store");
     });
     registerErrorHandling(app);
     // The streams first: they carry their own CORS policy as encapsulated plugins, and a child plugin only
