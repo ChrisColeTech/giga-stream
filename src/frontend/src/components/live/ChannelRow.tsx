@@ -1,14 +1,14 @@
 import type { KeyboardEvent, Ref } from "react";
+import { ACCENT } from "@/components/ui/Form";
 import { LogoImage } from "@/components/ui/LogoImage";
-import { StatusDot } from "@/components/ui/StatusDot";
 import { cn } from "@/lib/cn";
 import { PLAYING_MARKER } from "@/lib/live-constants";
-import { statusDot, statusWord } from "@/lib/live-status";
+import { statusBar, statusWord } from "@/lib/live-status";
 import type { Channel } from "@/types/channel";
 
 export interface ChannelRowProps {
   readonly channel: Channel;
-  /** The row the selection is on (a bar on the left edge). */
+  /** The row the selection is on (the accent left border). */
   readonly selected: boolean;
   /** The channel the player has loaded (the marker). Selected and playing are different states. */
   readonly playing: boolean;
@@ -18,14 +18,16 @@ export interface ChannelRowProps {
   readonly ref?: Ref<HTMLLIElement>;
 }
 
-/** One channel: a 56 px logo, the number, the name on one line, the status dot with the category, and the markers. A click
- *  or Enter selects it and marks it playing. */
+/** One channel in LoRA Studio's queue row shape (components/generate/QueueRow.tsx), which `SkeletonRows` mirrors: the
+ *  status as the left-edge accent bar, a 4:3 logo in a 56px column, the number and name on the primary line, the
+ *  category and the status word or playing marker on the meta line. A click or Enter selects it and marks it playing. */
 export function ChannelRow({ channel, selected, playing, tabStop, onActivate, ref }: ChannelRowProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLLIElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     onActivate();
   };
+  const name = channel.number === undefined ? channel.name : `${channel.number} ${channel.name}`;
 
   return (
     <li
@@ -38,28 +40,22 @@ export function ChannelRow({ channel, selected, playing, tabStop, onActivate, re
       onClick={onActivate}
       onKeyDown={onKeyDown}
       className={cn(
-        "relative flex cursor-pointer items-center gap-2.5 py-2 pr-2.5 pl-3 outline-none",
-        "transition-[background] duration-fade ease-linear",
+        "relative grid w-full cursor-pointer grid-cols-[56px_minmax(0,1fr)] items-start gap-x-2.5 outline-none",
+        "border-b border-l-2 border-hair px-2.75 py-2",
+        "transition-colors duration-fade ease-linear hover:bg-hov",
         "focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent",
-        selected ? "bg-hov" : "hover:bg-hov",
+        selected ? "border-l-accent bg-ctl" : "border-l-transparent",
       )}
     >
-      {selected && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
+      <span className={cn("absolute top-2 bottom-2 left-0 w-1 rounded-full", ACCENT[statusBar(channel.status)])} aria-hidden />
       <LogoImage src={channel.logoUrl} alt={channel.name} />
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          {channel.number !== undefined && (
-            <span className="flex-none font-mono text-[11px] text-muted tabular-nums">{channel.number}</span>
-          )}
-          <span className="min-w-0 truncate font-sans text-[13px] text-text">{channel.name}</span>
-        </span>
-        <span className="flex min-w-0 items-center gap-1.5 font-sans text-xs text-muted">
-          <StatusDot state={statusDot(channel.status)} />
-          <span className="sr-only">{statusWord(channel.status)}</span>
-          <span className="min-w-0 truncate">{channel.category}</span>
-          {playing && (
-            <span className="ml-auto flex-none font-mono text-[11px] text-accent-text">{PLAYING_MARKER}</span>
-          )}
+      <span className="grid min-w-0 gap-1.25">
+        <span className="min-w-0 truncate font-mono text-xs text-text">{name}</span>
+        <span className="flex min-w-0 justify-between gap-2 overflow-hidden font-mono text-xs text-faint">
+          <span className="truncate">{channel.category}</span>
+          <span className={cn("flex-none", playing && "text-accent-text")}>
+            {playing ? PLAYING_MARKER : statusWord(channel.status)}
+          </span>
         </span>
       </span>
     </li>

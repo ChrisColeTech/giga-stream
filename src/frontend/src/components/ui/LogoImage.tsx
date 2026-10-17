@@ -19,7 +19,7 @@ export function LogoImage({ src, alt }: { src?: string; alt: string }) {
         />
       ) : (
         <span className="grid size-full place-items-center" role="img" aria-label={alt}>
-          <Tv className="size-3.5 text-muted" aria-hidden />
+          <Tv className="size-4 text-dim" aria-hidden />
         </span>
       )}
     </div>

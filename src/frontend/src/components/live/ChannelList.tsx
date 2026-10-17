@@ -41,7 +41,7 @@ export function ChannelList({ rows, loading, selectedId, playingId, onSelect, on
       role="listbox"
       aria-label={CHANNEL_LIST_LABEL}
       onKeyDown={onKeyDown}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto py-1"
+      className="m-0 flex min-h-0 flex-1 list-none flex-col overflow-x-hidden overflow-y-auto border-t border-hair p-0"
     >
       {rows.map((row) => (
         <ChannelRow

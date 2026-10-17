@@ -3,18 +3,18 @@ import { describe, it } from "node:test";
 import { detailRows } from "@/lib/live-details";
 import { EMPTY_VALUE } from "@/lib/live-constants";
 import { objectFitOf, PICTURE_FIT_OPTIONS } from "@/lib/live-picture";
-import { statusDot, statusWord } from "@/lib/live-status";
+import { statusBar, statusWord } from "@/lib/live-status";
 import { stageStateFor } from "@/lib/live-stage";
 import { CHANNEL_LIST } from "@/fixtures/channels";
 
-describe("status dot", () => {
-  it("maps live to done, offline to failed and an unprobed channel to the queued grey", () => {
-    assert.equal(statusDot("live"), "done");
-    assert.equal(statusDot("offline"), "failed");
-    assert.equal(statusDot("unknown"), "queued");
+describe("status bar", () => {
+  it("maps live to success, offline to error and an unprobed channel to inactive", () => {
+    assert.equal(statusBar("live"), "success");
+    assert.equal(statusBar("offline"), "error");
+    assert.equal(statusBar("unknown"), "inactive");
   });
 
-  it("gives every status a word for assistive technology", () => {
+  it("gives every status a word for the meta line", () => {
     assert.equal(statusWord("live"), "Live");
     assert.equal(statusWord("offline"), "Offline");
     assert.equal(statusWord("unknown"), "Not checked");

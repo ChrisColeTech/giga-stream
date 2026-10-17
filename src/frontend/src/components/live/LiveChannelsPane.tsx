@@ -41,9 +41,9 @@ export function LiveChannelsPane({
 }: LiveChannelsPaneProps) {
   return (
     <div className="flex size-full min-h-0 flex-col">
-      <div className="flex h-9 flex-none items-center gap-2 px-3">
-        <h2 className="font-sans text-[11px] font-semibold text-faint">{CHANNELS_HEADING}</h2>
-        <span className="font-mono text-[11px] text-muted tabular-nums">{list.items.length}</span>
+      <div className="flex h-9 flex-none items-center gap-2 pr-1 pl-2.75">
+        <h2 className="m-0 font-mono text-xs font-normal text-faint">{CHANNELS_HEADING}</h2>
+        <span className="font-mono text-xs text-dim tabular-nums">{list.items.length}</span>
         <IconButton className="ml-auto" aria-label={REFRESH_LABEL} title={REFRESH_LABEL} onClick={onRefresh}>
           <RefreshCw className="size-3.75" aria-hidden />
         </IconButton>
