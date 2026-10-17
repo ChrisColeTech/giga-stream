@@ -23,10 +23,13 @@ const PlaylistUrls = z.string().default("").transform((value, ctx): string[] => 
   return urls;
 });
 
+/** Development and production never share a port (docs/03 section 1); `npm start` is production. */
+const PORTS = { development: 8091, production: 8191 } as const;
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  // Tests use port 0.
-  PORT: z.coerce.number().int().min(0).max(65535).default(8091),
+  // Tests use port 0; unset, the port follows NODE_ENV.
+  PORT: z.coerce.number().int().min(0).max(65535).optional(),
   HOST: z.string().default("127.0.0.1"),
   DATA_DIR: z.string().default(""),
   // Signs access tokens (docs/03 section 7.12). The backend refuses to start without one.
@@ -70,6 +73,7 @@ const parsed = EnvSchema.parse(process.env);
 
 export const config = {
   ...parsed,
+  PORT: parsed.PORT ?? PORTS[parsed.NODE_ENV === "production" ? "production" : "development"],
   DATA_DIR: parsed.DATA_DIR || path.join(os.homedir(), ".giga-stream-admin"),
 };
 

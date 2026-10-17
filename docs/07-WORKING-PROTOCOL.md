@@ -45,6 +45,31 @@ rules are in `01`; this document is about process.
 
 - **Ask before starting a program** the owner did not ask for. Restarting the owner's own stack when
   asked is fine.
+- **The dev stack runs from the root, in the background, during development and testing** (owner,
+  2026-10-17). `npm run dev` is the only launcher (the backend, the interface's Vite on 5171, the
+  Electron app with its fileserver 8090, the live server 8097; kill-ports frees the development ports
+  first, never a production one). The window loads Vite, so edits reload in place. On Windows, start
+  that npm command in the background through the Windows process service and retain its PID. A plain `Start-Process` is still
+  tied to the automation shell's Windows job and is killed when that shell call exits:
+
+  ```powershell
+  $root = (Get-Location).Path
+  $stdout = Join-Path $env:TEMP "giga-stream-dev.log"
+  $stderr = Join-Path $env:TEMP "giga-stream-dev.err.log"
+  $command = 'cmd.exe /d /c "cd /d ""{0}"" && npm run dev > ""{1}"" 2> ""{2}"""' `
+    -f $root, $stdout, $stderr
+  $stack = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
+    -Arguments @{ CommandLine = $command }
+  $stack.ProcessId
+  ```
+
+  This returns immediately while the stack stays running. Checks and drives use that stack, never
+  ad-hoc per-program spawns, and do not stop it as drive cleanup. When explicitly stopping it, use
+  `taskkill /PID $stack.ProcessId /T /F` so the whole launcher tree exits.
+- **Development and production never share a port** (owner, 2026-10-17; the table is `03` section 1).
+  The installed app runs on the production ports (fileserver 8190, backend 8191, live server 8197,
+  preview 5271) so the owner can test it while the dev stack runs on the development ones. Nothing
+  started for development takes a production port, and nothing stops a process on one.
 - **Checks never touch the owner's data or running app.** A check runs the fileserver and the admin
   backend with temporary `DATA_DIR`s, on free ports, and serves its own build of the interface. The
   owner's `~/.giga-stream`, saved layout and Electron window are not test fixtures.
@@ -121,7 +146,15 @@ written, stated as written and not run; every gap it filled and how; anything le
 4. A failure goes back to the **same** worker with the exact output. The coordinator does not quietly
    fix a worker's defect and report the work as clean.
 5. A worker that broke a rule is told, and the breach is recorded in the landing commit message.
-6. The coordinator records what landed and what was verified, and tells the owner.
+6. **When the wave has landed and the gate passes, the coordinator produces the Windows app**
+   (owner, 2026-10-17): `npm run dev`'s stack may keep running; `npm run dist:win` at the root builds the
+   interface and the fileserver and packages them with electron-builder. The result is
+   `release/Giga Stream Setup <version>.exe` (the installer) and `release/win-unpacked/Giga Stream.exe`
+   (runs without installing). It runs on the production ports, so the owner tests the wave in it without
+   disturbing development. Only the fileserver ships in it, with the built interface it serves, the shared
+   media library and FFmpeg; the admin backend and the live server are separate programs and never do. A
+   packaging failure is a wave failure, reported as it ran.
+7. The coordinator records what landed and what was verified, and tells the owner, giving the exe's path.
 
 Worktrees live under `D:\Projects\.giga-worktrees\`, one per worker, and are removed when their branch has
 landed. A worktree is cut from a commit, so before any worker is briefed the coordinator commits the

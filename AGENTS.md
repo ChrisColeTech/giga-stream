@@ -26,10 +26,20 @@ person's changes.
 
 ## Layout
 
-- `src/frontend` the React interface (Vite, port 5171). `src/fileserver` the application server and
-  Electron host (port 8090). `src/backend` the optional admin backend (port 8091). `src/live-server` the
-  live server (port 8097, `docs/10`): channels of real videos as live HLS, on its own SQLite. `src/mockup` the
-  provider playback proof of concept (`docs/14`): plain HTML, CSS and JS, never packaged.
+- `src/frontend` the React interface (Vite). `src/fileserver` the application server and Electron host;
+  it serves the built interface. `src/backend` the optional admin backend. `src/live-server` the live
+  server (`docs/10`): channels of real videos as live HLS, on its own SQLite. `src/mockup` the provider
+  playback proof of concept (`docs/14`): plain HTML, CSS and JS, never packaged.
+- **Ports: development and production never share one** (owner, 2026-10-17; `docs/03` section 1), so the
+  installed app runs beside the dev stack. `NODE_ENV=production` selects production: the packaged app sets
+  it, and the servers' `npm start` loads it from their `production.env`.
+
+  | Program | Development | Production |
+  |---|---|---|
+  | Interface | 5171 (Vite) | 5271 (`npm run preview`); the packaged app is served by its fileserver |
+  | Fileserver | 8090 | 8190 (the packaged app) |
+  | Admin backend | 8091 (3001 where the local `src/backend/.env` sets it) | 8191 |
+  | Live server | 8097 | 8197 |
 - `src/shared/<domain>` libraries any program or tool may import (`docs/01` section 4.2); not programs.
   `src/shared/media` finds and runs the bundled FFmpeg and scans folders for video files.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
@@ -39,7 +49,25 @@ person's changes.
 
 ## Commands
 
-Added in phase 0 of `docs/08`, when `package.json` exists.
+The dev stack (backend, the interface's Vite, the Electron app with its fileserver, live server; the
+development ports above) runs from the root during development and testing (owner, 2026-10-17; `07`
+section 4):
+
+- `npm run dev` — the only stack launcher; run it from the repository root (Electron window included).
+  The window loads Vite, so edits reload in place.
+- To keep it running across automation-shell calls on Windows, launch that command through
+  `Win32_Process.Create` exactly as documented in `07` section 4. Do not add alternate stack-launcher
+  npm scripts; `Start-Process` is still killed with the automation shell's Windows job.
+- `npm run kill-ports` — frees the development ports (5171, 8090, 8091, 3001, 8097) by port; never a
+  production one, so an installed app the owner is testing keeps running.
+- `node scripts/check/gate.mjs` — every typecheck, the lint, the rule checker and every program's tests.
+- `npm run dist:win` — builds the interface and the fileserver and packages the Windows app with
+  electron-builder (`electron-builder.config.cjs`): `release/Giga Stream Setup <version>.exe`, and
+  `release/win-unpacked/Giga Stream.exe` to run without installing. Only the fileserver (with the built
+  interface it serves, the shared media library and FFmpeg) is in it; the backend and live server are not.
+  The coordinator produces it after every wave (`07` section 6.5).
+
+Checks and drives run against the started stack, never against ad-hoc per-program spawns (`07` section 4).
 
 ## Rules that bite (full text: `docs/01`)
 
@@ -63,3 +91,5 @@ Added in phase 0 of `docs/08`, when `package.json` exists.
   Ask before starting a program the owner did not ask for. Stop processes by PID, never by name.
 - A worker works only in its own worktree and branch, compiles clean, writes tests but does not run
   them, never edits a doc, commits without pushing, and reports in the format of `docs/07` section 6.4.
+- After every wave lands, the coordinator runs `npm run dist:win` and gives the owner the exe's path, so
+  the owner tests the wave without disturbing development (`docs/07` section 6.5).

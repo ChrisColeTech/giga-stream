@@ -29,4 +29,15 @@ export default defineConfig({
       '/ws': { target: 'http://127.0.0.1:8090', changeOrigin: true, ws: true },
     },
   },
+  /* The production build in a browser (`npm run preview`): its own port, talking to the production fileserver, so it never
+   * collides with the dev server and the dev stack (docs/03 section 1). */
+  preview: {
+    host: '127.0.0.1',
+    port: 5271,
+    strictPort: true,
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8190', changeOrigin: true, ws: true },
+      '/ws': { target: 'http://127.0.0.1:8190', changeOrigin: true, ws: true },
+    },
+  },
 })

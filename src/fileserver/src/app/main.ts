@@ -1,3 +1,6 @@
+// MUST stay the first import: it sets production mode in the packaged app before config.ts is parsed.
+import "./production-env.js";
+
 import path from "node:path";
 
 import { app, BrowserWindow, dialog, screen, session } from "electron";

@@ -1,7 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { createSettingsService } from "../src/services/settings-service.js";
 import { makeApp, pick, send } from "./app-fixture.js";
+
+test("the packaged app's default admin address is the production backend until one is saved", () => {
+  const stored = new Map<string, unknown>();
+  const settings = createSettingsService({
+    repository: { readAll: () => stored, writeMany: (rows) => rows.forEach((value, key) => stored.set(key, value)) },
+    allowInsecureAdmin: false,
+    now: () => 0,
+    defaultAdminUrl: "http://127.0.0.1:8191",
+  });
+  assert.equal(settings.get().adminUrl, "http://127.0.0.1:8191");
+  settings.patch({ adminUrl: "http://127.0.0.1:8091" });
+  assert.equal(settings.get().adminUrl, "http://127.0.0.1:8091", "a saved address wins over the default");
+});
 
 test("a fresh fileserver answers every setting at its default, with the admin address included", async () => {
   const t = await makeApp();

@@ -25,14 +25,17 @@ export function createSettingsService(deps: {
   repository: SettingsRepository;
   allowInsecureAdmin: boolean;
   now: () => number;
+  /** The admin address before one is saved: the production backend's port in the packaged app. */
+  defaultAdminUrl?: string;
 }): SettingsService {
   const { repository, allowInsecureAdmin, now } = deps;
+  const defaults = { ...SETTING_DEFAULTS, adminUrl: deps.defaultAdminUrl ?? SETTING_DEFAULTS.adminUrl };
 
   function get(): Settings {
     const stored = repository.readAll();
     const pick = <K extends SettingKey>(key: K): Settings[K] => {
       const parsed = SETTING_SCHEMAS[key].safeParse(stored.get(key));
-      return parsed.success ? parsed.data : SETTING_DEFAULTS[key];
+      return parsed.success ? parsed.data : defaults[key];
     };
     const adminUrl = normalizeAdminUrl(pick("adminUrl"), allowInsecureAdmin);
     return {

@@ -185,13 +185,13 @@ fixture files from `FIXTURE_DIR`; a missing fixture stops the start with the com
 
 | Context | Command | Behaviour |
 |---|---|---|
-| Your channels | `npm run live:start` (`npm start` in `src/live-server`) | port 8097, data in `~/.giga-stream-live`, `.env` read if present |
+| Your channels | `npm run live:start` (`npm start` in `src/live-server`) | production: port 8197 (`production.env`, `03` section 1), data in `~/.giga-stream-live`, `.env` read if present |
 | App development | `npm run live:dev` | makes the fixtures, then the four test channels with the player page, data in `src/live-server/data/test-channels` (gitignored) |
 | Tests | `npm test` in `src/live-server`; `LIVE_SERVER_BROWSER=1 npm test` adds Chrome | temporary data folders; encodes cached in `<temp>/giga-stream-live-test-cache` |
 
 | Setting | Default | |
 |---|---|---|
-| `PORT` | 8097 | 0 picks a free port |
+| `PORT` | 8097; 8197 when `NODE_ENV=production` | 0 picks a free port |
 | `HOST` | `127.0.0.1` | `0.0.0.0` serves the LAN; changes stay this-computer-only |
 | `DATA_DIR` | `~/.giga-stream-live` | the database and encode mode's output |
 | `CACHE_DIR` | `<DATA_DIR>/cache` | loop mode's encodes; large |

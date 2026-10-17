@@ -56,6 +56,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   const services = createAppServices({
     dataDir: overrides.dataDir ?? config.dataDir,
     allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
+    defaultAdminUrl: overrides.defaultAdminUrl ?? config.defaultAdminUrl,
     liveViewTtlMs: overrides.liveViewTtlMs ?? config.liveViewTtlMs,
     now: overrides.now ?? Date.now,
     ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),

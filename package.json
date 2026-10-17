@@ -14,9 +14,11 @@
     "live:start": "npm start --prefix src/live-server",
     "test:live-server": "npm test --prefix src/live-server",
     "electron:dev": "npm run dev --prefix src/fileserver",
-    "electron": "npm run start:app --prefix src/fileserver"
+    "electron": "npm run start:app --prefix src/fileserver",
+    "dist:win": "npm run build --prefix src/frontend && npm run build --prefix src/fileserver && electron-builder --win --config electron-builder.config.cjs"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^10.0.6",
+    "electron-builder": "^26.15.3"
   }
 }

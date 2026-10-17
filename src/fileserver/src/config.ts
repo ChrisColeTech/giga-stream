@@ -12,6 +12,13 @@ const DEFAULT_WEB_DIST = path.resolve(PROGRAM_ROOT, "..", "frontend", "dist");
 /** The proof of concept (docs/14), served instead when `WEB_DIST` points at it; its results stay beside it. */
 const POC_DIR = path.resolve(PROGRAM_ROOT, "..", "mockup");
 
+/**
+ * Development and production never share a port (docs/03 section 1): this fileserver, and the admin
+ * backend it reads by default. Production is the packaged app, which sets `NODE_ENV=production`.
+ */
+const PORTS = { development: 8090, production: 8190 } as const;
+const ADMIN_PORTS = { development: 8091, production: 8191 } as const;
+
 /** Env parsing (docs/03 section 1) — the only place `process.env` is read. */
 const BooleanFlag = z
   .enum(["true", "false"])
@@ -19,7 +26,8 @@ const BooleanFlag = z
   .transform((value) => value === "true");
 
 const EnvSchema = z.object({
-  PORT: z.coerce.number().int().min(0).max(65535).default(8090),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  PORT: z.coerce.number().int().min(0).max(65535).optional(),
   HOST: z.string().default("127.0.0.1"),
   WEB_DIST: z.string().default(DEFAULT_WEB_DIST),
   DATA_DIR: z.string().default(""),
@@ -34,9 +42,12 @@ const EnvSchema = z.object({
 });
 
 const env = EnvSchema.parse(process.env);
+const mode = env.NODE_ENV === "production" ? "production" : "development";
 
 export const config = {
-  port: env.PORT,
+  port: env.PORT ?? PORTS[mode],
+  /** The admin backend's address until Settings names another. */
+  defaultAdminUrl: `http://127.0.0.1:${ADMIN_PORTS[mode]}`,
   host: env.HOST,
   webDist: path.resolve(env.WEB_DIST),
   /** The fileserver's own data folder: `~/.giga-stream` unless `DATA_DIR` is set. */

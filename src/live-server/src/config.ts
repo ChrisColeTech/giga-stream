@@ -8,10 +8,13 @@ const BooleanFlag = z
   .default("false")
   .transform((value) => value === "true");
 
+/** Development and production never share a port (docs/03 section 1); `npm start` is production. */
+const PORTS = { development: 8097, production: 8197 } as const;
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  // Tests use port 0.
-  PORT: z.coerce.number().int().min(0).max(65535).default(8097),
+  // Tests use port 0; unset, the port follows NODE_ENV.
+  PORT: z.coerce.number().int().min(0).max(65535).optional(),
   // 0.0.0.0 serves the streams to the LAN; changes are still accepted from this computer only.
   HOST: z.string().default("127.0.0.1"),
   DATA_DIR: z.string().default(""),
@@ -30,6 +33,7 @@ const dataDir = parsed.DATA_DIR || path.join(os.homedir(), ".giga-stream-live");
 
 export const config = {
   ...parsed,
+  PORT: parsed.PORT ?? PORTS[parsed.NODE_ENV === "production" ? "production" : "development"],
   DATA_DIR: dataDir,
   CACHE_DIR: parsed.CACHE_DIR || path.join(dataDir, "cache"),
   FIXTURE_DIR: parsed.FIXTURE_DIR || path.join(os.tmpdir(), "giga-stream-fixtures"),

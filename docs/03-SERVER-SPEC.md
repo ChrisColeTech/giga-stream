@@ -45,14 +45,22 @@ change without a design discussion.
 
 ## 1. Programs, ports and configuration
 
-| Program | Default port |
-|---|---|
-| Interface (Vite, development; proxies `/api` and `/ws` to the fileserver) | 5171 |
-| Fileserver | 8090 |
-| Admin backend | 8091 |
-| Live server (`10`) | 8097 |
+Development and production never share a port (owner, 2026-10-17), so the installed app runs beside
+the dev stack. `NODE_ENV=production` selects the production column: the packaged Electron app sets it
+(`src/app/production-env.ts`), and the backend's and live server's `npm start` load it from their
+`production.env`, which also pins the port over a development `PORT` in a local `.env`. `PORT` set in the
+environment overrides either.
 
-Both servers bind `127.0.0.1` unless `HOST` says otherwise.
+| Program | Development | Production |
+|---|---|---|
+| Interface (Vite; proxies `/api` and `/ws` to the fileserver) | 5171 (`npm run dev`) | 5271 (`npm run preview`, proxying to 8190) |
+| Fileserver | 8090 | 8190 (the packaged app) |
+| Admin backend | 8091 | 8191 |
+| Live server (`10`) | 8097 | 8197 |
+
+The fileserver's default admin address follows the same column: `http://127.0.0.1:8091` in development,
+`http://127.0.0.1:8191` in the packaged app, until Settings ▸ Admin backend names another. Both servers
+bind `127.0.0.1` unless `HOST` says otherwise.
 
 **Fileserver environment:** `PORT`, `HOST`, `DATA_DIR` (default `~/.giga-stream`), `WEB_DIST` (the built
 interface, default `src/frontend/dist`; point it at `src/mockup` to serve the proof of concept of `14`),

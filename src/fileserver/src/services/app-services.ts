@@ -38,6 +38,8 @@ import { createFavoritesService, createWatchService, type FavoritesService, type
 export interface ServiceOptions {
   dataDir: string;
   allowInsecureAdmin: boolean;
+  /** The admin address before one is saved (config: the backend's port for this mode). */
+  defaultAdminUrl: string;
   liveViewTtlMs: number;
   now: () => number;
   /** Test seams: the fetches the admin client, the probe and the image cache use. */
@@ -58,6 +60,7 @@ export function createAppServices(options: ServiceOptions) {
     repository: settingsRepository,
     allowInsecureAdmin: options.allowInsecureAdmin,
     now: options.now,
+    defaultAdminUrl: options.defaultAdminUrl,
   });
   const shell = createShellStateService({ repository: createShellStateRepository(database), now: options.now });
   const channelState = createChannelStateRepository(database);
