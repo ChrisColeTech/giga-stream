@@ -23,6 +23,7 @@ test("a watch write survives closing and reopening the data folder (Continue Wat
       playbackId: "p1",
       seq: 1,
     });
+    first.clock.advance(60_000); // the test clock is frozen: "newest first" needs distinct times
     await write(first.app, {
       item: { kind: "title", id: "tv-1399" },
       season: 1,
