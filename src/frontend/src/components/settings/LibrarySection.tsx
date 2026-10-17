@@ -29,10 +29,10 @@ export function LibrarySection({ libraryView, onLibraryView, onOpenCollections, 
         <Segmented aria-label="Default view" options={VIEWS} value={libraryView} onChange={onLibraryView} />
       </Row>
       <Row label="Collections" tip="Open the collections window.">
-        <Button onClick={onOpenCollections}>Manage collections</Button>
+        <Button size="sm" onClick={onOpenCollections}>Manage collections</Button>
       </Row>
       <Row label="History" tip="Close Settings and show the library's history.">
-        <Button onClick={onOpenHistory}>Open History</Button>
+        <Button size="sm" onClick={onOpenHistory}>Open History</Button>
       </Row>
     </Group>
   );

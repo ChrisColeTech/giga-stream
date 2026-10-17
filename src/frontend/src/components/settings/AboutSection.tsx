@@ -11,10 +11,10 @@ export function AboutSection() {
     <>
       <Group id="settings.about" title="About" icon={Info}>
         <Row label="Version and build" tip="The version of this app and its build." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Runtime mode" tip="Whether this runs as the desktop app or in a browser." reason={NEEDS_FILESERVER}>
-          <span className="font-mono text-xs text-muted">{FACT_UNKNOWN}</span>
+          <span className="font-mono text-[11px] text-muted">{FACT_UNKNOWN}</span>
         </Row>
         <Row label="Licences" tip="The licences of this app and of the data it uses.">
           <Button variant="ghost" size="sm" disabled title={NO_LICENCE_TEXT}>
@@ -24,7 +24,7 @@ export function AboutSection() {
       </Group>
       <Group id="settings.about.attribution" title="Attribution" icon={Database} last>
         <Row label="TMDB" tip="The notice the TMDB terms require, shown beside the app's own marks.">
-          <span className="min-w-0 flex-1 text-xs leading-4 text-muted">{TMDB_NOTICE}</span>
+          <span className="min-w-0 flex-1 text-[13px] leading-5 text-text">{TMDB_NOTICE}</span>
         </Row>
       </Group>
     </>

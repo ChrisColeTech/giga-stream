@@ -59,7 +59,7 @@ export function Segmented<T extends string>({
           className={cn(
             SEG_BUTTON,
             "disabled:cursor-not-allowed disabled:text-dim disabled:hover:text-dim",
-            dense ? "h-5 px-2.25 text-[11px]" : "h-[calc(var(--spacing-ctl-md)-6px)] px-2 text-xs",
+            dense ? "h-5 px-2.25 text-[11px]" : "h-[calc(var(--spacing-ctl-sm)-6px)] px-2 text-xs",
           )}
           onClick={() => onChange(option.value)}
         >
