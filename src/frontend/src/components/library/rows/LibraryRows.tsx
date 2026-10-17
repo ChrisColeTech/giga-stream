@@ -1,4 +1,5 @@
 import { useMemo, type KeyboardEvent, type ReactNode } from "react";
+import { useScrollTopWhileLoading } from "@/hooks/useScrollTopWhileLoading";
 import { useAppStore } from "@/store/app-store";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { Scope } from "@/lib/library-query";
@@ -62,12 +63,14 @@ export function LibraryRows({
     () => buildShelves({ items, continuing, collections, marks, showContinue }),
     [items, continuing, collections, marks, showContinue],
   );
+  const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading);
   const render = rowsRenderState(shelves.length, hasMore, paging);
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
       <div
+        ref={scroller}
         role="group"
         aria-label={ROWS_COPY.listLabel}
         className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto py-3"

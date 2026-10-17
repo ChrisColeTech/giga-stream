@@ -4,12 +4,13 @@ import {
   LibrarySearchSession,
   appendLibraryPage,
   canLoadLibraryPage,
-  knownLibraryCount,
   libraryQueryKey,
   readContinue,
   readLibrary,
 } from "@/services/library";
 import { listCollections } from "@/services/collections";
+import { acceptCount, resultCount } from "@/lib/library-counts";
+import { reloadDecision } from "@/lib/library-reload";
 import { logLibraryPage } from "@/services/library-log";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem, LibraryPage } from "@/types/library";
@@ -44,6 +45,10 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
   const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
+  const previousKey = useRef(libraryQueryKey(query));
+  const previousSerial = useRef(refreshSerial);
+  const firstPass = useRef(true);
+  const dirty = useRef(false);
 
   if (session.current === null) {
     session.current = new LibrarySearchSession(
@@ -108,6 +113,10 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     firstPagePending.current = true;
     pageRequest.current?.abort();
     setPaging(false);
+    /* The loaded list goes: the grid draws its first-page skeletons until the new first page lands, and nothing can
+       chain pages toward a stale position (no cursor, so no pager). */
+    pageRef.current = null;
+    setPage(null);
     setLoading(true);
     if (debounce) session.current?.search(query);
     else session.current?.readNow(query);
@@ -137,17 +146,27 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     return true;
   };
 
+  /* The first page is read again only for an invalidation (`library-reload`): a changed query or a bumped refresh
+     serial, applied when the Library is shown. Showing it again reads nothing for the list, which keeps its place;
+     only the side data (counts, Continue) refreshes quietly. */
   useEffect(() => {
     const searchChanged = previousSearch.current !== query.search;
     previousSearch.current = query.search;
-    useAppStore.getState().setLibraryQuery(query);
-    read(searchChanged);
-  }, [query]);
-  useEffect(() => {
-    if (active && !previousActive.current) { read(false); readSideData(); }
+    const queryChanged = previousKey.current !== libraryQueryKey(query);
+    previousKey.current = libraryQueryKey(query);
+    const serialChanged = previousSerial.current !== refreshSerial;
+    previousSerial.current = refreshSerial;
+    const shownNow = active && !previousActive.current;
     previousActive.current = active;
-  }, [active]);
-  useEffect(() => { if (refreshSerial > 0) { read(false); readSideData(); } }, [refreshSerial]);
+    useAppStore.getState().setLibraryQuery(query);
+    const decision = reloadDecision({
+      initial: firstPass.current, active, queryChanged, serialChanged, dirty: dirty.current,
+    });
+    firstPass.current = false;
+    dirty.current = decision.dirty;
+    if (decision.reload) read(searchChanged && !shownNow);
+    if (active && (shownNow || serialChanged) && !decision.reload) readSideData();
+  }, [query, refreshSerial, active]);
   useEffect(() => {
     readSideData();
     return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };
@@ -173,23 +192,4 @@ export function useLibraryData(active: boolean, query: LibraryQuery, showContinu
     loadMore,
     refresh: () => { read(false); readSideData(); },
   };
-}
-
-function acceptCount(query: LibraryQuery, page: LibraryPage): void {
-  if (query.scope !== "all" || query.search.trim() !== "" || query.genres.length > 0
-    || query.year !== "" || query.watched !== "all") return;
-  const count = knownLibraryCount(page);
-  if (count === undefined) return;
-  const store = useAppStore.getState();
-  const collectionId = collectionOf(query.source);
-  store.setLibraryCounts(collectionId === null
-    ? { ...store.libraryCounts, [query.source]: count }
-    : { ...store.libraryCounts, collections: { ...store.libraryCounts.collections, [collectionId]: count } });
-}
-
-function resultCount(
-  result: PromiseSettledResult<LibraryPage>,
-  previous: number | undefined,
-): number | undefined {
-  return result.status === "fulfilled" ? knownLibraryCount(result.value) : previous;
 }
