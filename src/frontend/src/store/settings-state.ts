@@ -28,6 +28,7 @@ export function fieldsOfSettings(settings: SettingsAnswer): SettingsFields {
       resumeMode: settings.resumeMode,
       watchedPercent: settings.watchedPercent,
       liveOnOpen: settings.liveOnOpen,
+      defaultSource: settings.defaultSource,
     },
     library: {
       libraryView: settings.libraryView,
@@ -74,5 +75,6 @@ export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswe
     ...(value.pauseHistory === baseline.pauseHistory ? {} : { pauseHistory: value.pauseHistory }),
     ...(value.rescanOnStartup === baseline.rescanOnStartup ? {} : { rescanOnStartup: value.rescanOnStartup }),
     ...(value.adminUrl === baseline.adminUrl ? {} : { adminUrl: value.adminUrl }),
+    ...(value.defaultSource === baseline.defaultSource ? {} : { defaultSource: value.defaultSource }),
   };
 }

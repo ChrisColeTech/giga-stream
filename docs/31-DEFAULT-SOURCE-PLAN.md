@@ -57,9 +57,9 @@ reload or relaunch the default is in the store before a Play can open the Player
 | `frontend/src/services/schemas/settings-schema.ts`, `types/settings.ts`, `constants/settings-defaults.ts` | the key (in `PlaybackPrefs`) |
 | `frontend/src/store/slices/playback-slice.ts` | default value |
 | `frontend/src/store/settings-state.ts`, `shell-hydration.ts` | field, patch and settle for the key |
-| `frontend/src/lib/player-sources.ts` | `preferredPlayerSource(sources, saved)` |
-| `frontend/src/hooks/usePlayerSources.ts` | apply the saved default |
-| `frontend/src/pages/PlayerPage.tsx` | the pick saves the default |
+| `frontend/src/lib/player-sources.ts` | none: `selectedPlayerSource(sources, id)` already means "that source if offered, else the first" |
+| `frontend/src/hooks/usePlayerSources.ts` | commit the saved default to the store instead of the session's last choice |
+| `frontend/src/pages/PlayerPage.tsx` | host `selectedPlayerSource(sources, savedDefault)` directly (no frame of the wrong source while the store catches up); the pick saves the default |
 | `frontend/test/player-sources.test.ts` | preferred source, fallback, local |
 | `docs/03` section 3.2 | should list `defaultSource` (not edited here) |
 

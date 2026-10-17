@@ -32,6 +32,7 @@ export function playbackSlice(set: Set, get: Get): PlaybackSlice {
       resumeMode: DEFAULT_SETTINGS.resumeMode,
       watchedPercent: DEFAULT_SETTINGS.watchedPercent,
       liveOnOpen: DEFAULT_SETTINGS.liveOnOpen,
+      defaultSource: DEFAULT_SETTINGS.defaultSource,
     },
     playerItem: null,
     playerMedia: { sources: [], activeSourceId: null, stage: { kind: "idle" } },

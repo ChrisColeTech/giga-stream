@@ -7,7 +7,6 @@ import { useAppStore } from "@/store/app-store";
 
 /** Resolves media for the playing item and preserves a session source choice across same-item refreshes. */
 export function usePlayerSources(session: PlayerSession, data: LoadedPlayerData): readonly PlayerSource[] {
-  const activeSourceId = useAppStore((state) => state.playerMedia.activeSourceId);
   const setSources = useAppStore((state) => state.setPlayerSources);
   const sources = useMemo(() => {
     if (session.current?.kind === "local") {
@@ -20,7 +19,10 @@ export function usePlayerSources(session: PlayerSession, data: LoadedPlayerData)
   }, [data.detail, data.localInfo, data.playingEpisode, session.current]);
 
   useEffect(() => {
-    const selected = selectedPlayerSource(sources, activeSourceId)?.id ?? null;
+    // The saved default when this item offers it, else its first source. Read here, not as a dependency: choosing a
+    // source must not restart the stage it just switched.
+    const saved = useAppStore.getState().playback.defaultSource;
+    const selected = selectedPlayerSource(sources, saved)?.id ?? null;
     setSources(sources, selected);
   }, [sources]);
   return sources;

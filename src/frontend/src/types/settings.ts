@@ -40,6 +40,9 @@ export interface Settings {
   readonly rescanOnStartup: boolean;
   /** The admin backend's address. The interface only edits it through the fileserver; it never contacts it. */
   readonly adminUrl: string;
+  /** The Player source last chosen (`provider:<id>` or `app`), played first wherever an item offers it; null is the
+   *  item's first source. */
+  readonly defaultSource: string | null;
 }
 
 /** The playback preferences: stable choices that apply to every stream, kept in the store and edited in Live's rail. */
@@ -54,6 +57,7 @@ export type PlaybackPrefs = Pick<
   | "resumeMode"
   | "watchedPercent"
   | "liveOnOpen"
+  | "defaultSource"
 >;
 
 /** The Library preferences, kept in the store and edited in Settings > Library. */

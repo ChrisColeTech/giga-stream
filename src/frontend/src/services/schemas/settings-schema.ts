@@ -20,6 +20,7 @@ export const SettingsSchema = z.object({
   pauseHistory: z.boolean(),
   rescanOnStartup: z.boolean(),
   adminUrl: z.string().min(1).max(2048),
+  defaultSource: z.string().min(1).max(200).nullable(),
 });
 
 export const SettingsPatchSchema = SettingsSchema.partial();

@@ -89,5 +89,6 @@ function settledSettings(local: SettingsAnswer, sent: SettingsPatch, answer: Set
     ...(sent.pauseHistory === local.pauseHistory ? { pauseHistory: answer.pauseHistory } : {}),
     ...(sent.rescanOnStartup === local.rescanOnStartup ? { rescanOnStartup: answer.rescanOnStartup } : {}),
     ...(sent.adminUrl === local.adminUrl ? { adminUrl: answer.adminUrl } : {}),
+    ...(sent.defaultSource === local.defaultSource ? { defaultSource: answer.defaultSource } : {}),
   };
 }
