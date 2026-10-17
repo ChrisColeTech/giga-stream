@@ -16,7 +16,7 @@ export function CollectionsIndex({ rows, onOpen }: CollectionsIndexProps) {
   return (
     <Workspace labels={NEW_COLLECTION_LABELS}>
       <NewCollectionForm />
-      <CollectionRows rows={rows} onRefresh={verbs.refresh} onOpen={onOpen} onDelete={verbs.remove} />
+      <CollectionRows rows={rows} onOpen={onOpen} onDelete={verbs.remove} />
     </Workspace>
   );
 }

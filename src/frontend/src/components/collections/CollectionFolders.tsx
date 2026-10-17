@@ -2,7 +2,7 @@ import { Folder, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
-import { Group } from "@/components/ui/Form";
+import { Actions, Group } from "@/components/ui/Form";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { SKELETON_ROW_COUNT } from "@/lib/collections-copy";
@@ -20,8 +20,8 @@ const COLUMNS: ReadonlyArray<Column<CollectionFolder>> = [
 ];
 
 /** The folders attached to one collection (`03` section 3.8). Their locations are never shown, only their names. Attach
- *  folder acts on this list, so it sits on the group's heading, as Sensenova puts a list's verb there. With none, the
- *  table is drawn as skeleton rows. */
+ *  folder ends the group, under the table; section headers carry no buttons. With none, the table is drawn as skeleton
+ *  rows. */
 export function CollectionFolders({
   collectionId,
   folders,
@@ -31,24 +31,20 @@ export function CollectionFolders({
 }) {
   const verbs = useCollectionVerbs();
   return (
-    <Group
-      title="Folders"
-      icon={Folder}
-      action={
-        <Button
-          size="sm"
-          title="Attach a folder this collection is built from. Files on disk are only read, never changed."
-          onClick={() => verbs.attach(collectionId)}
-        >
-          <FolderPlus aria-hidden /> Attach folder
-        </Button>
-      }
-    >
+    <Group title="Folders" icon={Folder}>
       {folders.length === 0 ? (
         <SkeletonRows count={SKELETON_ROW_COUNT} />
       ) : (
         <DataTable label="Folders" columns={COLUMNS} rows={folders} rowKey={(folder) => folder.id} />
       )}
+      <Actions>
+        <Button
+          title="Attach a folder this collection is built from. Files on disk are only read, never changed."
+          onClick={() => verbs.attach(collectionId)}
+        >
+          <FolderPlus aria-hidden /> Attach folder
+        </Button>
+      </Actions>
     </Group>
   );
 }

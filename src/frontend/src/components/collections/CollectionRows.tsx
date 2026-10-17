@@ -1,5 +1,4 @@
-import { Library, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Library } from "lucide-react";
 import { Group, Wide } from "@/components/ui/Form";
 import { SkeletonRows } from "@/components/ui/SkeletonRows";
 import { TwoStep } from "@/components/ui/TwoStep";
@@ -7,30 +6,20 @@ import { SCAN_LABEL } from "@/lib/collections-copy";
 import type { CollectionRow } from "@/types/collection";
 
 /* The stored collections, as Sensenova's datasets grid (pages/datasets/DatasetRows.tsx): a header row of column names,
- * then a row per collection that opens it, with Delete beside the row it removes as an inline two-step. Refresh acts on
- * this list, so it sits on the heading. Delta: no tick column; Sensenova's tick picks the app context for a forward
- * verb, and the Collections window has no forward verb. */
+ * then a row per collection that opens it, with Delete beside the row it removes as an inline two-step. Deltas: no tick
+ * column (Sensenova's tick picks the app context for a forward verb, and this window has none), and no Refresh on the
+ * heading (owner: section headers carry no buttons). */
 const COLS = "grid grid-cols-[minmax(0,2fr)_7ch_7ch_7ch_12ch_auto] items-center gap-3 px-3";
 
 export interface CollectionRowsProps {
   readonly rows: readonly CollectionRow[];
-  readonly onRefresh: () => void;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
 }
 
-export function CollectionRows({ rows, onRefresh, onOpen, onDelete }: CollectionRowsProps) {
+export function CollectionRows({ rows, onOpen, onDelete }: CollectionRowsProps) {
   return (
-    <Group
-      icon={Library}
-      title="Collections"
-      last
-      action={
-        <Button size="sm" title="Re-read the collections" onClick={onRefresh}>
-          <RefreshCw aria-hidden /> Refresh
-        </Button>
-      }
-    >
+    <Group icon={Library} title="Collections" last>
       <Wide>
         <div className={`${COLS} font-mono text-xs text-dim`}>
           <span>name</span>
