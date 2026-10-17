@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react'
 
+import { Tooltip } from '../form/Tooltip'
 import { cn } from '../lib/cn'
+import { nodeText } from '../lib/node-text'
 
 export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'danger'
 export type ButtonSize = 'sm' | 'md' | 'lg'
@@ -64,10 +66,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Forwarded so a dialog can move focus to its committing button. React 19
    *  passes `ref` as a plain prop, so no forwardRef wrapper is needed. */
   ref?: React.Ref<HTMLButtonElement>
+  /** Why the button cannot be used now. Present, the button is natively `disabled` and sits in the focusable `Tooltip`
+   *  labelled "Verb. reason" (the template's disabled model, as `ResumeFooter` draws it); absent, no wrapper at all.
+   *  A native `title` would double the bubble, so it is dropped while a reason is given. */
+  reason?: string
 }
 
-export function Button({ variant = 'default', size = 'md', full = false, on = false, className, type = 'button', ref, ...rest }: ButtonProps) {
+export function Button({ variant = 'default', size = 'md', full = false, on = false, reason, className, type = 'button', ref, ...rest }: ButtonProps) {
+  const classes = cn(BASE, SIZES[size], VARIANTS[variant], full && 'w-full', className)
+  if (reason === undefined) return <button ref={ref} type={type} data-on={on ? '' : undefined} className={classes} {...rest} />
+  const verb = rest['aria-label'] ?? nodeText(rest.children)
   return (
-    <button ref={ref} type={type} data-on={on ? '' : undefined} className={cn(BASE, SIZES[size], VARIANTS[variant], full && 'w-full', className)} {...rest} />
+    <Tooltip text={reason} focusable label={`${verb}. ${reason}`} className={cn('min-w-0', full && 'w-full')}>
+      <button ref={ref} type={type} data-on={on ? '' : undefined} className={classes} {...rest} title={undefined} disabled />
+    </Tooltip>
   )
 }

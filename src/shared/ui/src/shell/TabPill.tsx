@@ -1,6 +1,8 @@
 export interface TabItem<T extends string> {
   readonly id: T;
   readonly label: string;
+  /** The tab's tooltip when it works (the admin's `Channels (Ctrl+1)`). */
+  readonly title?: string;
 }
 
 export interface TabPillProps<T extends string> {
@@ -43,6 +45,7 @@ export function TabPill<T extends string>({ label, items, active, disabled = fal
           key={item.id}
           type="button"
           className={TAB}
+          title={disabled ? undefined : item.title}
           disabled={disabled}
           data-active={!disabled && item.id === active ? "" : undefined}
           onClick={() => onSelect(item.id)}

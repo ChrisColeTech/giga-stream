@@ -1,4 +1,5 @@
 import { Square } from "lucide-react";
+import { Tooltip } from "../form/Tooltip";
 import { cn } from "../lib/cn";
 
 export interface RunningWorkJob {
@@ -14,6 +15,11 @@ export interface RunningWorkProps {
   readonly liveCount: number;
   /** Stop acts on the first press: a confirm makes no sense on an emergency stop. */
   readonly onStop: () => void;
+  /** The words beside the bar, for an app whose work is not "N running" (the admin's `2 preparing · 1 syncing`). */
+  readonly readout?: string;
+  /** Why Stop cannot be used even while work runs (work that no route can stop). Present, Stop is natively disabled
+   *  inside the focusable `Tooltip` labelled "Stop. reason". Absent, Stop works while anything runs. */
+  readonly stopReason?: string;
 }
 
 const BUTTON =
@@ -24,8 +30,19 @@ const BUTTON =
 /* LoRA Studio's running work: a bar that fills, the count of live jobs with the first one's percent, and Stop. An empty
  * track and "idle" while nothing runs: the bar is furniture, not a sentence. A job that cannot say how far it is (a scan
  * walking its folder) fills the bar and pulses. */
-export function RunningWork({ running, liveCount, onStop }: RunningWorkProps) {
+export function RunningWork({ running, liveCount, onStop, readout, stopReason }: RunningWorkProps) {
   const percent = running?.percent ?? null;
+  const stop = (
+    <button
+      type="button"
+      className={BUTTON}
+      disabled={running === null || stopReason !== undefined}
+      title={stopReason !== undefined ? undefined : running === null ? "Nothing to stop" : `Stop ${running.label.toLowerCase()}`}
+      onClick={onStop}
+    >
+      <Square aria-hidden /> Stop
+    </button>
+  );
   return (
     <span
       className="inline-flex items-center gap-1.5"
@@ -48,17 +65,15 @@ export function RunningWork({ running, liveCount, onStop }: RunningWorkProps) {
         />
       </span>
       <span className="font-mono text-xs tabular-nums text-dim">
-        {running === null ? "idle" : `${liveCount} running${percent === null ? "" : ` · ${percent}%`}`}
+        {running === null ? "idle" : (readout ?? `${liveCount} running${percent === null ? "" : ` · ${percent}%`}`)}
       </span>
-      <button
-        type="button"
-        className={BUTTON}
-        disabled={running === null}
-        title={running === null ? "Nothing to stop" : `Stop ${running.label.toLowerCase()}`}
-        onClick={onStop}
-      >
-        <Square aria-hidden /> Stop
-      </button>
+      {stopReason === undefined ? (
+        stop
+      ) : (
+        <Tooltip text={stopReason} focusable label={`Stop. ${stopReason}`}>
+          {stop}
+        </Tooltip>
+      )}
     </span>
   );
 }
