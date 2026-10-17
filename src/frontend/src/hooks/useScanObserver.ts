@@ -3,15 +3,21 @@ import { refreshCollectionsData } from "@/hooks/useCollectionsData";
 import { createScanObserver, type ScanObserver } from "@/lib/scan-observer";
 import { ApiError } from "@/services/api";
 import { streamFolderScan } from "@/services/scan-stream";
-import { useAppStore } from "@/store/app-store";
+import { useAppStore, type AppState } from "@/store/app-store";
 
 const sentence = (error: unknown): string =>
   error instanceof Error ? error.message : "Could not reach the fileserver.";
 
-export function useScanObserver(): void {
-  const scanIds = useAppStore((state) =>
-    state.collections.flatMap((collection) => collection.folders.filter((folder) => folder.scanning).map((folder) => folder.id)),
+export const selectScanCollections = (state: AppState): AppState["collections"] => state.collections;
+
+export const scanningFolderIds = (collections: AppState["collections"]): string[] =>
+  collections.flatMap((collection) =>
+    collection.folders.filter((folder) => folder.scanning).map((folder) => folder.id),
   );
+
+export function useScanObserver(): void {
+  const collections = useAppStore(selectScanCollections);
+  const scanIds = scanningFolderIds(collections);
   const scanKey = scanIds.join("\n");
   const observerRef = useRef<ScanObserver | null>(null);
   if (observerRef.current === null) {

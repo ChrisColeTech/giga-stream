@@ -1,11 +1,32 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { scanningFolderIds, selectScanCollections } from "@/hooks/useScanObserver";
 import { createScanObserver } from "@/lib/scan-observer";
 import type { ScanTerminal } from "@/services/scan-stream";
+import { useAppStore } from "@/store/app-store";
 
 const turn = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 describe("session scan observer", () => {
+  it("selects the stable collections field and derives scanning IDs after the snapshot", () => {
+    const initial = useAppStore.getState();
+    try {
+      useAppStore.getState().setCollections([{
+        id: "c-1", name: "One", type: "local", itemCount: 0, scanning: true, createdAt: 1, updatedAt: 1,
+        folders: [
+          { id: "f-1", collectionId: "c-1", name: "One", fileCount: 0, scanning: true },
+          { id: "f-2", collectionId: "c-1", name: "Two", fileCount: 0, scanning: false },
+        ],
+      }]);
+      const selected = selectScanCollections(useAppStore.getState());
+      useAppStore.setState({ libraryRefreshSerial: useAppStore.getState().libraryRefreshSerial + 1 });
+      assert.equal(selectScanCollections(useAppStore.getState()), selected);
+      assert.deepEqual(scanningFolderIds(selected), ["f-1"]);
+    } finally {
+      useAppStore.setState(initial, true);
+    }
+  });
+
   it("keeps one stream across Collections lifecycle changes and aborts only when its owner closes", async () => {
     let starts = 0;
     let signal: AbortSignal | undefined;

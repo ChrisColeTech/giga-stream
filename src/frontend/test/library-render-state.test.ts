@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
+import { requestVisiblePageOnce } from "@/components/library/LibraryPager";
 import { collectionsSubmenu, FOLDER_MEMBERSHIP_REASON } from "@/lib/collection-menu";
 import { memberRows } from "@/lib/collections-members";
 import { libraryRenderState, rowsRenderState } from "@/lib/library-render-state";
@@ -37,6 +38,18 @@ describe("Rows paging grammar", () => {
   it("keeps the pager beside an empty-page skeleton when another cursor exists", () => {
     assert.deepEqual(rowsRenderState(0, true, false), { showSkeleton: true, showPager: true });
     assert.deepEqual(rowsRenderState(0, false, false), { showSkeleton: true, showPager: false });
+  });
+
+  it("requests a visible cursor only once until the active request clears", () => {
+    const active = { current: false };
+    let requests = 0;
+    const request = () => { requests += 1; };
+    requestVisiblePageOnce(active, request);
+    requestVisiblePageOnce(active, request);
+    assert.equal(requests, 1);
+    active.current = false;
+    requestVisiblePageOnce(active, request);
+    assert.equal(requests, 2);
   });
 });
 
