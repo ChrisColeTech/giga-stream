@@ -92,5 +92,11 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   them, never edits a doc, commits without pushing, and reports in the format of `docs/07` section 6.4.
 - Every code wave, including foundations other waves wait on, is implemented by a worker. The coordinator
   writes docs and briefs, reviews and lands branches, runs checks and real drives, packages, and reports.
+- Every frontend wave is visually accepted in the connected Chrome MCP against the root `npm run dev`
+  stack, at both required sizes. The coordinator compares each touched surface and pane to its exact
+  governing doc, reads console/network failures, and rejects invented empty-state placeholders: loading
+  and empty content regions use the documented skeletons while the established controls stay in place.
+- A frontend wave is not landed or packaged while a real fileserver answer fails its frontend schema,
+  while a control still calls a stub/mock service, or while a fixture supplies data the fileserver owns.
 - After every wave lands, the coordinator runs `npm run dist:win` and gives the owner the exe's path, so
   the owner tests the wave without disturbing development (`docs/07` section 6.5).

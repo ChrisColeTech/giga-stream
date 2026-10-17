@@ -85,6 +85,20 @@ rules are in `01`; this document is about process.
 
 - A visible feature is done when it has been run in the browser or the Electron window, looked at, and
   compared with the reference, and the gate passes. Compiling is not done.
+- **Chrome MCP visual acceptance is mandatory for every frontend wave** (owner, 2026-10-17). With the
+  root `npm run dev` stack still running, the coordinator opens the real interface in the connected
+  Chrome MCP, checks every touched surface and pane at both required viewport sizes, and compares it to
+  the exact governing sections of `02`, `04` and `06`. Console errors, failed/invalid network answers,
+  missing controls, invented placeholder compositions and undocumented visual changes fail the wave.
+- **State grammar is checked visually, not inferred from unit tests.** Loading and empty content regions
+  draw the documented skeletons. A wiring change never replaces established controls with an empty-state
+  card, dash facts or native controls that the page docs did not specify; a control works or remains in
+  place disabled with its documented accessible reason.
+- **The real wire is part of acceptance.** The coordinator drives the fileserver answers used by the
+  surface, verifies them against the frontend schemas, and sweeps the touched paths for stubs, mocks and
+  fixture imports. One malformed composite child must not discard valid siblings. A wave is not accepted
+  while a fileserver-owned value still comes from a frontend fixture or a service still returns a phase-one
+  refusal.
 - The default test run is fast (seconds). Heavy suites are opt-in and run once at the end.
 - The gate (`node scripts/check/gate.mjs`) runs every typecheck, the lint, the rule checker and every
   program's tests, and must print `gate: PASS`.
@@ -144,11 +158,14 @@ written, stated as written and not run; every gap it filled and how; anything le
 2. It merges the branch, runs `npm ci` where a lockfile changed (never under a running app, 4), and runs
    the gate.
 3. It runs the real checks the worker could not: the programs started on free ports with temporary
-   data, driven over HTTP (the fileserver has no socket, `03` section 4), restarted and re-read.
+   data, driven over HTTP (the fileserver has no socket, `03` section 4), restarted and re-read. For a
+   frontend wave it also completes section 5's Chrome MCP visual acceptance before the branch is called
+   landed.
 4. A failure goes back to the **same** worker with the exact output. The coordinator does not quietly
    fix a worker's defect and report the work as clean.
 5. A worker that broke a rule is told, and the breach is recorded in the landing commit message.
-6. **When the wave has landed and the gate passes, the coordinator produces the Windows app**
+6. **Only when the wave's gate, real-wire checks and Chrome MCP visual acceptance pass does the
+   coordinator produce the Windows app**
    (owner, 2026-10-17): `npm run dev`'s stack may keep running; `npm run dist:win` at the root builds the
    interface and the fileserver and packages them with electron-builder. The result is
    `release/Giga Stream Setup <version>.exe` (the installer) and `release/win-unpacked/Giga Stream.exe`
