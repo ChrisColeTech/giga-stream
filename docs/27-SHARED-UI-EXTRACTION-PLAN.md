@@ -17,19 +17,27 @@ reconciliation is `28` Appendix A).
 
 ## 0. The program, and where this document sits
 
-| Wave | What | Worker | Plan | Starts when |
-|---|---|---|---|---|
-| 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below |
-| **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **now** |
-| 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted |
-| 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 accepted |
-| 4 | Providers and Titles | A | `28` | Wave 3 accepted |
-| 5 | Playlists, Jobs and Accounts | A | `28` | Wave 4 accepted |
-| 6 | audit rows, sweep, tests | A | `28` | Wave 5 accepted |
-| 7 | request layer, auth, shell wiring, Settings persistence | A | `29` | Wave 6 and Wave 0 accepted |
-| 8 | Channels, Providers and the Preview window wired | A | `29` | Wave 7 accepted |
-| 9 | Titles, Playlists, Jobs wired | A | `29` | Wave 8 accepted |
-| 10 | Accounts wired, sweep | A | `29` | Wave 9 accepted |
+**Order of execution:** Wave 1 first (U1, U2, U3, U4 strictly one after the other). Wave 0 (backend) may run beside Wave 1 at
+any time because it touches only `src/backend`. Then Waves 2, 3, 4, 5, 6 (visual parity, fixtures only, no network), then
+Wave 7 (needs Wave 0 landed), then 8, 9, 10 (wiring). A wave starts only when the one before it is landed and visually accepted.
+
+**This is the master progress table; `28` and `29` carry the per-wave detail and the coordinator updates all three when a
+wave changes state.** States: `Not started`, `In progress` (a worker is running), `Landed` (merged, gate green, awaiting
+acceptance), `Done` (visually accepted on the real stack).
+
+| Wave | What | Worker | Plan | Starts when | Status | Landed in (commit) |
+|---|---|---|---|---|---|---|
+| 0 | backend changes the wiring needs, including per-account UI state (migration 017) | B | `29` | any time; independent of everything below | Not started | |
+| **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **now** | **Not started** | |
+| 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | Not started | |
+| 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 accepted | Not started | |
+| 4 | Providers and Titles | A | `28` | Wave 3 accepted | Not started | |
+| 5 | Playlists, Jobs and Accounts | A | `28` | Wave 4 accepted | Not started | |
+| 6 | audit rows, sweep, tests | A | `28` | Wave 5 accepted | Not started | |
+| 7 | request layer, auth, shell wiring, Settings persistence | A | `29` | Wave 6 and Wave 0 accepted | Not started | |
+| 8 | Channels, Providers and the Preview window wired | A | `29` | Wave 7 accepted | Not started | |
+| 9 | Titles, Playlists, Jobs wired | A | `29` | Wave 8 accepted | Not started | |
+| 10 | Accounts wired, sweep | A | `29` | Wave 9 accepted | Not started | |
 
 **Step 9** (the admin-only library pieces: `Checkbox` for row selection, `RecordGrid`, `ToolbarStrip`, the `reason` prop
 that makes a disabled button explain itself, a pill `ChipGroup`, the tooltip arrow that follows its anchor, the shell's
@@ -169,6 +177,15 @@ the typecheck of `src/frontend`, `src/admin`, `src/shared/ui` and `src/shared/ht
 lint, `node scripts/check-rules.mjs`, all clean; tests written, **not run**; one commit per step on its branch, never
 pushed, merged or rebased; the report of `07` 6.4. The admin is edited only for what a step moves: an import rewrite and
 the deletion of the copy it replaces. No admin page work, no stripping of the demo (Wave 2 does that), no new admin file.
+
+### 6.1a Wave 1 progress and files by worker
+
+| Worker | Steps | Status | Landed in | Creates | Updates | Deletes (same commit) |
+|---|---|---|---|---|---|---|
+| U1 | 0, 1, 2a, 2b, 2c | Not started | | `src/shared/ui/**` (`package.json`, `tsconfig.json`, `styles/`, `controls/`, `form/`, `lists/`, `menus/`, `hooks/`, `lib/`, fonts), `src/shared/http/` scaffold, the rule-checker tests of 6.2 | `scripts/check-rules/*`, `scripts/check/gate.mjs`, both apps' `vite.config.mts`, `tsconfig.app.json`, `index.css`, and every import of a moved UI file | the frontend's and admin's copies listed in 6.3 for steps 0 to 2c |
+| U2 | 3, 4 | Not started | | `shell/`, `Swatches`, `ArmedButton`, the motion constants in the library | `components/chrome/*` of the interface (become adapters), `test/theatre-mode.test.ts` | the admin's chrome copies of 6.3 for steps 3 and 4 |
+| U3 | 5, 6 | Not started | | `src/shared/http/src/*`, `store/chrome-slice.ts`, `useTheme`, `useShellKeys`, `EventsDrawer` | `services/api.ts`, `lib/error-sentence.ts`, `store/slices/shell-slice.ts`, `test/api.test.ts` (moved) | the admin's copies of 6.3 for steps 5 and 6 |
+| U4 | 7, 8 | Not started | | `windows/`, `panes/` | `components/overlays/*`, `popups/*`, `settings/*`, the pane engine files, `styles/workspace.css` | the admin's copies of 6.3 for steps 7 and 8 |
 
 ### 6.2 Tests each worker writes (fast, `node:test`, written not run)
 

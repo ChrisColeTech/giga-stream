@@ -678,6 +678,16 @@ There is no `testPage` field in `/healthz` and none is added: the Preview window
 One worker per real sub-project (`07` 6.1): **B** owns `src/backend` (Wave 0), **A** owns `src/admin` (Waves 7 to 10) in one worktree. The coordinator lands each, runs the gate and the real checks, and visually accepts Waves 7 to 10 at both sizes.
 A wave's worker: `npm ci` in its own worktree, typecheck, lint, `node scripts/check-rules.mjs`, all clean; tests written, not run; one commit per wave; never pushes; reports per `07` 6.4.
 
+### Progress and files by wave (the coordinator keeps the status column current)
+
+| Wave | Status | Landed in | Creates | Updates | Deletes |
+|---|---|---|---|---|---|
+| 0 | Not started | | `store/migrations/017-admin-ui-state.sql`, `store/ui-state-repository.ts`, `types/ui-state.ts`, `constants/ui-state.ts`, `services/ui-state-service.ts`, `api/account-state.ts`, and their tests (section 18, B1) | `store/store.ts`, `constants/errors.ts`, `services/service-registry.ts`, `app.ts` (B1); `types/provider.ts`, `services/provider-service.ts` (B2); `api/titles.ts`, `constants/limits.ts` (B3); `services/job-runner.ts`, `store/job-repository.ts` (B4); `channel-service.ts`, `provider-service.ts`, `playlist-service.ts`, `title-records.ts`, `title-overlay.ts` (B5); `scripts/check/live-smoke.mjs` (B6) | none |
+| 7 | Not started | | `services/{api,auth,health,audit,account-state}.ts`, `services/schemas/*`, `lib/{error-sentence,account-state-map}.ts`, `store/ui-state-slice.ts`, `hooks/{useAccountHydration,useShellWriteback,useSettingsWriteback}.ts`, `components/session/SessionState.tsx`, tests | `store/session-slice.ts`, `SignInForm`, `SignInPage`, Settings Session and About, the events wiring, `vite.config.mts` | `fixtures/session.ts`, `fixtures/audit.ts`, the `signedin` switch, `hooks/useFixtureLoad.ts` |
+| 8 | Not started | | `services/{channels,providers,preview-player}.ts`, schemas, `store/{channels,providers}-slice.ts`, `hooks/{usePreviewPlayer,useChannelsLoad}.ts`, tests | `usePreviewSession.ts` (real session), `PreviewWindow.tsx`, `FolderRow.tsx`, the Channels and Providers pages and components of `28` | `fixtures/channels.ts`, `fixtures/providers.ts` |
+| 9 | Not started | | `services/{titles,playlists,jobs}.ts`, schemas, slices, `lib/title-units.ts`, tests | the Titles, Playlists and Jobs components, the statusbar `N syncing` | the three fixtures |
+| 10 | Not started | | `services/accounts.ts`, schema, slice, tests | the Accounts pages, `README.md` | `constants/fixture-switches.ts`, any remaining fixture |
+
 ### Wave 0 - backend changes (worker B)
 
 - **Worktree.** `D:\Projects\.giga-worktrees\wire-backend`, branch `admin/wire-backend`, cut from the current `family-port`. **Owns** `src/backend/**` and `scripts/check/live-smoke.mjs`. **Off limits** every other program, docs, `.env`.

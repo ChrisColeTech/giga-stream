@@ -390,6 +390,17 @@ Every wave: `npm ci` (in its own worktree only), `npm run typecheck`, `npm run l
 root, all clean; tests written and **not run**; one commit per wave on the branch (never pushed, merged or rebased). The report
 follows `07` 6.4.
 
+### Progress and files by wave (the coordinator keeps the status column current)
+
+| Wave | Status | Landed in | Creates | Updates | Deletes |
+|---|---|---|---|---|---|
+| 1 | Not started | | see `27` 6.1a | see `27` 6.1a | see `27` 6.3 |
+| 2 | Not started | | the shell and shared record pieces of 6.1 (`AdminTitlebar`, `AdminStatusbar`, `AdminEventsDrawer`, `WorkspaceFrame`, `RecordRail`, `WorkspaceToolbar`, `NewRecordGroup`, `ListGroup`, `SignInForm`, `SignInPage`, six index-skeleton pages, `SessionSection`, `useShellKeys`, `useCaptionOverlay`, `useFixtureLoad`, `useRecordForm`), `constants/{tabs,record-copy}.ts`, `store/{workspace,panes,session}-slice.ts`, `fixtures/session.ts`, `constants/fixture-switches.ts`, `services/admin-host.ts`, `lib/{field-checks,row-state,event-sentence,live-time}.ts`; in `src/shared/ui`: the `reason` prop, `ToolbarStrip`, the tooltip arrow, `AppShell` `minSize`; their tests | `main.tsx`, `App.tsx`, `AppShell.tsx`, `OverlayHost.tsx`, `SettingsWindow.tsx`, `AppearanceSection`, `ZoomStepper`, `AboutSection`, `app-store.ts`, `selectors.ts`, `constants/settings-sections.ts`, `types/shell.ts`, `types/events.ts`, `package.json` (drops the dropdown-menu dependency), `src/admin/README.md` stub | the demo of 4.1: library, live, player, popups, collections components; `LibraryPage`, `LivePage`, `PlayerPage`; old fixtures, services, lib, types, tests |
+| 3 | Not started | | `components/channels/*` (index, New form, rows, both workspaces and their groups, `PreviewWindow`, `PreviewStage`, `PreviewStatus`), `pages/ChannelsPage.tsx` (fills the Wave 2 skeleton), `fixtures/channels.ts`, `types/admin-channel.ts`, `constants/{channel-copy,preview-copy}.ts`, `components/records/{VideoList,FolderRow,StateWord}`, `hooks/usePreviewSession.ts`, `lib/preview-state.ts`; in `src/shared/ui`: `RecordGrid`, `SkeletonGrid`, `Checkbox`, pill `ChipGroup`; their tests | `ChannelsPage.tsx` shell from Wave 2, `OverlayHost.tsx` (adds `preview`), the statusbar's `N preparing` | none |
+| 4 | Not started | | `components/providers/*`, `components/titles/*`, `SeasonList`, the two fixtures, types and copy files, `ProvidersPage`/`TitlesPage` bodies; library: `ChipsInput` `className`; tests | the two Wave 2 page skeletons | none |
+| 5 | Not started | | `components/playlists/*`, `jobs/*`, `accounts/*`, three fixtures, types and copy files, three page bodies; tests | the three Wave 2 page skeletons, the statusbar (`N syncing`) | none |
+| 6 | Not started | | `fixtures/audit.ts`, `events-store.test.ts` | `lib/event-sentence.ts` use in every page write, `src/admin/README.md`, any file over 200 lines | leftovers of 4.1; any unused import or file |
+
 ### Wave 1 - the shared library (workers U1 to U4)
 
 `27` steps 0 to 8, in the order and with the ownership, tests, per-step admin deletions, real-stack checks and exit criteria of
