@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import { ERRORS } from "../constants/errors.js";
+import { CHANNEL_BODY_LIMIT_BYTES } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
 import { SORTS } from "../services/title-service.js";
 import { ok } from "./envelope.js";
@@ -49,6 +50,9 @@ const SyncBody = z
     path: ["kind"],
   });
 
+/** A manual series can run past the default body limit (100 seasons of up to 500 episodes; docs/29 B3). */
+const WRITE = { bodyLimit: CHANNEL_BODY_LIMIT_BYTES };
+
 /**
  * Titles (docs/03 sections 7.4, 7.6b): public reads so the fileserver can pass them through, and the
  * catalog sync — any signed-in admin, one job at a time.
@@ -93,13 +97,13 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
   });
 
   // Full CRUD (docs/26 decision D20): any signed-in admin, audited, and never the channel revision.
-  app.post("/api/titles", async (request, reply) => {
+  app.post("/api/titles", WRITE, async (request, reply) => {
     const principal = signedIn(services, request);
     const input = parseInput(TitleInputSchema, request.body, ERRORS.titleInvalid);
     return ok(reply, services.titles.create(input, actorOf(request, principal)), 201);
   });
 
-  app.patch("/api/titles/:titleId", async (request, reply) => {
+  app.patch("/api/titles/:titleId", WRITE, async (request, reply) => {
     const principal = signedIn(services, request);
     const { titleId } = parseInput(TitleParams, request.params);
     const patch = parseInput(TitlePatchSchema, request.body, ERRORS.titleInvalid);

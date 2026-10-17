@@ -30,6 +30,14 @@ function fieldsOf(input: {
 }
 
 /**
+ * A PATCH's optional field: absent keeps the stored value, `null` clears it (docs/29 B2), a value replaces it.
+ */
+function kept<T>(patched: T | null | undefined, stored: T | undefined): T | undefined {
+  if (patched === undefined) return stored;
+  return patched ?? undefined;
+}
+
+/**
  * The providers (docs/03 section 7.2b). Every change is live as soon as it is saved: it raises the one
  * revision in the same transaction. Nothing is pushed: a reader learns of a change from the revision in the next
  * answer it reads (`01` section 4.4).
@@ -59,7 +67,7 @@ export function createProviderService(deps: {
       const record: Omit<ProviderRecord, "id"> = {
         name: input.name,
         source: input.source,
-        is_active: 1,
+        is_active: (input.enabled ?? true) ? 1 : 0,
         created_at: createdAt,
         ...fieldsOf(input),
       };
@@ -78,25 +86,29 @@ export function createProviderService(deps: {
         id,
         name: patch.name ?? current.name,
         source: patch.source ?? current.source,
-        is_active: current.is_active ? 1 : 0,
+        is_active: (patch.enabled ?? current.is_active) ? 1 : 0,
         created_at: current.created_at,
         ...fieldsOf({
           order: patch.order ?? current.order,
           family: patch.family ?? current.family,
-          movieTemplate: patch.movieTemplate ?? current.movieTemplate,
-          episodeTemplate: patch.episodeTemplate ?? current.episodeTemplate,
-          startParam: patch.startParam ?? current.startParam,
-          subtitlesParam: patch.subtitlesParam ?? current.subtitlesParam,
-          origin: patch.origin ?? current.origin,
-          frameOrigins: patch.frameOrigins ?? current.frameOrigins,
-          messageShape: patch.messageShape ?? current.messageShape,
+          movieTemplate: kept(patch.movieTemplate, current.movieTemplate),
+          episodeTemplate: kept(patch.episodeTemplate, current.episodeTemplate),
+          startParam: kept(patch.startParam, current.startParam),
+          subtitlesParam: kept(patch.subtitlesParam, current.subtitlesParam),
+          origin: kept(patch.origin, current.origin),
+          frameOrigins: kept(patch.frameOrigins, current.frameOrigins),
+          messageShape: kept(patch.messageShape, current.messageShape),
         }),
       };
       store.transaction(() => {
         store.providers.update(record);
         store.revisions.next();
       });
-      audit.record(actor, { action: "provider.updated", subject: String(id), detail: { fields: Object.keys(patch) } });
+      audit.record(actor, {
+        action: "provider.updated",
+        subject: String(id),
+        detail: { name: record.name, fields: Object.keys(patch) },
+      });
       return existing(id);
     },
 

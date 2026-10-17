@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 
-import { makeApp, pick, send } from "./test-app.js";
+import { makeApp, pick, send, signIn } from "./test-app.js";
 import { stubTmdb, tmdbOn } from "./title-stubs.js";
 
 test("a title detail is fetched once, stored, and answered from the store after a restart", async () => {
@@ -186,4 +186,27 @@ test("recommendations answer in TMDB's order; a thin list row carries its kind a
   assert.equal(pick(listed.body, "data.items.0.id"), "movie-603");
   assert.equal(pick(listed.body, "data.items.0.tmdbId"), 603);
   await t.dispose();
+});
+
+/** A manual series of `seasons` seasons, each of 500 episodes with a long title: about 33 KB a season. */
+function longSeasons(seasons: number) {
+  const episodes = (season: number) =>
+    Array.from({ length: 500 }, (_, e) => ({
+      episode: e + 1,
+      title: `Episode ${e + 1} of season ${season} with a long title`,
+    }));
+  return Array.from({ length: seasons }, (_, s) => ({ season: s + 1, episodes: episodes(s + 1) }));
+}
+
+test("a manual series over the default 64 KiB body limit is accepted; one over 256 KiB is refused", async () => {
+  const t = await makeApp();
+  const token = (await signIn(t.app)).access;
+  const series = (seasons: number) => ({ kind: "tv", title: "Long Series", seasons: longSeasons(seasons) });
+  const fits = await send(t.app, "POST", "/api/titles", series(3), token);
+  assert.equal(fits.status, 201, "about 100 KB is accepted");
+  const id = String(pick(fits.body, "data.id"));
+  const edited = await send(t.app, "PATCH", `/api/titles/${id}`, { seasons: longSeasons(3) }, token);
+  assert.equal(edited.status, 200, "a PATCH takes the same limit");
+  const tooLarge = await send(t.app, "POST", "/api/titles", series(10), token);
+  assert.deepEqual([tooLarge.status, pick(tooLarge.body, "error.code")], [400, "request.invalid"]);
 });

@@ -2,11 +2,26 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { JobRecord } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
 import type { JobRun } from "../types/job.js";
+import type { PlaylistSyncAnswer } from "../types/playlist-sync.js";
 import type { Actor } from "./audit-service.js";
 import type { PlaylistSyncService } from "./playlist-sync-service.js";
 import type { TitleService } from "./title-service.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
+
+/**
+ * The sentence a playlist job keeps as its outcome: what the run did, or what a dry run would have done (docs/29 B4).
+ */
+const outcomeOf = (answer: PlaylistSyncAnswer, dryRun: boolean): string =>
+  dryRun
+    ? `Dry run. ${answer.created} to create, ${answer.updated} to update.`
+    : `Synced: ${answer.created} created, ${answer.updated} updated.`;
+
+/** The counts a playlist job keeps: the run's, with the refusal examples and the created ids (docs/29 B4). */
+function countsOf(answer: PlaylistSyncAnswer): Record<string, unknown> {
+  const { created, updated, skipped, refused, removed, kept, refusalExamples, createdIds } = answer;
+  return { created, updated, skipped, refused, removed, kept, refusalExamples, createdIds };
+}
 
 /**
  * Runs sync jobs (docs/26 section 3.11). A playlist job syncs only its playlist, under the rules of 3.10; a catalog
@@ -42,14 +57,14 @@ export function createJobRunner(deps: {
     if (job.type === "playlist") {
       const playlist = store.playlists.find(job.config.playlistId);
       if (!playlist) return;
+      const dryRun = override.dryRun ?? job.config.dryRun;
       try {
         const answer = await playlistSync.run(
-          { dryRun: override.dryRun ?? job.config.dryRun, prune: override.prune ?? job.config.prune },
+          { dryRun, prune: override.prune ?? job.config.prune },
           actor,
           [playlist],
         );
-        const { created, updated, skipped, refused, removed, kept } = answer;
-        record(job, "ok", { created, updated, skipped, refused, removed, kept });
+        record(job, outcomeOf(answer, dryRun), countsOf(answer));
       } catch (error) {
         // Being turned away because another playlist sync runs is not an outcome of this job.
         if (!(error instanceof AppError && error.code === ERRORS.playlistBusy.code)) {
