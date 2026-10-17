@@ -61,12 +61,19 @@ test("both consumers complete: no findings", () => {
   assert.deepEqual(problems(both()), []);
 });
 
-test("a consumer missing the alias, the @source, the dedupe, fs.allow or the paths fails", () => {
+test("a consumer missing the alias, the @source, the dedupe, fs.allow or the paths fails, against that consumer", () => {
+  // The admin is complete in every tree here, so a finding can only come from the consumer that was dropped from.
   for (const drop of ["alias", "source", "dedupe", "fs", "paths"]) {
-    const found = problems({ "src/shared/ui/package.json": LIBRARY_PKG, ...consumer("src/frontend", { drop }) });
+    const found = problems({ "src/shared/ui/package.json": LIBRARY_PKG, ...consumer("src/frontend", { drop }), ...consumer("src/admin") });
     assert.ok(found.length > 0, `dropping ${drop} must fail`);
-    assert.ok(found.every((f) => f.file === "src/frontend"));
+    assert.ok(found.every((f) => f.file === "src/frontend"), `dropping ${drop} reported ${JSON.stringify(found.map((f) => f.file))}`);
   }
+});
+
+test("a tree whose admin consumer is absent reports the admin, not the frontend", () => {
+  const found = problems({ "src/shared/ui/package.json": LIBRARY_PKG, ...consumer("src/frontend") });
+  assert.ok(found.length > 0);
+  assert.ok(found.every((f) => f.file === "src/admin"));
 });
 
 test("a version drift between a consumer and the library fails", () => {

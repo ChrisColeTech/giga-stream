@@ -32,5 +32,7 @@
       "@giga/http/*": ["../shared/http/src/*"]
     }
   },
-  "include": ["src"]
+  /* The family library and the request layer are part of this program: their files take this JSX and path setup, and
+     the test runner (tsx) applies a tsconfig's options only to the files its include matches (docs/27 section 3). */
+  "include": ["src", "../shared/ui/src", "../shared/http/src"]
 }

@@ -1,0 +1,22 @@
+{
+  /* The configuration the test runner (tsx) reads: `npm test` runs with this file (docs/27 section 3). It is not part of
+     `npm run typecheck`. tsx resolves each import through `paths` and takes a tsconfig's options only for the files its
+     include matches (the library is included through the base file). Each runtime package maps to the one copy the admin
+     uses, runtime file first (tsx loads it); typecheck reads the declarations from tsconfig.app.json. */
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@giga/ui/*": ["../shared/ui/src/*"],
+      "@giga/http/*": ["../shared/http/src/*"],
+      "react": ["./node_modules/react/index.js"],
+      "react/*": ["./node_modules/react/*"],
+      "react-dom": ["./node_modules/react-dom/index.js"],
+      "react-dom/*": ["./node_modules/react-dom/*"],
+      "framer-motion": ["./node_modules/framer-motion/dist/es/index.mjs"],
+      "zustand": ["./node_modules/zustand/esm/index.mjs"],
+      "lucide-react": ["./node_modules/lucide-react/dist/esm/lucide-react.mjs"],
+      "@radix-ui/react-dropdown-menu": ["./node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs"]
+    }
+  }
+}
