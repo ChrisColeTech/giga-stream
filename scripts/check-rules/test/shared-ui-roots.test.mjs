@@ -105,9 +105,9 @@ test("the request layer is React-free and the only home of fetch in the librarie
   assert.deepEqual(fetches.map((f) => f.file), ["src/shared/ui/src/lib/net.ts"]);
 });
 
-test("the admin's copies of the family files are exempt from the ceiling until their step deletes them", () => {
+test("the size ceiling applies to every file, the family files included (the family-file list is retired)", () => {
   const long = "export const x = 1;\n".repeat(201);
-  assert.deepEqual(findings({ "src/admin/src/components/ui/Section.tsx": long }, "size-and-naming"), []);
+  assert.equal(findings({ "src/admin/src/components/ui/Section.tsx": long }, "size-and-naming").length, 1);
   assert.equal(findings({ "src/admin/src/components/library/long-file.ts": long }, "size-and-naming").length, 1);
 });
 
