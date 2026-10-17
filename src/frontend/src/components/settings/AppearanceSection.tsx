@@ -1,5 +1,7 @@
-import { Eye } from "lucide-react";
-import { Group, Row, Workspace } from "@/components/ui/Form";
+import { Eye, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Actions, Group, Row, Workspace } from "@/components/ui/Form";
+import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { Segmented } from "@/components/ui/Segmented";
 import { Swatches } from "@/components/ui/Swatches";
 import { useAppStore } from "@/store/app-store";
@@ -30,6 +32,11 @@ export function AppearanceSection() {
   const setMotion = useAppStore((state) => state.setMotion);
   const uiZoom = useAppStore((state) => state.uiZoom);
   const setZoom = useAppStore((state) => state.setZoom);
+  const atDefaults =
+    theme === SETTINGS_VALUES.theme &&
+    motion === SETTINGS_VALUES.reducedMotion &&
+    accent === SETTINGS_VALUES.themeAccent &&
+    uiZoom === SETTINGS_VALUES.uiZoom;
 
   return (
     <Workspace labels={LABELS}>
@@ -52,6 +59,21 @@ export function AppearanceSection() {
         <Row label="UI zoom" tip="Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.">
           <ZoomStepper value={uiZoom} onChange={setZoom} />
         </Row>
+        <Actions>
+          <Button
+            variant="ghost"
+            disabled={atDefaults}
+            title={atDefaults ? "Appearance is already at its defaults." : "Dark, Follow system, Amber and a zoom of 1"}
+            onClick={() => {
+              setTheme(SETTINGS_VALUES.theme);
+              setMotion(SETTINGS_VALUES.reducedMotion);
+              setAccent(SETTINGS_VALUES.themeAccent);
+              setZoom(SETTINGS_VALUES.uiZoom);
+            }}
+          >
+            <RotateCcw aria-hidden /> Restore defaults
+          </Button>
+        </Actions>
       </Group>
     </Workspace>
   );
