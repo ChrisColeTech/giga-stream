@@ -35,13 +35,14 @@ Governed by `00`, `01` (ownership, stack, rules), `02` (the window), `03` (route
 Fastify 5, zod and one `node:sqlite` handle (`store/database.ts`). Port 8091, 8191 in production. `DATA_DIR` defaults
 to `~/.giga-stream-admin`, with `admin.db` inside it.
 
-- **Routes:** `/healthz`; `/api/auth/*` (login, refresh, logout, me, password); `/api/admin-accounts` (owner);
-  `/api/audit` (owner); `/api/channels` (reads public, writes owner or editor); `/api/providers`; `/api/titles`
+- **Routes:** `/healthz`; `/api/auth/*` (login, refresh, logout, me, password); `/api/admin-accounts`;
+  `/api/audit`; `/api/channels` (reads public, writes signed in); `/api/providers`; `/api/titles`
   (TMDB); `/api/playlist-sync`.
 - **Channels are stored stream-address rows:** `id` (`ch_<uuid>`), `name`, `category` (free text), `number` (TEXT),
   `logo_url`, `stream_url`, `revision`, and for playlist-synced rows `tvg_id` and `source`.
 - **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token, a sign-in rate limit and a lockout. Every change
-  writes an audit entry. `api/guard.ts` `signedIn(services, request, roles)` gates writes.
+  writes an audit entry. `api/guard.ts` `signedIn(services, request, roles)` gates writes. Today it also separates an `owner` role from an `editor` role; the
+  owner retired roles (D24), so every signed-in admin is equal and the `roles` argument goes.
 - **Network policy** (`network-policy.ts`): refuses to listen off loopback over plain http unless
   `TLS_CERT_FILE`/`TLS_KEY_FILE`, `TRUST_PROXY` or `ALLOW_INSECURE_HTTP` is set. No-store routes: `/api/auth`,
   `/api/admin-accounts`, `/api/audit`.
@@ -76,7 +77,7 @@ Its own composition root (`app.ts`), runs its TypeScript directly with `.ts` imp
 | Channel id | minted `ch_<uuid>` | kebab-case, given | both kept; unique across kinds |
 | `number` | TEXT | integer | TEXT on the wire; live validates digits |
 | `category` | free text | six fixed values | fixed for `live`; free text for `stream` (D12) |
-| Who may write | owner or editor, JWT | this computer only, no sign-in | owner or editor, JWT (D2) |
+| Who may write | any signed-in admin, JWT | this computer only, no sign-in | any signed-in admin, JWT (D2) |
 | Stream address | stored; passes the address rule (`03` 7.3) | derived from its own origin | derived at read time (D3) |
 | Stream paths | none | root `/live`, `/logos` | the same root paths, a sanctioned exception (D14) |
 | Port | 8091 / 8191 | 8097 / 8197 | the backend's; the live port retires |
@@ -125,19 +126,19 @@ Migration `008-live-channels.sql`, forward-only:
 
 ### 3.3 Routes (proposed)
 
-Reads stay public and keep the shape the fileserver reads. Writes need a signed-in owner or editor.
+Reads stay public and keep the shape the fileserver reads. Writes need a signed-in admin.
 
 | Route | Who | Change |
 |---|---|---|
 | `GET /api/channels` | anyone | same shape; a live row's `streamUrl` is built from the caller's origin |
 | `GET /api/channels/:id` | anyone | same |
-| `POST /api/channels` | owner, editor | body discriminated by `kind`: `stream` (today's body) or `live` (id, name, category, number, mode, captions, variants, folder or videos) |
-| `PATCH /api/channels/:id` | owner, editor | the same discriminator; a change to a live channel rebuilds it |
-| `DELETE /api/channels/:id` | owner, editor | stops the runtime, then deletes |
-| `PUT /api/channels/:id/fault` | owner, editor | `{ fault, durationMs?, delayMs? }`; live channels only |
-| `DELETE /api/channels/:id/fault` | owner, editor | clears |
-| `GET /api/admin-channels` | owner, editor | the full admin view: state, problem, renditions, playlist, nowPlaying, fault, mode, source |
-| `POST /api/channels/:id/rebuild` | owner, editor | re-reads a folder source and rebuilds (today a PATCH of the same folder) |
+| `POST /api/channels` | signed in | body discriminated by `kind`: `stream` (today's body) or `live` (id, name, category, number, mode, captions, variants, folder or videos) |
+| `PATCH /api/channels/:id` | signed in | the same discriminator; a change to a live channel rebuilds it |
+| `DELETE /api/channels/:id` | signed in | stops the runtime, then deletes |
+| `PUT /api/channels/:id/fault` | signed in | `{ fault, durationMs?, delayMs? }`; live channels only |
+| `DELETE /api/channels/:id/fault` | signed in | clears |
+| `GET /api/admin-channels` | signed in | the full admin view: state, problem, renditions, playlist, nowPlaying, fault, mode, source |
+| `POST /api/channels/:id/rebuild` | signed in | re-reads a folder source and rebuilds (today a PATCH of the same folder) |
 | `GET\|HEAD /live/:id/master.m3u8` (renditions, segments) | anyone | the same bytes as today; `Range`; playlists `no-store`, segments immutable |
 | `GET /logos/:id.png` | anyone | the generated logo |
 | `GET /test/player.html` | anyone | only with `TEST_PAGE=true` |
@@ -245,7 +246,7 @@ one off. An admin app manages **records**. The owner: *"we need a jobs tab for t
 should be crud for titles and playlists."* So there are two new record types: a **playlist** and a **job**.
 
 - **Playlists** (`playlists` table): `id`, `name`, `address` (a secret: never returned, audited by host only, `https` only
-  by the address rule of `03` 7.3), `enabled`, `created_at`. Routes (owner and editor, audited): `GET` and `POST
+  by the address rule of `03` 7.3), `enabled`, `created_at`. Routes (signed in, audited): `GET` and `POST
   /api/playlists`; `GET`, `PATCH`, `DELETE /api/playlists/:id`. An answer is `{ id, name, host, masked, enabled, channels,
   lastSyncedAt, lastOutcome }`; `PATCH` with `address` replaces it. Deleting a playlist keeps the channels it created and
   clears their `source`, so they become hand-made rows that no sync touches (the Delete tooltip says so). A disabled
@@ -253,7 +254,7 @@ should be crud for titles and playlists."* So there are two new record types: a 
 - **Jobs** (`sync_jobs` table): `id`, `name`, `type` (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`,
   `"24h"` or `"off"`), `config` JSON, `last_run_at`, `last_outcome`, `last_counts` JSON, `created_at`. A playlist job's
   config is `playlistId`, `dryRun` and `prune`; a catalog job's is `scope` (`trending` or `popular`), `kind` (`movie` or
-  `tv`) and `pages`. Routes (owner and editor, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
+  `tv`) and `pages`. Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
   /api/jobs/:id`; `POST /api/jobs/:id/run` (single-flight per job, `409 sync.busy`; a disabled job or a job whose
   playlist is disabled is refused with `422 job.disabled` and its reason). A playlist job syncs only its playlist, under
   the rules of 3.10; a catalog job syncs its scope.
@@ -295,8 +296,7 @@ runs in a browser tab, so there are no window controls. The minimum size is 900 
 - **Titlebar** (as `docs/reference/family/datasets-index.jpg`): far left, the left-pane toggle (ghost icon button),
   then the brand: an accent icon tile and the two-line mono wordmark `GIGA / STREAM` with the mono subtitle `ADMIN`.
   **Centre: the tab pill**, a recessed rounded track holding **Channels · Providers · Titles · Playlists · Jobs ·
-  Accounts**, the active tab the filled chip. Accounts is visibly disabled for an editor, with "Owners only" as the
-  tooltip. Right: the
+  Accounts**, the active tab the filled chip. Every tab is open to every signed-in admin. Right: the
   events-band toggle and the right-pane toggle (disabled, with its reason, where a page has no right pane). The pill is
   the only navigation between tabs; there is no router and no URL segment (`04` section 1); `Ctrl+1`, `Ctrl+2` and
   `Ctrl+3` pick the tabs. **There is no persistent navigation rail** (the owner's correction, 2026-10-17, after seeing the
@@ -346,7 +346,7 @@ is now the family's record pattern and nothing else:
    input spanned the row; info glyphs sat on arbitrary rows; Playlists used different row markup):
    - **Row 1 is always the record's name** (Name, Title, Email). **Row 2 is the Kind, Type or Family selector** when the
      record has one that changes the rows below it (Channels: Kind; Providers: Family; Jobs: Type); the rows it switches
-     follow it directly. A selector that does not switch rows (Titles' Kind, Accounts' Role) is an ordinary field and sits
+     follow it directly. A selector that does not switch rows (Titles' Kind) is an ordinary field and sits
      where the field-order table puts it.
    - **Every control spans the row at 36px**, a Segmented included (equal segments). The one exception is a Toggle.
    - **An info glyph sits on every row except a row labelled Name, Title, Email or Password** (their labels explain
@@ -361,12 +361,12 @@ is now the family's record pattern and nothing else:
 
 | Tab | Record | List columns (after the checkbox) | Workspace rail | Index forward verb | Who |
 |---|---|---|---|---|---|
-| **Channels** | a channel, live or stream | number, name, category, kind, state, mode, now playing | details · source · playback · fault · status (a stream channel: details · stream · status) | `Preview →` | owner, editor |
-| **Providers** | a provider | order, name, source, family, state | details · templates · player | `Titles →` | owner, editor |
-| **Titles** | a title | title, kind, year, rating, state | details · people and plot · seasons · sources | `Jobs →` | owner, editor |
-| **Playlists** | a playlist (an M3U address) | name, host, channels, last synced, state | details · status | `Jobs →` | owner, editor |
-| **Jobs** | a sync job (a playlist sync or a catalog sync) | name, type, target, schedule, last run, outcome, state | details · schedule · run · last run | `Run job` (acts on the ticked jobs) | owner, editor |
-| **Accounts** | an admin account | email, name, role, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | owner |
+| **Channels** | a channel, live or stream | number, name, category, kind, state, mode, now playing | details · source · playback · fault · status (a stream channel: details · stream · status) | `Preview →` | signed in |
+| **Providers** | a provider | order, name, source, family, state | details · templates · player | `Titles →` | signed in |
+| **Titles** | a title | title, kind, year, rating, state | details · people and plot · seasons · sources | `Jobs →` | signed in |
+| **Playlists** | a playlist (an M3U address) | name, host, channels, last synced, state | details · status | `Jobs →` | signed in |
+| **Jobs** | a sync job (a playlist sync or a catalog sync) | name, type, target, schedule, last run, outcome, state | details · schedule · run · last run | `Run job` (acts on the ticked jobs) | signed in |
+| **Accounts** | an admin account | email, name, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | signed in |
 
 **The tab pill is Channels · Providers · Titles · Playlists · Jobs · Accounts** (owner, 2026-10-17: "we need a jobs
 tab for the sync jobs, the title and playlist should be crud for titles and playlists"). Titles and Playlists are plain
@@ -385,7 +385,7 @@ the Titles or Playlists pages.
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
 | Catalog job | Name*, Type*, Scope*, Kind* | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
-| Account | Email*, Name*, Role*, Password* (New only) | `Enabled` | none | Last sign-in |
+| Account | Email*, Name*, Password* (New only) | `Enabled` | none | Last sign-in |
 
 ### 4.5 Channels index (proposed)
 
@@ -441,10 +441,10 @@ checked against the address rule, the refusal shown as a field error. Status: `S
 
 ### 4.8 Accounts index and workspace (proposed; owner)
 
-- **Index:** New account (Email, Name, Role Segmented Owner or Editor, Password of at least twelve characters, `Create`);
-  the list (email, name, role, state, last sign-in); row end `Delete` as an `ArmedButton` (the last enabled owner's
-  refusal, `account.last_owner`, is that row's disabled reason). The toolbar strip has no verb: Accounts is the last tab.
-- **Workspace:** rail `‹ Accounts`, then **details** (Email, Name, Role, `Enabled`; the stored `disabled` flag, shown
+- **Index:** New account (Email, Name, Password of at least twelve characters, `Create`);
+  the list (email, name, state, last sign-in); row end `Delete` as an `ArmedButton` (the last enabled account's
+  refusal is that row's disabled reason). The toolbar strip has no verb: Accounts is the last tab.
+- **Workspace:** rail `‹ Accounts`, then **details** (Email, Name, `Enabled`; the stored `disabled` flag, shown
   inverted) and **password** (`Set new password`, whose tip says it signs this account out everywhere). Toolbar:
   `Discard changes`, `Save`.
 
@@ -457,11 +457,9 @@ anything on this screen."* So there is no Audit tab, index or workspace.
   entries as its rows, with the page's own notices and failures: time, tone word, area (Channel, Provider, Title,
   Playlist, Job, Account, Session), and one plain sentence built from the entry (`ada@example.test updated channel
   Fixture News`). `auth.login_failed` and failed syncs are `warn` or `error`; everything else `info`.
-- **Where the rows come from:** `GET /api/audit` (owner only, `03` 7.13), read when the drawer opens, after the page's own
+- **Where the rows come from:** `GET /api/audit` (any signed-in admin, `03` 7.13), read when the drawer opens, after the page's own
   writes, and by `Refresh`; never on a timer (`01` 4.4). The newest row is at the foot. A `Load older` row at the top reads
   the next page (`before`). **Clear** empties the list on screen only. At most 200 rows are held.
-- **An editor** cannot read the audit route (owners only), so an editor's drawer shows the page's own session events:
-  what that editor just did and any refusal. Whether editors may read the audit log is D23.
 - There is no filter, as the family drawer has none. A row carries the subject's name so a person can find what changed;
   rows are not links.
 
@@ -470,12 +468,11 @@ anything on this screen."* So there is no Audit tab, index or workspace.
 - **Index:** New provider (Name, Source, Family Segmented Embed or Stream, Movie template for an embed provider, `Create`);
   the list (order, name, source, family, state); row end `Delete` as an `ArmedButton`. Toolbar: `Titles →`.
 - **Workspace:** rail `‹ Providers`, then **details · templates · player**. Details: Name, Source, Family, `Enabled`
-  (the stored `is_active`), Order, API key. Templates: Movie template, Episode template (the `{tmdbId}` / `{season}` /
+  (the stored `is_active`), Order. Templates: Movie template, Episode template (the `{tmdbId}` / `{season}` /
   `{episode}` placeholders are in the info tip), Start parameter, Subtitle parameter. Player: Origin, Frame origins (a
   chips input), Message shape. Toolbar: `Discard changes`, `Save`, `Titles →`. `PUT` is the save.
-- **The API key** is a secret. Today the public `GET /api/providers` returns it in clear text to anyone (verified by
-  worker B; the fileserver does not read it). The decision is D22; until it is made the workspace shows the key masked
-  with `Replace` and never displays it.
+- **There is no API key.** Providers are embed or stream templates; nothing in the product reads a provider's key. The
+  stored `api_key` field (`03` 7.2b) is dead and is removed (D22).
 
 ### 4.9b Titles (proposed; `03` sections 7.4 and 7.6b)
 
@@ -548,7 +545,7 @@ as page behaviour in the mockup.
 | 5 | **Restarting the backend stops every live channel** until it rebuilds. | the merge (D4) | Restarting to apply config without a stream gap | keeping the engine as a supervised child |
 | 6 | **The admin persists nothing between page loads.** Browser storage is forbidden and the admin has no server-side settings of its own. | `01` 4.4 | Remembered theme, tab, panes | D16: a per-account settings row |
 | 7 | **No route stops one channel's build.** The engine holds an abort per channel, but only the whole-process shutdown and a PATCH or DELETE of the channel use it. | verified in `channel-runtime.ts` and the route list | The statusbar `Stop` | a stop route |
-| 8 | **Whether a provider's `api_key` is returned by the public provider read is unchecked.** `03` 7.2b says it "stops at the backend and fileserver". | not yet verified | The provider workspace's key field design (masked, `Replace`) | verify in wave 1b, then decide |
+| 8 | **A provider's `api_key` is stored but never used.** Nothing in the backend, fileserver or interface reads it. | verified in the code | A key field on the provider form | D22: removed |
 | 9 | **The refresh token has no safe browser home** under the no-storage rule. | `01` 4.4 | Staying signed in across a reload | D5 |
 
 Items 2, 3 and 7 are backend work, and item 1 is a design decision that changes what every page can show. They are
@@ -665,7 +662,7 @@ what the fileserver already tolerates; TMDB; payments; multiple admin tenants; a
 Each has a recommended default. The waves proceed on the defaults and are redirected if the owner says otherwise.
 
 - **D1.** One channels table with a `kind` column (recommended), or two tables with a union read.
-- **D2.** Live writes need a signed-in owner or editor; the loopback-only gate retires (recommended).
+- **D2.** Live writes need a signed-in admin; the loopback-only gate retires (recommended).
 - **D3.** Live stream addresses are built from the caller's origin at read time, and the address rule does not apply to
   them (recommended).
 - **D4.** Accept that restarting the admin backend stops live channels (recommended). The alternative is keeping the engine
@@ -673,14 +670,17 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 - **D5.** The refresh token lives in memory only, so a reload signs in again (recommended). `sessionStorage` is browser
   storage, which `01` section 4.4 forbids.
 - **D6.** *(Retired.)* There is no Audit tab; the audit log is the Events drawer (4.9).
-- **D23.** Whether editors may read the audit log in their Events drawer (recommended: no; owners only, as `03` 7.13).
+- **D23.** *(Retired with roles, D24.)* Every signed-in admin reads the audit log in the Events drawer.
+- **D24.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The
+  backend's `owner` and `editor` roles came with its first commit, not from the owner; they are removed: every signed-in
+  admin account is equal and may do everything, accounts have an email, a name, a password and `Enabled`.
 - **D7.** *(Reversed by the owner, 2026-10-17.)* Providers, Titles and Playlists are tabs in version one: an admin has to
   be able to start a sync from a page.
 - **D8.** The production admin is served by the backend at `/admin/` (recommended).
 - **D9.** The development admin uses Vite on port 5172; this needs a row in `03` section 1.
 - **D10.** *(Reversed by the owner, 2026-10-17.)* The tabs are the titlebar's tab pill, as in the family. No persistent
   nav rail.
-- **D11.** Fault injection is visible to editors and owners, marked as a test tool (recommended).
+- **D11.** Fault injection is visible to every signed-in admin, marked as a test tool (recommended).
 - **D12.** Live categories are the six fixed values; stream rows keep free text (recommended).
 - **D13.** Your existing `~/.giga-stream-live` channels are imported once, by a script you run (recommended), or you start
   fresh. Wave 1b writes the script and does not run it on your data.
@@ -692,9 +692,9 @@ Each has a recommended default. The waves proceed on the defaults and are redire
   list shows it. Background state (a channel finishing its build, a sync finishing) is read again by `Refresh` and
   after the page's own actions, with no polling and no socket (`01` 4.4). Streaming the progress of an operation (4.12
   item 1, option B) is a later improvement, not a requirement.
-- **D22.** The public `GET /api/providers` and `/:id` return each provider's `api_key` in clear text to anyone who can
-  reach the backend (verified; the fileserver does not read it). Recommended: the public read omits it, and the admin
-  read returns only whether one is set (`hasKey`), with `Replace` to change it. This changes the contract in `03` 7.2b.
+- **D22.** *(Decided, owner, 2026-10-17: "providers dont even use api keys to my knowledge".)* A provider has no API key.
+  The stored `api_key` is read by nothing (verified in the backend, fileserver and interface), so the column, the field, the
+  schema and the contract line in `03` 7.2b are removed; the provider form has no key field.
 - **D21.** Whether the TMDB read token and the OMDb key become admin-editable settings (a masked field with `Replace`,
   stored, never returned) or stay environment-only (recommended until asked).
 - **D20.** *(Decided, owner, 2026-10-17: "this is a crud app".)* Titles are ordinary records: create, edit, delete. The
