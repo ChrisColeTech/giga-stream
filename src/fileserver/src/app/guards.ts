@@ -1,6 +1,8 @@
-import type { BrowserWindow, Session } from "electron";
+import { webFrameMain, type BrowserWindow, type Session, type WebFrameMain } from "electron";
 
+import { DialogGuardInstaller } from "./dialog-guard.js";
 import { describeTarget, judgeMainFrame } from "./navigation.js";
+import { PlayerPolicyAuthority } from "./player-policy.js";
 
 export type GuardReport = { kind: string; url?: string; permission?: string; origin?: string; blocked: boolean };
 
@@ -16,7 +18,9 @@ export function installGuards(
   session: Session,
   appOrigin: string,
   report: (entry: GuardReport) => void,
-): void {
+): PlayerPolicyAuthority {
+  const authority = new PlayerPolicyAuthority(window.webContents.mainFrame.frameTreeNodeId);
+  const dialogs = new DialogGuardInstaller(authority, report);
   const mainFrameGuard = (details: { preventDefault: () => void; url: string }): void => {
     if (judgeMainFrame(appOrigin, details.url) === "allow") return;
     details.preventDefault();
@@ -24,36 +28,28 @@ export function installGuards(
   };
 
   window.webContents.on("will-navigate", mainFrameGuard);
-  window.webContents.on("will-redirect", mainFrameGuard);
-  /**
-   * The player frame (a direct child of the page) keeps the origin it was first loaded on. On 2026-10-16
-   * VidSrc's ads navigated that frame away on the first press (stellarconductornexus.com → … →
-   * green-planet.live), replacing the player with an ad page, so a cross-origin navigation of it is
-   * refused. Frames nested inside the player are the provider's business: allowed, and reported.
-   */
-  const playerOrigins = new Map<number, string>();
-  window.webContents.on("will-frame-navigate", (details) => {
+  const frameGuard = (details: {
+    preventDefault: () => void;
+    url: string;
+    isMainFrame: boolean;
+    frame: WebFrameMain | null;
+  }): void => {
     const frame = details.frame;
-    if (details.isMainFrame || !frame) return;
-    const isPlayer = frame.parent === window.webContents.mainFrame;
-    let target = "";
-    try {
-      target = new URL(details.url).origin;
-    } catch {
-      target = "";
-    }
-    if (!isPlayer) {
-      report({ kind: "frame navigate", url: describeTarget(details.url), blocked: false });
+    if (details.isMainFrame) {
+      mainFrameGuard(details);
       return;
     }
-    const first = playerOrigins.get(frame.frameTreeNodeId);
-    if (first === undefined) {
-      playerOrigins.set(frame.frameTreeNodeId, target);
-      return;
-    }
-    if (target === first) return;
+    if (frame !== null && authority.judge(frame, details.url) === "allow") return;
     details.preventDefault();
-    report({ kind: "player hijack", url: describeTarget(details.url), blocked: true });
+    const direct = frame?.parent?.frameTreeNodeId === window.webContents.mainFrame.frameTreeNodeId;
+    report({ kind: direct ? "player hijack" : "frame navigate", url: describeTarget(details.url), blocked: true });
+  };
+  window.webContents.on("will-frame-navigate", frameGuard);
+  window.webContents.on("will-redirect", frameGuard);
+  window.webContents.on("did-frame-navigate", (_event, _url, _code, _status, isMain, processId, routingId) => {
+    if (isMain) return;
+    const frame = webFrameMain.fromId(processId, routingId);
+    if (frame !== undefined) dialogs.install(frame);
   });
   window.webContents.setWindowOpenHandler(({ url, disposition }) => {
     report({ kind: "popup", url: `${describeTarget(url)} (${disposition})`, blocked: true });
@@ -65,4 +61,5 @@ export function installGuards(
     report({ kind: "permission", permission, origin: describeTarget(details.requestingUrl ?? ""), blocked: !allowed });
     callback(allowed);
   });
+  return authority;
 }

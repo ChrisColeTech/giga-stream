@@ -11,6 +11,7 @@ import { config } from "../config.js";
 import { enableAdBlocking } from "./ad-blocker.js";
 import { adHostResolverRules } from "./ad-hosts.js";
 import { installGuards, type GuardReport } from "./guards.js";
+import { installPlayerPolicyIpc } from "./player-policy-ipc.js";
 
 /**
  * The desktop shell (the Giga Images pattern): the fileserver runs IN this process, so the window is
@@ -84,7 +85,8 @@ function createWindow(url: string): BrowserWindow {
   const report = (entry: GuardReport): void => {
     if (!window.isDestroyed()) window.webContents.send("poc:guard", entry);
   };
-  installGuards(window, session.defaultSession, new URL(url).origin, report);
+  const playerPolicy = installGuards(window, session.defaultSession, new URL(url).origin, report);
+  installPlayerPolicyIpc(window.webContents.ipc, window.webContents.mainFrame.frameTreeNodeId, playerPolicy);
   window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
     mainWindow = null;
