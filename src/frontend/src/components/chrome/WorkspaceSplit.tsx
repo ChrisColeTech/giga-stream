@@ -19,7 +19,7 @@ export interface WorkspaceSplitProps {
  *  top pane holds the horizontal [left | centre | right]. The bottom pane is a SIBLING of the whole row, which is what
  *  makes ONE row gutter resize all three top panes against it together. Sizes, clamps, collapses and adoption live in
  *  useWorkspaceSplit; this file only composes. Every surface stays mounted so a switch never loses its panes; the
- *  inactive ones are `hidden`. */
+ *  inactive ones are `hidden`. A closed pane is `inert`: its controls leave the tab order and the accessibility tree. */
 export function WorkspaceSplit({ surface, active, left, center, right, bottom }: WorkspaceSplitProps) {
   const split = useWorkspaceSplit(surface);
   const config = SURFACES[surface];
@@ -41,7 +41,7 @@ export function WorkspaceSplit({ surface, active, left, center, right, bottom }:
     >
       {hasLeft && (
         <Allotment.Pane minSize={split.minFor("left")} maxSize={split.maxFor("left")}>
-          <div className="pane pane-left" data-open={leftOpen || undefined} aria-label="Left pane">
+          <div className="pane pane-left" data-open={leftOpen || undefined} inert={!leftOpen} aria-label="Left pane">
             {left}
           </div>
         </Allotment.Pane>
@@ -53,7 +53,7 @@ export function WorkspaceSplit({ surface, active, left, center, right, bottom }:
       </Allotment.Pane>
       {hasRight && (
         <Allotment.Pane minSize={split.minFor("right")} maxSize={split.maxFor("right")}>
-          <div className="pane pane-right" data-open={rightOpen || undefined} aria-label="Right pane">
+          <div className="pane pane-right" data-open={rightOpen || undefined} inert={!rightOpen} aria-label="Right pane">
             {right}
           </div>
         </Allotment.Pane>
@@ -75,7 +75,7 @@ export function WorkspaceSplit({ surface, active, left, center, right, bottom }:
         >
           <Allotment.Pane minSize={STAGE_MIN_HEIGHT}>{row}</Allotment.Pane>
           <Allotment.Pane minSize={split.minFor("bottom")} maxSize={split.maxFor("bottom")}>
-            <div className="pane pane-bottom" data-open={bottomOpen || undefined} aria-label="Bottom pane">
+            <div className="pane pane-bottom" data-open={bottomOpen || undefined} inert={!bottomOpen} aria-label="Bottom pane">
               {bottom}
             </div>
           </Allotment.Pane>

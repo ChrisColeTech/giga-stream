@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import type { AllotmentHandle } from "allotment";
 import { SURFACES, limitsOf, paneKey } from "@/constants/surfaces";
+import { sidesFalling, sidesRising, type SideKey } from "@/lib/pane-collapse";
 import { useAppStore } from "@/store/app-store";
 import type { WorkspaceSplitApi } from "@/types/panes";
 import type { PaneKey, PaneSide, Surface } from "@/types/shell";
@@ -11,33 +12,7 @@ import { usePaneTween } from "./usePaneTween";
  * only the surface's two-level geometry: a vertical [row | bottom] whose top pane holds the horizontal
  * [left | centre | right]. The centre takes what the painted panes leave, so the row fills its box exactly and the
  * bottom pane resizes against the whole row at once. A surface without a pane simply has no such entry. */
-type SideKey = Exclude<PaneSide, "bottom">;
 const SIDE_KEYS: readonly SideKey[] = ["left", "right"];
-
-/* The work width (CSS px) below which the right pane collapses (06 section 1.3). Named here, not in constants/, so the
- * shell's own geometry stays in one file. */
-const WORK_WIDTH_FLOOR = 1000;
-
-/* The order side panes fall in as the work width shrinks: the right first, then the left. */
-const FALL_ORDER: readonly SideKey[] = ["right", "left"];
-
-/** The work width a side pane collapses below: the floor for the right; for the left, the line where the centre's
- *  minimum and the left pane's minimum no longer fit side by side. The centre never collapses. */
-export function collapseLine(surface: Surface, side: SideKey): number {
-  if (side === "right") return WORK_WIDTH_FLOOR;
-  return SURFACES[surface].centerMin + (limitsOf(surface, "left")?.min ?? 0);
-}
-
-/** The side panes that fall when the work width goes from `previous` (null on the first measure) to `width`, right
- *  first. A pane falls only when the width crosses its line downward: a pane the user reopens under its line stays
- *  open until the window is widened past the line and narrowed again. */
-export function sidesFalling(surface: Surface, previous: number | null, width: number): SideKey[] {
-  return FALL_ORDER.filter((side) => {
-    if (limitsOf(surface, side) === null) return false;
-    const line = collapseLine(surface, side);
-    return width < line && (previous === null || previous >= line);
-  });
-}
 
 export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
   const config = SURFACES[surface];
@@ -49,6 +24,8 @@ export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
   const repaint = useRef<() => void>(() => {});
   const settle = useRef<() => void>(() => {});
   const lastWidth = useRef<number | null>(null);
+  /** The side panes this hook closed for width, not the user: only these reopen when the width comes back. */
+  const fallen = useRef(new Set<SideKey>());
 
   const sides = SIDE_KEYS.filter((side) => limitsOf(surface, side) !== null);
   const hasBottom = limitsOf(surface, "bottom") !== null;
@@ -78,7 +55,17 @@ export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
     const state = useAppStore.getState();
     if (state.surface !== surface || !(state.open[keyOf(side)] ?? true)) return;
     state.togglePane(side);
+    fallen.current.add(side);
     state.say(`The ${side} pane collapsed to fit the window.`);
+  };
+
+  /* A pane the width closed comes back when the width does, unless the user has opened or closed it since. */
+  const rise = (side: SideKey): void => {
+    const state = useAppStore.getState();
+    if (!fallen.current.delete(side)) return;
+    if (state.surface !== surface || (state.open[keyOf(side)] ?? true)) return;
+    state.togglePane(side);
+    state.say(`The ${side} pane is back.`);
   };
 
   /* Runs on every size change of the surface's box: judge the width, then paint the panes. */
@@ -87,6 +74,7 @@ export function useWorkspaceSplit(surface: Surface): WorkspaceSplitApi {
     /* A hidden surface measures 0 and has no width to judge; its last width stays for when it is shown. */
     if (width > 0) {
       sidesFalling(surface, lastWidth.current, width).forEach(fall);
+      sidesRising(surface, lastWidth.current, width).forEach(rise);
       lastWidth.current = width;
     }
     repaint.current();

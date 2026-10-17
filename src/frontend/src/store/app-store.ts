@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { DEFAULT_SURFACE, SIDES, SURFACES, SURFACE_ORDER, limitsOf, paneKey } from "@/constants/surfaces";
+import { EVENT_ROWS } from "@/fixtures/events";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
+import type { EventRow } from "@/types/events";
 import type { Box } from "@/types/child-window";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { CollectionRow } from "@/types/collection";
@@ -38,6 +40,9 @@ export interface AppState {
   /** Where each child window last was and how large, for the run: a window opened again is placed there. */
   childBounds: Readonly<Record<string, Box>>;
   notice: Notice | null;
+  /** The events drawer's log (`06` section 7), newest last: the fixture's rows, then every warn or error notice. */
+  events: readonly EventRow[];
+  clearEvents: () => void;
   /** Every collection, as the library service reports them. Empty until that service is wired. */
   collections: readonly CollectionRow[];
   /** Folded form groups by id; absent means open. Fold state is shell state, kept across openings. */
@@ -105,6 +110,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   uiZoom: 1,
   childBounds: {},
   notice: null,
+  events: EVENT_ROWS,
+  clearEvents: () => set({ events: [] }),
   collections: [],
   folded: {},
   theme: "dark",
@@ -149,10 +156,23 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setZoom: (uiZoom) => set({ uiZoom: Math.min(3, Math.max(0.5, uiZoom)) }),
   rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
   toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
-  say: (sentence, tone = "info") => set({ notice: { sentence, tone, serial: (get().notice?.serial ?? 0) + 1 } }),
+  say: (sentence, tone = "info") => {
+    const serial = (get().notice?.serial ?? 0) + 1;
+    /* A warn or an error is also a row of the events log; an info notice (a zoom reset) is not an event. */
+    const row: EventRow | null =
+      tone === "info" ? null : { id: `n-${serial}-${Date.now()}`, at: Date.now(), tone, area: "Connection", sentence };
+    set({ notice: { sentence, tone, serial }, ...(row === null ? {} : { events: [...get().events, row].slice(-200) }) });
+  },
   playRequest: null,
   requestPlay: (ref) =>
-    set({ surface: "player", playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 } }),
+    /* Play hands off to the Player: an open work window (Title information) closes with it (`06` section 4.4). */
+    set({
+      surface: "player",
+      overlay: null,
+      overlayAnchor: null,
+      overlayItem: null,
+      playRequest: { ref, serial: (get().playRequest?.serial ?? 0) + 1 },
+    }),
   setTheme: (theme) => set({ theme }),
   setAccent: (accent) => set({ accent }),
   setMotion: (motion) => set({ motion }),

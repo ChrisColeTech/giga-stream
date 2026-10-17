@@ -6,7 +6,7 @@ import { LibrarySection } from "@/components/settings/LibrarySection";
 import { PlaybackSection } from "@/components/settings/PlaybackSection";
 import { SettingsRail } from "@/components/settings/SettingsRail";
 import { workSpec } from "@/constants/child-window";
-import type { SettingsSectionId } from "@/constants/settings-sections";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/constants/settings-sections";
 import { SETTINGS_VALUES } from "@/fixtures/settings";
 import { useAppStore } from "@/store/app-store";
 import { saveSetting } from "@/services/settings";
@@ -41,7 +41,10 @@ export function SettingsWindow() {
     <ChildWindow spec={SPEC} onClose={closeOverlay}>
       <div className="flex min-h-0 min-w-0 flex-1 bg-bg">
         <SettingsRail selected={section} onSelect={setSection} />
-        <div role="tabpanel" aria-label={section} className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          role="tabpanel"
+          aria-label={SETTINGS_SECTIONS.find((entry) => entry.id === section)?.label ?? section}
+          className="flex min-h-0 min-w-0 flex-1 flex-col">
           {section === "appearance" && <AppearanceSection />}
           {section === "playback" && <PlaybackSection />}
           {section === "library" && (

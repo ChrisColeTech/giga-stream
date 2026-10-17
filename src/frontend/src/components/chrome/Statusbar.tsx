@@ -1,4 +1,4 @@
-import { PanelBottom, Settings } from "lucide-react";
+import { CircleAlert, PanelBottom, Settings } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAppStore } from "@/store/app-store";
 import { RunningWork } from "./RunningWork";
@@ -19,27 +19,23 @@ const BUTTON =
   /* A variant, so the open state beats the base `text-muted`. */
   "data-on:bg-accent-tint data-on:text-accent-text";
 
-const TONE = { info: "text-text", warn: "text-st-loading", error: "text-st-failed" } as const;
+/* The sentence is always the readable text color; the tone is the glyph's color beside it, so a warn stays legible on
+   the light theme and color is never the only signal. */
+const GLYPH = { warn: "text-st-loading", error: "text-st-failed" } as const;
 
 export function Statusbar() {
   const eventsOpen = useAppStore((state) => state.eventsOpen);
   const toggleEvents = useAppStore((state) => state.toggleEvents);
-  const settingsOpen = useAppStore((state) => state.overlay === "settings");
   const openOverlay = useAppStore((state) => state.openOverlay);
-  const closeOverlay = useAppStore((state) => state.closeOverlay);
   const notice = useAppStore((state) => state.notice);
 
   return (
     <footer className={BAR}>
       <RunningWork />
       {notice !== null && (
-        <span
-          key={notice.serial}
-          role="status"
-          title={notice.sentence}
-          className={cn("min-w-0 truncate text-xs", TONE[notice.tone])}
-        >
-          {notice.sentence}
+        <span key={notice.serial} role="status" title={notice.sentence} className="flex min-w-0 items-center gap-1.5 text-xs text-text">
+          {notice.tone !== "info" && <CircleAlert className={cn("size-3 flex-none", GLYPH[notice.tone])} aria-hidden />}
+          <span className="truncate">{notice.sentence}</span>
         </span>
       )}
       <span className="flex-1" />
@@ -52,12 +48,12 @@ export function Statusbar() {
       >
         <PanelBottom className="size-3.5" aria-hidden /> Events
       </button>
+      {/* Settings is a modal window whose scrim covers this bar, so the door is never lit as a toggle: the window's own
+          X and Escape close it. */}
       <button
         type="button"
-        aria-pressed={settingsOpen}
-        data-on={settingsOpen ? "" : undefined}
         className={BUTTON}
-        onClick={() => (settingsOpen ? closeOverlay() : openOverlay("settings"))}
+        onClick={() => openOverlay("settings")}
       >
         <Settings className="size-3.5" aria-hidden /> Settings
       </button>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { collapseLine, sidesFalling } from "@/hooks/useWorkspaceSplit";
+import { collapseLine, sidesFalling, sidesRising } from "@/lib/pane-collapse";
 
 describe("the pane collapse line (06 section 1.3)", () => {
   it("drops the right pane first, once the work width is under 1000 px", () => {
@@ -31,5 +31,12 @@ describe("the pane collapse line (06 section 1.3)", () => {
 
   it("never returns the bottom pane or the centre: the width rule is for the side panes only", () => {
     assert.deepEqual(sidesFalling("player", 1200, 500), ["right", "left"]);
+  });
+
+  it("raises a side pane when the width crosses its line upward, and never on the first measure", () => {
+    assert.deepEqual(sidesRising("library", 990, 1200), ["right"]);
+    assert.deepEqual(sidesRising("library", 700, 1200), ["right", "left"]);
+    assert.deepEqual(sidesRising("library", 1100, 1200), []);
+    assert.deepEqual(sidesRising("library", null, 1200), []);
   });
 });

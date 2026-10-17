@@ -30,6 +30,12 @@ export function useChildWindowKeys(
       /* A Radix menu (the Collections submenu) renders in a portal on the body, outside the frame, but it is this
        * window's own control: its keys reach it, and Radix's own Escape handling runs on them. */
       if (target instanceof Element && target.closest('[role="menu"]') !== null) return;
+      /* Focus lost to the body (the window swapped views and the pressed control unmounted) is not a key from the main
+       * window: it comes back to the frame and the key is handled there, so Escape and Tab keep working. */
+      if (target === document.body && frame.current !== null) {
+        frame.current.focus({ preventScroll: true });
+        return;
+      }
       event.stopPropagation();
       event.preventDefault();
     };

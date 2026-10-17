@@ -14,10 +14,17 @@ export function firstShown<T>(candidates: readonly T[], shown: (node: T) => bool
   return candidates.find(shown);
 }
 
-/** Focuses the active surface's search: the first `[data-search]` that is laid out. Reports whether it found one. */
+/** Whether a field is really on screen: it has a box with size, and no closed (inert) pane holds it. A pane collapsed
+ *  to zero still lays its children out, so a box alone is not proof. */
+function onScreen(node: HTMLElement): boolean {
+  const box = node.getBoundingClientRect();
+  return box.width > 0 && box.height > 0 && node.closest("[inert]") === null;
+}
+
+/** Focuses the active surface's search: the first `[data-search]` that is on screen. Reports whether it found one. */
 function focusActiveSearch(): boolean {
   const fields = Array.from(document.querySelectorAll<HTMLElement>("[data-search]"));
-  const field = firstShown(fields, (node) => node.getClientRects().length > 0);
+  const field = firstShown(fields, onScreen);
   if (field === undefined) return false;
   field.focus();
   return true;
