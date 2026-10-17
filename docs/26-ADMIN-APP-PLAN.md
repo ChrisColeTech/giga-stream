@@ -341,6 +341,21 @@ is now the family's record pattern and nothing else:
    `Enabled`; (3) the optional fields, most used first; (4) read-only facts last. The New form is group (1) only, and the
    same fields come first in the workspace's Details, in the same order.
 5. **State is a word in the list** (`live`, `preparing`, `failed`, `disabled`, `edited`, `manual`), never a section.
+7. **One form pattern** (owner, 2026-10-17, after the six New forms disagreed: the Kind or Type selector was first on
+   Channels and Jobs, second on Titles, third on Providers and Accounts; selectors were 126 to 151 px wide while every
+   input spanned the row; info glyphs sat on arbitrary rows; Playlists used different row markup):
+   - **Row 1 is always the record's name** (Name, Title, Email). **Row 2 is the Kind, Type or Family selector** when the
+     record has one that changes the rows below it (Channels: Kind; Providers: Family; Jobs: Type); the rows it switches
+     follow it directly. A selector that does not switch rows (Titles' Kind, Accounts' Role) is an ordinary field and sits
+     where the field-order table puts it.
+   - **Every control spans the row at 36px**, a Segmented included (equal segments). The one exception is a Toggle.
+   - **An info glyph sits on every row except a row labelled Name, Title, Email or Password** (their labels explain
+     themselves); every other row has one.
+   - **One row markup for every form and workspace:** `<div class="row"><label>Label ⓘ</label><div class="control">…</div></div>`,
+     with a label element on every row (a Segmented row's too) and `.row-field` for a trailing button. No page builds its
+     own variant.
+   - **A form is checked by measurement, not by eye:** the coordinator runs one probe over all six New forms (row order,
+     control types, widths, glyphs, markup) and every form must produce the same shape.
 6. **Every tab is a record type with an index and a workspace.** The audit log is not a record type an admin works on, so
    it is not a tab: it is the Events drawer (4.9).
 
@@ -363,9 +378,9 @@ the Titles or Playlists pages.
 
 | Record | 1. Required | 2. Enabled | 3. Optional, most used first | 4. Read-only |
 |---|---|---|---|---|
-| Live channel | Name*, Number*, Category*, Source* (Folder or Videos, then the path or list) | `Enabled` | Mode, Captions, Qualities, Logo | Id, State, Renditions, Playlist, Stream address |
+| Live channel | Name*, Kind*, Number*, Category*, Source* (Folder or Videos, then the path or list) | `Enabled` | Mode, Captions, Qualities, Logo | Id, State, Renditions, Playlist, Stream address |
 | Stream channel | Name*, Number*, Category*, Stream address* | `Enabled` | Logo address | Id, Synced from |
-| Provider | Name*, Source*, Family*, Movie template* (embed) | `Enabled` | Order, Episode template, Start parameter, Subtitle parameter, Origin, Frame origins, Message shape, API key | Created |
+| Provider | Name*, Family*, Source*, Movie template* (embed) | `Enabled` | Order, Episode template, Start parameter, Subtitle parameter, Origin, Frame origins, Message shape, API key | Created |
 | Title | Title*, Kind*, Year* | `Enabled` | TMDB id, Rating, Genres, Runtime, Poster, Backdrop, Plot, Cast, Stream address, Seasons | State, Sources |
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
