@@ -1,4 +1,4 @@
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { RailSection } from "@/components/ui/RailSection";
 import { SelectField } from "@/components/ui/SelectField";
@@ -48,6 +48,7 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView }: 
             options={[
               { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" aria-hidden /> },
               { value: "list", label: "List", icon: <List className="size-3.5" aria-hidden /> },
+              { value: "rows", label: "Rows", icon: <Rows3 className="size-3.5" aria-hidden /> },
             ]}
             value={view}
             onChange={onView}

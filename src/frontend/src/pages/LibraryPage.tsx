@@ -33,14 +33,11 @@ import { useAppStore } from "@/store/app-store";
 const GENRES = genreChoices(LIBRARY_ITEMS);
 const YEARS = yearChoices(LIBRARY_ITEMS);
 
-/** The centre's views: the grid or list of the body, or the Rows view of shelves. */
-type CenterView = ListView | "rows";
-
 /** Library: collections on the left, the media body in the centre, filters on the right. The query, the view, the
  *  selection and the watch-history marks are local to the surface; favourites and memberships come from the store. */
 export function LibraryPage({ active }: { active: boolean }) {
   const [query, setQuery] = useState<LibraryQuery>(DEFAULT_QUERY);
-  const [view, setView] = useState<CenterView>("grid");
+  const [view, setView] = useState<ListView>("grid");
   const [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryMarks>(NO_HISTORY);
   const marks = useAppStore((state) => state.marks);
@@ -103,8 +100,7 @@ export function LibraryPage({ active }: { active: boolean }) {
       right={
         <LibraryFilters
           query={query}
-          /* Rows has no segment in the switch yet (LibraryFilters owns it): the grid stays marked while Rows shows. */
-          view={view === "rows" ? "grid" : view}
+          view={view}
           genres={GENRES}
           years={YEARS}
           onQuery={patch}
