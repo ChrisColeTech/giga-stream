@@ -6,6 +6,8 @@ import path from "node:path";
 
 import { makeApp, pick, send } from "./app-fixture.js";
 
+const createInput = (name: unknown, type: unknown = "local") => ({ name, type });
+
 test("a collection is created, read, renamed and listed", async () => {
   const t = await makeApp();
   const created = await send(t.app, "POST", "/api/collections", { name: "Movies", type: "movie" });
@@ -29,16 +31,21 @@ test("a collection is created, read, renamed and listed", async () => {
 
 test("a name that is empty, too long, or a duplicate ignoring case is refused", async () => {
   const t = await makeApp();
-  await send(t.app, "POST", "/api/collections", { name: "Movies", type: "movie" });
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "movies", type: "movie" })).status, 422);
+  await send(t.app, "POST", "/api/collections", createInput("Movies", "movie"));
+  assert.equal((await send(t.app, "POST", "/api/collections", createInput("movies", "movie"))).status, 422);
   assert.equal(
-    pick((await send(t.app, "POST", "/api/collections", { name: "movies", type: "movie" })).body, "error.code"),
+    pick((await send(t.app, "POST", "/api/collections", createInput("movies", "movie"))).body, "error.code"),
     "collection.invalid",
   );
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "   ", type: "local" })).status, 422);
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "x".repeat(81), type: "local" })).status, 422);
+  assert.equal((await send(t.app, "POST", "/api/collections", createInput("   "))).status, 422);
+  assert.equal((await send(t.app, "POST", "/api/collections", createInput("x".repeat(81)))).status, 422);
+  assert.equal((await send(t.app, "POST", "/api/collections", createInput("Bad type", "other"))).status, 422);
+  await t.dispose();
+});
+
+test("collection create requires type at the route boundary", async () => {
+  const t = await makeApp();
   assert.equal((await send(t.app, "POST", "/api/collections", { name: "Missing type" })).status, 400);
-  assert.equal((await send(t.app, "POST", "/api/collections", { name: "Bad type", type: "other" })).status, 422);
   await t.dispose();
 });
 
