@@ -5,6 +5,7 @@ import type { ResolvedItem } from "@/lib/library-marks";
 import type { Scope } from "@/lib/library-query";
 import { buildShelves, type ShelfGroup } from "@/lib/rows-shelves";
 import type { CollectionRow } from "@/types/collection";
+import { BackToTop } from "../BackToTop";
 import { TypeStrip } from "../TypeStrip";
 import { LibraryPager } from "../LibraryPager";
 import { RowsShelf } from "./RowsShelf";
@@ -66,7 +67,7 @@ export function LibraryRows({
   const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading);
   const render = rowsRenderState(shelves.length, hasMore, paging);
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
       {strip}
       <div
@@ -93,6 +94,7 @@ export function LibraryRows({
           <LibraryPager hasMore={hasMore} loading={paging} view="rows" scope={scope} onVisible={onLoadMore} />
         )}
       </div>
+      <BackToTop scroller={scroller} />
     </div>
   );
 }
