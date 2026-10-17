@@ -248,6 +248,10 @@ the live server's stream addresses (`/live/...`, `/logos/...` and its test page,
   job it started.
 - Navigation guards cover `will-navigate`, redirects, frames and new windows. The preload exposes
   named capabilities only; generic `invoke`, raw IPC and Node objects are banned.
+- Provider-frame policy is one named capability: the renderer sets or clears the active source's exact
+  origin and documented nested-frame origins. The Electron main process enforces that policy on every
+  player/nested frame and injects the static dialog no-ops; the renderer never reaches through a
+  cross-origin `contentDocument` and never supplies executable code over IPC.
 
 ### Backend
 

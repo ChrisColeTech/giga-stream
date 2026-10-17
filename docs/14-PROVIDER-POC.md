@@ -92,6 +92,9 @@ loaded; Malwarebytes flagged them and stopped the run. Since then (`network-rule
   page, the provider's origins and its `allowHosts` in `providers.json`. A host is added to `allowHosts`
   only when it serves the player or the video, never an ad, popunder or tracking host.
 - Every host a provider's page asks for is recorded, as contacted or refused, with each run's result.
+- Product integration strengthens the PoC's best-effort renderer injection: Electron receives the active
+  source's exact frame policy through a named preload capability, enforces nested origins in the main
+  process and injects its own static dialog no-ops. Cross-origin `contentDocument` access is never assumed.
 - Whether a provider plays with ad hosts refused, and in strict mode, is part of check 14.
 - **The blocker fails closed (2026-10-16).** When the blocker's lists cannot load (first launch with no
   internet), the app no longer starts without the blocker ready. `network-rules.cjs` `mayContact` and

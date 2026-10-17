@@ -36,7 +36,8 @@ corrected first.
 - **The PoC (`14`, proven in Electron).** The embed is a 16:9 iframe with
   `allow="autoplay; fullscreen; encrypted-media; picture-in-picture"`, `referrerPolicy="origin"`, optional
   `sandbox="allow-scripts allow-same-origin allow-presentation"`; the nested-frame guard and dialog no-ops
-  (`frame-guard.js`) are injected into the player frame and its children; the message decode table
+  (`frame-guard.js`) become Electron main-process enforcement/injection for the player frame and its children;
+  the renderer sets the active source's policy through one named preload capability. The message decode table
   (`messages.js`) reads `vidsrc-status`, VixSrc's `event`-object shape, the common `player-event` shape and
   `MEDIA_DATA`, position and duration in seconds. `data/providers.json` carries, per provider, the movie and
   episode templates, the `startAt` and subtitle parameter names, the allowed message origin, the frame origins
@@ -134,10 +135,11 @@ phase 1 type says.
 **Errors.** `lib/error-sentence.ts` is the one mapping from dotted codes to sentences (`01` section 4.1). A refusal
 shows its sentence once on the notice line.
 
-**The embed library is not a service** (no REST): `lib/embed-url.ts` builds the address from a `TitleSource`,
-resume seconds and the subtitle language; `lib/embed-messages.ts` is the PoC decode table, seconds to
-milliseconds; `lib/frame-guard.ts` is the PoC's self-contained guard string and its installer. All three are pure
-or DOM-only, unit-tested (`14` §2.2–2.4 ported near-verbatim, `07` section 2).
+**The embed library is not a REST service:** `lib/embed-url.ts` builds the address from a `TitleSource`, resume
+seconds and the subtitle language; `lib/embed-messages.ts` is the PoC decode table, seconds to milliseconds;
+the desktop service sets/clears the source policy through the preload's named capability. Electron owns the
+static frame/dialog guard because a renderer cannot reach a cross-origin `contentDocument`; a browser relies on
+the iframe sandbox. These pieces are unit-tested (`14` §2.2–2.4, strengthened at product integration).
 
 ## 3. What each surface reads and writes
 
