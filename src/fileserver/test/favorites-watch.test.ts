@@ -36,7 +36,7 @@ test("watch progress applies, replays never rewind, and watched is sticky", asyn
   assert.equal(pick(late.body, "data.applied"), false);
   assert.equal(pick(late.body, "data.entry.positionMs"), 3000);
 
-  // At 95 percent the entry flips to watched...
+  // Past the watchedPercent default of 90 the entry flips to watched...
   const watched = await write({
     item: { kind: "title", id: "tt100" },
     positionMs: 9600,
@@ -48,6 +48,31 @@ test("watch progress applies, replays never rewind, and watched is sticky", asyn
   // ...and never goes back to watching.
   const back = await write({ item: { kind: "title", id: "tt100" }, positionMs: 10, durationMs: 10_000, playbackId: "p1", seq: 3 });
   assert.equal(pick(back.body, "data.entry.state"), "watched");
+  await t.dispose();
+});
+
+test("the watched threshold follows the watchedPercent setting, not a constant", async () => {
+  const t = await makeApp();
+  const write = (body: Record<string, unknown>) => send(t.app, "PUT", "/api/watch", body);
+  const patch = await send(t.app, "PATCH", "/api/settings", { watchedPercent: 100 });
+  assert.equal(patch.status, 200);
+  // 96 percent would flip watched at the old 95 constant; the 100 setting keeps it watching.
+  const almost = await write({
+    item: { kind: "title", id: "tt300" },
+    positionMs: 9600,
+    durationMs: 10_000,
+    playbackId: "p10",
+    seq: 1,
+  });
+  assert.equal(pick(almost.body, "data.entry.state"), "watching");
+  const done = await write({
+    item: { kind: "title", id: "tt300" },
+    positionMs: 10_000,
+    durationMs: 10_000,
+    playbackId: "p10",
+    seq: 2,
+  });
+  assert.equal(pick(done.body, "data.entry.state"), "watched");
   await t.dispose();
 });
 

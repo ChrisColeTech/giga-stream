@@ -49,6 +49,28 @@ test("the state answer's parts stand alone: a settings patch changes the setting
   await t.dispose();
 });
 
+test("the last channel rides on the state answer only while liveOnOpen is last", async () => {
+  const t = await makeApp();
+  await pointAt(t, backend.url);
+  await send(t.app, "POST", "/api/channels/refresh");
+  await send(t.app, "PATCH", "/api/channels/last", { channelId: "fx-news" });
+
+  const withLast = await send(t.app, "GET", "/api/state");
+  assert.equal(pick(withLast.body, "data.lastChannelId"), "fx-news", "the default (last) carries it");
+
+  await send(t.app, "PATCH", "/api/settings", { liveOnOpen: "none" });
+  const withoutLast = await send(t.app, "GET", "/api/state");
+  assert.equal(pick(withoutLast.body, "data.lastChannelId"), undefined, "none omits it");
+
+  // The stored channel is untouched: turning the setting back on resumes carrying it.
+  const again = await send(t.app, "GET", "/api/state");
+  await send(t.app, "PATCH", "/api/settings", { liveOnOpen: "last" });
+  const restored = await send(t.app, "GET", "/api/state");
+  assert.equal(pick(again.body, "data.lastChannelId"), undefined);
+  assert.equal(pick(restored.body, "data.lastChannelId"), "fx-news");
+  await t.dispose();
+});
+
 test("healthz answers the fileserver's own state and its view of the backend", async () => {
   const t = await makeApp();
   await pointAt(t, backend.url);

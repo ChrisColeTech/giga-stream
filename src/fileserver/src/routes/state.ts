@@ -14,7 +14,11 @@ export function registerStateRoute(app: FastifyInstance, services: AppServices):
     // (docs/03 section 4: connection is a fact of the last request, and this request is that read).
     const channels = await channelsOf(services);
     const backend = services.live.backend();
-    const lastChannelId = services.live.lastId(() => services.channelState.readLastChannelId());
+    // The last channel rides along only when Live is set to open on it (03 section 3.2: liveOnOpen).
+    const lastChannelId =
+      services.settings.get().liveOnOpen === "last"
+        ? services.live.lastId(() => services.channelState.readLastChannelId())
+        : undefined;
     return okEnvelope({
       version: APP_VERSION,
       host: { runtime: APP_RUNTIME },

@@ -17,7 +17,8 @@ export interface WatchWrite {
 
 /**
  * The entry answer (3.13): the identity is the item with its exact episode, never the playback.
- * `state` is `watching` or `watched`; it flips to `watched` at `WATCHED_FRACTION` of the duration.
+ * `state` is `watching` or `watched`; it flips to `watched` at the `watchedPercent` setting's
+ * share of the duration (3.2).
  */
 export interface WatchEntry {
   watchId: string;

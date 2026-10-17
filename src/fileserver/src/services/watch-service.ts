@@ -1,4 +1,3 @@
-import { WATCHED_FRACTION } from "../constants/media-files.js";
 import { AppError } from "../lib/app-error.js";
 import type { ItemRef } from "../types/collection.js";
 import type { WatchEntry, WatchWrite } from "../types/watch.js";
@@ -45,8 +44,13 @@ export interface WatchService {
   clear: () => { cleared: number };
 }
 
-export function createWatchService(deps: { watches: WatchRepository; now: () => number }): WatchService {
-  const { watches, now } = deps;
+export function createWatchService(deps: {
+  watches: WatchRepository;
+  /** The `watchedPercent` setting, read at each write (03 section 3.2; the table's default is 90). */
+  watchedPercent: () => 90 | 95 | 100;
+  now: () => number;
+}): WatchService {
+  const { watches, watchedPercent, now } = deps;
   /** The last applied seq of each playback, in memory only (03 section 3.13's ordering rule). */
   const lastSeqByPlayback = new Map<string, number>();
 
@@ -81,7 +85,8 @@ export function createWatchService(deps: { watches: WatchRepository; now: () => 
         season: input.season,
         episode: input.episode,
       });
-      const over = input.durationMs !== undefined && input.positionMs >= input.durationMs * WATCHED_FRACTION;
+      const over =
+        input.durationMs !== undefined && input.positionMs >= (input.durationMs * watchedPercent()) / 100;
       const state = existing?.state === "watched" || over ? "watched" : "watching";
       const row = watches.upsert({
         id: existing?.id ?? randomId(),

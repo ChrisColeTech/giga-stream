@@ -10,8 +10,5 @@ export const SCAN_EVENT_BUFFER = 2000;
 export const SELECTION_TOKEN_TTL_MS = 10 * 60 * 1000;
 export const SELECTION_TOKEN_BYTES = 16; // 128 bits of entropy
 
-/** The point where a watch entry becomes `watched`: position >= 0.95 of the duration (3.13 default). */
-export const WATCHED_FRACTION = 0.95;
-
 /** The state answer carries unsettled jobs and the 50 most recent settled ones (03 section 4). */
 export const SETTLED_JOB_HISTORY = 50;
