@@ -5,59 +5,34 @@ import path from "node:path";
 
 import { app, BrowserWindow, dialog, screen, session } from "electron";
 
+import { resolveAppUrl } from "./app-url.js";
 import { startOrAttach, type BackendHandle } from "./backend-host.js";
 import { installGuards } from "./guards.js";
 import { installNativeDialogIpc } from "./native-dialog.js";
+import { createTray, type TrayHandle } from "./tray.js";
 import { isTrustedSender } from "./trust.js";
 import { installWindowOverlayIpc } from "./window-overlay.js";
 
 /**
  * The backend's desktop window (docs/26 section 4.1, the fileserver's pattern): this process runs the admin backend
  * itself, then opens ONE window on the admin app it serves at `/admin/`. Context isolation on, node integration
- * off, sandbox on. Plain `npm start` stays the headless server; this file runs only under `electron .`.
+ * off, sandbox on. The app closes to the system tray: the close button hides the window and only Quit (the tray's,
+ * or any other quit) stops the backend. Plain `npm start` stays the headless server; this file runs only under
+ * `electron .`.
  */
 
 // Dev-only DevTools endpoint on a fixed loopback port, so automation can drive the window like a browser tab. The
 // fileserver's window uses 9222; this one 9223, so both can run. The packaged app never opens one.
 if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9223");
 
-/** The admin's Vite dev server (src/admin/vite.config.mts), loaded unpackaged when it answers. */
-const DEV_URL = "http://127.0.0.1:5172/admin/";
-const DEV_WAIT_MS = 3000;
-/** `--wait-vite` (the dev stack starts Vite and this window together): give Vite time to come up before falling back. */
-const STACK_WAIT_MS = 30_000;
-const WAIT_FOR_VITE = process.argv.includes("--wait-vite");
-const ADMIN_PATH = "/admin/";
-const PROBE_TIMEOUT_MS = 1500;
-const PROBE_RETRY_MS = 250;
 const BAR = { color: "#18181b", symbolColor: "#a3a3ac", height: 40 } as const;
 
 let backend: BackendHandle | null = null;
 let mainWindow: BrowserWindow | null = null;
-
-/** Whether anything answers at the address: any response counts, only a transport failure is a no. */
-async function answers(url: string, waitMs: number): Promise<boolean> {
-  const deadline = Date.now() + waitMs;
-  while (Date.now() < deadline) {
-    try {
-      await fetch(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
-      return true;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, PROBE_RETRY_MS));
-    }
-  }
-  return false;
-}
-
-/** The page the window loads: the Vite server when unpackaged and it answers (edits reload in place), else the
- *  backend's own `/admin/`, which must exist: a missing build is a message, not a window of JSON. */
-async function resolveAppUrl(origin: string): Promise<string> {
-  if (!app.isPackaged && (await answers(DEV_URL, WAIT_FOR_VITE ? STACK_WAIT_MS : DEV_WAIT_MS))) return DEV_URL;
-  const own = `${origin}${ADMIN_PATH}`;
-  const reply = await fetch(own, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) }).catch(() => null);
-  if (reply?.ok !== true) throw new Error("The admin app is not built. Run: npm run build --prefix src/admin");
-  return own;
-}
+// Module-level: a Tray that is garbage collected disappears from the notification area.
+let tray: TrayHandle | null = null;
+/** Set once any quit begins (the tray's, `app.quit()`, a system shutdown): from then on a close really closes. */
+let quitting = false;
 
 /** The preferred window clamped to the work area: every number here is a DIP (docs/02 section 1). */
 function windowSize(): { width: number; height: number; minWidth: number; minHeight: number } {
@@ -68,6 +43,15 @@ function windowSize(): { width: number; height: number; minWidth: number; minHei
     minWidth: Math.min(900, width),
     minHeight: Math.min(640, height),
   };
+}
+
+/** Shows the same window object again (the page stays loaded): restored when minimised, then focused. */
+function showWindow(): void {
+  const window = mainWindow;
+  if (window === null || window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
 }
 
 function createWindow(url: string, origin: string): BrowserWindow {
@@ -96,6 +80,15 @@ function createWindow(url: string, origin: string): BrowserWindow {
   );
   installWindowOverlayIpc(window.webContents.ipc, trusted, () => window);
   window.once("ready-to-show", () => window.show());
+  // Close (the button, Alt+F4) hides while the app runs; a quit lets it through. A logoff or shutdown is a quit too.
+  window.on("close", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    window.hide();
+  });
+  window.on("session-end", () => {
+    quitting = true;
+  });
   window.on("closed", () => {
     mainWindow = null;
   });
@@ -103,10 +96,11 @@ function createWindow(url: string, origin: string): BrowserWindow {
   return window;
 }
 
+// Before anything is created: a second launch shows the running window and exits.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => mainWindow?.focus());
+  app.on("second-instance", showWindow);
 
   app
     .whenReady()
@@ -115,21 +109,29 @@ if (!app.requestSingleInstanceLock()) {
       const url = await resolveAppUrl(backend.origin);
       console.info(`[giga-stream-admin] ${backend.attached ? "attached to" : "started"} ${backend.origin}; window on ${url}`);
       mainWindow = createWindow(url, backend.origin);
+      tray = createTray({ showWindow, quit: () => app.quit(), address: backend.origin });
     })
     .catch((error: unknown) => {
       console.error(`\n[giga-stream-admin] failed to start\n${error instanceof Error ? error.message : String(error)}\n`);
       app.exit(1);
     });
 
-  app.on("window-all-closed", () => app.quit());
+  // Closing the last window (hidden to the tray) never quits; only an explicit quit does.
+  app.on("window-all-closed", () => undefined);
 
   let shuttingDown = false;
   app.on("before-quit", (event) => {
+    quitting = true;
+    tray?.destroy();
+    tray = null;
     if (shuttingDown || backend === null) return;
     shuttingDown = true;
     event.preventDefault();
     const instance = backend;
     backend = null;
-    void instance.close().finally(() => app.quit());
+    void instance
+      .close()
+      .catch((error: unknown) => console.error("[giga-stream-admin] the backend did not close cleanly", error))
+      .finally(() => app.quit());
   });
 }
