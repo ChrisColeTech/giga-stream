@@ -322,10 +322,19 @@ follow the theme through the preload's overlay colours (4.1). The minimum size i
   exposes it; section 4.12 item 7); then one polite notice line; then `Events` and `Settings`.
 - **Events band** (160px above the statusbar, `06` section 7): mono rows of time, tone word, area (Channel, Provider, Title,
   Playlist, Job, Account, Session, Connection), the normalised sentence; at most 200 rows; **Clear**; shimmer lines when empty.
-- **Settings window** (a modal work window, `06` section 6.1): Appearance (theme, accent, reduce motion), Session (who is
-  signed in; **Sign out**), About (version, backend revision, the address in use).
-- **Persistence:** none in version one. A reload opens on Channels with default panes and the default theme, because
-  browser storage is forbidden and the admin has no fileserver of its own to save to (D16).
+- **Settings window** (a modal work window, `06` section 6.1, the interface's `SettingsWindow` frame from the shared
+  library): Appearance (theme, accent, reduce motion, interface zoom), Session (who is signed in; **Sign out**), About
+  (version, backend revision, the address in use).
+- **Persistence** (decided, owner, 2026-10-17: the Settings window and its persistence were a gap; D16): the admin saves
+  its settings the way the interface does, to its own server. The backend keeps ONE row per signed-in account in a new
+  table (`admin_ui_state`: `account_id`, `settings` JSON, `shell` JSON, `updated_at`; migration 017) behind
+  `GET /api/auth/me/state` and `PUT /api/auth/me/state` (signed in, whole-document write with the interface's
+  write-back rules: committed on change, one request at a time, a refusal rolls the field back and posts a notice).
+  `settings` holds theme, accent, reduce motion and zoom; `shell` holds the last tab, which workspace panes and the
+  events band are open and their sizes, and the work windows' remembered bounds. Reads happen once after sign-in; until
+  then (the sign-in screen) the defaults apply (dark, amber). Nothing is stored in the browser (`01` 4.4) and nothing in
+  Electron's profile. The pattern is the interface's `/api/settings` and `/api/shell-state` hydration and write-back
+  hooks (`22`), pointed at these two routes.
 
 ### 4.3 Sign-in gate (proposed)
 
@@ -420,9 +429,31 @@ the Titles or Playlists pages.
   clicking the row opens its workspace (no `Open` button, no double-click). At the row end, `Delete` as an
   `ArmedButton` naming the channel.
 - **Toolbar** (the strip above the groups, as `datasets-index.jpg` and `training-index.jpg`): right only, ONE forward
-  verb in the filled accent, `Preview →`, acting on the ticked channel (it opens its test player; disabled, with its
-  reason, when no row or more than one is ticked, or `TEST_PAGE` is off, which the page reads from `GET /healthz` `testPage`: a field the wiring plan `29` adds). Nothing else is in an index toolbar.
+  verb in the filled accent, `Preview →`, acting on the ticked channel (it opens the Preview window, 4.5a; disabled, with its
+  reason, when no row or more than one is ticked). Nothing else is in an index toolbar.
 - Loading and empty show skeleton rows. No sentence sits over them.
+
+### 4.5a The Preview window (decided, owner, 2026-10-17)
+
+The owner: *"we can preview the channel once we save it; it can be a popup or child window, it doesn't need to be a full
+page; just a simple preview to make sure it works, in the family style and grammar."* `Preview →` (the Channels index's
+toolbar verb for the one ticked channel, and the workspace toolbar's verb once the channel is saved) opens a **child work
+window** (the shared library's `ChildWindow`, moved by its header, resized by its edges, closed by its `X` or `Escape`,
+focus returned to the opener; `06` section 9) titled `Preview`, standard size, holding:
+
+- a 16:9 video that plays the channel: a live channel through its own `masterUrl` (`/live/<id>/master.m3u8` on the
+  backend's origin), a stream channel through its `streamUrl`; HLS through the same player library the interface's
+  `LivePlayer` uses (`hls.js`, or the browser's native HLS where present), muted until the person unmutes, with the native
+  controls;
+- under it, ONE mono status line from what the player and `GET /api/admin-channels` say: the channel's state
+  (`preparing`, `starting`, `live`, `restarting`, `stopped`, `failed`) and its `problem`, and the player's own error when it
+  cannot load or play (`manifest failed`, `media error`, an unreachable address), with a ghost `Retry` verb beside it. While
+  the channel is `preparing` or `starting` the stage shows skeleton, never an empty card.
+- no other controls: no quality picker, no fault injection, no test page. It does not depend on `TEST_PAGE` and needs no
+  `/healthz` field. The backend's `/test/player.html` stays for development and is not used by the admin.
+
+It opens on a channel that exists and is saved; a `failed` or `stopped` channel still opens it and says why. Closing the
+window stops the playback. Its bounds are remembered with the other work windows (4.2 Persistence).
 
 ### 4.6 Channel workspace, live (proposed)
 
@@ -442,8 +473,8 @@ the Titles or Playlists pages.
     line in the body), renditions, the playlist (ordered rows with durations; the playing one carries the accent strip),
     and the stream address with a copy icon.
 - **Toolbar** (as `training-workspace.jpg`), right: `Discard changes` (ghost), `Save` (edged), then `Preview →`, the
-  forward verb in the filled accent, which opens the channel's test player when `TEST_PAGE` is on and is disabled with
-  its reason otherwise. `Rebuild` is a pressed verb in the source group's action slot. ONE Save for the page, because a
+  forward verb in the filled accent, which opens the Preview window (4.5a) for the saved channel; it is disabled, with
+  the reason "Save the channel first", while the page has unsaved changes or is a New form. `Rebuild` is a pressed verb in the source group's action slot. ONE Save for the page, because a
   channel is a single PATCH.
 - **No delete here.** Delete lives on the index row (the family rule).
 
@@ -558,7 +589,7 @@ as page behaviour in the mockup.
 | 3 | **A playlist sync overwrote `streamUrl`, `logoUrl`, `category` and `number` of a synced row (lifted, built)** (verified in `playlist-sync-service.ts` before the rules), re-creates a deleted one, and duplicates a renamed one. | the sync's design | Reliable edit and delete of a synced channel | **Decided: the rules of 3.10** (edited fields, `sync_name`, `Enabled`, `prune` skips edited rows) |
 | 4 | **A folder is a path on the backend's machine.** A plain browser cannot return one from a native dialog. | the architecture | A working `Choose` button | **Decided (D18):** the admin runs in the backend's own Electron window, so `Choose` is the native picker |
 | 5 | **Restarting the backend stops every live channel** until it rebuilds. | the merge (D4) | Restarting to apply config without a stream gap | keeping the engine as a supervised child |
-| 6 | **The admin persists nothing between page loads.** Browser storage is forbidden and the admin has no server-side settings of its own. | `01` 4.4 | Remembered theme, tab, panes | D16: a per-account settings row |
+| 6 | **The admin had nothing to persist its settings to.** Browser storage is forbidden (`01` 4.4) and the backend had no settings row. | `01` 4.4 | Remembered theme, tab, panes | **Decided (D16):** a per-account `admin_ui_state` row, `GET`/`PUT /api/auth/me/state` (migration 017; planned in `29`) |
 | 7 | **No route stops one channel's build.** The engine holds an abort per channel, but only the whole-process shutdown and a PATCH or DELETE of the channel use it. | verified in `channel-runtime.ts` and the route list | The statusbar `Stop` | a stop route |
 | 8 | **A provider's `api_key` was stored but never used (lifted, built).** Nothing in the backend, fileserver or interface read it; migration 016 dropped it. | verified in the code | A key field on the provider form | D24: removed |
 | 9 | **The refresh token has no safe browser home** under the no-storage rule. | `01` 4.4 | Staying signed in across a reload | D5 |
@@ -722,8 +753,9 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 - **D20.** *(Decided, owner, 2026-10-17: "this is a crud app".)* Titles are ordinary records: create, edit, delete. The
   one rule the sync adds is that it never overwrites a title or field an admin edited. Manual titles carry their own id
   (`custom-<uuid>`); an optional TMDB id lets the providers produce sources for it.
-- **D16.** The admin persists nothing in version one (recommended). Persisting theme and panes would need a backend
-  settings row per account.
+- **D16.** *(Decided, owner, 2026-10-17, reversing the earlier default of persisting nothing.)* The admin persists
+  its settings and shell layout per signed-in account in the backend (`admin_ui_state`, `GET`/`PUT /api/auth/me/state`,
+  4.2 Persistence).
 - **D18.** *(Decided, owner, 2026-10-17: "follow the family convention and do what we are doing for the other folder
   pickers; we dont have a complex popup, it just shows the native folder picker".)* `Choose` is the native folder picker
   of the backend's Electron window. No popup and no directory-listing route.

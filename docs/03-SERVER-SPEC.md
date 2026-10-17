@@ -611,7 +611,7 @@ of this document.
 ### 7.1 Health
 
 `GET /healthz` returns `{ role: "admin-backend", version, revision, tmdb: "configured" | "absent", liveChannels }`
-(`liveChannels` counts the live channels the engine holds; `testPage: boolean` is added by the admin wiring plan `29`).
+(`liveChannels` counts the live channels the engine holds).
 
 ### 7.2 Channels
 
