@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { pathOf, previewAddress } from "@/lib/preview-address";
-import { PLAYER_IDLE, previewLine, previewTarget } from "@/lib/preview-state";
+import { PLAYER_IDLE, healthWord, previewLine, previewTarget } from "@/lib/preview-state";
 import { live, stream } from "./support/channels-kit";
 
 const failed = (error: "manifest failed" | "unreachable" | "media error" | "unsupported") => ({ phase: "idle" as const, error });
@@ -79,5 +79,18 @@ describe("the Preview's status line", () => {
       const { line } = previewLine(live("a", { state, problem: "A long sentence about why." }), false, PLAYER_IDLE);
       assert.ok(!line.includes("."), `${state}: ${line}`);
     }
+  });
+});
+
+describe("the status bar's health word (`51` section 2.5)", () => {
+  it("is a stream channel's verdict: online muted, offline in the failed tone, not checked faint", () => {
+    assert.deepEqual(healthWord(stream("a", { status: "online" })), { word: "online", className: undefined });
+    assert.deepEqual(healthWord(stream("b", { status: "offline" })), { word: "offline", className: "text-st-failed" });
+    assert.deepEqual(healthWord(stream("c")), { word: "not checked", className: "text-faint" });
+  });
+
+  it("is absent for a live-kind channel or no channel: the engine word stands alone", () => {
+    assert.equal(healthWord(live("a")), null);
+    assert.equal(healthWord(undefined), null);
   });
 });

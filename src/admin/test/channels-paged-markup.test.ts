@@ -38,11 +38,11 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
     assert.equal(count(html, "<select"), 7);
   });
 
-  it("has the Stream status select beside Playlist: Any status, Live, Dead, Not checked", () => {
+  it("has the Stream status select beside Playlist: Any status, Online, Offline, Not checked", () => {
     const html = firstRow();
     const from = html.indexOf('aria-label="Stream status"');
     const select = html.slice(from, html.indexOf("</select>", from));
-    assert.deepEqual([...select.matchAll(/>([A-Za-z ]+)<\/option>/g)].map((m) => m[1]), ["Any status", "Live", "Dead", "Not checked"]);
+    assert.deepEqual([...select.matchAll(/>([A-Za-z ]+)<\/option>/g)].map((m) => m[1]), ["Any status", "Online", "Offline", "Not checked"]);
     assert.ok(select.includes('<option value="all" selected="">Any status</option>') && select.includes('value="unchecked"'));
   });
 
@@ -65,7 +65,7 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
   });
 
   it("lists the playlist names after All playlists, at most twenty, and always the one the query holds", () => {
-    const row = (name: string, id: number) => ({ id, name, kind: "url", enabled: true, channels: 1, enabledChannels: 0, live: 0, dead: 0 }) as const;
+    const row = (name: string, id: number) => ({ id, name, kind: "url", enabled: true, channels: 1, enabledChannels: 0, online: 0, offline: 0 }) as const;
     const many = Array.from({ length: 25 }, (_, i) => row(`List ${i + 1}`, i + 1));
     const labels = (selected: string) => playlistChoices(many, selected).map((one) => one.label);
     assert.equal(labels("").length, 21);

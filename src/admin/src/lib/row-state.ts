@@ -16,7 +16,8 @@ export type StateWord =
   | "idle"
   | "running"
   | "enabled"
-  | "dead"
+  | "online"
+  | "offline"
   | "not checked"
   | "stored"
   | "deleted";
@@ -39,13 +40,14 @@ export interface RowState {
 const TONES: Readonly<Record<StateWord, StateTone>> = {
   live: "done",
   enabled: "done",
+  online: "done",
   preparing: "loading",
   starting: "loading",
   restarting: "loading",
   running: "loading",
   edited: "loading",
   failed: "failed",
-  dead: "failed",
+  offline: "failed",
   "not checked": "faint",
   stopped: "faint",
   held: "faint",
@@ -87,14 +89,14 @@ export function channelState(channel: ChannelStateInput): RowState {
 }
 
 const STREAM_HINTS: Readonly<Partial<Record<StateWord, string>>> = {
-  live: "The address answered with an HLS manifest",
-  dead: "No HLS manifest at this address",
+  online: "The address answered with an HLS manifest",
+  offline: "No HLS manifest at this address",
   "not checked": "No check has run on this address yet",
 };
 
-/** The `stream` column word of a stream channel (`43` section 4.1): `live`, `dead` or `not checked` (no verdict yet). A
- *  live-kind channel has no stream to check and no word. Never dimmed: a disabled row dims as a whole. */
-export function streamStatusState(status: "live" | "dead" | undefined): RowState {
+/** The `stream` column word of a stream channel (`43` section 4.1): `online`, `offline` or `not checked` (no verdict
+ *  yet). A live-kind channel has no stream to check and no word. Never dimmed: a disabled row dims as a whole. */
+export function streamStatusState(status: "online" | "offline" | undefined): RowState {
   const word: StateWord = status ?? "not checked";
   return { word, tone: TONES[word], dimmed: false, hint: STREAM_HINTS[word] };
 }

@@ -85,7 +85,6 @@ export const PAGES_MAX = 500;
 
 /** Notices. */
 export const jobCreated = (name: string): string => `Created ${name}.`;
-export const jobSaved = (name: string): string => `Saved ${name}.`;
 export const jobDeleted = (name: string): string => `Deleted ${name}.`;
 export const jobStopping = (name: string): string => `Stopping ${name}.`;
 export const jobStarted =(name: string): string => `Started ${name}.`;

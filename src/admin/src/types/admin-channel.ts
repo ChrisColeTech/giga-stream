@@ -35,7 +35,7 @@ export interface StreamAdminChannel extends BackendChannel {
   readonly playlistId?: number;
   readonly playlistName?: string;
   /** The sync's verdict on the row's own stream address; absent until it is checked. */
-  readonly status?: "live" | "dead";
+  readonly status?: "online" | "offline";
   readonly checkedAt?: number;
   /** The relative `/logos/c/<file>` of the cached copy; `logoUrl` stays the source address. */
   readonly cachedLogoUrl?: string;

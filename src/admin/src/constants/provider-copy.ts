@@ -69,7 +69,6 @@ export const UNREACHABLE_REASON = "The admin backend cannot be reached.";
 export const PROVIDER_GONE = "That provider no longer exists.";
 export const REQUEST_FAILED = "The request failed.";
 export const providerCreated = (name: string): string => `Created ${name}.`;
-export const providerSaved = (name: string): string => `Saved ${name}.`;
 export const providerDeleted = (name: string): string => `Deleted ${name}.`;
 export const unreadableProviders = (count: number): string =>
   `${count} ${count === 1 ? "provider" : "providers"} could not be read.`;

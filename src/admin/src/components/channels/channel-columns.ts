@@ -8,10 +8,10 @@ import type { AdminChannel } from "@/types/admin-channel";
 const column = createColumnHelper<typeof recordFeatures, AdminChannel>();
 
 /** The Channels list's columns (`36` section 5.2, `45` section 2.3): name, category, kind, state, stream (the sync's
- *  verdict on a stream row's address: `live`, `dead`, `not checked`; blank on a live channel), mode, now playing. `size`
- *  is the minimum width in px. Hidden in a narrow pane in this order: now playing, mode, category, kind, stream; the name
- *  and the state word always stay. Name, category and kind sort on the server (the header and the Sort select agree);
- *  the others do not. */
+ *  verdict on a stream row's address: `online`, `offline`, `not checked`; blank on a live channel), mode, now playing.
+ *  `size` is the minimum width in px. Hidden in a narrow pane in this order: now playing, mode, category, kind, stream;
+ *  the name and the state word always stay. Name, category and kind sort on the server (the header and the Sort select
+ *  agree); the others do not. */
 export const channelColumns = column.columns([
   column.accessor((row) => row.name, {
     id: "name",

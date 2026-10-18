@@ -3,8 +3,9 @@ import type { RunCounts, RunResult } from "@/services/schemas/run-counts-schema"
 import { catalogCountsOf, failedCountsOf, playlistCountsOf } from "./job-counts";
 
 /* A sync run worded in the admin from its typed result (`43` section 3.4 step 6): the backend stores no sentence. Only
- * what the counts hold is said, and a count of nothing is left out: `Synced: 312 logos cached, 1,904 live, 640 dead.`
- * A run that changed nothing reads `Synced: nothing changed.` A failure names its code through the error table. Pure. */
+ * what the counts hold is said, and a count of nothing is left out: `Synced: 312 logos cached, 1,904 online, 640
+ * offline.` A run that changed nothing reads `Synced: nothing changed.` A failure names its code through the error
+ * table. Pure. Shown where the Jobs surfaces carry the run (the list's outcome column, the workspaces); never said. */
 
 const PREFIX: Readonly<Record<RunResult, string>> = { ok: "Synced", failed: "Failed", stopped: "Stopped" };
 
@@ -20,8 +21,8 @@ function parts(counts: RunCounts): string[] {
       [playlist.refused, "refused"],
       [playlist.logosCached, "logos cached"],
       [playlist.logosFailed, "logos failed"],
-      [playlist.live, "live"],
-      [playlist.dead, "dead"],
+      [playlist.online, "online"],
+      [playlist.offline, "offline"],
       [playlist.unchecked, "not checked"],
     ];
     const said = found.filter(([count]) => count > 0).map(([count, word]) => `${number(count)} ${word}`);

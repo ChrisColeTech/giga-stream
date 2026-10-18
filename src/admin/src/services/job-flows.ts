@@ -1,5 +1,5 @@
 import { AUDIT_AFTER_WRITE, AUDIT_PAGE } from "@/constants/audit-limits";
-import { JOB_GONE, jobCreated, jobDeleted, jobSaved, jobStarted, unreadableJobs } from "@/constants/job-copy";
+import { JOB_GONE, jobCreated, jobDeleted, jobStarted, unreadableJobs } from "@/constants/job-copy";
 import type { BulkItem } from "@/lib/bulk-plan";
 import type { JobBulkVerb } from "@/lib/job-bulk";
 import { changedFields, createBody, isEmptyPatch } from "@/lib/job-body";
@@ -128,7 +128,6 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
       const saved = await service.update(id, patch);
       if (!alive(serial)) return DROPPED;
       upsert(saved);
-      say(jobSaved(saved.name));
       wrote();
       return done(saved);
     } catch (error: unknown) {

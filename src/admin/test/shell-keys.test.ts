@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { resolveShellKey, type KeyPress, type ShellKeyContext } from "@giga/ui/hooks/useShellKeys";
-import { ZOOM_RESET_NOTICE } from "@/constants/record-copy";
 import { SHELL_KEYS } from "@/constants/shell-keys";
 import { TAB_ORDER } from "@/constants/tabs";
 import { runShellAction } from "@/lib/shell-actions";
@@ -88,13 +87,12 @@ describe("what a shell key does", () => {
     assert.equal(state().overlay, "settings");
   });
 
-  it("resets the zoom and says so, under a window too", () => {
+  it("resets the zoom, silently (`50` section 2.1), under a window too", () => {
     state().setZoom(1.6);
     state().openOverlay("settings");
     assert.equal(runShellAction("zoom-reset", state()), true);
     assert.equal(state().uiZoom, 1);
-    assert.equal(state().events.at(-1)?.sentence, ZOOM_RESET_NOTICE);
-    assert.equal(state().events.at(-1)?.tone, "info");
+    assert.equal(state().events.length, 0, "no `Zoom reset` row: the zoom is its own feedback");
   });
 
   it("toggles the events drawer", () => {

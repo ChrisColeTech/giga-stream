@@ -3,7 +3,6 @@ import {
   PROVIDER_GONE,
   providerCreated,
   providerDeleted,
-  providerSaved,
   unreadableProviders,
 } from "@/constants/provider-copy";
 import { isEmptyBody, providerChanges, providerCreateBody } from "@/lib/provider-body";
@@ -137,7 +136,6 @@ export function createProviderFlows(deps: ProviderFlowDeps): ProviderFlows {
       const provider = await service.update(id, body);
       if (!alive(serial)) return DROPPED;
       store().providerUpsert(provider);
-      store().say(providerSaved(provider.name));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(provider);
     } catch (error: unknown) {

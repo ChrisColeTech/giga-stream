@@ -118,16 +118,16 @@ describe("the channels service", () => {
 
   it("sets a verdict with PUT /status and parses the answered row", async () => {
     await withBackend(
-      () => success(stream("a", { status: "dead", checkedAt: 55 })),
+      () => success(stream("a", { status: "offline", checkedAt: 55 })),
       async (calls) => {
-        const row = await channels.setStatus("a", "dead");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PUT", "/api/channels/a/status", { status: "dead" }]);
-        assert.deepEqual([row.kind === "stream" && row.status, row.kind === "stream" && row.checkedAt], ["dead", 55]);
+        const row = await channels.setStatus("a", "offline");
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PUT", "/api/channels/a/status", { status: "offline" }]);
+        assert.deepEqual([row.kind === "stream" && row.status, row.kind === "stream" && row.checkedAt], ["offline", 55]);
       },
     );
     await withBackend(
       () => refusal(422, "channel.not_stream"),
-      async () => assert.rejects(channels.setStatus("a", "live"), { code: "channel.not_stream", status: 422 }),
+      async () => assert.rejects(channels.setStatus("a", "online"), { code: "channel.not_stream", status: 422 }),
     );
   });
 

@@ -52,14 +52,14 @@ describe("the playlists list", () => {
     const ran = new Date(2026, 9, 17, 6, 0).getTime();
     state().playlistsLoaded(
       [
-        row(1, { channels: 2598, enabledChannels: 12, live: 1904, dead: 640, lastRunAt: ran }),
+        row(1, { channels: 2598, enabledChannels: 12, online: 1904, offline: 640, lastRunAt: ran }),
         row(2, { enabled: false }),
         filePlaylist(3),
       ],
       {},
     );
     const html = page();
-    for (const heading of [">name<", ">source<", ">channels<", ">enabled<", ">live<", ">dead<", ">last run<", ">state<"]) {
+    for (const heading of [">name<", ">source<", ">channels<", ">enabled<", ">online<", ">offline<", ">last run<", ">state<"]) {
       assert.ok(html.includes(heading), heading);
     }
     assert.ok(html.includes(">iptv.example.test</span>") && html.includes(">us.m3u</span>"));
@@ -146,14 +146,14 @@ describe("a playlist's workspace", () => {
   it("Status for a web playlist: Host, Source type, the counts line, Last run, and the run in words from the typed result", () => {
     const ran = new Date(2026, 9, 17, 6, 0).getTime();
     const playlist = row(1, {
-      channels: 2598, enabledChannels: 0, live: 1904, dead: 640, lastRunAt: ran, lastResult: "ok",
-      lastCounts: counts({ source: "updated", logosCached: 312, live: 1904, dead: 640 }),
+      channels: 2598, enabledChannels: 0, online: 1904, offline: 640, lastRunAt: ran, lastResult: "ok",
+      lastCounts: counts({ source: "updated", logosCached: 312, online: 1904, offline: 640 }),
     });
     const html = renderLive(createElement(PlaylistStatusGroup, { playlist }));
     for (const label of [">Host<", ">Source type<", ">Channels<", ">Last run<", ">Result<"]) assert.ok(html.includes(label), label);
     assert.ok(html.includes(">iptv.example.test<") && html.includes(">Web address<"));
-    assert.ok(html.includes("2,598 channels · 0 enabled · 1,904 live · 640 dead"));
-    assert.ok(html.includes("2026-10-17 06:00") && html.includes("Synced: 312 logos cached, 1,904 live, 640 dead."));
+    assert.ok(html.includes("2,598 channels · 0 enabled · 1,904 online · 640 offline"));
+    assert.ok(html.includes("2026-10-17 06:00") && html.includes("Synced: 312 logos cached, 1,904 online, 640 offline."));
     assert.ok(!html.includes("<ul") && !html.includes("animate-skel-shimmer"));
   });
 
@@ -161,7 +161,7 @@ describe("a playlist's workspace", () => {
     const html = renderLive(createElement(PlaylistStatusGroup, { playlist: filePlaylist(2) }));
     assert.ok(html.includes(">File<") && html.includes(">us.m3u<") && !html.includes(">Host<"));
     assert.ok(html.includes(">File</span>") || html.includes(">File<"));
-    assert.ok(html.includes("3 channels · 0 enabled · 0 live · 0 dead") && html.includes(">never<"));
+    assert.ok(html.includes("3 channels · 0 enabled · 0 online · 0 offline") && html.includes(">never<"));
     assert.ok(html.includes("animate-skel-shimmer"));
   });
 });

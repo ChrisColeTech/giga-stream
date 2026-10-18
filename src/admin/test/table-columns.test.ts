@@ -62,7 +62,7 @@ describe("the index tables' column sets", () => {
     assert.deepEqual(shown(accountColumns, NARROW), ids(accountColumns));
   });
 
-  it("playlists: at 842px dead, live and enabled go (in that order), at 1206px all eight show", () => {
+  it("playlists: at 842px offline, online and enabled go (in that order), at 1206px all eight show", () => {
     assert.deepEqual(shown(playlistColumns, WIDE), ids(playlistColumns));
     assert.deepEqual(shown(playlistColumns, NARROW), ["name", "source", "channels", "last-run", "state"]);
     assert.deepEqual(shown(playlistColumns, 900), ["name", "source", "channels", "enabled", "last-run", "state"]);

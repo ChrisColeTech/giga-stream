@@ -27,7 +27,7 @@ export const CHANNEL_TIPS = {
   playlist: "The videos in play order; the one playing is lit.",
   liveAddress: "The address players load; copy it to try it elsewhere.",
   syncedFrom: "The playlist that owns this channel, if an import created it.",
-  stream: "What the last check found at the stream address: live answered with an HLS manifest, dead did not.",
+  stream: "What the last check found at the stream address: online answered with an HLS manifest, offline did not.",
   checked: "When the stream address was last checked. A verdict that is old is stale.",
   logoCached: "The copy of the logo the app keeps; the logo address stays the source.",
   published: "Whether players read this channel: it is enabled, and so is its playlist.",

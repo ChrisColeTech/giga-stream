@@ -4,8 +4,11 @@ import type { PlayerError } from "@/lib/preview-state";
 
 export const PREVIEW_TITLE = "Preview";
 
-/** The window's size: standard, opened centred at most 80% of the main window. */
-export const PREVIEW_SIZE = { width: 640, body: 450, minWidth: 420, minBody: 330 } as const;
+/** The window's size: standard, opened centred at most 80% of the main window (`50` section 2.7). */
+export const PREVIEW_SIZE = { width: 820, body: 560, minWidth: 420, minBody: 330 } as const;
+
+/** The `Online` switch's tooltip on a stream nobody has checked (`51` section 2.6): off until a verdict exists. */
+export const UNCHECKED_TITLE = "No check has run on this address yet.";
 
 /** The line while the window reads the channels. */
 export const READING_WORD = "loading";

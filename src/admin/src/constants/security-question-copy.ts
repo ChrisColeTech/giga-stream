@@ -18,7 +18,6 @@ export const ENTER_CURRENT_PASSWORD_REASON = "Enter your current password.";
 export const QUESTION_SAVING_REASON = "Saving.";
 export const NOT_SIGNED_IN_REASON = "You are not signed in.";
 
-export const QUESTION_SAVED = "Security question saved.";
 export const ANSWER_TOO_LONG = "Answer must be at most 200 characters.";
 export const ANSWER_NOT_VALID = "The answer is not valid.";
 export const WRONG_CURRENT_PASSWORD = "That current password is wrong.";

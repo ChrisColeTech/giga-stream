@@ -39,8 +39,8 @@ describe("a run worded in the admin from its typed result", () => {
 
   it("words only what the run counted: the W2 shape and a run that changed nothing", () => {
     assert.equal(
-      runWords("ok", counts({ source: "updated", logosCached: 312, live: 1904, dead: 640 })),
-      "Synced: 312 logos cached, 1,904 live, 640 dead.",
+      runWords("ok", counts({ source: "updated", logosCached: 312, online: 1904, offline: 640 })),
+      "Synced: 312 logos cached, 1,904 online, 640 offline.",
     );
     assert.equal(runWords("ok", counts()), "Synced: nothing changed.");
     assert.equal(runWords("ok", counts({ created: 2, updated: 1 })), "Synced: 2 created, 1 updated.");

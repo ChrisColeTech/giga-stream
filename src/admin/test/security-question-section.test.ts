@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { SecurityQuestionSection } from "@/components/settings/SecurityQuestionSection";
-import { QUESTION_SAVED } from "@/constants/security-question-copy";
 import { SECURITY_QUESTIONS, SECURITY_QUESTION_OPTIONS } from "@/constants/security-questions";
 import {
   answerRefusal,
@@ -112,9 +111,5 @@ describe("the Account page", () => {
     const html = page();
     assert.ok(html.includes('aria-label="Save question. You are not signed in."'));
     assert.ok(html.split('disabled=""').length - 1 >= 4);
-  });
-
-  it("says `Security question saved.`", () => {
-    assert.equal(QUESTION_SAVED, "Security question saved.");
   });
 });

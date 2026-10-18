@@ -45,6 +45,27 @@ export interface PreviewLine {
   readonly notice?: string;
 }
 
+export interface HealthWord {
+  /** `online`, `offline` or `not checked` — the check's verdict on a stream address (`51` section 2.5). */
+  readonly word: string;
+  /** The class the word wears in the child status bar: the failed tone for `offline`, faint for `not checked`, and
+   *  nothing for `online` (the muted default). A word, never a dot, never a control. */
+  readonly className: string | undefined;
+}
+
+const HEALTH: Readonly<Record<"online" | "offline" | "not checked", HealthWord>> = {
+  online: { word: "online", className: undefined },
+  offline: { word: "offline", className: "text-st-failed" },
+  "not checked": { word: "not checked", className: "text-faint" },
+};
+
+/** The status bar's health word, before the play-state line: a stream channel's verdict; null for a live-kind channel
+ *  (its engine word is the on-air sense and stands alone) or with no channel. */
+export function healthWord(channel: AdminChannel | undefined): HealthWord | null {
+  if (channel?.kind !== "stream") return null;
+  return HEALTH[channel.status ?? "not checked"];
+}
+
 const errorText = (error: PlayerError): string => PLAYER_ERROR_TEXT[error];
 
 /** The window's state word under the stage: a live channel's state (and the player's error after it), a stream

@@ -8,7 +8,7 @@ import { usePreviewPlayer } from "@/hooks/usePreviewPlayer";
 import { usePreviewSession } from "@/hooks/usePreviewSession";
 import { usePreviewVerbs } from "@/hooks/usePreviewVerbs";
 import { usePreviewWalk } from "@/hooks/usePreviewWalk";
-import { previewLine, previewTarget } from "@/lib/preview-state";
+import { healthWord, previewLine, previewTarget } from "@/lib/preview-state";
 import { useAppStore } from "@/store/app-store";
 import { PreviewStage } from "./PreviewStage";
 import { PreviewToolbar } from "./PreviewToolbar";
@@ -23,7 +23,7 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   usePreviewNotice(status.notice);
   const closeOverlay = useAppStore((state) => state.closeOverlay);
   const walk = usePreviewWalk(player.detach, session.reading);
-  const verbs = usePreviewVerbs(session.channel, session.reading, player.status.error !== null);
+  const verbs = usePreviewVerbs(session.channel, session.reading);
   usePreviewKeys(walk.step);
 
   /* The title bar is the channel (`36` section 8.2): its name, a shimmer while it is read, never the word `Preview`. */
@@ -31,13 +31,22 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   const shimmer = <span className={`${SHIMMER_TILE} block h-3.5 w-32`} aria-hidden />;
   const heading = name ?? (session.reading ? shimmer : status.line);
 
-  /* The window's state is its status bar (`36` section 8.3): the state word left (a failure in the failure tone), the
-     position right, a shimmer while the window reads. */
+  /* The window's state is its status bar (`36` section 8.3): the health word then the state word left (a failure in the
+     failure tone), the position right, a shimmer while the window reads. The health word is a stream channel's verdict
+     (`51` section 2.5); a live-kind channel's engine word is the on-air sense and stands alone. */
+  const health = healthWord(session.channel);
   const place = session.reading && walk.position === null ? null : `${walk.position ?? "–"} / ${walk.total}`;
   const bar = {
     left: (
       <span role="status" className={status.line.startsWith("failed") ? "text-st-failed" : undefined}>
-        {status.line}
+        {health === null ? (
+          status.line
+        ) : (
+          <>
+            <span className={health.className}>{health.word}</span>
+            {` · ${status.line}`}
+          </>
+        )}
       </span>
     ),
     right:
@@ -70,12 +79,13 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   );
 }
 
-/** The Preview window (`36` section 8, 8.1): a modal work window that plays one saved channel through hls.js, a live channel
- *  on its own `/live/<id>/` path and a stream channel on its address. The title bar is the channel's name (8.2); a toolbar
- *  under it carries `Enable` / `Disable`, `Mark live` / `Mark dead`, `Retry` and, right, the state word and the walk
- *  (`N / total`, `Previous`, `Next`); the stage fills the rest. It reads ONE channel, never the list. Moved by its header, resized by its edges, closed by its X or Escape, its bounds remembered
- *  for the run. Each open reads the channels afresh; a step of the walk moves the request value (a new serial) and keeps
- *  the window mounted, so it stays at its place and size: the player detaches, then attaches the next channel. */
+/** The Preview window (`36` section 8, 8.1, `51` sections 2.5 and 2.6): a modal work window that plays one saved channel
+ *  through hls.js, a live channel on its own `/live/<id>/` path and a stream channel on its address. The title bar is the
+ *  channel's name (8.2); a toolbar under it carries the `Enabled` and `Online` toggles, `Retry` and, right, `Previous` and
+ *  `Next`; the status bar carries the health word, the state word and the walk (`N / total`); the stage fills the rest. It
+ *  reads ONE channel, never the list. Moved by its header, resized by its edges, closed by its X or Escape, its bounds
+ *  remembered for the run. Each open reads the channels afresh; a step of the walk moves the request value (a new serial)
+ *  and keeps the window mounted, so it stays at its place and size: the player detaches, then attaches the next channel. */
 export function PreviewWindow() {
   const preview = useAppStore((state) => state.channels.preview);
   return preview === null ? null : <PreviewBody key={preview.opened} channelId={preview.channelId} />;

@@ -116,7 +116,7 @@ describe("save and remove", () => {
     const result = await flows.save(1, { ...draftOfProvider(provider(1)), enabled: false, startParam: "t" });
     assert.ok(result.ok && result.value?.name === "saved");
     assert.deepEqual(calls, ['update:1:{"enabled":false,"startParam":"t"}']);
-    assert.equal(lastEvent(), "Saved saved.");
+    assert.equal(lastEvent(), undefined, "a save says nothing (`50` section 2.1)");
   });
 
   it("closes the workspace and re-reads when the provider is gone", async () => {

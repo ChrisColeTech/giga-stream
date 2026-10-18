@@ -29,6 +29,3 @@ export const SLEEPING_PANES = "Close the open window to change the panes.";
 export const STOP_IDLE = "Nothing is running.";
 export const STOP_BUILD = "A channel build cannot be cancelled; change or delete the channel.";
 export const STOP_SYNCING = "Stop syncing";
-
-/** A key's notice. */
-export const ZOOM_RESET_NOTICE = "Zoom reset to 100%.";
