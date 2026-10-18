@@ -1,5 +1,5 @@
 import { ToolbarStrip } from "@giga/ui/shell/ToolbarStrip";
-import { FORWARD_ICON } from "@/constants/toolbar-icons";
+import { FORWARD_ICONS, FORWARD_TOOLTIPS } from "@/constants/toolbar-icons";
 import { usePreviewOpen } from "@/hooks/usePreviewOpen";
 import { previewIndexReason } from "@/lib/channel-guard";
 import { useAppStore } from "@/store/app-store";
@@ -18,8 +18,8 @@ export function ChannelsToolbar() {
       verbs={[
         {
           id: "forward",
-          label: "Preview",
-          icon: FORWARD_ICON,
+          label: FORWARD_TOOLTIPS.Preview,
+          icon: FORWARD_ICONS.Preview,
           ...(reason !== undefined && { reason }),
           onPress: () => {
             if (only !== undefined) openPreview(only);

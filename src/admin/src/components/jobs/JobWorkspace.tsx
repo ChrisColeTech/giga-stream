@@ -14,7 +14,7 @@ import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, sameJobDraft, type RunToggles } from "@/lib/job-draft";
 import { workspaceRunReason } from "@/lib/job-run-gate";
 import { idOf } from "@/lib/playlist-rows";
-import { changeReason } from "@/lib/workspace-verbs";
+import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
 import type { JobResult } from "@/services/job-flows";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { useAppStore } from "@/store/app-store";
@@ -47,7 +47,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   };
   const run = (toggles: RunToggles): Promise<JobResult> => flows.run(job.id, toggles);
   const runReason = workspaceRunReason(job, { dirty: form.dirty, busy: isBusy(runKey), unreachable, playlists });
-  const forward =
+  const forward: ToolbarAction =
     job.type === "playlist"
       ? { label: "Channels", onPress: () => requestTab("channels") }
       : { label: "Titles", onPress: () => requestTab("titles") };

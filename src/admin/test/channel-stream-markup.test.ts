@@ -36,7 +36,7 @@ describe("a stream channel's workspace", () => {
     assert.ok(!html.includes(">Playback<"));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(/<button[^>]*aria-label="Preview"[^>]*>/.test(html), "the toolbar's forward arrow is an icon button");
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "the toolbar's forward arrow is an icon button");
     assert.ok(!html.includes("Preview →") && !html.includes(">Save<"));
     assert.ok(html.indexOf("Save details") > html.indexOf(">Stream<"), "the commit ends the Stream group");
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));

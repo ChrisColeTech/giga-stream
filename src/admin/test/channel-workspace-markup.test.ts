@@ -61,7 +61,7 @@ describe("a live channel's workspace", () => {
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(at(html, "Save details") > at(html, 'id="lv-playback"') && at(html, "Save details") < at(html, 'id="lv-status"'));
-    assert.ok(/<button[^>]*aria-label="Preview"[^>]*>/.test(html), "a saved channel previews, by the arrow icon");
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "a saved channel previews, by the arrow icon");
   });
 
   it("draws Details in order: Name, Kind, Category, Plays, Folder, Enabled, Logo, Id", () => {
