@@ -1,0 +1,61 @@
+/* The backend's own channel response shapes (`29` section 5, copied from `src/backend/src/types`), so the wiring wave
+ * replaces only the source of the data and never the shape. `GET /api/admin-channels` answers `{ items, revision }`. */
+
+export type ChannelState = "preparing" | "starting" | "live" | "restarting" | "stopped" | "failed";
+
+export type Variant = "360p" | "720p" | "1080p";
+
+export type LiveMode = "loop" | "encode";
+
+/** The six categories a live channel picks from; a stream channel's category is free text. */
+export type LiveCategory = "News" | "Sports" | "Music" | "Kids" | "Movies" | "Entertainment";
+
+/** The seven faults a running live stream can be given (a test tool). */
+export type FaultName = "stall" | "segment-404" | "slow-segments" | "playlist-500" | "discontinuity" | "restart" | "end";
+
+export interface BackendChannel {
+  readonly id: string;
+  readonly name: string;
+  readonly category: string;
+  /** A whole number, 1 to 9999, sent as text. */
+  readonly number?: string;
+  readonly logoUrl?: string;
+  /** A live row's is `<caller origin>/live/<id>/master.m3u8`; a stream row's is the address its players load. */
+  readonly streamUrl: string;
+  readonly kind: "stream" | "live";
+  readonly tvgId?: string;
+  /** The playlist host that owns a synced stream row; absent on a hand-made one. */
+  readonly source?: string;
+  readonly revision: number;
+}
+
+export interface StreamAdminChannel extends BackendChannel {
+  readonly kind: "stream";
+  readonly enabled: boolean;
+  /** The fields an admin edited on a synced row; the sync keeps them. */
+  readonly editedFields?: readonly string[];
+}
+
+export interface PlaylistEntry {
+  readonly name: string;
+  readonly durationMs: number;
+}
+
+export interface LiveAdminChannel extends BackendChannel {
+  readonly kind: "live";
+  readonly enabled: boolean;
+  readonly mode: LiveMode;
+  readonly captions: boolean;
+  readonly variants: readonly Variant[];
+  /** Exactly one of `folder` and `videos`. */
+  readonly folder?: string;
+  readonly videos?: readonly string[];
+  readonly state: ChannelState;
+  readonly problem?: string;
+  readonly fault: FaultName | null;
+  readonly renditions: readonly string[];
+  readonly playlist: readonly PlaylistEntry[];
+  readonly nowPlaying: { readonly index: number; readonly name: string } | null;
+}
+
+export type AdminChannel = StreamAdminChannel | LiveAdminChannel;
