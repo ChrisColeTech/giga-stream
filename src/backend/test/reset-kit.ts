@@ -73,7 +73,7 @@ export async function auditEntries(app: FastifyInstance, token: string): Promise
 
 /** Makes a second account and answers its id. */
 export async function makeAccount(app: FastifyInstance, token: string, username: string): Promise<string> {
-  const made = await send(app, "POST", "/api/admin-accounts", { username, name: "Second", password: ADMIN_PASSWORD }, token);
+  const made = await send(app, "POST", "/api/admin-accounts", { username, password: ADMIN_PASSWORD }, token);
   if (made.status !== 201) throw new Error(`account not created: ${JSON.stringify(made.body)}`);
   return String(pick(made.body, "data.id"));
 }

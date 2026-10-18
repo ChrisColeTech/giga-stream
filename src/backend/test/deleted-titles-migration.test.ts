@@ -51,7 +51,7 @@ test("020 applies on an 018 database: the title stays, the table is empty, and a
     const db = new DatabaseSync(file, { readOnly: true });
     try {
       const version = db.prepare("PRAGMA user_version").get();
-      assert.equal(Number(Object.values(version ?? {})[0]), 20);
+      assert.equal(Number(Object.values(version ?? {})[0]), 21);
     } finally {
       db.close();
     }

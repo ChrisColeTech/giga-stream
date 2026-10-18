@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { ADMIN_USERNAME, makeApp, pick, send, signIn } from "./test-app.js";
 
 const code = (answer: { body: unknown }): unknown => pick(answer.body, "error.code");
-const second = { username: "second@example.test", name: "Second", password: "second-password-1" };
+const second = { username: "second@example.test", password: "second-password-1" };
 
 async function adminToken(t: Awaited<ReturnType<typeof makeApp>>): Promise<string> {
   return (await signIn(t.app)).access;
@@ -27,8 +27,11 @@ test("an admin creates, reads, updates and deletes an account", async () => {
   const id = String(pick(created.body, "data.id"));
   assert.equal(JSON.stringify(created.body).includes(second.password), false);
   assert.equal(pick((await send(t.app, "GET", `/api/admin-accounts/${id}`, undefined, token)).body, "data.username"), second.username);
-  const renamed = await send(t.app, "PATCH", `/api/admin-accounts/${id}`, { name: "Edith" }, token);
-  assert.equal(pick(renamed.body, "data.name"), "Edith");
+  const renamed = await send(t.app, "PATCH", `/api/admin-accounts/${id}`, { username: "edith" }, token);
+  assert.equal(pick(renamed.body, "data.username"), "edith");
+  assert.equal("name" in (renamed.body as { data: object }).data, false);
+  const named = await send(t.app, "POST", "/api/admin-accounts", { username: "x", name: "X", password: "x-password-1" }, token);
+  assert.equal(code(named), "account.invalid");
   assert.deepEqual((await send(t.app, "DELETE", `/api/admin-accounts/${id}`, undefined, token)).body, { ok: true, data: { id } });
   assert.equal(code(await send(t.app, "GET", `/api/admin-accounts/${id}`, undefined, token)), "account.not_found");
 });
@@ -42,7 +45,7 @@ test("an account created without a role manages channels, accounts and reads the
   for (const url of ["/api/admin-accounts", "/api/audit"]) {
     assert.equal((await send(t.app, "GET", url, undefined, access)).status, 200, url);
   }
-  const third = { username: "third", name: "Third", password: "third-password-1" };
+  const third = { username: "third", password: "third-password-1" };
   assert.equal((await send(t.app, "POST", "/api/admin-accounts", third, access)).status, 201);
 });
 
