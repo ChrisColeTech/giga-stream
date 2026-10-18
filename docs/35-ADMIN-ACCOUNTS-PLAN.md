@@ -41,7 +41,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 11 | Verification runs on a temporary backend that serves the built admin on its own free port, with a temporary `DATA_DIR`; the owner's backend, database and `.env` are never read or written by it (section 3). |
 
 | 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Email`, `Password`; Details is `Name`, `Email`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
-| 13 | **A generated id number** (owner, second round: "I said a few responses back we should be generating ids"). Every account shows its backend-generated integer `idNumber` from the accounts sequence (migration `018`, Wave B2 of `39` section 7.1) as the list column `id` and the read-only `Id` row in Details. The number is **never derived and never reused**; the string id `acct_<uuid>` stays the key everywhere. **3a's Id column lands after B2**: 3a is cut only after B2 has merged, so the column and row never show a placeholder. |
+| 13 | **A generated id number** (owner, second round: "I said a few responses back we should be generating ids"). Every account shows its backend-generated integer `idNumber` from the accounts sequence (migration `018`, Wave B2 of `39` section 7.1) as the list column `id` and the read-only `Id` row in Details. The number is **never derived and never reused**; it is the accounts table's integer primary key. The API keeps returning the string `id` `acct_<uuid>` unchanged, which the JWT `sub` and the audit log use. **3a's Id column lands after B2**: 3a is cut only after B2 has merged, so the column and row never show a placeholder. |
 | 14 | **Security question (`40`).** Accounts gain a read-only Details fact `Security question` (`Set` or `Not set`, from the answer's `securityQuestionSet`), placed after `Last sign-in` and before `Id`. The question itself is set by the account's own owner in Settings > Account (R, `40` 4.2), not in this Accounts workspace; no admin sets another account's question. |
 
 ## 2. Scope, in order (six commits)
@@ -368,7 +368,7 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 20 | `35` (first version) planned a request layer, schemas and sentences | the foundation built them; this revision removes that scope |
 | 21 | `28` 7.3: the Account New form is `Email`, `Name`, `Password`; `26` 4.8 lists Email first | superseded (owner, 2026-10-17): Name first (decision 12) |
 | 22 | `29` 5: `AdminAccount.id` is a string | `acct_<uuid>`; an `idNumber` is added by migration `018` and the shapes of `29` 5 gain it (decision 13) |
-| 23 | `35` (second round) said no id was generated for accounts beyond the string key | every account gets a generated `idNumber` from the accounts sequence (`39` 7.1); the string key stays |
+| 23 | `35` (second round) said no id was generated for accounts beyond the string key | every account gets a generated `idNumber`, its database primary key (`39` 7.1); the API's string `id` is unchanged |
 
 ## 13. Done when
 
