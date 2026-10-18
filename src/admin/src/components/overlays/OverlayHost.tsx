@@ -1,5 +1,6 @@
 import { AnimatePresence } from "framer-motion";
 import { ChildMemoryContext, type ChildMemory } from "@giga/ui/lib/child-memory";
+import { PreviewWindow } from "@/components/channels/PreviewWindow";
 import { useAppStore } from "@/store/app-store";
 import { SettingsWindow } from "./SettingsWindow";
 
@@ -11,14 +12,18 @@ const MEMORY: ChildMemory = {
 };
 
 /** THE ONE OPEN FLOW (`04` section 1): opening a flow replaces the open one. Every flow is a modal work window drawn
- *  inside the main window (`02` section 5). The AnimatePresence lives here so a window's exit can play after it is
- *  removed. Settings today; the Preview window joins it in Wave 3. */
+ *  inside the main window (`02` section 5): Settings, and the Preview of one saved channel (`36` section 8). Replacing the
+ *  Preview unmounts it, which destroys its player. The AnimatePresence lives here so a window's exit can play after it
+ *  is removed. */
 export function OverlayHost() {
   const overlay = useAppStore((state) => state.overlay);
 
   return (
     <ChildMemoryContext value={MEMORY}>
-      <AnimatePresence>{overlay === "settings" && <SettingsWindow key="settings" />}</AnimatePresence>
+      <AnimatePresence>
+        {overlay === "settings" && <SettingsWindow key="settings" />}
+        {overlay === "preview" && <PreviewWindow key="preview" />}
+      </AnimatePresence>
     </ChildMemoryContext>
   );
 }
