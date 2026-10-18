@@ -42,7 +42,7 @@ export function createChannelRepository(db: DatabaseSync) {
       logo_checked_at = CASE WHEN logo_url IS ? THEN logo_checked_at ELSE NULL END
     WHERE id = ?`);
   const setVerdict = db.prepare("UPDATE channels SET status = ?, checked_at = ? WHERE id = ? AND kind = 'stream'");
-  const clearVideos =db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
+  const clearVideos = db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
   const addVideo = db.prepare("INSERT INTO channel_videos (channel_id, position, path) VALUES (?, ?, ?)");
   const remove = db.prepare("DELETE FROM channels WHERE id = ?");
   const stats = createChannelStats(db);
