@@ -1,0 +1,36 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import { Sep } from '../src/layout/Sep'
+import { STRIP_MIN_H } from '../src/layout/strip-class'
+import { STRIP, Toolbar } from '../src/layout/Toolbar'
+
+/* LoRA Trainer components/layout/Toolbar.tsx, ported: STRIP on bg-panel, role toolbar, left, a spacer, right. */
+
+test('the strip is HandoffStrip.tsx 8 to the letter', () => {
+  assert.equal(STRIP, 'flex flex-none flex-wrap items-center gap-2 border-b border-hair px-3 py-2')
+})
+
+test('the toolbar draws left, then the flex spacer, then right, on the panel', () => {
+  const html = renderToStaticMarkup(createElement(Toolbar, { left: createElement('i', null, 'L'), right: createElement('b', null, 'R') }))
+  assert.equal(html, `<div class="${STRIP} ${STRIP_MIN_H} bg-panel" role="toolbar"><i>L</i><span class="min-w-0 flex-1" aria-hidden="true"></span><b>R</b></div>`)
+})
+
+test('an empty toolbar is still drawn: the strip and its spacer', () => {
+  const html = renderToStaticMarkup(createElement(Toolbar, {}))
+  assert.ok(html.startsWith('<div class="flex flex-none') && html.includes('role="toolbar"') && html.includes('min-w-0 flex-1'))
+})
+
+test('an empty toolbar is as tall as one with a small button: the small control, py-2 twice and the hairline', () => {
+  assert.equal(STRIP_MIN_H, 'min-h-[calc(var(--spacing-ctl-sm)_+_2*0.5rem_+_1px)]')
+  assert.ok(STRIP.includes('py-2') && STRIP.includes('border-b'), 'the min height counts the padding and the hairline')
+  const empty = renderToStaticMarkup(createElement(Toolbar, {}))
+  const filled = renderToStaticMarkup(createElement(Toolbar, { right: createElement('button', { className: 'h-ctl-sm' }, 'Jobs →') }))
+  for (const html of [empty, filled]) assert.ok(html.includes(` ${STRIP_MIN_H} `), html)
+})
+
+test('Sep is the hairline between clusters', () => {
+  assert.equal(renderToStaticMarkup(createElement(Sep)), '<span class="mx-1 h-5 w-px flex-none bg-hair" aria-hidden="true"></span>')
+})

@@ -68,12 +68,14 @@ describe("the playlists list", () => {
 });
 
 describe("the Playlists table strip", () => {
-  it("holds Refresh and Jobs → rightmost, no bar above the form; the bulk verbs are drawn and wait for a tick", () => {
+  it("holds Refresh and no forward verb; Jobs → is the page toolbar's, above the form; the bulk verbs wait for a tick", () => {
     state().playlistsLoaded([row(1)], {});
     const html = page();
-    assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New playlist"));
+    assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New playlist"));
+    const top = html.slice(0, html.indexOf("overflow-y-auto"));
+    assert.ok(/<button[^>]*title="Go to Jobs"[^>]*>Jobs →<\/button>/.test(top));
     const table = html.slice(html.indexOf('aria-label="Playlists table"'));
-    assert.ok(/<button[^>]*aria-label="Go to Jobs"[^>]*>Jobs →<\/button>/.test(table));
+    assert.ok(!table.includes("→"));
     assert.ok(table.includes('title="Refresh playlists"'));
     for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
@@ -89,7 +91,7 @@ describe("the Playlists table strip", () => {
 });
 
 describe("a playlist's workspace", () => {
-  it("opens with the rail, Details then Status, the masked address with Replace, the pinned Discard and Save details", () => {
+  it("opens with the rail, the page toolbar (Discard, Jobs →), Details then Status, the masked address, Save details", () => {
     state().playlistsLoaded([row(1)], {});
     state().openWorkspace("playlists", "1");
     const html = page();
@@ -99,7 +101,7 @@ describe("a playlist's workspace", () => {
     assert.ok(html.includes(" Replace</button>") && !html.includes('type="password"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(html.includes("Discard changes") && html.includes("Save details") && !html.includes(">Save<"));
-    assert.ok(!html.includes("Jobs →"));
+    assert.ok(html.indexOf("Discard changes") < html.indexOf("Jobs →") && html.indexOf("Jobs →") < html.indexOf('id="pw-details"'));
     assert.ok(!html.includes("Sync now"), "no sync verb in a playlist's workspace");
   });
 

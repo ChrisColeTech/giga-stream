@@ -12,9 +12,7 @@ import { StateWord } from "@/components/records/StateWord";
 import { CHANNEL_TIPS } from "@/constants/channel-tips";
 import { isBuilding } from "@/lib/channel-list";
 import { channelState } from "@/lib/row-state";
-import type { ToolbarAction } from "@/lib/workspace-verbs";
 import type { LiveAdminChannel } from "@/types/admin-channel";
-import { PreviewButton } from "./PreviewButton";
 import { PlaylistRows } from "./PlaylistRows";
 
 const FACT = "flex h-9 min-w-0 items-center font-mono text-sm text-muted";
@@ -28,8 +26,6 @@ export interface LiveStatusGroupProps {
   readonly rebuildReason: string | undefined;
   readonly onRebuild: () => void;
   readonly onCopy: (address: string) => void;
-  /** `Preview channel`, an icon beside `Refresh status`. */
-  readonly preview: ToolbarAction;
 }
 
 /** A live channel's `Status` (`36` section 6), read-only. The State row ends with a `Refresh status` icon that reads the
@@ -38,7 +34,7 @@ export interface LiveStatusGroupProps {
  *  word, a failed channel's problem, the renditions, the playlist with the video on air lit, and the stream address with
  *  a copy button. */
 export function LiveStatusGroup(props: LiveStatusGroupProps) {
-  const { channel, refreshReason, onRefresh, rebuildReason, onRebuild, onCopy, preview } = props;
+  const { channel, refreshReason, onRefresh, rebuildReason, onRebuild, onCopy } = props;
   const building = isBuilding(channel);
   const shimmer = (width: string) => <span className={SHIMMER} style={{ width }} aria-hidden />;
 
@@ -48,12 +44,9 @@ export function LiveStatusGroup(props: LiveStatusGroupProps) {
         label="State"
         tip={CHANNEL_TIPS.state}
         trailing={
-          <>
-            <IconButton aria-label="Refresh status" title="Refresh status" reason={refreshReason} onClick={onRefresh}>
-              <RefreshCw className="size-3.5" aria-hidden />
-            </IconButton>
-            <PreviewButton preview={preview} />
-          </>
+          <IconButton aria-label="Refresh status" title="Refresh status" reason={refreshReason} onClick={onRefresh}>
+            <RefreshCw className="size-3.5" aria-hidden />
+          </IconButton>
         }
       >
         <span className={FACT}>{building ? shimmer("30%") : <StateWord state={channelState(channel)} />}</span>

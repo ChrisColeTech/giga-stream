@@ -62,21 +62,19 @@ describe("the New channel form", () => {
     const html = renderLive(createElement(ChannelsIndex));
     assert.ok(html.includes('aria-label="Create. Name is required."'));
     assert.ok(html.includes(`aria-label="Choose. ${NO_HOST}"`));
-    assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New channel"), "no bar above the New group");
+    assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New channel"), "the page toolbar sits above the New group");
   });
 });
 
 describe("the channels table strip", () => {
-  const table = () => {
-    const html = renderLive(createElement(ChannelsIndex));
-    return html.slice(html.indexOf('aria-label="Channels table"'));
-  };
+  const index = () => renderLive(createElement(ChannelsIndex));
+  const table = () => index().slice(index().indexOf('aria-label="Channels table"'));
+  const toolbar = () => index().slice(0, index().indexOf("overflow-y-auto"));
 
-  it("draws Refresh first and Preview → rightmost, waiting for a ticked row; every bulk verb waits with its reason", () => {
+  it("draws Refresh first and no forward verb; Preview → waits in the page toolbar; every bulk verb waits", () => {
     const html = table();
-    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"') && html.includes("Preview →"));
+    assert.ok(toolbar().includes('aria-label="Preview →. Tick a row first"') && !html.includes("Preview →"));
     assert.ok(html.indexOf("Refresh channels") < html.indexOf("Select all channels"));
-    assert.ok(html.indexOf("Select all channels") < html.indexOf("Preview channel"));
     for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
   });
 
@@ -94,9 +92,9 @@ describe("the channels table strip", () => {
     state().channelsLoaded([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
-    assert.ok(table().includes('aria-label="Preview channel. Tick only one row"'));
+    assert.ok(toolbar().includes('aria-label="Preview →. Tick only one row"'));
     state().channelTick("a", false);
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(table()) && !table().includes("Preview channel. "));
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(toolbar()) && !toolbar().includes("Preview →. "));
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {

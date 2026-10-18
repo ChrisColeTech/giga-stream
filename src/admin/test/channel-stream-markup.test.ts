@@ -23,7 +23,6 @@ const statusGroup = (channel: StreamAdminChannel, revertReason?: string) =>
       channel,
       revertReason,
       onRevert: () => undefined,
-      preview: { label: "Preview", onPress: () => undefined },
     }),
   );
 const SAVE = { onPress: () => undefined, reason: "Nothing has changed." };
@@ -35,7 +34,7 @@ beforeEach(() => {
 });
 
 describe("a stream channel's workspace", () => {
-  it("opens with the rail Details, Stream, Status, the Preview arrow, the pinned Discard and Save details ending Stream", () => {
+  it("opens with the rail Details, Stream, Status, the page toolbar (Discard, Preview →) and Save details ending Stream", () => {
     state().channelsLoaded([stream("s")], 1);
     state().openWorkspace("channels", "s");
     const html = page();
@@ -43,8 +42,10 @@ describe("a stream channel's workspace", () => {
     assert.ok(!html.includes(">Playback<"));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "Preview is an icon button in the Status group");
-    assert.ok(!html.includes("Preview →") && !html.includes(">Save<"));
+    const start = html.indexOf('role="toolbar"');
+    const bar = html.slice(start, html.indexOf("overflow-y-auto", start));
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "Preview → is the page toolbar's");
+    assert.ok(!statusGroup(stream("s")).includes("Preview") && !html.includes(">Save<"));
     assert.ok(html.indexOf("Save details") > html.indexOf(">Stream<"), "the commit ends the Stream group");
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));
   });

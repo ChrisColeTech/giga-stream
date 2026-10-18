@@ -176,7 +176,9 @@ describe("a job's workspace", () => {
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
     assert.ok(html.includes('aria-label="Dry run"') && html.includes('aria-label="Prune"'));
     assert.ok(html.includes("2 created · 1 updated") && html.includes(">bad address<"));
-    assert.ok(html.includes(">ch_a</button>") && !/aria-label="Go to /.test(html), "no toolbar arrow: the tab bar goes there");
+    assert.ok(html.includes(">ch_a</button>"));
+    assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "a playlist job's forward verb");
+    assert.ok(at(html, "Discard changes") < at(html, "Channels →") && at(html, "Channels →") < at(html, 'id="jw-details"'));
     assert.ok(html.includes('aria-label="Interval"') && html.includes('value="24h"'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'), "the commit ends Schedule");
     assert.ok(html.includes('aria-label="Refresh last run"'), "Refresh is an icon on the State row");
@@ -188,9 +190,10 @@ describe("a job's workspace", () => {
     const html = page();
     assert.ok(html.includes('aria-label="Scope"') && html.includes('aria-label="Pages"'));
     assert.ok(!html.includes('aria-label="Dry run"') && !html.includes('aria-label="Playlist"'));
-    assert.ok(html.includes(">1240<") && html.includes("animate-skel-shimmer") && !/aria-label="Go to /.test(html));
+    assert.ok(html.includes(">1240<") && html.includes("animate-skel-shimmer"));
+    assert.ok(/<button[^>]*title="Go to Titles"[^>]*>Titles →<\/button>/.test(html), "a catalog job's forward verb");
     assert.ok(html.includes(">Run job</button>"), "an enabled catalog job can run");
-    assert.ok(!html.includes("text-accent-ink") || html.split("text-accent-ink").length <= 2, "Save details is the one primary");
+    assert.ok(html.split("text-accent-ink").length <= 3, "the primaries are Save details and the page toolbar's Titles →");
   });
 
   it("disables the workspace's Run job for a disabled job, and shows a bad interval under its row (a row error, not a paragraph)", () => {

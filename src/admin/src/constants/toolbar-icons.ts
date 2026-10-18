@@ -1,12 +1,9 @@
-import { Eye, type LucideIcon } from "lucide-react";
-
 /** Where a forward verb goes: `Preview` opens a channel's preview window, the rest switch to that tab. The name is the
- *  verb's `label` in the data that declares it, and the word the selection toolbar draws before its `→` (`Titles →`). */
+ *  verb's `label` in the data that declares it, and the word the page toolbar draws before its `→` (`Titles →`). */
 export type ForwardDestination = "Preview" | "Channels" | "Providers" | "Titles" | "Playlists" | "Jobs" | "Accounts";
 
-/** A forward verb in a toolbar is its word and `→`, no icon (`01` section 9; LoRA Trainer `GalleryToolbar.tsx` 48).
- *  The one icon here is Preview's glyph as a channel workspace's trailing row action, LoRA Trainer's `View` (`Eye`). */
-export const PREVIEW_ICON: LucideIcon = Eye;
+/** A forward verb is its word and `→`, no icon (`01` section 9 Page toolbar; LoRA Trainer `DatasetsIndex.tsx` 67). */
+export const FORWARD_ARROW = "→";
 
 export const PREVIEW_TOOLTIP = "Preview channel";
 export const GO_TO_TOOLTIP = "Go to";

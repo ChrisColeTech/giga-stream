@@ -38,7 +38,6 @@ const status = (channel: LiveAdminChannel, rebuildReason?: string, refreshReason
       rebuildReason,
       onRebuild: () => undefined,
       onCopy: () => undefined,
-      preview: { label: "Preview", onPress: () => undefined },
     }),
   );
 
@@ -48,7 +47,7 @@ beforeEach(() => {
 });
 
 describe("a live channel's workspace", () => {
-  it("opens from the held list: the rail, the groups, the pinned Discard, Save details and the Preview arrow", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard, Preview →), the groups and Save details", () => {
     state().channelsLoaded([live("a")], 1);
     state().openWorkspace("channels", "a");
     const html = page();
@@ -62,7 +61,10 @@ describe("a live channel's workspace", () => {
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(at(html, "Save details") > at(html, 'id="lv-playback"') && at(html, "Save details") < at(html, 'id="lv-status"'));
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "a saved channel previews, by the arrow icon");
+    const bar = html.slice(at(html, 'role="toolbar"'), html.indexOf("overflow-y-auto", at(html, 'role="toolbar"')));
+    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("Preview →"), "Discard left, the forward verb rightmost");
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "a saved channel previews");
+    assert.ok(!status(live("a")).includes("Preview"), "the Status group no longer carries Preview");
   });
 
   it("draws Details in order: Name, Kind, Category, Plays, Folder, Enabled, Logo, Id", () => {

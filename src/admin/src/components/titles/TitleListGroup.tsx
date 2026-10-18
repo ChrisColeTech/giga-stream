@@ -2,7 +2,6 @@ import { Clapperboard } from "lucide-react";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/title-copy";
-import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { useTitleActions } from "@/hooks/useTitleActions";
 import { useTitleBulk } from "@/hooks/useTitleBulk";
 import { pagingReasons } from "@/lib/title-query";
@@ -13,9 +12,10 @@ import { TitleRows } from "./TitleRows";
 
 /** `Titles` (`37` section 4.2): the list group. Its body holds the search, the Kind chips and the Sort pills, then the
  *  selection toolbar (`01` section 9: `Refresh`, then `Enable`, `Disable`, `Revert to TMDB` and the armed `Delete`, always
- *  drawn; on the right the three-state `All`, the `Newer` and `Older` icons and `Jobs →`) directly above the grid. `Newer` is disabled at page 1 with `This
- *  is the first page.`, `Older` at the last page with `This is the last page.`. Every read goes through the flows,
- *  which drop a late answer for a view that is no longer shown. The heading carries nothing. */
+ *  drawn; on the right the three-state `All` and the `Newer` and `Older` icons) directly above the grid; `Jobs →` is the
+ *  page toolbar's. `Newer` is disabled at page 1 with `This is the first page.`, `Older` at the last page with `This is
+ *  the last page.`. Every read goes through the flows, which drop a late answer for a view that is no longer shown. The
+ *  heading carries nothing. */
 export function TitleListGroup() {
   const view = useAppStore((state) => state.titles.view);
   const totalPages = useAppStore((state) => state.titles.totalPages);
@@ -25,7 +25,6 @@ export function TitleListGroup() {
   const tickAll = useAppStore((state) => state.titlesTickAll);
   const { flows, track } = useTitleActions();
   const { verbs } = useTitleBulk();
-  const forward = useForwardVerbs("titles");
   const paging = pagingReasons(view.page, totalPages);
   const read = (call: () => Promise<unknown>): void => void track("read", call);
   const all = { label: "Select all titles", checked: titleSelectAll(items, ticked), onToggle: tickAll };
@@ -34,7 +33,6 @@ export function TitleListGroup() {
     <TableStrip
       label="Titles table"
       noun="titles"
-      forward={forward}
       refresh={{ onPress: () => read(flows.refresh), reason: loading ? LOADING_REASON : undefined }}
       paging={{
         newer: { onPress: () => read(flows.newer), reason: paging.newer },

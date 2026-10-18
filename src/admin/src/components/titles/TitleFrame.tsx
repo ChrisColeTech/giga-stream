@@ -17,15 +17,15 @@ export type TitleSpy = ReturnType<typeof useScrollSpy>;
 export interface TitleFrameProps {
   readonly series: boolean;
   readonly active: boolean;
-  /** The pinned `Discard changes` strip (`DiscardBar`) above the scrolling page. */
-  readonly bar: ReactNode;
+  /** The page toolbar (`WorkspaceToolbar`: `Discard changes`, `Jobs →`) above the scrolling page. */
+  readonly toolbar: ReactNode;
   readonly children: (spy: TitleSpy) => ReactNode;
 }
 
 /** The frame both states of a title's workspace share (`37` section 4.3): the rail (`‹ Titles`, Details, People and
- *  plot, Seasons for a series only, Sources) and the one scrolling page sized by the page's label column.
- *  The groups bind themselves to the scroll spy the frame hands them. */
-export function TitleFrame({ series, active, bar, children }: TitleFrameProps) {
+ *  plot, Seasons for a series only, Sources), the page toolbar and the one scrolling page sized by the page's label
+ *  column. The groups bind themselves to the scroll spy the frame hands them. */
+export function TitleFrame({ series, active, toolbar, children }: TitleFrameProps) {
   const keys = series ? TITLE_KEYS_SERIES : TITLE_KEYS_MOVIE;
   const spy = useScrollSpy(keys, keys[0] ?? "tw-details");
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
@@ -41,8 +41,8 @@ export function TitleFrame({ series, active, bar, children }: TitleFrameProps) {
           spy={spy}
         />
       }
+      toolbar={toolbar}
     >
-      {bar}
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div
           className="flex flex-col px-6 pb-8"

@@ -81,12 +81,13 @@ describe("the providers list", () => {
 });
 
 describe("the table strip", () => {
-  it("draws an enabled Titles → rightmost; Refresh is first and the bulk verbs are drawn, waiting for a tick", () => {
+  it("leaves the enabled Titles → to the page toolbar; Refresh is first and the bulk verbs are drawn, waiting", () => {
     const html = page();
     const table = html.slice(html.indexOf('aria-label="Providers table"'));
-    const forward = table.match(/<button[^>]*aria-label="Go to Titles"[^>]*>Titles →<\/button>/)?.[0] ?? "";
+    const top = html.slice(0, html.indexOf("overflow-y-auto"));
+    const forward = top.match(/<button[^>]*title="Go to Titles"[^>]*>Titles →<\/button>/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
-    assert.ok(table.includes('title="Refresh providers"') && table.indexOf("Refresh providers") < table.indexOf("Titles →"));
+    assert.ok(table.includes('title="Refresh providers"') && !table.includes("Titles →"));
     for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
@@ -100,7 +101,7 @@ describe("the table strip", () => {
 });
 
 describe("a provider's workspace", () => {
-  it("opens from the held list: the rail, Details, Templates, Player, the pinned Discard, Save details and the Titles arrow", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard, Titles →), Details, Templates, Player, Save details", () => {
     loaded([provider(1)]);
     state().openWorkspace("providers", "1");
     const html = page();
@@ -108,7 +109,7 @@ describe("a provider's workspace", () => {
     assert.ok(at(html, ">Details<") < at(html, ">Templates<") && at(html, ">Templates<") < at(html, ">Player<"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Player<"));
-    assert.ok(!html.includes("Titles →"));
+    assert.ok(at(html, "Discard changes") < at(html, "Titles →") && at(html, "Titles →") < at(html, 'id="pv-details"'));
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
     assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));

@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
-import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
+import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import {
   PLAYLIST_GONE,
@@ -29,6 +29,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
   const { flows, saving, track } = usePlaylistActions();
   const unreachable = useAppStore((state) => state.playlists.unreachable);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
+  const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(PLAYLIST_SECTION_KEYS, PLAYLIST_SECTION_KEYS[0] ?? "pw-details");
   const channels = usePlaylistChannels(playlist.host);
 
@@ -55,8 +56,14 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
           spy={spy}
         />
       }
+      toolbar={
+        <WorkspaceToolbar
+          dirty={form.dirty}
+          onDiscard={form.discard}
+          forward={{ label: "Jobs", onPress: () => requestTab("jobs") }}
+        />
+      }
     >
-      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div
           className="flex flex-col px-6 pb-8"
@@ -84,7 +91,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
 }
 
 /** One playlist's workspace (`38` section 3.3), opened from the list already held: the rail (`‹ Playlists`, Details,
- *  Status), a toolbar with the `Jobs` arrow, the pinned `Discard changes` and one scrolling page whose Details group ends with
+ *  Status), the page toolbar (`Discard changes` left, `Jobs →` rightmost) and one scrolling page whose Details group ends with
  *  `Save details`. If the playlist is no longer
  *  in a read list (deleted elsewhere), the workspace closes with a notice. */
 export function PlaylistWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {

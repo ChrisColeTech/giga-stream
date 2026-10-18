@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
-import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
+import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
   ACCOUNT_GONE,
   ACCOUNT_SECTIONS,
@@ -54,8 +54,8 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
           spy={spy}
         />
       }
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} />}
     >
-      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(WORKSPACE_LABELS) } as CSSProperties}>
           <div ref={spy.bind("ac-details")}>
@@ -85,7 +85,7 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
 }
 
 /** One account's workspace, opened from the list already held (no request to open it, `29` section 8): the rail
- *  (`‹ Accounts`, Details, Password), an empty toolbar, the pinned `Discard changes` and one scrolling page whose Details
+ *  (`‹ Accounts`, Details, Password), the page toolbar (`Discard changes`, no forward verb) and one scrolling page whose Details
  *  group ends with `Save details`. If the
  *  account is no longer in a read list, the workspace closes with a notice. */
 export function AccountWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {

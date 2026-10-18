@@ -56,7 +56,7 @@ describe("the list group", () => {
     assert.ok(html.includes('aria-label="Older. This is the last page."'));
     assert.ok(at(html, 'aria-label="Sort"') < at(html, 'aria-label="Titles table"'));
     assert.ok(at(html, 'title="Refresh titles"') < at(html, 'aria-label="Newer. '), "Refresh first, the paging on the right");
-    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, 'aria-label="Older. ') < at(html, "Jobs →"));
+    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, "Jobs →") < at(html, 'id="ti-list"'));
     const heading = html.slice(at(html, 'id="ti-list"'), at(html, 'aria-label="Search titles"'));
     assert.ok(!heading.includes("Older") && !heading.includes("Refresh"), "no verb in the heading");
   });
@@ -105,11 +105,12 @@ describe("the titles grid", () => {
 });
 
 describe("the table strip", () => {
-  it("keeps the enabled Jobs → rightmost; the bulk verbs are drawn and wait for a ticked row", () => {
+  it("leaves the enabled Jobs → to the page toolbar; the bulk verbs are drawn and wait for a ticked row", () => {
     const html = page();
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
-    const forward = table.match(/<button[^>]*aria-label="Go to Jobs"[^>]*>Jobs →<\/button>/)?.[0] ?? "";
-    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
+    const top = html.slice(0, at(html, "overflow-y-auto"));
+    const forward = top.match(/<button[^>]*title="Go to Jobs"[^>]*>Jobs →<\/button>/)?.[0] ?? "";
+    assert.ok(forward.length > 0 && !forward.includes('disabled=""') && !table.includes("→"));
     for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
@@ -144,6 +145,7 @@ describe("a title's workspace", () => {
     const html = open(row("tv-1", { kind: "tv" }));
     assert.ok(html.includes("animate-skel-shimmer") && html.includes(">Seasons<"));
     assert.ok(html.includes('aria-label="Discard changes. Loading."') && !html.includes('aria-label="Title"'));
+    assert.ok(at(html, "Discard changes") < at(html, "Jobs →"), "the page toolbar is drawn while the detail loads");
     assert.ok(!html.includes("Save details"), "no commit over a skeleton");
   });
 
@@ -158,7 +160,7 @@ describe("a title's workspace", () => {
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
-    assert.ok(html.includes('value="120"') && !html.includes("Jobs →"));
+    assert.ok(html.includes('value="120"') && at(html, "Jobs →") < at(html, 'id="tw-details"'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Images<"));
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });
