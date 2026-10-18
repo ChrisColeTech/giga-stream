@@ -9,8 +9,6 @@ import { PaneToggle } from '../src/shell/PaneToggle'
 import { RunningWork } from '../src/shell/RunningWork'
 import { TabPill } from '../src/shell/TabPill'
 
-const idle = { running: null, liveCount: 0, onStop: () => undefined }
-
 test('Brand draws an optional mono tag after the wordmark, and nothing without one', () => {
   const tagged = renderToStaticMarkup(createElement(Brand, { word: 'GIGA', subtitle: 'STREAM', icon: Tv, tag: 'ADMIN' }))
   assert.ok(tagged.indexOf('STREAM') < tagged.indexOf('>ADMIN<'))
@@ -37,11 +35,15 @@ test('a tab carries its tooltip while the pill works, and the track carries the 
 test('running work can carry its own words, and Stop can be disabled with a reason while work runs', () => {
   const html = renderToStaticMarkup(
     createElement(RunningWork, {
-      ...idle,
-      running: { label: 'Channel builds', percent: null },
-      liveCount: 3,
-      readout: '2 preparing · 1 syncing',
-      stopReason: 'A channel build cannot be cancelled.',
+      onStop: () => undefined,
+      view: {
+        active: true,
+        percent: null,
+        readout: '2 preparing · 1 syncing',
+        stoppable: false,
+        stopTitle: 'A channel build cannot be cancelled.',
+        stopReason: 'A channel build cannot be cancelled.',
+      },
     }),
   )
   assert.ok(html.includes('>2 preparing · 1 syncing</span>'))
@@ -51,7 +53,12 @@ test('running work can carry its own words, and Stop can be disabled with a reas
 })
 
 test('without those props running work reads as before', () => {
-  const html = renderToStaticMarkup(createElement(RunningWork, { ...idle, running: { label: 'Scan', percent: null }, liveCount: 2 }))
+  const html = renderToStaticMarkup(
+    createElement(RunningWork, {
+      onStop: () => undefined,
+      view: { active: true, percent: null, readout: '2 running', stoppable: true, stopTitle: 'Stop scan' },
+    }),
+  )
   assert.ok(html.includes('>2 running</span>'))
   assert.ok(!html.includes('role="group"'))
   assert.ok(!(html.match(/<button[^>]*>/)?.[0] ?? '').includes('disabled=""'))

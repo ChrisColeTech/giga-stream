@@ -1,16 +1,23 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { clampSize, inside, limitsOf, openBox, placeAt, resized, roomOf, sized } from "../src/lib/child-bounds";
-import { WORK_BODY, WORK_WIDTH, workSpec } from "../src/lib/child-metrics";
+import { OPEN_SHARE, WORK_BODY, WORK_WIDTH, workSpec } from "../src/lib/child-metrics";
 
 const room = roomOf({ width: 1600, height: 1000 });
 const spec = workSpec("settings", "Settings");
 
 describe("a child window's sizes", () => {
-  it("opens at its content's size when that is under 80% of the main window", () => {
+  it("carries the memory version on its key, so an old remembered box cannot restore the small size", () => {
+    assert.equal(spec.key, "settings@2");
+    assert.equal(workSpec("collections", "Collections").key, "collections@2");
+    assert.equal(workSpec("title-info", "Title information").key, "title-info@2");
+    assert.equal(workSpec("preview", "Preview").key, "preview@2");
+  });
+
+  it("opens at its content's size where that fits 80% of the main window, and caps where it does not", () => {
     const limits = limitsOf(spec, room);
-    assert.deepEqual(sized(WORK_WIDTH, WORK_BODY), { width: 978, height: 752 });
-    assert.deepEqual(limits.open, { width: 978, height: 752 });
+    assert.deepEqual(sized(WORK_WIDTH, WORK_BODY), { width: 1218, height: 892 });
+    assert.deepEqual(limits.open, { width: 1218, height: Math.floor(room.height * OPEN_SHARE) });
   });
 
   it("opens no larger than 80% of a small main window, and never below its least", () => {

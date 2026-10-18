@@ -34,28 +34,29 @@ test("the window is a labelled modal dialog with its close X, eight grips and a 
   assert.ok(html.includes('role="dialog"'));
   assert.ok(html.includes('aria-label="Settings window"'));
   assert.ok(html.includes('aria-modal="true"'));
-  assert.ok(html.includes('data-child-window="settings"'));
+  assert.ok(html.includes('data-child-window="settings@2"'));
   assert.ok(html.includes('aria-label="Close Settings"'));
   assert.equal(count(html, "data-grip="), 8);
   assert.ok(html.includes("data-drag"));
   assert.ok(html.includes("<p>body</p>"));
 });
 
-test("a modal window draws the scrim over the main window and its titlebar slice; a tool window does not", () => {
-  assert.ok(render().includes("data-scrim"));
-  assert.ok(render().includes("data-scrim-titlebar"));
+test("a modal window draws the one scrim, starting under the titlebar; a tool window draws none", () => {
+  const html = render();
+  assert.ok(html.includes("data-scrim"));
+  assert.ok(!html.includes("data-scrim-titlebar"), "the titlebar keeps its native drag; the wash starts below it");
   assert.equal(render(undefined, false).includes("data-scrim"), false);
   assert.equal(render(undefined, false).includes("aria-modal"), false);
 });
 
-test("with no memory the window opens centred at its content's size", () => {
+test("with no memory the window opens centred at its content's size, capped at 80% of the room", () => {
   const html = render();
-  assert.ok(html.includes("width:978px"));
-  assert.ok(html.includes("height:752px"));
-  assert.ok(html.includes("left:311px"));
+  assert.ok(html.includes("width:1218px"));
+  assert.ok(html.includes("height:768px"), "892 wanted, capped at 80% of the 960 room");
+  assert.ok(html.includes("left:191px"));
 });
 
-test("the window opens where the memory says it was, and asks for it by its key", () => {
+test("the window opens where the memory says it was, and asks for it by its versioned key", () => {
   const asked: string[] = [];
   const memory: ChildMemory = {
     recall: (key) => {
@@ -66,5 +67,5 @@ test("the window opens where the memory says it was, and asks for it by its key"
   };
   const html = render(memory);
   assert.ok(html.includes("left:20px;top:60px;width:700px;height:500px"));
-  assert.deepEqual(asked, ["settings"]);
+  assert.deepEqual(asked, ["settings@2"]);
 });

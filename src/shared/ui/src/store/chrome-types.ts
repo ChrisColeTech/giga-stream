@@ -47,7 +47,8 @@ export interface ChromeSlice<K extends ChromeKinds> {
   rememberChild: (key: string, box: K["box"]) => void;
   rememberMaximized: (key: string, on: boolean) => void;
   toggleFold: (id: string) => void;
-  /** A warn or an error is also a row of the events log; an info notice is not. `area` defaults to the program's. */
+  /** An info is only a row of the events log; a warn or an error is also the notice line (`50` section 2.1). `area`
+   *  defaults to the program's. */
   say: (sentence: string, tone?: EventTone, area?: K["area"]) => void;
   clearEvents: () => void;
   logEvent: (event: EventInput<K["area"]>) => void;

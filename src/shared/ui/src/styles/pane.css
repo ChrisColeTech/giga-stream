@@ -84,6 +84,23 @@
     background: var(--color-surface);
   }
 
+  /* The spotlight on every centre pane, normal mode and Theatre alike (`50` §2.8), ported from the interface's
+   * workspace.css: a STATIC radial gradient (no animation, no filter, no blend mode) so the compositor rasterizes it
+   * once. A pseudo-element over the recessed surface, behind nothing: pointer-events none, and `.pane` is already
+   * `position: relative`, so `inset: 0` bounds it to the pane. */
+  .pane-center::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 62% 58% at 50% 46%,
+      var(--color-spot),
+      color-mix(in srgb, var(--color-spot) 35%, transparent) 48%,
+      transparent 75%
+    );
+  }
+
   /* The surfaces follow the bars between normal and Theatre at the same tempo, so the shell dims as one. */
   .workspace .split-view,
   .workspace .pane {

@@ -13,7 +13,7 @@ export interface ChromeDefaults {
 
 export interface ChromeOptions<K extends ChromeKinds> {
   readonly defaults: ChromeDefaults;
-  /** The area a notice's Events row carries when `say` names none. */
+  /** The area a `say` row carries when `say` names none. */
   readonly defaultArea: K["area"];
   /** The log's starting rows (a demo's fixture; the interface starts empty). */
   readonly events?: readonly EventRow<K["area"]>[];
@@ -56,12 +56,19 @@ export function createChromeSlice<K extends ChromeKinds>(
     rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
     rememberMaximized: (key, on) => set({ childMaximized: { ...get().childMaximized, [key]: on } }),
     toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
+    /* The statusbar speaks status and progress only (`50` section 2.1): an info sentence is a row of the events log and
+     * never the notice line; a warn or an error is both. */
     say: (sentence, tone: EventTone = "info", area = options.defaultArea) => {
-      const serial = (get().notice?.serial ?? 0) + 1;
       const at = now();
-      const row = tone === "info" ? null : { id: `n-${serial}-${at}`, at, tone, area, sentence };
-      const events = row === null ? {} : { events: appendEvent(get().events, row, at) };
-      set({ notice: { sentence, tone, serial }, ...events });
+      if (tone === "info") {
+        set({ events: appendEvent(get().events, { at, tone, area, sentence }, at) });
+        return;
+      }
+      const serial = (get().notice?.serial ?? 0) + 1;
+      set({
+        notice: { sentence, tone, serial },
+        events: appendEvent(get().events, { id: `n-${serial}-${at}`, at, tone, area, sentence }, at),
+      });
     },
     clearEvents: () => set({ events: [] }),
     logEvent: (event) => set({ events: appendEvent(get().events, event, now()) }),

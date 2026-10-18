@@ -4,7 +4,7 @@ import { cancelJob, listJobs } from "@/services/jobs";
 import { useAppStore } from "@/store/app-store";
 import { isLive } from "@/types/job";
 
-/** The interface's running work: the store's live jobs, Stop through the fileserver; the shared bar draws it. */
+/** The interface's running work: the store's live jobs built into the shared bar's view, Stop through the fileserver. */
 export function RunningWork() {
   useScanObserver();
   const say = useAppStore((state) => state.say);
@@ -28,8 +28,14 @@ export function RunningWork() {
 
   return (
     <RunningWorkBar
-      running={running === null ? null : { label: running.label, percent }}
-      liveCount={live.length}
+      view={{
+        active: running !== null,
+        percent,
+        readout: running === null ? undefined : `${live.length} running${percent === null ? "" : ` · ${percent}%`}`,
+        tooltip: running === null ? "Nothing running" : `${running.label}${percent === null ? "" : ` · ${percent}%`}`,
+        stoppable: running !== null,
+        stopTitle: running === null ? "Nothing to stop" : `Stop ${running.label.toLowerCase()}`,
+      }}
       onStop={() => void stop()}
     />
   );
