@@ -1,6 +1,6 @@
 # 36 - Admin Channels and Preview plan (Wave 3b)
 
-**Status: plan, written before the code (branch `admin/channels-tab`, cut from `family-port` after Wave 3a, `35`, and the backend Wave B2 (real ids, `39` section 7) have landed).** Amended 2026-10-17 (owner): bulk verbs on the ticked rows, a real id number, Name first.
+**Status: plan, written before the code (branch `admin/channels-tab`, cut from `family-port` after Wave 3a, `35`, has landed).** Amended 2026-10-17 (owner): bulk verbs on the ticked rows, Name first, and the backend assigns a new live channel's id (3.2).
 Owner, 2026-10-17: no fixture waves; every tab is built directly against the real backend routes through the service
 modules, and a wave exits only when every control is really wired and verified. This document is the Channels tab end to
 end, with the Preview window. It supersedes the fixture-first Wave 3 of `28` (its reference content - the look, the
@@ -70,8 +70,7 @@ or video is refused at write time (`That folder does not exist.`, field `folder`
 - `list` parses `items` one row at a time (`z.array(z.unknown())`, each row `ChannelSchema.safeParse`): an unreadable row is
   dropped and counted, one `warn` notice (`N channels could not be read.`), the rest shown (`01` section 8). The schema file gains
   `ChannelListLenientSchema`; `ChannelListSchema` stays for the tests.
-- **A generated id number, never derived** (owner, final decision: every backend record gets a generated, never-reused integer from a sequence, shown read-only as `Id`; the backend side is Wave B2 of `39` section 7.1, which this wave is cut after). **Every** channel, live and stream, carries `idNumber` from the channels sequence (migration `018`; existing channels numbered in creation order). It is never reused and never reassigned. The admin sends **no id** on create and derives nothing: `lib/channel-id.ts` does not exist. The database key of a channel is `idNumber`; the API keeps returning the string `id` the fileserver reads (`/live/<id>/...`, `/logos/<id>.png`), unchanged. The backend gives a new live channel the string `id` `live-<idNumber>` itself. The number is shown read-only as the list column `id` and as the `Id` row in Details (last row). A 409 on a live
-  create is `channel.taken` on the number (the id can no longer collide), shown under Number with `Another channel already has that number.`. `ChannelSchema` gains `idNumber: z.number()`.
+- **The backend assigns a new live channel's id** (owner, final: no id changes beyond this). Today the backend requires a caller-sent kebab-case `id` on a live create, while it assigns a stream channel's id itself (`ch_<uuid>`, `services/channel-service.ts`). This wave makes the live create the same: **the create body sends no `id`**, the admin never derives one from the Name (`lib/channel-id.ts` does not exist), and the backend assigns `live-<uuid>` (lower-case, kebab-case, 41 characters, within `LIVE_ID_MAX`, so `/live/<id>/...` and `/logos/<id>.png` keep working). **Existing ids are untouched**; a caller-sent id (the seeded test channels, scripts, tests) is still accepted and validated as today. The small backend change is part of this wave (section 4): `types/channel-input.ts` makes `id` optional on the live input, `services/channel-service.ts` assigns `live-<randomUUID()>` when it is absent, and `src/backend/test/channels.test.ts` gains a create without an id. The `Id` row in Details stays the read-only string `id`, as `28` 7.3 already had it. A 409 on a live create is `channel.taken` on the number, shown under Number with `Another channel already has that number.`.
 - `number` is sent as text (`"7"`), never a JSON number. `variants` are sent as the list in the order chosen.
 
 ## 4. Pieces to build, by file
@@ -105,7 +104,7 @@ Paths under `src/admin/src/`. "C" create, "U" update. Bounds are expected sizes;
 | U | `lib/event-sentence.ts` | not touched (Wave 4 sweep owns it) |
 
 No change under `src/shared/ui` is planned; a gap found is added additively with its library test and named in the report.
-No change to `src/backend`, `package.json` or `index-frames.ts`.
+One small backend change (3.2): `src/backend/src/types/channel-input.ts` (`id` optional on a live create), `src/backend/src/services/channel-service.ts` (assigns `live-<uuid>` when absent) and a case in `src/backend/test/channels.test.ts`. No other change to `src/backend`, and none to `package.json` or `index-frames.ts`.
 
 ## 5. The index
 
@@ -132,7 +131,7 @@ window; type the path.`, and the field is a typed path. `Choose` exists only on 
 
 ### 5.2 The list (`ListGroup`, icon `radio`, title `Channels`, heading action ghost `Refresh`)
 
-`RecordGrid` over the rows of `channelRows`; headings `id` (`idNumber`, mono), `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
+`RecordGrid` over the rows of `channelRows`; headings `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
 (`constants/channel-grid.ts`, tracks in rem, the end track fits `Delete Fixture Entertainment?`, a minimum width inside its own
 scroller). Select-all tick `Select all channels` (`mixed` over a part); row tick `Select <name>`; a press on the data cells opens
 the workspace (no `Open` button, no double click); the state column is the `StateWord` of `channelState`; a disabled row is
@@ -275,13 +274,13 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, all clean.
 
 ## 11. The worker brief (headings, `07` section 6.2)
 
-1. **Where.** Worktree `D:\Projects\.giga-worktrees\admin-channels-tab`, branch `admin/channels-tab`, cut from `family-port` after Wave 3a is landed. May change: the files of section 4 and `src/admin/test`. Off limits: `src/backend`, `src/frontend`,
+1. **Where.** Worktree `D:\Projects\.giga-worktrees\admin-channels-tab`, branch `admin/channels-tab`, cut from `family-port` after Wave 3a is landed. May change: the files of section 4, `src/admin/test`, and in `src/backend` only the three files of 3.2 (the live-id change). Off limits: the rest of `src/backend`, `src/frontend`,
    `src/fileserver`, `src/shared/*` (a gap is added additively and named), the other tabs' pages, slices and services, `store/app-store.ts`, `store/slices/*` except `channels`, `index-frames.ts`, `package.json`, every `.env`, `docs/**`.
 2. **Rules.** `AGENTS.md`, `07`, `01`; this plan; no fixture and no fake feature; a control works or is disabled with its reason; skeletons never a sentence over them; no browser storage, no timers; files at most 200 lines; never print a secret.
 3. **Role.** Implements sections 3 to 8 in the five commits of section 2; writes and runs its tests; no browser, no server; edits no doc; commits on its branch, never pushes or merges.
 4. **Read first.** `AGENTS.md`; `07` 6; `01` 4, 5, 6, 8, 9; this document; `35` (the pattern: slice, flows, serial, notices); `29` 5, 7, 9.1, 9.7, 10, 13; `26` 4.5 to 4.7; `28` 7.2 to 7.4; the foundation files of section 1; the backend's `api/channels.ts`, `api/admin-channels.ts`, `api/live-faults.ts`, `types/channel-input.ts`, `services/live-channel-rules.ts` as read-only reference; the library's `ChildWindow`, `RecordGrid`, `ArmedButton`, `Toggle`, `Segmented`, `ChipGroup`.
 5. **Scope.** Section 4; out of scope as section 2.
-6. **Report.** `07` 6.4, plus every gap filled (the first one: anything the backend's `idNumber` answer does not cover) and any signature of `StateWord` / `useRecordForm` that differed.
+6. **Report.** `07` 6.4, plus every gap filled (the first one: anything the live-id change did not cover) and any signature of `StateWord` / `useRecordForm` that differed.
 
 ## 12. The coordinator's acceptance
 
@@ -300,10 +299,9 @@ On a temporary backend (`39` section 9): `FIXTURE_DIR` of videos (`npm run fixtu
 | # | Doc says | Code does |
 |---|---|---|
 | 1 | `26` 4.5a: Preview plays `masterUrl` | no admin answer has it; the live row's `streamUrl` is `<caller origin>/live/<id>/master.m3u8` (`29` 9.7 already corrects it) |
-| 2 | `28` 7.3: the live New form has Name, Kind, Number, Category, Folder | superseded (owner, 2026-10-17): the backend assigns the id (Wave B2); the form sends none and derives none (3.2). Also: Name is first on every form (`39` section 5) |
+| 2 | `28` 7.3: the live New form has Name, Kind, Number, Category, Folder | superseded (owner, 2026-10-17): the backend assigns a new live channel's id (`live-<uuid>`, 3.2); the form sends none and derives none. Also: Name is first on every form (`39` section 5) |
 | 10 | `28` 7.2: the Channels toolbar has `Preview →` only; ticks arm one verb | superseded (owner, 2026-10-17): bulk verbs `Enable`, `Disable`, `Rebuild`, `Delete` beside it (5.3) |
-| 11 | `29` 5: `BackendChannel` has `id` only | gains `idNumber` for every channel (3.2) |
-| 12 | `36` 3.2 (first round) derived the live id from the name; the second round made the number a sequence only for live rows | every channel, stream and live, takes `idNumber` from the one channels sequence; the API's string `id` (`ch_<uuid>`, `live-<n>` or the caller's kebab-case id) is unchanged |
+| 11 | `29` 9.1: a live create body carries `id` | the backend now assigns it when absent (3.2); the admin sends none |
 | 3 | `28` Wave 3 / `29` Wave 8 plan fixtures first, then a wiring wave | superseded: this wave is wired directly; `FIXTURE_BUILD_MS`, `useFixtureLoad`, `fixtures/channels.ts` do not exist |
 | 4 | `28` Wave 2 row lists `useRecordForm`, `StateWord` as created | neither is in the tree; they are Wave 3a's (`35`) |
 | 5 | `29` 9.1: a live PATCH may change `logoUrl` | refused (`A live channel has no logoUrl...`); the live Logo row is read-only |
