@@ -38,6 +38,8 @@ export function publicChannel(record: ChannelRecord, base: string): BackendChann
     ...(record.logoUrl !== null && { logoUrl: record.logoUrl }),
     ...(record.tvgId !== null && { tvgId: record.tvgId }),
     ...(record.source !== null && { source: record.source }),
+    // The backend's hash-named cached copy, absolute from the caller's origin so the fileserver can fetch and keep it (docs/46 D.1).
+    ...(record.logoFile !== null && { cachedLogoUrl: `${base}${CACHED_LOGO_PREFIX}${record.logoFile}` }),
     streamUrl: record.streamUrl,
   };
 }

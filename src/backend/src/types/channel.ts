@@ -17,6 +17,8 @@ export interface BackendChannel {
   kind: ChannelKind;
   tvgId?: string;          // the playlist's tvg-id; the playlist sync's update key (docs/03 section 7.2c)
   source?: string;         // derived from the parent playlist (its host, or its file name), never stored (7.2c)
+  /** A stream row's cached logo: absolute from the request origin on a public read (docs/46 D.1); the admin's is relative. */
+  cachedLogoUrl?: string;
   revision: number;
 }
 

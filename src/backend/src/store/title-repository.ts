@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { applyFields } from "./title-edits.js";
+import { createTitleCatalog } from "./title-catalog.js";
 import { createTitlePage } from "./title-page.js";
 
 /** A stored title: the `7.4` answer plus its freshness facts (docs/03 section 7.6b) and its record facts (docs/26 D20). */
@@ -112,7 +113,11 @@ export function createTitleRepository(db: DatabaseSync) {
   }
   const pages = createTitlePage(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
 
+  const catalog = createTitleCatalog(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
+
   return {
+    /** The fileserver's catalog read (docs/03 section 7.4): enabled rows by id after a cursor. */
+    catalog: catalog.catalog,
     /** The stored-titles list (docs/41 section 3.2): one page and its filtered count; the whole store's inventory. */
     page: pages.page,
     inventory: pages.inventory,
