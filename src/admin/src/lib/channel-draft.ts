@@ -109,3 +109,7 @@ export function rebuilds(channel: LiveAdminChannel, draft: LiveDraft): boolean {
     !sameList(draft.variants, base.variants)
   );
 }
+
+/** A quality chip pressed: off if it was on, else on at the end, so the list keeps the order the person chose. */
+export const toggleVariant = (variants: readonly Variant[], variant: Variant): Variant[] =>
+  variants.includes(variant) ? variants.filter((one) => one !== variant) : [...variants, variant];

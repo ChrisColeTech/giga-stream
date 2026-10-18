@@ -1,4 +1,5 @@
 import { ChannelsIndex } from "@/components/channels/ChannelsIndex";
+import { ChannelWorkspace } from "@/components/channels/ChannelWorkspace";
 import { TabPage, type PageProps } from "@/components/chrome/TabPage";
 import { useChannelsLoad } from "@/hooks/useChannelsLoad";
 import { useAppStore } from "@/store/app-store";
@@ -11,7 +12,7 @@ export function ChannelsPage({ active }: PageProps) {
   useChannelsLoad(active);
   return (
     <TabPage active={active} label="Channels">
-      {openId === null ? <ChannelsIndex /> : <ChannelsIndex />}
+      {openId === null ? <ChannelsIndex /> : <ChannelWorkspace id={openId} active={active} />}
     </TabPage>
   );
 }
