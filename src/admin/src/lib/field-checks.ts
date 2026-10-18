@@ -28,14 +28,17 @@ export function wholeNumber(label: string, value: string, min = NUMBER_MIN, max 
   return number >= min && number <= max ? null : `${label} must be a whole number from ${min} to ${max}.`;
 }
 
-/** An address the browser parses and whose scheme is https. */
-export function httpsAddress(label: string, value: string): Refusal {
+/** An address the browser parses whose scheme is http or https and that carries no credentials (`03` section 7.3). */
+export function webAddress(label: string, value: string): Refusal {
   const text = value.trim();
   if (text === "") return null;
+  const wrong = `${label} must be an http or https address.`;
   try {
-    return new URL(text).protocol === "https:" ? null : `${label} must be an https address.`;
+    const url = new URL(text);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return wrong;
+    return url.username === "" && url.password === "" ? null : `${label} must not contain a user name or password.`;
   } catch {
-    return `${label} must be an https address.`;
+    return wrong;
   }
 }
 

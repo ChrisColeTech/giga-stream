@@ -67,11 +67,12 @@ describe("a channel's checks", () => {
     assert.equal(createReason(full, { saving: false, unreachable: false }), undefined);
   });
 
-  it("refuse a stream address that is not https, with its row", () => {
+  it("refuse a stream address that is not http or https, with its row; plain http is fine", () => {
     const base = { ...EMPTY_NEW_CHANNEL, name: "N", folder: "D:\\v" };
     assert.equal(newChannelRefusal(base), null);
-    const refused = newChannelRefusal({ ...base, kind: "stream", streamUrl: "http://a.b/c" });
-    assert.deepEqual(refused, { field: "streamUrl", sentence: "Stream address must be an https address." });
+    assert.equal(newChannelRefusal({ ...base, kind: "stream", streamUrl: "http://192.168.1.4:8080/c" }), null);
+    const refused = newChannelRefusal({ ...base, kind: "stream", streamUrl: "ftp://a.b/c" });
+    assert.deepEqual(refused, { field: "streamUrl", sentence: "Stream address must be an http or https address." });
     assert.deepEqual(checkChannel({ ...streamDraft(stream("s")), logoUrl: "ftp://x" }).refusal?.field, "logoUrl");
   });
 

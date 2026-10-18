@@ -35,25 +35,26 @@ test("an entry whose stream or logo address breaks the rule is refused and count
     entry("Plain http", "x").replace("https://", "http://"),
     entry("Private literal", "x").replace("stream.example", "10.1.2.3"),
     entry("Loopback", "x").replace("stream.example", "127.0.0.1"),
-    entry("Link local", "x").replace("stream.example", "[fe80::1]"),
     entry("Credentials", "x").replace("stream.example", "user:pw@stream.example"),
-    entry("Bad logo", "ok", 'tvg-logo="http://img.example/logo.png" '),
-    entry("Private logo", "ok2", 'tvg-logo="https://192.168.1.5/logo.png" '),
+    entry("Ftp stream", "x").replace("https://", "ftp://"),
+    entry("Http logo", "ok", 'tvg-logo="http://img.example/logo.png" '),
+    entry("Ftp logo", "ok2", 'tvg-logo="ftp://192.168.1.5/logo.png" '),
     `#EXTINF:-1 group-title="News",Long address\n${long}`,
     entry("Good logo", "ok3", 'tvg-logo="https://img.example/logo.png" '),
   );
   const answer = await uploadFile(t, token, NAME, text);
   assert.deepEqual(
     ["created", "refused", "skipped"].map((f) => pick(answer.body, `data.imported.${f}`)),
-    [2, 8, 0],
+    [6, 4, 0],
   );
   const examples = pick(answer.body, "data.imported.refusalExamples") as string[];
-  assert.deepEqual(examples.slice(0, 3), ["Plain http", "Private literal", "Loopback"]);
+  assert.deepEqual(examples.slice(0, 4), ["Credentials", "Ftp stream", "Ftp logo", "Long address"]);
   const everything = JSON.stringify([answer.body, await audit()]);
-  for (const address of ["stream.example/x", "10.1.2.3", "192.168.1.5", "img.example", "http://"]) {
+  for (const address of ["stream.example/x", "user:pw", "192.168.1.5", "ftp://"]) {
     assert.equal(everything.includes(address), false, `no address in an answer or the audit: ${address}`);
   }
-  assert.deepEqual((await adminChannels()).map((r) => r.name).sort(), ["Good", "Good logo"]);
+  const kept = ["Good", "Good logo", "Http logo", "Loopback", "Plain http", "Private literal"];
+  assert.deepEqual((await adminChannels()).map((r) => r.name).sort(), kept);
 });
 
 test("names are NFC-normalised, repeats and the entry cap are counted as skipped", async () => {
@@ -68,13 +69,11 @@ test("names are NFC-normalised, repeats and the entry cap are counted as skipped
   assert.deepEqual(["created", "updated"].map((f) => pick(again.body, `data.imported.${f}`)), [0, 0], "the composed name matches itself");
 });
 
-test("with the development flag a loopback playlist address is allowed, a private one still is not", async () => {
-  const { t, token, adminChannels } = await setupPlaylists({ loopback: true });
-  const text = playlistOf(
-    entry("Local", "x").replace("https://stream.example", "http://127.0.0.1:9000"),
-    entry("Private", "x").replace("stream.example", "10.0.0.8"),
-  );
-  const answer = await uploadFile(t, token, NAME, text);
-  assert.deepEqual(["created", "refused"].map((f) => pick(answer.body, `data.imported.${f}`)), [1, 1]);
-  assert.deepEqual((await adminChannels()).map((r) => r.name), ["Local"]);
+test("a plain http, private or loopback playlist address is accepted by the rule", async () => {
+  const { api, feed } = await setupPlaylists({ feed: {} });
+  for (const url of ["http://cdn.example/a.m3u", "http://10.0.0.5/b.m3u", "http://192.168.1.9:8080/c.m3u"]) {
+    feed.set(url, M3U);
+    const made = await api("POST", "/api/playlists", { url });
+    assert.equal(made.status, 201, url);
+  }
 });

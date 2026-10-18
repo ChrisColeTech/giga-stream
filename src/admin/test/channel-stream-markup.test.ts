@@ -87,13 +87,13 @@ describe("a stream channel's workspace", () => {
     const html = renderLive(
       createElement(StreamAddressGroup, {
         draft: { ...streamDraft(stream("s")), streamUrl: "http://plain" },
-        errors: { streamUrl: "Stream address must be an https address." },
+        errors: { streamUrl: "Stream address must be an http or https address." },
         edited: [],
         onChange: () => undefined,
         save: SAVE,
       }),
     );
-    assert.ok(html.includes('role="alert">Stream address must be an https address.</p>'));
+    assert.ok(html.includes('role="alert">Stream address must be an http or https address.</p>'));
     assert.ok(/aria-label="Stream address" aria-invalid="true"/.test(html));
   });
 

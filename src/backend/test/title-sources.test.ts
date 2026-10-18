@@ -9,7 +9,7 @@ import type { Config } from "../src/config.js";
 
 const MOVIE_TEMPLATE = "https://streams.example/movie/{tmdbId}/index.m3u8";
 const EPISODE_TEMPLATE = "https://streams.example/tv/{tmdbId}/{season}/{episode}/index.m3u8";
-const LOOPBACK_TEMPLATE = "http://127.0.0.1:8091/live/fx-sports/master.m3u8";
+const HTTP_TEMPLATE = "http://127.0.0.1:8091/live/fx-sports/master.m3u8";
 
 const FIRST = {
   name: "First", source: "first", order: 1, family: "embed",
@@ -144,24 +144,18 @@ test("a template that is not set answers no streamUrl key", async () => {
   await t.dispose();
 });
 
-test("a loopback template with the flag off is omitted, never answered broken", async () => {
+test("a plain http template fills the dev stream; one with credentials or another scheme is omitted", async () => {
   const tmdb = await stubTmdb();
-  const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: LOOPBACK_TEMPLATE } });
+  const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: HTTP_TEMPLATE } });
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
-  const data = pick(detail.body, "data") as Record<string, unknown>;
-  assert.equal(Object.hasOwn(data, "streamUrl"), false);
+  assert.equal(pick(detail.body, "data.streamUrl"), HTTP_TEMPLATE);
   await t.dispose();
-});
-
-test("a loopback template with the flag on fills the dev stream", async () => {
-  const tmdb = await stubTmdb();
-  const t = await makeApp({
-    loopback: true,
-    config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: LOOPBACK_TEMPLATE },
-  });
-  const detail = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.equal(pick(detail.body, "data.streamUrl"), LOOPBACK_TEMPLATE);
-  await t.dispose();
+  for (const bad of ["http://u:p@127.0.0.1:8091/{tmdbId}.m3u8", "ftp://streams.example/{tmdbId}.m3u8"]) {
+    const other = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: bad } });
+    const data = pick((await send(other.app, "GET", "/api/titles/movie-603")).body, "data") as Record<string, unknown>;
+    assert.equal(Object.hasOwn(data, "streamUrl"), false, bad);
+    await other.dispose();
+  }
 });
 
 test("a movie may carry streamUrl and sources together; neither displaces the other", async () => {

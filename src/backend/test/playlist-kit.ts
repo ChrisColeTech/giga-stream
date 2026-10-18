@@ -91,12 +91,11 @@ export const uploadFile = (t: TestApp, token: string, fileName: string, content:
   uploadParts(t, token, [{ name: "file", filename: fileName, content }]);
 
 /** A test app with a fake feed and a signed-in admin, and the calls the playlist tests share. */
-export async function setupPlaylists(options: { feed?: Record<string, string>; config?: Record<string, unknown>; loopback?: boolean } = {}) {
+export async function setupPlaylists(options: { feed?: Record<string, string>; config?: Record<string, unknown> } = {}) {
   const feed = fakeFeed(options.feed ?? { [ONE]: M3U, [TWO]: M3U });
   const t = await makeApp({
     safeFetch: feed.safeFetch,
     ...(options.config && { config: options.config }),
-    ...(options.loopback && { loopback: true }),
   });
   const token = (await signIn(t.app)).access;
   const api = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: unknown) => send(t.app, method, url, body, token);

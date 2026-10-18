@@ -33,8 +33,8 @@ export const systemResolver: Resolver = async (hostname, options) => {
 };
 
 /**
- * The `lookup` hook of the request: resolves the name, refuses the whole answer when ANY address is non-public
- * (a mixed answer is how rebinding is staged), and hands back a validated one. Serves both callback forms.
+ * The `lookup` hook of the request: resolves the name once, refuses the whole answer when ANY address is loopback or
+ * link-local (a mixed answer is how rebinding is staged), and hands back a validated one. Serves both callback forms.
  */
 export function createGuardedLookup(resolve: Resolver, allowLoopback: boolean): LookupFunction {
   return (hostname, options, callback) => {
@@ -63,7 +63,7 @@ function lowerHeaders(raw: http.IncomingHttpHeaders): Record<string, string> {
   return out;
 }
 
-/** The real transport: `node:https` (`node:http` only for a loopback URL, which the caller has already vetted). */
+/** The real transport: `node:https` for an https URL, `node:http` for an http one (the caller has vetted both). */
 export const nodeTransport: SafeTransport = (request) =>
   new Promise((resolve, reject) => {
     const { url } = request;

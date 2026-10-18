@@ -19,11 +19,11 @@ function placeholderFixtures(dataDir: string): string {
   return fixtures;
 }
 
-test("the seed creates the four test channels as live rows served by this backend, once, with no loopback flag", async () => {
+test("the seed creates the four test channels as live rows served by this backend, once", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-seed-"));
   try {
     const fixtures = placeholderFixtures(dataDir);
-    const first = await makeApp({ seed: true, dataDir, config: { FIXTURE_DIR: fixtures, ALLOW_LOOPBACK_STREAMS: false } });
+    const first = await makeApp({ seed: true, dataDir, config: { FIXTURE_DIR: fixtures } });
     const list = (await send(first.app, "GET", "/api/channels")).body;
     assert.deepEqual(itemsOf(list).map((c) => [c.id, c.name, c.number, c.category, c.kind]), [
       ["fx-news", "Fixture News", "1", "News", "live"],

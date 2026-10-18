@@ -23,10 +23,9 @@ export function createChannelService(deps: {
   store: Store;
   audit: AuditService;
   live: LiveEngine;
-  allowLoopback: boolean;
   now: () => number;
 }) {
-  const { store, audit, live, allowLoopback, now } = deps;
+  const { store, audit, live, now } = deps;
 
   /** One audit line about a channel, named: the log shows the channel's name, not only its id (docs/29 B5). */
   const named = (actor: Actor, action: string, id: string, name: string, detail: Record<string, unknown> = {}): void =>
@@ -51,7 +50,7 @@ export function createChannelService(deps: {
   }
 
   function createRecord(input: ChannelInput): ChannelRecord {
-    if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`, allowLoopback);
+    if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`);
     const record = newLiveRecord({ ...input, id: input.id ?? `live-${randomUUID()}` }); // none sent: assigned, docs/36
     if (store.channels.find(record.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
     claimNumber(record);
@@ -91,7 +90,7 @@ export function createChannelService(deps: {
       }
       let record: ChannelRecord;
       if (current.kind === "stream") {
-        record = withEdits(current, patchedStreamRecord(current, patch, allowLoopback));
+        record = withEdits(current, patchedStreamRecord(current, patch));
       } else {
         const next = patchedLiveRecord(current, patch);
         claimNumber(next);

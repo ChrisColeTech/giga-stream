@@ -25,7 +25,7 @@ export interface StreamAddressGroupProps {
   readonly save: SaveVerb;
 }
 
-/** A stream channel's `Stream` group (`36` section 7): the stream address and the logo address, each https, checked on
+/** A stream channel's `Stream` group (`36` section 7): the stream address and the logo address, each http or https, checked on
  *  the page and by the backend; a refused address is the row's error, `aria-invalid`, and the notice says it too. */
 export function StreamAddressGroup({ draft, errors, edited, onChange, save }: StreamAddressGroupProps) {
   return (

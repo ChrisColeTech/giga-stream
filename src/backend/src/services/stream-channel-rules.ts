@@ -8,17 +8,17 @@ export const invalid = (field: string, message: string): AppError =>
   new AppError(ERRORS.channelInvalid, { field }, message);
 
 /** The address rule of docs/03 section 7.3 applies to stream rows only (docs/26 decision D3). */
-function checkAddresses(record: StreamRecord, allowLoopback: boolean): void {
-  if (!isAcceptedAddress(record.streamUrl, allowLoopback)) {
-    throw invalid("streamUrl", addressRefusal("stream address", allowLoopback));
+function checkAddresses(record: StreamRecord): void {
+  if (!isAcceptedAddress(record.streamUrl)) {
+    throw invalid("streamUrl", addressRefusal("stream address"));
   }
-  if (record.logoUrl !== null && !isAcceptedAddress(record.logoUrl, allowLoopback)) {
-    throw invalid("logoUrl", addressRefusal("logo address", allowLoopback));
+  if (record.logoUrl !== null && !isAcceptedAddress(record.logoUrl)) {
+    throw invalid("logoUrl", addressRefusal("logo address"));
   }
 }
 
 /** A hand-created stream row has no parent playlist, so no sync touches it (docs/03 section 7.2c). */
-export function newStreamRecord(input: StreamChannelInput, id: string, allowLoopback: boolean): StreamRecord {
+export function newStreamRecord(input: StreamChannelInput, id: string): StreamRecord {
   const record: StreamRecord = {
     ...NOT_SYNCED,
     kind: "stream",
@@ -34,7 +34,7 @@ export function newStreamRecord(input: StreamChannelInput, id: string, allowLoop
     enabled: true,
     published: true,
   };
-  checkAddresses(record, allowLoopback);
+  checkAddresses(record);
   return record;
 }
 
@@ -52,7 +52,7 @@ export function withEdits(before: StreamRecord, after: StreamRecord): StreamReco
 
 const LIVE_ONLY = ["mode", "captions", "variants", "folder", "videos"] as const;
 
-export function patchedStreamRecord(current: StreamRecord, patch: ChannelPatch, allowLoopback: boolean): StreamRecord {
+export function patchedStreamRecord(current: StreamRecord, patch: ChannelPatch): StreamRecord {
   for (const field of LIVE_ONLY) {
     if (patch[field] !== undefined) throw invalid(field, `A stream channel has no ${field}; it belongs to a live channel.`);
   }
@@ -68,6 +68,6 @@ export function patchedStreamRecord(current: StreamRecord, patch: ChannelPatch, 
     logoUrl: patch.logoUrl ?? current.logoUrl,
     streamUrl: patch.streamUrl ?? current.streamUrl,
   };
-  checkAddresses(record, allowLoopback);
+  checkAddresses(record);
   return record;
 }

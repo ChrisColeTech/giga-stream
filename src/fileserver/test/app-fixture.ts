@@ -98,7 +98,6 @@ export async function startBackend(): Promise<RealBackend> {
         ADMIN_BOOTSTRAP_USERNAME: OWNER_USERNAME,
         ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
         SEED_TEST_CHANNELS: "true",
-        ALLOW_LOOPBACK_STREAMS: "true",
         TMDB_READ_TOKEN: "",
         TMDB_SYNC_SCHEDULE: "",
       },

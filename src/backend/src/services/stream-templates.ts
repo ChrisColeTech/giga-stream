@@ -10,9 +10,8 @@ import { asRecord } from "./title-shapes.js";
 export function createStreamTemplates(options: {
   movieTemplate: string;
   episodeTemplate: string;
-  allowLoopback: boolean;
 }) {
-  const { movieTemplate, episodeTemplate, allowLoopback } = options;
+  const { movieTemplate, episodeTemplate } = options;
 
   function filled(template: string, values: { tmdbId: number; season?: number; episode?: number }): string | undefined {
     if (template === "") return undefined;
@@ -20,7 +19,7 @@ export function createStreamTemplates(options: {
       const value = values[placeholder.slice(1, -1) as keyof typeof values];
       return value === undefined ? placeholder : String(value);
     });
-    return isAcceptedAddress(url, allowLoopback) ? url : undefined;
+    return isAcceptedAddress(url) ? url : undefined;
   }
 
   const movieStreamUrl = (tmdbId: number): string | undefined => filled(movieTemplate, { tmdbId });

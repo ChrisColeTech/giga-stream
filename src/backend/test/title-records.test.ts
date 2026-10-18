@@ -62,10 +62,11 @@ test("a bad title is refused with the field named", async () => {
   assert.deepEqual(await refusal({ ...HOME, rating: 11 }), invalid("rating"));
   assert.deepEqual(await refusal({ ...HOME, genres: "Drama" }), invalid("genres"));
   assert.deepEqual(await refusal({ ...HOME, colour: "red" }), invalid("colour"));
-  assert.deepEqual(await refusal({ ...HOME, posterUrl: "http://img.example/p.jpg" }), invalid("posterUrl"));
+  assert.deepEqual(await refusal({ ...HOME, posterUrl: "ftp://img.example/p.jpg" }), invalid("posterUrl"));
+  assert.deepEqual(await refusal({ ...HOME, posterUrl: "http://u:p@img.example/p.jpg" }), invalid("posterUrl"));
   assert.deepEqual(await refusal({ ...HOME, backdropUrl: "ftp://x" }), invalid("backdropUrl"));
-  assert.deepEqual(await refusal({ ...HOME, streamUrl: "http://s.example/a.m3u8" }), invalid("streamUrl"));
-  assert.deepEqual(await refusal({ ...HOME, kind: "tv", seasons: [{ season: 1, episodes: [{ episode: 1, streamUrl: "http://s.example/e.m3u8" }] }] }), invalid("seasons"));
+  assert.deepEqual(await refusal({ ...HOME, streamUrl: "ftp://s.example/a.m3u8" }), invalid("streamUrl"));
+  assert.deepEqual(await refusal({ ...HOME, kind: "tv", seasons: [{ season: 1, episodes: [{ episode: 1, streamUrl: "ftp://s.example/e.m3u8" }] }] }), invalid("seasons"));
   assert.equal((await send(t.app, "GET", "/api/titles?kind=movie")).status, 200);
   const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
   const patch = async (target: string, body: unknown) => {
@@ -74,7 +75,7 @@ test("a bad title is refused with the field named", async () => {
   };
   assert.deepEqual(await patch(id, { kind: "tv" }), invalid("kind"));
   assert.deepEqual(await patch(id, { title: null }), invalid("title"));
-  assert.deepEqual(await patch(id, { posterUrl: "http://img.example/p.jpg" }), invalid("posterUrl"));
+  assert.deepEqual(await patch(id, { posterUrl: "ftp://img.example/p.jpg" }), invalid("posterUrl"));
   assert.deepEqual(await patch("custom-missing", { plot: "x" }), [404, "title.not_found", undefined]);
   assert.deepEqual(await patch("movie-603", { tmdbId: 5 }), invalid("tmdbId"));
 });

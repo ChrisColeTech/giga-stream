@@ -82,7 +82,7 @@ test("two uploads of one file at once leave one playlist: the second is a re-imp
 
 test("the name is the sanitised file name; a derived clash is suffixed, a new file is its own playlist", async () => {
   const { t, token, api, importUrl } = await setupPlaylists();
-  assert.equal(pick(await uploadFile(t, token, "C:\\lists\\Café Liste.M3U", M3U), "body.data.fileName"), "cafe-liste.m3u");
+  assert.equal(pick(await uploadFile(t, token, "C:\\lists\\Café Liste.M3U", M3U), "body.data.fileName"), "caf-liste.m3u");
   assert.equal(pick(await uploadFile(t, token, "a b  c.m3u", M3U), "body.data.name"), "a-b-c.m3u");
   await api("PATCH", "/api/playlists/1", { name: "us.m3u" });
   await importUrl("https://cdn.example/lists/us.m3u8?token=x", { name: "web" });
@@ -90,7 +90,8 @@ test("the name is the sanitised file name; a derived clash is suffixed, a new fi
   assert.deepEqual([clash.status, pick(clash.body, "data.name"), pick(clash.body, "data.fileName")], [201, "us.m3u (2)", "us.m3u"]);
   const hls = await uploadFile(t, token, "D:\\x\\Live List.M3U8", M3U);
   assert.deepEqual([hls.status, pick(hls.body, "data.fileName"), pick(hls.body, "data.name")], [201, "live-list.m3u8", "live-list.m3u8"]);
-  for (const bad of ["日本語.m3u", "日本語.m3u8", "list.txt", "list.m3u9", ".m3u", ".m3u8"]) {
+  assert.equal((await uploadFile(t, token, "日本語.m3u", M3U)).status, 201, "non-ASCII folds to hyphens, no special case");
+  for (const bad of ["list.txt", "list.m3u9", "", "dir/"]) {
     const refused = await uploadFile(t, token, bad, M3U);
     assert.deepEqual([refused.status, pick(refused.body, "error.code"), pick(refused.body, "error.details.field")], [422, "playlist.invalid", "file"], bad);
   }

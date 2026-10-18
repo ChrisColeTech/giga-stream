@@ -26,7 +26,6 @@ import { createUiStateService } from "./ui-state-service.js";
 
 export interface ServiceOptions {
   jwtSecret: string;
-  allowLoopback: boolean;
   tmdbToken: string;
   tmdbBase?: string;
   omdbKey: string;
@@ -67,7 +66,6 @@ export function createServices(store: Store, options: ServiceOptions) {
   const streams = createStreamTemplates({
     movieTemplate: options.movieStreamTemplate,
     episodeTemplate: options.episodeStreamTemplate,
-    allowLoopback: options.allowLoopback,
   });
   const live = createLiveEngine({
     cacheDir: options.cacheDir,
@@ -89,12 +87,10 @@ export function createServices(store: Store, options: ServiceOptions) {
     store.jobs.list().find((j) => j.type === type && j.enabled && j.schedule !== "off")?.schedule ?? "off";
   const titles = createTitleService({
     store, audit, tmdb, omdb, streams, now,
-    allowLoopback: options.allowLoopback,
     scheduleLabel: () => scheduleOf("catalog"),
   });
   const importer = createPlaylistImporter({
     store, audit, now,
-    allowLoopback: options.allowLoopback,
     maxBytes: options.playlistSyncMaxBytes,
     maxEntries: options.playlistSyncMax,
     safeFetch: options.safeFetch ?? createSafeFetch(),
@@ -119,11 +115,11 @@ export function createServices(store: Store, options: ServiceOptions) {
     adminStatic: createAdminStatic(options.adminDist),
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
     uiState: createUiStateService({ store, now, log: options.log }),
-    channels: createChannelService({ store, audit, live, allowLoopback: options.allowLoopback, now }),
+    channels: createChannelService({ store, audit, live, now }),
     providers: createProviderService({ store, audit, now }),
     titles,
     storedTitles: createStoredTitles(store),
-    playlists: createPlaylistService({ store, audit, runner, allowLoopback: options.allowLoopback, onChange: scheduler.arm }),
+    playlists: createPlaylistService({ store, audit, runner, onChange: scheduler.arm }),
     jobs: createJobService({ store, audit, now, runner, onChange: scheduler.arm }),
     hasAccounts: (): boolean => store.accounts.count() > 0,
     purgeExpiredSessions: (): void => store.refreshTokens.purgeExpired(now()),

@@ -47,7 +47,7 @@ test("a patch renames, disables, or - for a web playlist - replaces the address;
   assert.deepEqual([clash.status, pick(clash.body, "error.code")], [409, "playlist.taken"]);
   const moved = await api("PATCH", "/api/playlists/1", { url: TWO });
   assert.deepEqual([pick(moved.body, "data.host"), pick(moved.body, "data.channels")], ["other.example", 2], "its channels stay");
-  assert.equal(pick(await api("PATCH", "/api/playlists/1", { url: "http://x.example/a.m3u" }), "body.error.details.field"), "url");
+  assert.equal(pick(await api("PATCH", "/api/playlists/1", { url: "ftp://x.example/a.m3u" }), "body.error.details.field"), "url");
   const held = await api("PATCH", "/api/playlists/1", { url: ONE });
   assert.equal(held.status, 200, "an address is free again once it is rotated away");
   await importUrl(TWO, { name: "second" });

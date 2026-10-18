@@ -29,7 +29,6 @@ async function seedProviders() {
     CORS_ORIGINS: "",
     TMDB_READ_TOKEN: "",
     SEED_TEST_CHANNELS: false,
-    ALLOW_LOOPBACK_STREAMS: false,
   });
 
   const access = (await signIn(app)).access;

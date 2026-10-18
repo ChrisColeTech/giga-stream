@@ -115,7 +115,7 @@ test("over a real socket: the lookup hook pins a validated address and refuses t
 
     const strict = createSafeFetch({ lookup: async () => [{ address: "127.0.0.1", family: 4 }] });
     const options = { timeoutMs: 2_000, maxBytes: 100 };
-    assert.equal(await codeOf(strict(`http://127.0.0.1:${port}/ok`, options)), "safe_fetch.bad_url");
+    assert.equal(await codeOf(strict(`http://127.0.0.1:${port}/ok`, options)), "safe_fetch.blocked_address");
     assert.equal(await codeOf(strict(`https://127.0.0.1:${port}/ok`, options)), "safe_fetch.blocked_address");
     assert.equal(await codeOf(strict(`https://rebind.example:${port}/ok`, options)), "safe_fetch.blocked_address");
 
@@ -123,7 +123,7 @@ test("over a real socket: the lookup hook pins a validated address and refuses t
       allowLoopback: true,
       lookup: async () => [
         { address: "127.0.0.1", family: 4 },
-        { address: "10.0.0.1", family: 4 },
+        { address: "169.254.169.254", family: 4 },
       ],
     });
     assert.equal(await codeOf(mixed(`http://localhost:${port}/ok`, options)), "safe_fetch.blocked_address");

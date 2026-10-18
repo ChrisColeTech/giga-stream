@@ -34,15 +34,14 @@ export function createTitleRecords(deps: {
   audit: AuditService;
   ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
   now: () => number;
-  allowLoopback: boolean;
 }) {
-  const { store, audit, ensureTitle, now, allowLoopback } = deps;
+  const { store, audit, ensureTitle, now } = deps;
 
   function checkAddresses(values: Record<string, unknown>): void {
     for (const field of ["posterUrl", "backdropUrl", "streamUrl"] as const) {
       const value = values[field];
-      if (typeof value === "string" && !isAcceptedAddress(value, allowLoopback)) {
-        throw invalid(field, addressRefusal(field, allowLoopback));
+      if (typeof value === "string" && !isAcceptedAddress(value)) {
+        throw invalid(field, addressRefusal(field));
       }
     }
     const seasons = Array.isArray(values.seasons) ? values.seasons : [];
@@ -50,8 +49,8 @@ export function createTitleRecords(deps: {
       for (const episode of season.episodes) {
         for (const field of ["stillUrl", "streamUrl"] as const) {
           const value = episode[field];
-          if (value !== undefined && !isAcceptedAddress(value, allowLoopback)) {
-            throw invalid("seasons", addressRefusal(`episode ${field}`, allowLoopback));
+          if (value !== undefined && !isAcceptedAddress(value)) {
+            throw invalid("seasons", addressRefusal(`episode ${field}`));
           }
         }
       }

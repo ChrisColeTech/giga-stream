@@ -54,9 +54,8 @@ const EnvSchema = z.object({
   MOVIE_STREAM_TEMPLATE: z.string().default(""),
   EPISODE_STREAM_TEMPLATE: z.string().default(""),
   // The test channels (docs/10 section 3.3): four live channels made from the fixture files in FIXTURE_DIR and
-  // served by this backend itself. They need no ALLOW_LOOPBACK_STREAMS: a live row stores no address.
+  // served by this backend itself; a live row stores no address.
   SEED_TEST_CHANNELS: BooleanFlag,
-  ALLOW_LOOPBACK_STREAMS: BooleanFlag,
   // The live engine (docs/10 section 4). CACHE_DIR holds loop mode's encodes (large); unset, the backend uses
   // `<DATA_DIR>/cache` of the DATA_DIR it actually runs with, so an override of DATA_DIR moves it too.
   CACHE_DIR: z.string().default(""),

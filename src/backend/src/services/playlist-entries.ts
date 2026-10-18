@@ -25,8 +25,8 @@ const tooLong = (value: string | undefined): boolean => value !== undefined && v
  * category, a repeat of the same name and stream address, or one past `maxEntries` is skipped and counted. A body
  * that is not an M3U playlist is `422 playlist.invalid` (raised by the parser).
  */
-export function screenPlaylist(text: string, options: { maxEntries: number; allowLoopback: boolean }): ScreenedPlaylist {
-  const { maxEntries, allowLoopback } = options;
+export function screenPlaylist(text: string, options: { maxEntries: number }): ScreenedPlaylist {
+  const { maxEntries } = options;
   const seen = new Set<string>();
   const entries: M3uEntry[] = [];
   const refusalExamples: string[] = [];
@@ -34,8 +34,8 @@ export function screenPlaylist(text: string, options: { maxEntries: number; allo
   let refused = 0;
   for (const entry of parseM3U(text)) {
     const bad =
-      tooLong(entry.streamUrl) || tooLong(entry.logoUrl) || !isAcceptedAddress(entry.streamUrl, allowLoopback) ||
-      (entry.logoUrl !== undefined && !isAcceptedAddress(entry.logoUrl, allowLoopback));
+      tooLong(entry.streamUrl) || tooLong(entry.logoUrl) || !isAcceptedAddress(entry.streamUrl) ||
+      (entry.logoUrl !== undefined && !isAcceptedAddress(entry.logoUrl));
     if (bad) {
       refused += 1;
       if (refusalExamples.length < PLAYLIST_SYNC_EXAMPLES_MAX) refusalExamples.push(entry.name.slice(0, CHANNEL_NAME_MAX));

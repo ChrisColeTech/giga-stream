@@ -82,12 +82,13 @@ describe("the New playlist draft", () => {
 });
 
 describe("the playlist checks", () => {
-  it("refuse an address that is not https under Address, and a name over 120 under Name", () => {
-    assert.deepEqual(firstRefusal("", "http://x.test/a"), {
+  it("refuse an address that is not http or https under Address, and a name over 120 under Name", () => {
+    assert.deepEqual(firstRefusal("", "ftp://x.test/a"), {
       field: "address",
-      sentence: "Address must be an https address.",
+      sentence: "Address must be an http or https address.",
     });
     assert.equal(firstRefusal("", "https://x.test/a"), null);
+    assert.equal(firstRefusal("", "http://10.0.0.5/a"), null);
     assert.equal(firstRefusal("n".repeat(121), "https://x.test/a")?.field, "name");
     assert.equal(firstRefusal("Main", null), null);
   });

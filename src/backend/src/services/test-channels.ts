@@ -44,7 +44,7 @@ function isLegacyTestRow(record: ChannelRecord | undefined, id: string): boolean
 /**
  * With `SEED_TEST_CHANNELS`, a backend with no channels creates the four test channels as live rows, each a
  * list of three fixture files from `fixtureDir` (made by scripts/fixtures/make-fixtures.mjs) and served by
- * this backend itself. News has captions. Needs no `ALLOW_LOOPBACK_STREAMS`: a live row stores no address.
+ * this backend itself. News has captions. A live row stores no address.
  *
  * A database that predates the merge holds those ids as stream rows pointing at the retired live server's
  * port; each such legacy row (and only it) becomes the live row, keeping its id. A non-empty table gains no

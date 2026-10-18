@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { LOGO_INDEX_MAX_BYTES, LOGO_INDEX_TIMEOUT_MS } from "../constants/limits.js";
+import { isAcceptedAddress } from "./address-rule.js";
 
 /** CDN failover, StepDaddy's pair (`supplements/logo_resolve.py`). */
 const LOGOS_URLS = ["https://iptv-org.github.io/api/logos.json", "https://cdn.jsdelivr.net/gh/iptv-org/api@gh-pages/logos.json"];
@@ -30,14 +31,14 @@ export function normalizeChannelName(name: string): string {
   return name.toLowerCase().replace(QUALITY, " ").replace(NON_ALNUM, "");
 }
 
-/** A logo address must be usable `https` (`01` section 7); an `http` logo is upgraded, like StepDaddy's. */
-export function httpsLogoUrl(value: string | undefined): string | undefined {
+/** A logo address must pass the address rule (`03` section 7.3): `http` or `https`, no credentials; `//host` is `https`. */
+export function acceptedLogoUrl(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   if (trimmed === undefined || trimmed === "" || ["null", "none", "undefined", "-"].includes(trimmed.toLowerCase())) {
     return undefined;
   }
-  const upgraded = trimmed.startsWith("//") ? `https:${trimmed}` : trimmed.startsWith("http://") ? `https://${trimmed.slice(7)}` : trimmed;
-  return upgraded.startsWith("https://") ? upgraded : undefined;
+  const absolute = trimmed.startsWith("//") ? `https:${trimmed}` : trimmed;
+  return isAcceptedAddress(absolute) ? absolute : undefined;
 }
 
 /**
@@ -103,7 +104,7 @@ export function createLogoResolver(deps: { dataDir: string; ttlHours: number; fe
     const best = new Map<string, { score: [number, number, number]; url: string }>();
     for (const row of logos ?? []) {
       const parsed = LogoRow.parse(row);
-      const url = httpsLogoUrl(parsed.url);
+      const url = acceptedLogoUrl(parsed.url);
       if (url === undefined || parsed.channel === undefined || parsed.channel === "") continue;
       const score: [number, number, number] = [
         parsed.in_use ? 1 : 0,
