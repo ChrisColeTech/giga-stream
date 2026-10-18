@@ -11,11 +11,12 @@ import {
 } from "./schemas/title-schema";
 import type { RecordInput } from "./service-types";
 
-/** The Titles routes (`37` section 4.1), REAL. Every read asks for the disabled titles (`includeDisabled=true`, honoured
- *  for an admin's token). A list or search page is read row by row: an unreadable row is dropped and counted. A save is a
- *  `PATCH` of the changed fields (`null` clears); `detail` reads the fields a list row lacks; `revert` drops an admin's
- *  edits and refetches from TMDB (`409 title.manual` for a title made by hand). With no TMDB token and no manual title a
- *  read is `503 tmdb.unavailable`, which arrives as that `ApiError`. Writes take the 256 KiB body limit (B3). */
+/** The Titles routes (`37` section 4.1), REAL. Every read asks for the disabled titles (`includeDisabled=true`,
+ *  honoured for an admin's token). A list or search page is read row by row: an unreadable row is dropped and counted.
+ *  A save is a `PATCH` of the changed fields (`null` clears); `detail` reads the fields a list row lacks; `revert`
+ *  drops an admin's edits and refetches from TMDB (`409 title.manual` for a title made by hand). With no TMDB token and
+ *  no manual title a read is `503 tmdb.unavailable`, which arrives as that `ApiError`. Writes take the 256 KiB body
+ *  limit (B3). */
 export interface TitlesService {
   readonly list: (query?: BrowseQuery) => Promise<TitleList>;
   readonly search: (query: SearchQuery) => Promise<TitleList>;

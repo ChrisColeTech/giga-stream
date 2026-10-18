@@ -16,7 +16,7 @@ export interface FlowRefused<F extends string = string> {
   readonly ok: false;
   readonly sentence: string;
   readonly field?: F;
-  /** The answer belonged to an earlier session (or an older view) and was thrown away: nothing written, nothing said. */
+  /** The answer belonged to an earlier session (or an older view): thrown away, nothing written, nothing said. */
   readonly dropped?: true;
 }
 
@@ -41,8 +41,9 @@ export interface RefusalPorts<F extends string> {
   readonly fieldOf: (field: string | undefined) => F | undefined;
 }
 
-/** A failure, said once on the notice line (`warn`) and, when the backend named one of the form's fields, returned with
- *  that field. A transport failure also marks the backend unreachable, which disables every write until a read works. */
+/** A failure, said once on the notice line (`warn`) and, when the backend named one of the form's fields, returned
+ *  with that field. A transport failure also marks the backend unreachable, which disables every write until a read
+ *  works. */
 export function refusalOf<F extends string>(ports: RefusalPorts<F>, error: unknown, fallback?: F): FlowRefused<F> {
   const sentence = sentenceOf(error);
   const unreachable = isUnreachable(error);

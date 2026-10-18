@@ -24,5 +24,6 @@ test("the className reaches the chips box, beside the track's own classes", () =
 test("without a className the chips box is unchanged and the chips and input are drawn", () => {
   const html = render();
   assert.ok(!html.includes("min-h-9"));
-  assert.ok(html.includes('aria-label="Remove https://cdn.example.test"') && html.includes('aria-label="Frame origins"'));
+  assert.ok(html.includes('aria-label="Remove https://cdn.example.test"'));
+  assert.ok(html.includes('aria-label="Frame origins"'));
 });

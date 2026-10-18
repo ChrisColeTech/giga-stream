@@ -1,8 +1,8 @@
 import type { TitleEpisode } from "@/services/schemas/title-schema";
 
-/* A manual series' seasons as the Seasons editor holds them (`37` section 4.3), pure: an ordered list of seasons, each a
- * number and its episodes (a number and a title). The other episode fields the backend keeps (air date, runtime, still,
- * stream) ride along untouched in `rest`, so an edit never drops them. Every function returns a new list. */
+/* A manual series' seasons as the Seasons editor holds them (`37` section 4.3), pure: an ordered list of seasons, each
+ * a number and its episodes (a number and a title). The other episode fields the backend keeps (air date, runtime,
+ * still, stream) ride along untouched in `rest`, so an edit never drops them. Every function returns a new list. */
 
 export interface EpisodeDraft {
   readonly episode: number;

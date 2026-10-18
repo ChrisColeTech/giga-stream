@@ -6,7 +6,14 @@ import { json, success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
 import { resetStore, signInForTest } from "./support/store";
 
-const row = (id: string, extra: Record<string, unknown> = {}) => ({ id, kind: "movie", title: id, state: "synced", ...extra });
+const row = (id: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  kind: "movie",
+  title: id,
+  state: "synced",
+  ...extra,
+});
+const SENTENCE_503 = "The title service cannot be reached right now.";
 const listAnswer = (items: unknown[]) => ({ items, page: 2, totalPages: 7, totalResults: 140 });
 const query = (url: string | undefined): URLSearchParams => new URLSearchParams((url ?? "").split("?")[1] ?? "");
 
@@ -28,7 +35,8 @@ describe("the titles service reads", () => {
           ["all", "az", "2", "true"],
         );
         assert.equal(calls[0]?.headers["authorization"], "Bearer a");
-        assert.deepEqual([list.items.map((i) => i.id), list.unreadable, list.totalPages], [["movie-1", "custom-x"], 1, 7]);
+        const read = [list.items.map((i) => i.id), list.unreadable, list.totalPages];
+        assert.deepEqual(read, [["movie-1", "custom-x"], 1, 7]);
       },
     );
   });
@@ -40,14 +48,21 @@ describe("the titles service reads", () => {
         await titles.search({ q: "the matrix", kind: "tv", page: 1 });
         assert.ok(calls[0]?.url.startsWith("/api/titles/search?"));
         const params = query(calls[0]?.url);
-        assert.deepEqual([params.get("q"), params.get("kind"), params.get("includeDisabled")], ["the matrix", "tv", "true"]);
+        const read = [params.get("q"), params.get("kind"), params.get("includeDisabled")];
+        assert.deepEqual(read, ["the matrix", "tv", "true"]);
       },
     );
   });
 
   it("reads a detail with includeDisabled, its sources and seasons", async () => {
     await withBackend(
-      () => success({ ...row("tv-3", { kind: "tv" }), plot: "P", seasons: [{ season: 1, episodeCount: 8 }], sources: [{ name: "S", url: "https://s" }] }),
+      () =>
+        success({
+          ...row("tv-3", { kind: "tv" }),
+          plot: "P",
+          seasons: [{ season: 1, episodeCount: 8 }],
+          sources: [{ name: "S", url: "https://s" }],
+        }),
       async (calls) => {
         const detail = await titles.detail("tv-3");
         assert.equal(calls[0]?.url, "/api/titles/tv-3?includeDisabled=true");
@@ -58,7 +73,7 @@ describe("the titles service reads", () => {
 
   it("refuses with 503 tmdb.unavailable and its sentence", async () => {
     await withBackend(
-      () => json({ ok: false, error: { code: "tmdb.unavailable", message: "The title service cannot be reached right now." } }, 503),
+      () => json({ ok: false, error: { code: "tmdb.unavailable", message: SENTENCE_503 } }, 503),
       async () => {
         await assert.rejects(titles.list(), { code: "tmdb.unavailable", status: 503 });
       },
@@ -72,7 +87,8 @@ describe("the titles service writes", () => {
       () => success(row("custom-1", { state: "manual" }), 201),
       async (calls) => {
         await titles.create(titleCreateBody({ title: " New ", kind: "tv", year: "2020" }));
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["POST", "/api/titles", { kind: "tv", title: "New", year: 2020 }]);
+        const sent = [calls[0]?.method, calls[0]?.url, calls[0]?.body];
+        assert.deepEqual(sent, ["POST", "/api/titles", { kind: "tv", title: "New", year: 2020 }]);
       },
     );
   });
@@ -84,7 +100,8 @@ describe("the titles service writes", () => {
         await titles.update("movie-1", { plot: null, enabled: false });
         await titles.remove("movie-1");
         await titles.revert("movie-1");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/titles/movie-1", { plot: null, enabled: false }]);
+        const sent = [calls[0]?.method, calls[0]?.url, calls[0]?.body];
+        assert.deepEqual(sent, ["PATCH", "/api/titles/movie-1", { plot: null, enabled: false }]);
         assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/titles/movie-1"]);
         assert.deepEqual([calls[2]?.method, calls[2]?.url], ["POST", "/api/titles/movie-1/revert"]);
       },

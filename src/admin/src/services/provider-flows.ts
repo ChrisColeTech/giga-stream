@@ -23,7 +23,7 @@ import {
 import type { ProvidersService } from "./providers";
 import type { AdminProvider } from "./schemas/provider-schema";
 
-/** The part of the store the provider flows read and write. `useAppStore.getState` satisfies it; a test passes the same. */
+/** The part of the store the provider flows read and write; `useAppStore.getState` satisfies it, as a test's does. */
 export type ProviderStore = Pick<
   AppState,
   | "serial"

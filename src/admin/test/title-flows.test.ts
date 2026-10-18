@@ -18,7 +18,13 @@ const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => (
   state: "synced",
   ...extra,
 });
-const list = (items: AdminTitleRow[], totalPages = 2): TitleList => ({ items, page: 1, totalPages, totalResults: items.length, unreadable: 0 });
+const list = (items: AdminTitleRow[], totalPages = 2): TitleList => ({
+  items,
+  page: 1,
+  totalPages,
+  totalResults: items.length,
+  unreadable: 0,
+});
 const TMDB_DOWN = new ApiError("tmdb.unavailable", "The title service cannot be reached right now.", 503);
 
 function rig(script: Partial<TitlesService> = {}) {
@@ -33,7 +39,8 @@ function rig(script: Partial<TitlesService> = {}) {
     revert: async (id) => row(id),
     ...script,
   };
-  const flows = createTitleFlows({ service, store: () => useAppStore.getState(), audit: { reload: async () => undefined } });
+  const audit = { reload: async () => undefined };
+  const flows = createTitleFlows({ service, store: () => useAppStore.getState(), audit });
   return { flows, calls };
 }
 
@@ -43,7 +50,7 @@ beforeEach(() => {
 });
 
 describe("the list", () => {
-  it("with no TMDB token keeps the skeleton and says the backend's sentence; a manual title still creates", async () => {
+  it("with no TMDB token keeps the skeleton and says the backend's sentence; manual titles still create", async () => {
     const { flows } = rig({ list: async () => Promise.reject(TMDB_DOWN) });
     const result = await flows.load();
     assert.deepEqual([result.ok, state().titles.status, state().titles.items.length], [false, "failed", 0]);
@@ -93,7 +100,8 @@ describe("the list", () => {
 describe("the records", () => {
   it("refuses Revert to TMDB for a manual title with the backend's 409", async () => {
     const { flows } = rig({
-      revert: async () => Promise.reject(new ApiError("title.manual", "A title made by hand has no TMDB copy to go back to.", 409)),
+      revert: async () =>
+        Promise.reject(new ApiError("title.manual", "A title made by hand has no TMDB copy to go back to.", 409)),
     });
     assert.equal((await flows.revert("custom-1")).ok, false);
     assert.equal(notice(), "A title made by hand has no TMDB copy to go back to.");
@@ -109,7 +117,9 @@ describe("the records", () => {
 
   it("reads a detail for the open workspace; a save keeps its sources and sends only changed fields", async () => {
     let sent: unknown = null;
-    const { flows } = rig({ update: async (id, body) => ((sent = body), { ...row(id, { state: "edited" }), plot: "New" }) });
+    const { flows } = rig({
+      update: async (id, body) => ((sent = body), { ...row(id, { state: "edited" }), plot: "New" }),
+    });
     await flows.load();
     await flows.detail("movie-1");
     const detail = state().titles.detail?.value;

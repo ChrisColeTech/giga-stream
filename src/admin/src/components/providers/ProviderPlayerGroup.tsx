@@ -25,7 +25,7 @@ export interface ProviderPlayerGroupProps {
   readonly onRefuse: (field: "frameOrigins", sentence: string) => void;
 }
 
-/** The chips box takes the form's field height (`37` section 3.3). `!` because the track's own min-height shares a layer. */
+/** The chips box takes the form's field height (`37` 3.3); `!` because the track's own min-height shares a layer. */
 const CHIPS_FIELD = "min-h-9!";
 
 const isShape = (value: string): value is ProviderDraft["messageShape"] =>

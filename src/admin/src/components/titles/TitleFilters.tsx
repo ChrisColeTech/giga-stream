@@ -25,9 +25,9 @@ export interface TitleFiltersProps {
 
 const isKind = (value: string): value is TitleKind => value === "movie" || value === "tv";
 
-/** The list's heading area (`37` section 4.2), in order: the search field (it carries `data-search`, so `Ctrl+F` focuses
- *  it; it runs on Enter and on its own button, never as you type), the Kind chips (at least one stays on) and the Sort
- *  pills. A search, a kind or a sort change returns to page 1. */
+/** The list's heading area (`37` section 4.2), in order: the search field (it carries `data-search`, so `Ctrl+F`
+ *  focuses it; it runs on Enter and on its own button, never as you type), the Kind chips (at least one stays on) and
+ *  the Sort pills. A search, a kind or a sort change returns to page 1. */
 export function TitleFilters({ view, onType, onSearch, onKind, onSort }: TitleFiltersProps) {
   return (
     <>

@@ -74,7 +74,12 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
           style={{ "--label-col": labelColumn(PROVIDER_WORKSPACE_LABELS) } as CSSProperties}
         >
           <div ref={spy.bind("pv-details")}>
-            <ProviderDetailsGroup draft={form.draft} created={provider.created_at} errors={form.errors} onChange={form.set} />
+            <ProviderDetailsGroup
+              draft={form.draft}
+              created={provider.created_at}
+              errors={form.errors}
+              onChange={form.set}
+            />
           </div>
           <div ref={spy.bind("pv-templates")}>
             <ProviderTemplatesGroup draft={form.draft} errors={form.errors} onChange={form.set} />
@@ -89,8 +94,9 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
 }
 
 /** One provider's workspace (`37` section 3.3), opened from the list already held: the rail (`‹ Providers`, Details,
- *  Templates, Player), a toolbar with `Discard changes`, `Save` and `Titles →`, and one scrolling page. One Save sends a
- *  `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a notice. */
+ *  Templates, Player), a toolbar with `Discard changes`, `Save` and `Titles →`, and one scrolling page. One Save
+ *  sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
+ *  notice. */
 export function ProviderWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const provider = useAppStore((state) => state.providers.items.find((item) => String(item.id) === id));
   const status = useAppStore((state) => state.providers.status);

@@ -4,8 +4,8 @@ import { draftOfTitle, type NewTitleDraft, type TitleDraft } from "./title-draft
 import { commaItems, numberOf, runtimeMsOf } from "./title-units";
 
 /* The request bodies of the Titles routes (`37` section 4.1), pure. A create posts a manual title. A save is a strict
- * `PATCH` of ONLY the fields that differ from the saved title; an emptied optional field is `null` (clears). `tmdbId` is
- * sent only for a title made by hand, Runtime only for a movie, the seasons only for a manual series. */
+ * `PATCH` of ONLY the fields that differ from the saved title; an emptied optional field is `null` (clears).
+ * `tmdbId` is sent only for a title made by hand, Runtime only for a movie, the seasons only for a manual series. */
 
 export type TitleBody = Readonly<Record<string, unknown>>;
 
@@ -40,7 +40,8 @@ const listValue = (value: string): string[] | null => {
 export function titleChanges(saved: AdminTitleDetail, draft: TitleDraft, shape: TitleShape): TitleBody {
   const before = draftOfTitle(saved);
   const body: Record<string, unknown> = {};
-  const changed = (key: keyof Omit<TitleDraft, "enabled" | "seasons">): boolean => draft[key].trim() !== before[key].trim();
+  type TextKey = keyof Omit<TitleDraft, "enabled" | "seasons">;
+  const changed = (key: TextKey): boolean => draft[key].trim() !== before[key].trim();
   if (changed("title")) body["title"] = draft.title.trim();
   if (changed("year")) body["year"] = optional(numberOf(draft.year));
   if (draft.enabled !== before.enabled) body["enabled"] = draft.enabled;

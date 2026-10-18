@@ -12,10 +12,10 @@ import { EPISODES_MAX, hasRepeatedSeason, SEASONS_MAX } from "./season-edit";
 import type { NewTitleDraft, TitleDraft } from "./title-draft";
 import { commaItems } from "./title-units";
 
-/* The title rules (`37` section 4.1, mirroring `types/title-input.ts`): Title at most 200 characters, Year 1800 to 2200,
- * Rating 0 to 10, Runtime whole minutes, a TMDB id a whole positive number, at most 20 genres and 50 cast names, at most
- * 100 seasons of 500 episodes, each season number once. An empty value passes every rule except `required`. Addresses
- * are the backend's (its address rule depends on its configuration); its `422` names the row. Pure. */
+/* The title rules (`37` section 4.1, mirroring `types/title-input.ts`): Title at most 200 characters, Year 1800 to
+ * 2200, Rating 0 to 10, Runtime whole minutes, a TMDB id a whole positive number, at most 20 genres and 50 cast names,
+ * at most 100 seasons of 500 episodes, each season number once. An empty value passes every rule except `required`.
+ * Addresses are the backend's (its address rule depends on its configuration); its `422` names the row. Pure. */
 
 export const TITLE_MAX = 200;
 export const YEAR_FIRST = 1800;
@@ -82,7 +82,8 @@ export function firstCreateRefusal(draft: NewTitleDraft): TitleRefusal | null {
 }
 
 /** Why `Save` is disabled by a required field, or undefined. */
-export const saveRequiredReason = (draft: TitleDraft): string | undefined => required("Title", draft.title) ?? undefined;
+export const saveRequiredReason = (draft: TitleDraft): string | undefined =>
+  required("Title", draft.title) ?? undefined;
 
 function seasonsRefusal(draft: TitleDraft): Refusal {
   if (draft.seasons.length > SEASONS_MAX || draft.seasons.some((one) => one.episodes.length > EPISODES_MAX)) {
@@ -92,7 +93,10 @@ function seasonsRefusal(draft: TitleDraft): Refusal {
 }
 
 /** The first value the workspace refuses when `Save` is pressed, in the page's order, or null. */
-export function firstSaveRefusal(draft: TitleDraft, shape: { readonly manual: boolean; readonly series: boolean }): TitleRefusal | null {
+export function firstSaveRefusal(
+  draft: TitleDraft,
+  shape: { readonly manual: boolean; readonly series: boolean },
+): TitleRefusal | null {
   return first([
     ["title", required("Title", draft.title) ?? titleLength(draft.title)],
     ["year", yearRule(draft.year)],

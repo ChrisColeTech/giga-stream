@@ -38,7 +38,8 @@ export interface TitleDraft {
 const record = (value: unknown): Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null ? Object.fromEntries(Object.entries(value)) : {};
 const str = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
-const num = (value: unknown): number | undefined => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
+const num = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined;
 
 /** One stored episode as the editor's row; the fields the editor does not show are kept in `rest`. */
 function episodeOf(value: unknown): EpisodeDraft | null {

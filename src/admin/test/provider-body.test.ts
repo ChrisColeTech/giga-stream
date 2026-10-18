@@ -23,7 +23,12 @@ const SAVED: AdminProvider = {
 describe("the create body", () => {
   it("trims and sends the Movie template only for an embed provider", () => {
     const draft = { name: " A ", family: "embed" as const, source: " a ", movieTemplate: " https://x.test/{tmdbId} " };
-    assert.deepEqual(providerCreateBody(draft), { name: "A", source: "a", family: "embed", movieTemplate: "https://x.test/{tmdbId}" });
+    assert.deepEqual(providerCreateBody(draft), {
+      name: "A",
+      source: "a",
+      family: "embed",
+      movieTemplate: "https://x.test/{tmdbId}",
+    });
     assert.deepEqual(providerCreateBody({ ...draft, family: "stream" }), { name: "A", source: "a", family: "stream" });
   });
 });

@@ -1,8 +1,8 @@
 import type { AdminProvider, MessageShape, ProviderFamily } from "@/services/schemas/provider-schema";
 
-/* The Providers forms' values (`37` sections 3.2 and 3.3), pure. A draft holds what the fields hold (strings for text, a
- * number for Order, a list for the frame origins), and is compared with the saved provider's draft, so `dirty` is a fact
- * about values and never a flag set by typing. Name comes first on every form (owner, 2026-10-17). */
+/* The Providers forms' values (`37` sections 3.2 and 3.3), pure. A draft holds what the fields hold (strings for
+ * text, a number for Order, a list for the frame origins), and is compared with the saved provider's draft, so `dirty`
+ * is a fact about values and never a flag set by typing. Name comes first on every form (owner, 2026-10-17). */
 
 /** The New provider form, in its rows' order. */
 export interface NewProviderDraft {

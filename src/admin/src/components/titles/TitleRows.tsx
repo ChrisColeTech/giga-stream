@@ -15,11 +15,11 @@ import { useTitleActions } from "@/hooks/useTitleActions";
 import { titleRow, titleSelectAll } from "@/lib/title-rows";
 import { useAppStore } from "@/store/app-store";
 
-/** The titles grid (`37` section 4.2): the header with its select-all tick, then a row per title in the backend's order:
- *  the title, the kind, the year and rating in mono, the state word (`synced`, `edited` with a tip naming the edited
- *  fields, `manual`, or `disabled`, dimmed) and the end `Delete`, an armed two-step whose rest title for a synced title
- *  says the next sync adds it again and points to Enabled. Shimmer rows while nothing is read, while a read fails with no
- *  rows (no TMDB token) and when there is nothing to list; never a sentence. */
+/** The titles grid (`37` section 4.2): the header with its select-all tick, then a row per title in the backend's
+ *  order: the title, the kind, the year and rating in mono, the state word (`synced`, `edited` with a tip naming the
+ *  edited fields, `manual`, or `disabled`, dimmed) and the end `Delete`, an armed two-step whose rest title for a
+ *  synced title says the next sync adds it again and points to Enabled. Shimmer rows while nothing is read, while a
+ *  read fails with no rows (no TMDB token) and when there is nothing to list; never a sentence. */
 export function TitleRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.titles);
   const serial = useAppStore((state) => state.serial);

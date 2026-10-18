@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-/* `AdminTitleRow` and the detail's extra fields (`29` section 5). A season is a count in a list row and the episodes in a
- * detail. `sources` items are the title overlay's own; the page that draws them narrows them. `editedFields` is on an
+/* `AdminTitleRow` and the detail's extra fields (`29` section 5). A season is a count in a list row and the episodes in
+ * a detail. `sources` items are the title overlay's own; the page that draws them narrows them. `editedFields` is on an
  * admin's read (B5): the fields an admin changed on a synced title. */
 export const TitleRowSchema = z.object({
   id: z.string(),

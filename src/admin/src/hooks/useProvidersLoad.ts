@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { useAppStore } from "@/store/app-store";
 import { useProviderFlows } from "./useProviderFlows";
 
-/** Loads the providers when the tab is first shown in a session (status `idle`) and again when another tab's write marked
- *  them stale; never otherwise (no polling, `01` section 4.4). A new sign-in resets the slice first, so nothing of one
- *  account's session is shown in the next. A failed read leaves the status `failed`: the list's Refresh is the way back. */
+/** Loads the providers when the tab is first shown in a session (status `idle`) and again when another tab's write
+ *  marked them stale; never otherwise (no polling, `01` section 4.4). A new sign-in resets the slice first, so nothing
+ *  of one session is shown in the next. A failed read leaves the status `failed`: Refresh is the way back. */
 export function useProvidersLoad(active: boolean): void {
   const flows = useProviderFlows();
   const serial = useAppStore((state) => state.serial);

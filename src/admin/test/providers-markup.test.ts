@@ -64,9 +64,12 @@ describe("the providers list", () => {
   it("shows the headings, ticks, state words, a dimmed disabled row and Delete", () => {
     loaded([provider(2, { is_active: false }), provider(1)]);
     const html = page();
-    for (const heading of [">order<", ">name<", ">source<", ">family<", ">state<"]) assert.ok(html.includes(heading), heading);
+    for (const heading of [">order<", ">name<", ">source<", ">family<", ">state<"]) {
+      assert.ok(html.includes(heading), heading);
+    }
     assert.ok(at(html, ">Prov1<") < at(html, ">Prov2<"), "sorted by order");
-    assert.ok(html.includes('aria-label="Select Prov1"') && html.includes('data-st="disabled"') && html.includes("opacity-45"));
+    assert.ok(html.includes('aria-label="Select Prov1"') && html.includes('data-st="disabled"'));
+    assert.ok(html.includes("opacity-45"));
     assert.ok(html.includes('title="Deletes the provider; titles stop getting sources from it."'));
   });
 
@@ -112,7 +115,8 @@ describe("a provider's workspace", () => {
     state().openWorkspace("providers", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Remove https://cdn.example.test"') && html.includes("min-h-9!"));
-    assert.ok(html.includes('aria-label="Message shape"') && html.includes(">vidsrc-status<") && html.includes(">None<"));
+    assert.ok(html.includes('aria-label="Message shape"') && html.includes(">vidsrc-status<"));
+    assert.ok(html.includes(">None<"));
     assert.ok(html.includes('aria-label="Episode template"'));
   });
 

@@ -49,7 +49,8 @@ describe("the providers plan", () => {
     const fine = planProviderBulk("delete", LIST, [1]);
     assert.equal(providerBulkReason("delete", fine, 1, IDLE), undefined);
     assert.equal(providerBulkReason("delete", fine, 1, { busy: true, unreachable: false }), "Saving.");
-    assert.equal(providerBulkReason("delete", fine, 1, { busy: false, unreachable: true }), "The admin backend cannot be reached.");
+    const down = { busy: false, unreachable: true };
+    assert.equal(providerBulkReason("delete", fine, 1, down), "The admin backend cannot be reached.");
     assert.equal(deleteQuestion(1), "Delete 1 provider?");
   });
 });
@@ -77,11 +78,15 @@ describe("a run through the shared runner", () => {
       area: "Provider",
       plan,
       perform: call("disable"),
-      finish: (result) => state().providersSetTicked(state().providers.ticked.filter((id) => !result.done.some((d) => d.id === id))),
+      finish: (result) =>
+        state().providersSetTicked(state().providers.ticked.filter((id) => !result.done.some((d) => d.id === id))),
       reread: async () => void (rereads += 1),
     });
     assert.deepEqual(sent, ['1:{"enabled":false}', '2:{"enabled":false}']);
-    assert.deepEqual([outcome?.done.length, outcome?.failed[0]?.sentence, outcome?.refused[0]?.reason], [1, "Refused.", "Already disabled."]);
+    assert.deepEqual(
+      [outcome?.done.length, outcome?.failed[0]?.sentence, outcome?.refused[0]?.reason],
+      [1, "Refused.", "Already disabled."],
+    );
     assert.equal(state().notice?.sentence, "Disabled 1 provider; 1 failed; 1 skipped.");
     assert.deepEqual([rereads, state().providers.ticked], [1, [2, 3]]);
   });

@@ -47,7 +47,8 @@ describe("the providers service", () => {
     await withBackend(
       () => success(provider(9), 201),
       async (calls) => {
-        await providers.create(providerCreateBody({ name: " New ", family: "embed", source: "new", movieTemplate: "" }));
+        const draft = { name: " New ", family: "embed" as const, source: "new", movieTemplate: "" };
+        await providers.create(providerCreateBody(draft));
         assert.equal(calls[0]?.method, "POST");
         assert.deepEqual(calls[0]?.body, { name: "New", source: "new", family: "embed" });
       },

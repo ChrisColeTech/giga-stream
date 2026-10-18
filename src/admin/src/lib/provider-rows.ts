@@ -1,8 +1,8 @@
 import type { AdminProvider } from "@/services/schemas/provider-schema";
 import { enabledState, type RowState } from "./row-state";
 
-/* The providers list as pure data: the order the list shows (by `order`, then name), the row a list draws, the ticks and
- * the select-all state. No React, no store. */
+/* The providers list as pure data: the order the list shows (by `order`, then name), the row a list draws, the ticks
+ * and the select-all state. No React, no store. */
 
 const byOrderThenName = (a: AdminProvider, b: AdminProvider): number =>
   a.order - b.order || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.id - b.id;

@@ -36,7 +36,9 @@ export interface SearchQuery {
 }
 
 /** One request the list makes. */
-export type TitleRead = { readonly route: "browse"; readonly query: BrowseQuery } | { readonly route: "search"; readonly query: SearchQuery };
+export type TitleRead =
+  | { readonly route: "browse"; readonly query: BrowseQuery }
+  | { readonly route: "search"; readonly query: SearchQuery };
 
 const KIND_ORDER: readonly TitleKind[] = ["movie", "tv"];
 
@@ -70,7 +72,9 @@ export const runSearch = (view: TitleView): TitleView => ({ ...view, search: vie
 export function toggleKind(view: TitleView, kind: TitleKind): TitleView {
   const on = view.kinds.includes(kind);
   if (on && view.kinds.length === 1) return view;
-  const kinds = on ? view.kinds.filter((one) => one !== kind) : KIND_ORDER.filter((one) => one === kind || view.kinds.includes(one));
+  const kinds = on
+    ? view.kinds.filter((one) => one !== kind)
+    : KIND_ORDER.filter((one) => one === kind || view.kinds.includes(one));
   return { ...view, kinds, page: 1 };
 }
 

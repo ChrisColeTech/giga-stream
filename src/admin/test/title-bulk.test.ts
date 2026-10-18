@@ -10,7 +10,14 @@ import { useAppStore } from "@/store/app-store";
 import { resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
-const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => ({ id, kind: "movie", title: id, state: "synced", enabled: true, ...extra });
+const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => ({
+  id,
+  kind: "movie",
+  title: id,
+  state: "synced",
+  enabled: true,
+  ...extra,
+});
 const MANUAL = row("custom-1", { state: "manual" });
 const SYNCED = row("movie-1");
 const EDITED = row("movie-2", { state: "edited", editedFields: ["plot"] });
@@ -30,7 +37,8 @@ describe("the titles plan over mixed rows", () => {
     const enable = planTitleBulk("enable", LIST, ALL);
     assert.deepEqual([ids(enable), enable.refused[0]?.reason], [["movie-3"], "Already enabled."]);
     const disable = planTitleBulk("disable", LIST, ALL);
-    assert.deepEqual([ids(disable), disable.refused[0]?.reason], [["custom-1", "movie-1", "movie-2"], "Already disabled."]);
+    const expected = [["custom-1", "movie-1", "movie-2"], "Already disabled."];
+    assert.deepEqual([ids(disable), disable.refused[0]?.reason], expected);
   });
 
   it("Revert skips a manual title and an unedited synced one, with their reasons", () => {
@@ -80,7 +88,8 @@ describe("a Delete run through the shared runner", () => {
       area: "Title",
       plan,
       perform: call("delete"),
-      finish: (outcome) => state().titlesSetTicked(state().titles.ticked.filter((id) => !outcome.done.some((d) => d.id === id))),
+      finish: (outcome) =>
+        state().titlesSetTicked(state().titles.ticked.filter((id) => !outcome.done.some((d) => d.id === id))),
       reread: async () => void (rereads += 1),
     });
     assert.deepEqual(removed, ALL);
@@ -89,7 +98,8 @@ describe("a Delete run through the shared runner", () => {
       "Deleted 3 titles; 3 were synced and come back on the next catalog sync or browse that lists them. " +
         "Disable a title to keep it hidden; 1 failed.",
     );
-    assert.deepEqual([rereads, state().titles.ticked, state().titles.items.map((t) => t.id)], [1, ["movie-2"], ["movie-2"]]);
+    const left = state().titles.items.map((t) => t.id);
+    assert.deepEqual([rereads, state().titles.ticked, left], [1, ["movie-2"], ["movie-2"]]);
   });
 
   it("words a delete with no synced title plainly, and one synced title in the singular", () => {

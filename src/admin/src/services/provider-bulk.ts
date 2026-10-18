@@ -4,9 +4,9 @@ import { isUnreachable, sentenceOf } from "./provider-flow-support";
 import type { ProviderStore } from "./provider-flows";
 import type { ProvidersService } from "./providers";
 
-/** The one single-record call a bulk verb makes for each row (`hooks/useProviderBulk.ts`): `PUT { enabled }` for Enable
- *  and Disable, `DELETE` for Delete, straight to the service (no per-row notice or audit read: the shared runner says one
- *  summary and re-reads once). A success updates the list; a failure answers its sentence. */
+/** The one single-record call a bulk verb makes for each row (`hooks/useProviderBulk.ts`): `PUT { enabled }` for
+ *  Enable and Disable, `DELETE` for Delete, straight to the service (no per-row notice or audit read: the shared runner
+ *  says one summary and re-reads once). A success updates the list; a failure answers its sentence. */
 export function createProviderBulkCall(deps: {
   readonly service: Pick<ProvidersService, "update" | "remove">;
   readonly store: () => Pick<ProviderStore, "providerUpsert" | "providerRemove" | "providersMarkUnreachable">;

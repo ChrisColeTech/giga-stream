@@ -6,7 +6,13 @@ import type { NewTitleDraft, TitleDraft } from "@/lib/title-draft";
 import { findTitle, isManualTitle } from "@/lib/title-rows";
 import { DROPPED, codeOf, done, refusalOf, type FlowRefused } from "./provider-flow-support";
 import type { AdminTitleDetail } from "./schemas/title-schema";
-import { createTitleListFlow, titlePorts, type TitleListFlow, type TitleResult, type TitleStore } from "./title-list-flow";
+import {
+  createTitleListFlow,
+  titlePorts,
+  type TitleListFlow,
+  type TitleResult,
+  type TitleStore,
+} from "./title-list-flow";
 import type { TitlesService } from "./titles";
 
 export type { TitleResult } from "./title-list-flow";
@@ -33,10 +39,10 @@ export interface TitleFlows extends TitleListFlow {
 const NOT_FOUND = "title.not_found";
 const BAD_ANSWER = "backend.bad_response";
 
-/** The Titles tab's orchestration (`37` sections 4.2 and 4.3). Every flow records the session's serial before it awaits
- *  and writes only if the session is unchanged after; a failure is one `warn` notice and a typed result, so the form can
- *  put a field's refusal under its row. A save or a revert answers the stored record (no sources: those are derived on a
- *  detail read), so the open detail keeps the sources it had. */
+/** The Titles tab's orchestration (`37` sections 4.2 and 4.3). Every flow records the session's serial before it
+ *  awaits and writes only if the session is unchanged after; a failure is one `warn` notice and a typed result, so the
+ *  form can put a field's refusal under its row. A save or a revert answers the stored record (no sources: those are
+ *  derived on a detail read), so the open detail keeps the sources it had. */
 export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   const { service, store, audit } = deps;
   const list = createTitleListFlow(deps);

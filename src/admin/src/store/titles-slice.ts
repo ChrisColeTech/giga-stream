@@ -4,11 +4,11 @@ import { pruneTitleTicks, upsertTitle, withoutTitle } from "@/lib/title-rows";
 import type { AdminTitleDetail, AdminTitleRow } from "@/services/schemas/title-schema";
 import type { SliceGet, SliceSet } from "./slices/slice-host";
 
-/* The Titles tab's data, a slice of the one store (`37` section 5). Facts only: no promise, no timer. `view` is what the
- * list shows (page, the typed and the run search, the kinds, the sort; not remembered across sessions); `shown` is the
- * view the items were read for, so a late answer for an older view is told apart. `detail` is the open workspace's read
- * of the fields a list row lacks. `session` is the sign-in serial the data belongs to (the load hook resets the slice for
- * a new session, as the session slice does not). */
+/* The Titles tab's data, a slice of the one store (`37` section 5). Facts only: no promise, no timer. `view` is what
+ * the list shows (page, the typed and the run search, the kinds, the sort; not remembered across sessions); `shown` is
+ * the view the items were read for, so a late answer for an older view is told apart. `detail` is the open
+ * workspace's read of the fields a list row lacks. `session` is the sign-in serial the data belongs to (the load hook
+ * resets the slice for a new session, as the session slice does not). */
 
 export type TitlesStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -76,8 +76,10 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
     titlesReset: (session) => set({ titles: { ...NO_TITLES, session } }),
     titlesSetView: (view) => patch({ view }),
     titlesStartLoad: () => patch({ status: "loading" }),
-    titlesLoaded: (view, page) =>
-      patch({ status: "ready", unreachable: false, shown: view, totalPages: Math.max(1, page.totalPages), ...withItems(page.items) }),
+    titlesLoaded: (view, page) => {
+      const totalPages = Math.max(1, page.totalPages);
+      patch({ status: "ready", unreachable: false, shown: view, totalPages, ...withItems(page.items) });
+    },
     titlesLoadFailed: (view, unreachable) => {
       const keep = now().shown === view;
       patch({ status: "failed", unreachable, ...(keep ? {} : { shown: null, ...withItems([]) }) });
@@ -91,7 +93,10 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
     titlesTickAll: (on) => patch({ ticked: on ? now().items.map((item) => item.id) : [] }),
     titlesSetTicked: (ids) => patch({ ticked: pruneTitleTicks(ids, now().items) }),
     titlesMarkUnreachable: (unreachable) => patch({ unreachable }),
-    titleDetailStart: (id) => patch({ detail: { id, status: "loading", value: now().detail?.id === id ? now().detail?.value ?? null : null } }),
+    titleDetailStart: (id) => {
+      const kept = now().detail?.id === id ? (now().detail?.value ?? null) : null;
+      patch({ detail: { id, status: "loading", value: kept } });
+    },
     titleDetailLoaded: (detail) => {
       if (now().detail?.id !== detail.id) return;
       patch({ detail: { id: detail.id, status: "ready", value: detail } });

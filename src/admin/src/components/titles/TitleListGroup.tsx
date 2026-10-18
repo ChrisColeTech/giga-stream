@@ -8,10 +8,10 @@ import { useAppStore } from "@/store/app-store";
 import { TitleFilters } from "./TitleFilters";
 import { TitleRows } from "./TitleRows";
 
-/** `Titles` (`37` section 4.2): the list group. Its heading's action slot holds `Older` and `Newer` (`Newer` disabled at
- *  page 1 with `This is the first page.`, `Older` at the last page with `This is the last page.`) and `Refresh`; its body
- *  the search, the Kind chips, the Sort pills and the grid. Every read goes through the flows, which drop a late answer
- *  for a view that is no longer shown. */
+/** `Titles` (`37` section 4.2): the list group. Its heading's action slot holds `Older` and `Newer` (`Newer` disabled
+ *  at page 1 with `This is the first page.`, `Older` at the last page with `This is the last page.`) and `Refresh`;
+ *  its body the search, the Kind chips, the Sort pills and the grid. Every read goes through the flows, which drop a
+ *  late answer for a view that is no longer shown. */
 export function TitleListGroup() {
   const view = useAppStore((state) => state.titles.view);
   const totalPages = useAppStore((state) => state.titles.totalPages);
@@ -28,7 +28,12 @@ export function TitleListGroup() {
       <Button variant="ghost" size="sm" reason={paging.newer} onClick={() => read(flows.newer)}>
         Newer
       </Button>
-      <Button variant="ghost" size="sm" reason={loading ? LOADING_REASON : undefined} onClick={() => read(flows.refresh)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        reason={loading ? LOADING_REASON : undefined}
+        onClick={() => read(flows.refresh)}
+      >
         <RefreshCw aria-hidden /> Refresh
       </Button>
     </>

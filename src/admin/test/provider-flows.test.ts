@@ -61,7 +61,8 @@ describe("load", () => {
     const { flows } = rig({ list: async () => Promise.reject(refuse("backend.unreachable", 0)) });
     const result = await flows.load();
     assert.equal(result.ok, false);
-    assert.deepEqual([state().providers.status, state().providers.unreachable, state().providers.items.length], ["failed", true, 1]);
+    const { status, unreachable, items } = state().providers;
+    assert.deepEqual([status, unreachable, items.length], ["failed", true, 1]);
   });
 
   it("drops a late answer from an earlier session (serial)", async () => {
@@ -137,7 +138,8 @@ describe("save and remove", () => {
   it("drops a save answered after sign-out", async () => {
     state().providersLoaded([provider(1)]);
     let release: () => void = () => undefined;
-    const { flows } = rig({ update: () => new Promise((resolve) => (release = () => resolve(provider(1, { name: "late" })))) });
+    const late = provider(1, { name: "late" });
+    const { flows } = rig({ update: () => new Promise((resolve) => (release = () => resolve(late))) });
     const pending = flows.save(1, { ...draftOfProvider(provider(1)), name: "late" });
     state().signOut();
     release();

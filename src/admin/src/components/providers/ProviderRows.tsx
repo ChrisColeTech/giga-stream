@@ -11,8 +11,8 @@ import { useAppStore } from "@/store/app-store";
 
 /** The providers grid (`37` section 3.2): the header with its select-all tick, then a row per provider in `order`, then
  *  name: the order in mono, the name, the source, the family, the state word (`enabled` or `disabled`, a disabled
- *  provider dimmed) and the end `Delete`, an armed two-step naming the provider. Shimmer rows in the header's own columns
- *  draw while nothing has been read and when there is nothing to list (never a sentence). */
+ *  provider dimmed) and the end `Delete`, an armed two-step naming the provider. Shimmer rows in the header's own
+ *  columns draw while nothing has been read and when there is nothing to list (never a sentence). */
 export function ProviderRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.providers);
   const serial = useAppStore((state) => state.serial);

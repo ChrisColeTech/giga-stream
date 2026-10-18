@@ -28,7 +28,7 @@ export interface ProviderDetailsGroupProps {
 }
 
 /** `Details` (`37` section 3.3): Name, Family (changing it re-renders the template rows), Source, Movie template (an
- *  embed provider only), the Enabled switch over `is_active`, Order, and Created, read-only, `YYYY-MM-DD HH:mm` local. */
+ *  embed provider only), the Enabled switch over `is_active`, Order, and Created (read-only, local time). */
 export function ProviderDetailsGroup({ draft, created, errors, onChange }: ProviderDetailsGroupProps) {
   return (
     <Group id="pv-details" icon={FileText} title="Details">

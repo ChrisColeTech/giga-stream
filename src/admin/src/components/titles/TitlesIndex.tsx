@@ -4,7 +4,7 @@ import { NewTitleForm } from "./NewTitleForm";
 import { TitleListGroup } from "./TitleListGroup";
 import { TitlesToolbar } from "./TitlesToolbar";
 
-/** The Titles index: the bulk toolbar with `Jobs →` over `New title` and the list with its search, chips, sort and pager. */
+/** The Titles index: the bulk toolbar with `Jobs →` over `New title` and the list (search, chips, sort, pager). */
 export function TitlesIndex() {
   return (
     <>

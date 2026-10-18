@@ -44,7 +44,9 @@ export function providerChanges(saved: AdminProvider, draft: ProviderDraft): Pro
   if (!sameList(draft.frameOrigins, before.frameOrigins)) {
     body["frameOrigins"] = draft.frameOrigins.length === 0 ? null : [...draft.frameOrigins];
   }
-  if (draft.messageShape !== before.messageShape) body["messageShape"] = draft.messageShape === "" ? null : draft.messageShape;
+  if (draft.messageShape !== before.messageShape) {
+    body["messageShape"] = draft.messageShape === "" ? null : draft.messageShape;
+  }
   return body;
 }
 

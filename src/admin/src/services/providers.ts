@@ -9,9 +9,9 @@ import {
 import type { RecordService } from "./service-types";
 
 /** The Providers routes (`37` section 3.1), REAL: `GET`, `POST`, **`PUT`** and `DELETE /api/providers`. The backend
- *  registers the save as `PUT` with partial semantics (absent keeps, `null` clears an optional field), so `update` sends
- *  the method itself. A `422 provider.invalid` arrives as an `ApiError` naming its field. The list is read row by row:
- *  an unreadable row is dropped and counted (`unreadable`). */
+ *  registers the save as `PUT` with partial semantics (absent keeps, `null` clears an optional field), so `update`
+ *  sends the method itself. A `422 provider.invalid` arrives as an `ApiError` naming its field. The list is read row
+ *  by row: an unreadable row is dropped and counted (`unreadable`). */
 export type ProvidersService = RecordService<AdminProvider, number, ProviderList>;
 
 const path = (id: number): string => `/api/providers/${encodeURIComponent(String(id))}`;

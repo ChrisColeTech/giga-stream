@@ -10,8 +10,8 @@ import { TICK_FIRST } from "@/constants/record-copy";
 import type { AdminProvider } from "@/services/schemas/provider-schema";
 import { planBulk, type BulkItem, type BulkPlan, type BulkWords } from "./bulk-plan";
 
-/* The Providers toolbar's bulk verbs (`37` section 3.2, `39` section 6), pure: Enable and Disable skip a provider already
- * in that state; Delete runs on every ticked row. */
+/* The Providers toolbar's bulk verbs (`37` section 3.2, `39` section 6), pure: Enable and Disable skip a provider
+ * already in that state; Delete runs on every ticked row. */
 
 export type ProviderBulkVerb = "enable" | "disable" | "delete";
 

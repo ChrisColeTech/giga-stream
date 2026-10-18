@@ -24,7 +24,8 @@ export const MOVIE_PLACEHOLDERS: readonly string[] = ["{tmdbId}"];
 export const EPISODE_PLACEHOLDERS: readonly string[] = ["{tmdbId}", "{season}", "{episode}"];
 
 /** What the frame-origin chips accept, after `ChipsInput` lower-cases a token: an https host and an optional port. */
-export const FRAME_ORIGIN_PATTERN = /^https:\/\/[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:\d{1,5})?$/;
+const LABEL = "[a-z0-9]([a-z0-9-]*[a-z0-9])?";
+export const FRAME_ORIGIN_PATTERN = new RegExp(`^https://${LABEL}(\\.${LABEL})*(:\\d{1,5})?$`);
 
 const words = (items: readonly string[]): string =>
   items.length === 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1] ?? ""}`;
@@ -34,13 +35,15 @@ export function templateRefusal(label: string, value: string, placeholders: read
   if (text === "") return null;
   if (text.length > ADDRESS_MAX) return TEXT_TOO_LONG(label, ADDRESS_MAX);
   if (!text.startsWith("https://")) return TEMPLATE_HTTPS(label);
-  return placeholders.every((placeholder) => text.includes(placeholder)) ? null : TEMPLATE_PLACEHOLDERS(label, words(placeholders));
+  const complete = placeholders.every((placeholder) => text.includes(placeholder));
+  return complete ? null : TEMPLATE_PLACEHOLDERS(label, words(placeholders));
 }
 
 export function isHttpsOrigin(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname !== "" && (url.pathname === "/" || url.pathname === "") && url.search === "";
+    const bare = (url.pathname === "/" || url.pathname === "") && url.search === "" && url.hash === "";
+    return url.protocol === "https:" && url.hostname !== "" && bare;
   } catch {
     return false;
   }
@@ -102,7 +105,10 @@ export function firstCreateRefusal(draft: NewProviderDraft): ProviderRefusal | n
   return first([
     ["name", tooLong("Name", draft.name, NAME_MAX)],
     ["source", tooLong("Source", draft.source, SOURCE_MAX)],
-    ["movieTemplate", showsTemplates(draft.family) ? templateRefusal("Movie template", draft.movieTemplate, MOVIE_PLACEHOLDERS) : null],
+    [
+      "movieTemplate",
+      showsTemplates(draft.family) ? templateRefusal("Movie template", draft.movieTemplate, MOVIE_PLACEHOLDERS) : null,
+    ],
   ]);
 }
 
@@ -119,7 +125,10 @@ export function firstSaveRefusal(draft: ProviderDraft): ProviderRefusal | null {
     ["name", required("Name", draft.name) ?? tooLong("Name", draft.name, NAME_MAX)],
     ["source", required("Source", draft.source) ?? tooLong("Source", draft.source, SOURCE_MAX)],
     ["movieTemplate", embed ? templateRefusal("Movie template", draft.movieTemplate, MOVIE_PLACEHOLDERS) : null],
-    ["episodeTemplate", embed ? templateRefusal("Episode template", draft.episodeTemplate, EPISODE_PLACEHOLDERS) : null],
+    [
+      "episodeTemplate",
+      embed ? templateRefusal("Episode template", draft.episodeTemplate, EPISODE_PLACEHOLDERS) : null,
+    ],
     ["startParam", tooLong("Start parameter", draft.startParam, PARAM_MAX)],
     ["subtitlesParam", tooLong("Subtitle parameter", draft.subtitlesParam, PARAM_MAX)],
     ["origin", originRefusal(draft.origin)],

@@ -30,8 +30,9 @@ describe("templates", () => {
   it("need https and {tmdbId}; an empty one passes", () => {
     assert.equal(templateRefusal("Movie template", "", MOVIE_PLACEHOLDERS), null);
     assert.equal(templateRefusal("Movie template", "https://x.test/{tmdbId}", MOVIE_PLACEHOLDERS), null);
-    assert.equal(templateRefusal("Movie template", "http://x.test/{tmdbId}", MOVIE_PLACEHOLDERS), "Movie template must be an https address.");
-    assert.equal(templateRefusal("Movie template", "https://x.test/movie", MOVIE_PLACEHOLDERS), "Movie template must contain {tmdbId}.");
+    const movie = (value: string) => templateRefusal("Movie template", value, MOVIE_PLACEHOLDERS);
+    assert.equal(movie("http://x.test/{tmdbId}"), "Movie template must be an https address.");
+    assert.equal(movie("https://x.test/movie"), "Movie template must contain {tmdbId}.");
   });
 
   it("name every episode placeholder", () => {
@@ -39,7 +40,8 @@ describe("templates", () => {
       templateRefusal("Episode template", "https://x.test/{tmdbId}/{season}", EPISODE_PLACEHOLDERS),
       "Episode template must contain {tmdbId}, {season} and {episode}.",
     );
-    assert.equal(templateRefusal("Episode template", "https://x.test/{tmdbId}/{season}/{episode}", EPISODE_PLACEHOLDERS), null);
+    const full = "https://x.test/{tmdbId}/{season}/{episode}";
+    assert.equal(templateRefusal("Episode template", full, EPISODE_PLACEHOLDERS), null);
   });
 });
 
@@ -61,8 +63,12 @@ describe("origins", () => {
   });
 
   it("chip pattern takes a lower-cased https origin with a port and refuses a path", () => {
-    for (const good of ["https://cdn.example.test", "https://a-b.example.test:8443"]) assert.ok(FRAME_ORIGIN_PATTERN.test(good), good);
-    for (const bad of ["http://cdn.test", "https://cdn.test/x", "cdn.test", "https://"]) assert.ok(!FRAME_ORIGIN_PATTERN.test(bad), bad);
+    for (const good of ["https://cdn.example.test", "https://a-b.example.test:8443"]) {
+      assert.ok(FRAME_ORIGIN_PATTERN.test(good), good);
+    }
+    for (const bad of ["http://cdn.test", "https://cdn.test/x", "cdn.test", "https://"]) {
+      assert.ok(!FRAME_ORIGIN_PATTERN.test(bad), bad);
+    }
   });
 });
 
@@ -70,7 +76,8 @@ describe("the forms", () => {
   it("disable Create with the first missing field, the Movie template only for an embed provider", () => {
     assert.equal(createReason(EMPTY_NEW_PROVIDER, false, false), "Name is required.");
     assert.equal(createReason({ ...EMPTY_NEW_PROVIDER, name: "A" }, false, false), "Source is required.");
-    assert.equal(createReason({ ...EMPTY_NEW_PROVIDER, name: "A", source: "a" }, false, false), "Movie template is required.");
+    const named = { ...EMPTY_NEW_PROVIDER, name: "A", source: "a" };
+    assert.equal(createReason(named, false, false), "Movie template is required.");
     const stream = { ...EMPTY_NEW_PROVIDER, name: "A", source: "a", family: "stream" as const };
     assert.equal(createReason(stream, false, false), undefined);
     assert.equal(createReason(stream, true, false), "Saving.");
@@ -79,7 +86,10 @@ describe("the forms", () => {
 
   it("refuse a bad template under its row before sending", () => {
     const draft = { name: "A", family: "embed" as const, source: "a", movieTemplate: "https://x.test/movie" };
-    assert.deepEqual(firstCreateRefusal(draft), { field: "movieTemplate", sentence: "Movie template must contain {tmdbId}." });
+    assert.deepEqual(firstCreateRefusal(draft), {
+      field: "movieTemplate",
+      sentence: "Movie template must contain {tmdbId}.",
+    });
     assert.equal(firstCreateRefusal({ ...draft, family: "stream" }), null);
   });
 

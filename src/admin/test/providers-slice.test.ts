@@ -26,7 +26,8 @@ describe("the providers slice", () => {
     state().providersLoaded([provider(2), provider(1)]);
     assert.deepEqual([state().providers.status, state().providers.items.map((p) => p.id)], ["ready", [1, 2]]);
     state().providersLoadFailed(true);
-    assert.deepEqual([state().providers.status, state().providers.unreachable, state().providers.items.length], ["failed", true, 2]);
+    const { status, unreachable, items } = state().providers;
+    assert.deepEqual([status, unreachable, items.length], ["failed", true, 2]);
     state().providersLoaded([provider(1)]);
     assert.equal(state().providers.unreachable, false);
   });

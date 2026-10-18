@@ -39,7 +39,11 @@ describe("the provider draft", () => {
 
 describe("the provider rows", () => {
   it("sort by order, then name", () => {
-    const sorted = sortedProviders([provider(1, { order: 2, name: "b" }), provider(2, { order: 1, name: "z" }), provider(3, { order: 2, name: "A" })]);
+    const sorted = sortedProviders([
+      provider(1, { order: 2, name: "b" }),
+      provider(2, { order: 1, name: "z" }),
+      provider(3, { order: 2, name: "A" }),
+    ]);
     assert.deepEqual(sorted.map((item) => item.id), [2, 3, 1]);
   });
 

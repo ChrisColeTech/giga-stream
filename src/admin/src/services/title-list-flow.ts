@@ -17,7 +17,7 @@ import type { AppState } from "@/store/app-store";
 import { DROPPED, done, isUnreachable, refusalOf, type FlowResult, type RefusalPorts } from "./provider-flow-support";
 import type { TitlesService } from "./titles";
 
-/** The part of the store the title flows read and write. `useAppStore.getState` satisfies it; a test passes the same. */
+/** The part of the store the title flows read and write; `useAppStore.getState` satisfies it, as a test's does. */
 export type TitleStore = Pick<
   AppState,
   | "serial"

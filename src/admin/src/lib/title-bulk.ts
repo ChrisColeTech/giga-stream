@@ -41,19 +41,23 @@ export const tickedTitles = (items: readonly AdminTitleRow[], ticked: readonly s
 export function titleSkip(verb: TitleBulkVerb, title: AdminTitleRow): string | null {
   if (verb === "enable") return isEnabledTitle(title) ? ALREADY_ENABLED : null;
   if (verb === "disable") return isEnabledTitle(title) ? null : ALREADY_DISABLED;
-  if (verb === "revert") return isManualTitle(title) ? MANUAL_NO_TMDB : title.state === "synced" ? NOTHING_EDITED : null;
-  return null;
+  if (verb !== "revert") return null;
+  return isManualTitle(title) ? MANUAL_NO_TMDB : title.state === "synced" ? NOTHING_EDITED : null;
 }
 
-export function planTitleBulk(verb: TitleBulkVerb, items: readonly AdminTitleRow[], ticked: readonly string[]): BulkPlan<string> {
+export function planTitleBulk(
+  verb: TitleBulkVerb,
+  items: readonly AdminTitleRow[],
+  ticked: readonly string[],
+): BulkPlan<string> {
   return planBulk(tickedTitles(items, ticked), (item) => {
     const title = items.find((one) => one.id === item.id);
     return title === undefined ? null : titleSkip(verb, title);
   });
 }
 
-/** Why a verb is disabled, or undefined: nothing ticked, a run or a write going, the backend unreachable, or nothing left
- *  to run (then the first skipped row's own reason). */
+/** Why a verb is disabled, or undefined: nothing ticked, a run or a write going, the backend unreachable, or nothing
+ *  left to run (then the first skipped row's own reason). */
 export function titleBulkReason(
   plan: BulkPlan<string>,
   tickedCount: number,

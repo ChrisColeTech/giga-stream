@@ -7,8 +7,8 @@ import { useAppStore } from "@/store/app-store";
 
 /** The Providers index toolbar (owner, 2026-10-17; `37` section 3.2): the ghost bulk verbs Enable, Disable and an armed
  *  Delete over the ticked rows, each disabled with its reason (`Tick a row first`, every ticked row already in that
- *  state, the backend unreachable), beside the filled forward verb `Titles →`. What a run could not do is listed under the
- *  strip. */
+ *  state, the backend unreachable), beside the filled forward verb `Titles →`. What a run could not do is listed
+ *  under the strip. */
 export function ProvidersToolbar() {
   const { verbs, notes, dismiss } = useProviderBulk();
   const requestTab = useAppStore((state) => state.requestTab);

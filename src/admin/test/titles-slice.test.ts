@@ -6,7 +6,13 @@ import { useAppStore } from "@/store/app-store";
 import { resetStore } from "./support/store";
 
 const state = () => useAppStore.getState();
-const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => ({ id, kind: "movie", title: id, state: "synced", ...extra });
+const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => ({
+  id,
+  kind: "movie",
+  title: id,
+  state: "synced",
+  ...extra,
+});
 const page = (items: AdminTitleRow[], totalPages = 3) => ({ items, page: 1, totalPages, totalResults: items.length });
 
 beforeEach(() => resetStore());

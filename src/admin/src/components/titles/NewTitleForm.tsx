@@ -46,7 +46,13 @@ export function NewTitleForm() {
         />
       </Row>
       <Row label="Kind" tip={KIND_NEW_TIP}>
-        <Segmented field aria-label="Kind" options={KIND_OPTIONS} value={form.draft.kind} onChange={(kind) => form.set({ kind })} />
+        <Segmented
+          field
+          aria-label="Kind"
+          options={KIND_OPTIONS}
+          value={form.draft.kind}
+          onChange={(kind) => form.set({ kind })}
+        />
       </Row>
       <Row label="Year" tip={YEAR_TIP} error={form.errors["year"]}>
         <Input

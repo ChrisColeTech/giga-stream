@@ -16,7 +16,8 @@ function rig(totalPages: number) {
     list: async (query?: BrowseQuery): Promise<TitleList> => {
       pages.push(query?.page ?? 0);
       const id = `movie-${query?.page ?? 0}`;
-      return { items: [{ id, kind: "movie", title: id, state: "synced" }], page: query?.page ?? 1, totalPages, totalResults: 20, unreadable: 0 };
+      const items = [{ id, kind: "movie" as const, title: id, state: "synced" as const }];
+      return { items, page: query?.page ?? 1, totalPages, totalResults: 20, unreadable: 0 };
     },
     search: NEVER,
     detail: NEVER,
@@ -25,7 +26,8 @@ function rig(totalPages: number) {
     remove: NEVER,
     revert: NEVER,
   };
-  return { flows: createTitleFlows({ service, store: () => useAppStore.getState(), audit: { reload: async () => undefined } }), pages };
+  const audit = { reload: async () => undefined };
+  return { flows: createTitleFlows({ service, store: () => useAppStore.getState(), audit }), pages };
 }
 
 beforeEach(() => {
