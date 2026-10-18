@@ -1,16 +1,14 @@
 import { TabPage, type PageProps } from "@/components/chrome/TabPage";
-import { IndexSkeleton } from "@/components/records/IndexSkeleton";
-import { IndexToolbar } from "@/components/records/IndexToolbar";
-import { INDEX_FRAMES } from "@/constants/index-frames";
+import { TitlesIndex } from "@/components/titles/TitlesIndex";
+import { useTitlesLoad } from "@/hooks/useTitlesLoad";
 
-const FRAME = INDEX_FRAMES.titles;
-
-/** Titles. Wave 2 draws its index skeleton; the New form, the list with its search and the workspace arrive in Wave 4. */
+/** Titles: the index (bulk toolbar with `Jobs →`, `New title`, the list with its search, Kind chips, Sort and pager). It
+ *  reads the titles when first shown in a session. */
 export function TitlesPage({ active }: PageProps) {
+  useTitlesLoad(active);
   return (
     <TabPage active={active} label="Titles">
-      <IndexToolbar frame={FRAME} />
-      <IndexSkeleton frame={FRAME} />
+      <TitlesIndex />
     </TabPage>
   );
 }
