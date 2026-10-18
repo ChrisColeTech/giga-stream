@@ -8,6 +8,7 @@ import { SORTS } from "../services/title-service.js";
 import { ok } from "./envelope.js";
 import { actorOf, isAdmin, signedIn } from "./guard.js";
 import { TitleInputSchema, TitlePatchSchema } from "../types/title-input.js";
+import { StoredTitlesQuerySchema } from "../types/title-stored.js";
 import { parseInput } from "./parse-input.js";
 
 const BrowseQuery = z.object({
@@ -102,6 +103,13 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
     const principal = signedIn(services, request);
     const input = parseInput(TitleInputSchema, request.body, ERRORS.titleInvalid);
     return ok(reply, services.titles.create(input, actorOf(request, principal)), 201);
+  });
+
+  // Every stored title, paged, searched, filtered and sorted from the store alone: never TMDB (docs/41 section 3.2).
+  app.get("/api/titles/stored", async (request, reply) => {
+    signedIn(services, request);
+    const query = parseInput(StoredTitlesQuerySchema, request.query, ERRORS.requestInvalid);
+    return ok(reply, services.storedTitles.page(query));
   });
 
   // The deleted synced titles (docs/03 section 7.4): listed, and restored by removing the record.

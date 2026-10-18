@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { applyFields } from "./title-edits.js";
+import { createTitlePage } from "./title-page.js";
 
 /** A stored title: the `7.4` answer plus its freshness facts (docs/03 section 7.6b) and its record facts (docs/26 D20). */
 export interface StoredTitle {
@@ -109,8 +110,12 @@ export function createTitleRepository(db: DatabaseSync) {
     const row = byId.get(id);
     return row === undefined ? undefined : stored(TitleRow.parse(row));
   }
+  const pages = createTitlePage(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
 
   return {
+    /** The stored-titles list (docs/41 section 3.2): one page and its filtered count; the whole store's inventory. */
+    page: pages.page,
+    inventory: pages.inventory,
     /** The stored TMDB title, or undefined. */
     find(kind: "movie" | "tv", tmdbId: number): StoredTitle | undefined {
       const row = byTmdb.get(kind, tmdbId);

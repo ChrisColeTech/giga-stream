@@ -20,6 +20,7 @@ import { createStreamTemplates } from "./stream-templates.js";
 import { createSyncScheduler } from "./sync-scheduler.js";
 import { seedSyncRecords } from "./sync-seed.js";
 import { createTitleService } from "./title-service.js";
+import { createStoredTitles } from "./title-stored-service.js";
 import { createTmdbClient } from "./tmdb-client.js";
 import { createUiStateService } from "./ui-state-service.js";
 
@@ -120,6 +121,7 @@ export function createServices(store: Store, options: ServiceOptions) {
     channels: createChannelService({ store, audit, live, allowLoopback: options.allowLoopback, now }),
     providers: createProviderService({ store, audit, now }),
     titles,
+    storedTitles: createStoredTitles(store),
     playlists: createPlaylistService({ store, audit, now, allowLoopback: options.allowLoopback, onChange: scheduler.arm }),
     jobs: createJobService({ store, audit, now, runner, onChange: scheduler.arm }),
     /** Thin wrappers over the same code: a run covers every enabled playlist; the status is the aggregate. */
