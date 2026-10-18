@@ -1,108 +1,90 @@
-# 49 - The Library update: an incremental sync of the latest titles, changes and gaps (plan v2)
+# 49 - The Library update: an incremental sync of the latest titles, newly aired series and gaps (plan v3)
 
-**Status: v2 after the independent plan review (2026-10-18); awaiting delegation.** Owner: "it doesnt need to delete, but there needs to be an
-incremental type that only syncs the latest titles and gaps once the data is at rest. trending and popular is not the same as 'all recent';
-is there a filter for that?". Extends `48` (the Library fill) and `47` (the details phase). Docs first (`07`). Scope: the admin backend and the
-admin's Jobs words and New job form.
+**Status: v3 (2026-10-18). Supersedes v2's `/changes` refresh.** Owner: "it doesnt need to delete, but there needs to be an incremental
+type that only syncs the latest titles and gaps once the data is at rest. trending and popular is not the same as 'all recent'; is there a
+filter for that?" and, on v2: "im not sure if calling for 59000 description changes are worth the api hits. if the description is not
+missing, i dont know why we would be filling that gap. youre adding a lot of complexity just for extra updates on fields we already got in
+the fill, is there a use case where it is absolutely needed". Extends `48` (the Library fill) and `47` (the details phase). Docs first
+(`07`). Scope: the admin backend and the admin's Jobs words and New job form.
 
 ## 1. Why (observed against TMDB live, 2026-10-18)
 
 - A repeat **Library fill** re-walks every year slice (about 2,300 calls, 2 to 3 minutes) to find a handful of new titles, and its details
-  phase re-fetches every title older than 3 days (a rolling third of the library a day). After the first fill the data is at rest and a
-  cheaper job is wanted.
+  phase re-fetches every title older than 3 days. After the first fill the data is at rest and a cheaper job is wanted.
 - **Trending and popular** are ranked lists of what people watch now: they miss a quiet new release.
 - **There IS a filter for recent:** `GET /discover/{kind}` takes `primary_release_date.gte/.lte` (movies) and `first_air_date.gte/.lte`
   (series), which `title-slices.ts` `sliceParams` already builds. With the vote floor (`DISCOVER_MIN_VOTES` 50) the last 30 days hold 22 movies
-  and 7 series; the last 7 days 2 and 3. A title joins the library when it reaches the floor (one definition of "the library" everywhere).
-- **TMDB publishes what changed:** `GET /{movie|tv}/changes?start_date&end_date` lists the ids edited in a window (100 a page; a window may
-  not exceed 14 days, `422 Invalid date range`). One day, measured against the owner's store: **8,700 movie ids (1,963 stored = 22.6%) and
-  3,729 series ids (550 stored = 14.7%)**: about 2,500 stored titles a day, 133 list calls. It carries no votes, so it cannot find new titles;
-  it is how a STORED title's detail (a new season or episode, a plot, a poster) is kept current without blindly re-fetching.
+  and 7 series. A title joins the library when it reaches the floor (one definition of "the library" everywhere).
+- **The only edit that matters after the fill is a new episode or season on a series we store.** TMDB's `/{kind}/changes` list is NOT the
+  tool: it reports every edit of every title (about 8,700 movies and 3,700 series a day, of which about 2,500 are ours, almost all
+  translations, images and credits we already have) and would cost about 2,500 detail calls a day for nothing the interface shows.
+  The cheap, exact signal is **`GET /discover/tv?air_date.gte=&air_date.lte=`** (series with an EPISODE airing in a window) with the
+  floor: measured, **29 series in the last day (2 calls, all 29 stored), 150 in 7 days (8 calls), 216 in 30 days (11 calls)**. A movie has
+  no episodes: nothing about a stored movie needs a daily refresh; its detail stays as the fill stored it.
 
 ## 2. Decisions
 
-1. **A new catalog job scope `recent`, named `Library update`**, a second catalog job beside `Library fill` (the fill stays the full pass for
-   the first fill and an occasional resync; `POST /api/titles/sync` stays the fill). New job's Scope gains `Recent` (Kind hidden, Pages
-   hidden). The job's config for `recent` stores `pages: 1` (a harmless constant, ignored): `pages` stays required in the four schemas that
-   require it today (`types/job.ts`, `store/job-repository.ts` `CatalogConfig`, `job-service.ts`, the admin job schema), so no stored job can
-   fail to parse and break the Jobs list.
-2. **Phases, one run, one bar** (new phase names; `details` keeps meaning the fill's phase):
-   - `recent` (0-10%): per kind the discover query with `sliceParams`-style date filters `gte = today - RECENT_DAYS`, `lte = today`, the vote
-     floor, ALL pages (stops on an empty page like the walk); rows upsert by id exactly as the fill's walk (`storeRow`: a fresh payload stands,
-     a stale detail keeps its shape, the new titles come in list-shaped). `done/total` = pages across both kinds, the total grown as each
-     kind's page 1 answers and never lowered.
-   - `changes` (10-20%): per kind, `/{kind}/changes` for `[start, today]`, `start` = max(`cursor`, `today - CHANGES_MAX_WINDOW_DAYS + 1`)
-     (13 whole days back plus today, so the window never reaches TMDB's 14-day limit; verify the boundary on the fake and live), all pages.
-     The ids already in the store (enabled, `origin = 'tmdb'`, not deleted) are kept by ONE set-based query under `store/`
-     (`json_each(?)`, never an `IN (...)` list); a never-run job uses the clamped window and the run's note says a Library fill covers more.
-     `done/total` = changes pages, the total from page 1.
-   - `refresh` (20-100%): the details work of this run: **the recent queue** = list-shaped titles, titles with no detail or a season with no
-     episodes (the true gaps), and the changed ids FORCED (a fresh detail is fetched anyway: `fetchDetail` takes `force`, `pendingDetails`
-     takes the changed-id set bound as one `json_each(?)` parameter, an empty set widens nothing, a forced id counts against
-     `detail_failures` like any fetch). The recent queue has NO `fetched_at < staleBefore` and NO `episodesAt < staleBefore` clause: staleness
-     is replaced by `changes`, which is the point of this job. OMDb gap filling (`11` 7.3) runs as in the fill (it already needs a gap and an
-     unmet freshness window, so it stays small). Popularity order, one short transaction a title, Stop between titles.
-3. **`RECENT_DAYS` = 90** and **`CHANGES_MAX_WINDOW_DAYS` = 14**, `CHANGES_PAGE_SIZE` = 100 (assumed), named in `constants/limits.ts`. A title
-   released a month ago that only now reaches 50 votes is caught while the window is walked daily; older late bloomers are the full fill's.
-   A brand-new title under the floor is not stored by the update; a later daily discover inside its 90 days stores it once it passes.
-4. **A cursor, not `last_run_at`.** `last_run_at` is the END time of any run, stopped and failed included (`job-repository.ts` `recordRun`), and
-   the scheduler uses it, so it cannot anchor the changes window. Migration `028` adds `sync_jobs.cursor_at` (nullable integer); an `ok` run
-   of a `recent` job writes `cursor_at` = the run's START time minus `CURSOR_OVERLAP_MS` (1 hour); a stopped or failed run leaves it, so the
-   next run covers the same window again (every write is an upsert; the forced refresh is repeated, not lost). `last_run_at` keeps its meaning
-   and the scheduler is untouched.
-5. **Gaps** are the recent queue's second clause; there is no separate gap job. A gap healed by the update stays healed.
-6. **Cost at rest** (measured): about 5 discover calls + about 133 `changes` calls + the forced refresh of about 2,500 stored titles that
-   changed that day (about 3,000 calls with series seasons) at `TMDB_REQUESTS_PER_SECOND` 20: **about 3 to 4 minutes a day**, nothing else.
-   A window after an N-day gap costs about N times the changes calls, bounded by 14 days (about 1,900 calls, the cost of a fill walk) and the
-   refresh is only the distinct stored ids changed in it. The second of two runs in a row starts at the first's cursor, so it finds almost no
-   changed ids and finishes in seconds.
-7. **Seeding** (the review's catch: a fresh database runs migrations before the seed): migration `028` adds the cursor column AND inserts the
-   job with the exact guard of `025` (`WHERE EXISTS (SELECT 1 FROM sync_seed)`, `json_valid` and `CASE` guards) so an existing database gets
-   `Library update` once, enabled, schedule `24h` (a literal: `TMDB_SYNC_SCHEDULE` governs the fill only) and a deletion by the admin sticks
-   (the migration runs once); a fresh database gets it from `sync-seed.ts` (a second `insertCatalog` in the same transaction as the fill,
-   its doc comment updated). Tests prove exactly one update job on both paths.
-8. **One catalog run at a time** (existing: `isSyncRunning`, `busy`): the scheduler retries every second behind a running fill; a manual Run
-   during another catalog run answers `409 sync.busy` and the Jobs row says so (the Run job reason). A manual run ignores `Enabled`
-   (`26` 3.11); the scheduler needs the TMDB token.
+1. **A new catalog job scope `recent`, named `Library update`** (a second catalog job beside `Library fill`; the fill stays the full pass
+   for the first fill and an occasional resync; `POST /api/titles/sync` stays the fill). New job's Scope gains `Recent` (Kind and Pages
+   hidden; the job stores `pages: 1`, ignored, so the four schemas that require `pages` keep parsing).
+2. **Phases, one run, one bar:**
+   - `recent` (0-10%): per kind the discover query with `sliceParams` date filters `gte = today - RECENT_DAYS` (90), `lte = today`, the vote
+     floor, ALL pages (stops on an empty page); rows upsert by id as the fill's walk (`storeRow`): new titles come in list-shaped, a detailed
+     title keeps its detail. Page 1 of both kinds is read first so the progress total is known and never lowered. (Built.)
+   - `airing` (10-20%): series only, `GET /discover/tv?air_date.gte=<start>&air_date.lte=<today>&vote_count.gte=50&sort_by=popularity.desc`,
+     ALL pages. `start` = max(`cursor`, `today - AIRING_MAX_DAYS`) with `AIRING_MAX_DAYS` = 60 and a cursor-less run using
+     `AIRING_FIRST_DAYS` = 14. Every row upserts by id (a series not stored yet enters list-shaped); the ids of the series that are ALREADY stored
+     (enabled, `origin = 'tmdb'`, not deleted: the existing set-based `storedAmong`) are the run's **forced** set. `done/total` = pages,
+     total from page 1, never lowered. There is no 14-day limit and no 500-page problem (a window holds hundreds, not tens of thousands).
+   - `refresh` (20-100%): the details work of this run: the recent queue = list-shaped titles (the new ones), titles with no detail or a
+     season with no episodes (the true gaps), the OMDb gap rule (`11` 7.3, as built), and the forced airing series (`fetchDetail`
+     with `force`, as built). NO age clause (staleness is not a rule here). Popularity order, one short transaction a title, Stop
+     between titles.
+3. **Constants** in `constants/limits.ts`: `RECENT_DAYS` 90, `AIRING_FIRST_DAYS` 14, `AIRING_MAX_DAYS` 60, `CURSOR_OVERLAP_MS` 1 hour
+   (kept). `CHANGES_*` constants and the `changes` phase are DELETED.
+4. **The cursor stays** (migration `028`, as built): `sync_jobs.cursor_at`, written only by an `ok` run to the run's start minus the
+   overlap; a stopped or failed run leaves it (the next run covers the same window again, every write is an upsert). It anchors the
+   `airing` window. `last_run_at` keeps its meaning and the scheduler is untouched.
+5. **Gaps** are the refresh queue's second clause; there is no separate gap job.
+6. **Cost at rest** (measured): about 5 discover calls for recent + about 2 for airing + the details of the roughly 30 stored series that
+   aired an episode + any new or gapped titles: **seconds a day**. A window after an N-day gap costs about 2 calls per day of the gap
+   (8 for a week, 11 for 30 days). The second of two runs in a row finds almost nothing.
+7. **Seeding** (as built): migration `028` adds the cursor column and the guarded job row (`025`'s `sync_seed` guard) for an existing
+   database; a fresh database gets it from `sync-seed.ts`; an admin's deletion sticks.
+8. **One catalog run at a time** (existing): the scheduler retries behind a running fill; a manual Run during another catalog run is
+   `409 sync.busy`; a manual run ignores `Enabled`.
 
-## 3. Changes (backend unless noted)
+## 3. Changes from what is merged (v2 built the `changes` phase)
 
-- `types/job.ts`, `store/job-repository.ts`, `job-service.ts`, `job-runner.ts` (`pagesOf` and the request builder copy `kind`/`pages` only for
-  the scopes that have them), `title-shapes.ts` `SyncRequest` (the `recent` scope; `title-shapes.ts` is at the size limit: put the type in a new
-  small file), `types/job-counts.ts` (`changed`, default 0), `title-run.ts` `Seen`, `title-sync.ts` `SyncResult`/audit (`changed`).
-- New `services/title-recent.ts` (recent phase), `services/title-changes.ts` (changes phase and the stored-id query call), the recent queue in a
-  new `store/` file (`title-details.ts` is near the cap), `title-details-phase.ts` takes the queue mode and passes `force`;
-  `title-detail-fetch.ts` honours `force`. `title-sync.ts` dispatches by scope (no growth: extract; the recent run also syncs genres,
-  cheap). `title-walk.ts` `firstPhase` returns `recent` for the scope (`job-runner.ts` uses it).
-- `job-progress.ts` and the admin's duplicate `lib/job-fraction.ts`: phases `recent` 0-10, `changes` 10-20, `refresh` 20-100 (the fill's phase
-  weights unchanged); `title-sync-request.ts` describes `recent` for the audit.
-- `constants/limits.ts`: `RECENT_DAYS`, `CHANGES_MAX_WINDOW_DAYS`, `CHANGES_PAGE_SIZE`, `CURSOR_OVERLAP_MS`.
-- Migration `028-library-update.sql` (cursor column, the guarded job row).
-- Admin: `CatalogRows.tsx` Scope `Recent` (hide Kind and Pages for it), `job-body.ts` (`createBody`, `configChanges`), `job-draft.ts`, the
-  job target word `recent`, `lib/progress-words.ts` (`Reading recent titles N of M pages`, `Reading changes N of M pages`, `Refreshing 12 of
-  40`), `lib/run-words.ts` (`changed`: `Synced: 4 titles, 11 changed, 15 details.`), `job-schema.ts` (scope, counts), the scope tip in its copy file.
-- Docs (coordinator): `03` 7.6b and 7.2c (counts with `changed`), `26` 3.11 (the job list), `43` 3.1 (scope enum, the cursor), `44` 3.1
-  (phases/weights), `47` 3.1, `11` (the date filters and `/changes`, which `11` does not list today).
+- DELETE `services/title-changes.ts`, its tests and the `changes` phase from `title-update.ts` / `title-sync.ts`; DELETE the
+  `CHANGES_*` constants and the `changes` weight in `job-progress.ts` and the admin's `lib/job-fraction.ts`, and its words in
+  `lib/progress-words.ts`.
+- New `services/title-airing.ts` (the `airing` phase, series only, as above); `title-update.ts` runs `recent` -> `airing` -> `refresh`;
+  `run.seen.changed` counts the forced airing series (the counts key `changed` is renamed `airing`: `Synced: 4 titles, 29 airing, 31
+  details.`; backend `types/job-counts.ts` default 0, the admin schema and `run-words.ts`). Phase weights: `recent` 0-10, `airing` 10-20,
+  `refresh` 20-100 (the `changes` slot becomes `airing`).
+- Keep: migration `028`, the cursor, `recent`, `storedAmong`, the forced refresh queue, the seeding, the New job `Recent` scope.
+- Docs (coordinator): `03` 7.6b / 7.2c, `26` 3.11, `43` 3.1, `44` 3.1, `47` 3.1, `11` (the date filters and `air_date`, the cap on
+  `/changes` as not used).
 
 ## 4. Tests (backend, fake TMDB)
 
-- The fake serves discover with date filters, `/changes` with the 14-day limit (`422` beyond it) and 100 ids a page: the recent phase requests
-  exactly the window and the floor and stores the fake's rows; the changes phase requests `[start, today]` clamped to 13 days back, keeps only
-  stored, enabled, tmdb-origin, not-deleted ids (one set-based query) and forces exactly those; a forced fresh title is really re-fetched
-  by the fake; an empty changed set does not widen the queue; the recent queue has no staleness clause (a 10-day-old unchanged detail is not
-  fetched; a list-shaped title and an episode-less season are).
-- Cursor: written only by an `ok` run (start minus the overlap); a stopped and a failed run leave it; a longer-than-14-day gap is clamped
-  and noted; a second run right after finds almost no changed ids.
-- A `recent` job's config round-trips through `toJob` (the Jobs list still loads with one present); the config schema accepts `recent` and
-  ignores `pages`; progress is monotonic across the three phases; a manual run during a fill is `409 sync.busy`; migration 028 on a fresh
-  database plus the seed yields exactly one update job, and on an existing one inserts once and not again after the admin deletes it.
+- The fake serves discover with date filters and the `air_date` filter: `airing` requests exactly `[start, today]` with the floor, series
+  only, all pages; stored series in it are forced (a fresh stored detail is really re-fetched); a series not stored is stored list-shaped and
+  then detailed; movies are never forced; a deleted, disabled or manual title is never refreshed.
+- Cursor: written only by an `ok` run (start minus the overlap); a stopped and a failed run leave it; no cursor uses 14 days; an old
+  cursor is clamped to 60 days with a note.
+- The recent queue has no staleness clause (a 10-day-old unchanged detail is not fetched; a list-shaped title and an episode-less season are);
+  a second run right after finds almost nothing; progress monotonic across the three phases; the config round trip and the migration tests
+  as built; no `changes` route is ever requested.
 
 ## 5. Acceptance on the real stack
 
 After the first full fill: run `Library update` twice. The first adds the recent titles (compare with TMDB's last 90 days at the floor) and
-refreshes the stored titles that changed in the window (a stored series with a newly added episode gets it); it takes minutes. The second
-finishes in seconds and changes only popularity and timestamps.
+refreshes the stored series that aired an episode in the window; it takes seconds to a minute. The second finishes in seconds and changes
+only popularity and timestamps.
 
 ## 6. Not built
 
-Deleting titles TMDB dropped; TMDB's daily id export files; a window beyond 14 days (the Library fill covers it); changes to trending and popular.
+Deleting titles TMDB dropped; TMDB's `/changes` lists and daily id export files; refreshing stored movies after the fill (the Library
+fill covers them); changes to trending and popular.
