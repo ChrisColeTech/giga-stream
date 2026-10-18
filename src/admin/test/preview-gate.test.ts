@@ -46,12 +46,12 @@ describe("the Preview's gate and its window", () => {
     holdChannels([live("a")], 1);
     open("a");
     const html = renderLive(createElement(OverlayHost));
-    assert.ok(html.includes('aria-label="Preview window"') && html.includes('aria-modal="true"'));
+    assert.ok(html.includes('aria-label="Channel a window"') && html.includes('aria-modal="true"'), "titled by the channel");
     assert.ok(/<video[^>]*controls=""[^>]*muted=""/.test(html) && html.includes("bg-stage"));
     assert.ok(html.includes('role="status"') && html.includes(">loading</span>"), "the first read is running");
     assert.ok(!html.includes("<p>") && !html.includes("<p "), "the window's status is one state word, never a paragraph");
     assert.ok(html.includes("animate-skel-shimmer"), "the stage waits under its skeleton");
-    assert.ok(html.includes('aria-label="Close Preview"'));
+    assert.ok(html.includes('aria-label="Close Channel a"'));
     assert.ok(!html.includes("<iframe") && !html.includes("/test/") && !html.includes("<select"));
   });
 

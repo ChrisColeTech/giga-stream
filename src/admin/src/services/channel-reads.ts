@@ -23,6 +23,8 @@ export interface ChannelReads {
   refresh: () => Promise<FlowResult>;
   /** One page of the list by the held query (what the window asks for). */
   readPage: (index: number) => Promise<FlowResult>;
+  /** The Preview's read: ONE channel by id (`GET /api/admin-channels/:id`); it never reads or drops the list. */
+  readOne: (id: string) => Promise<FlowResult>;
   /** A new query: the pages are dropped and the first is read. */
   setQuery: (query: ChannelQuery) => Promise<FlowResult>;
   /** `Select all M matching`: reads every matching row (at most `SELECT_MATCHING_MAX`) and ticks them. */
@@ -108,5 +110,22 @@ export function createChannelReads({ service, store }: ChannelFlowDeps): Channel
     }
   }
 
-  return { load, refresh, readPage, setQuery, selectMatching };
+  /** The Preview's read (`36` section 8.2): ONE channel by id, never the list. A held row is replaced by id, any other is
+   *  kept as the window's own copy; a channel the backend does not know is removed (the window then says `missing`). */
+  async function readOne(id: string): Promise<FlowResult> {
+    const serial = store().serial;
+    try {
+      const channel = await service.readOne(id);
+      if (!stillSession(store, serial)) return DROPPED;
+      store().channelsPreviewLoaded(channel);
+      return done(undefined);
+    } catch (error: unknown) {
+      if (!stillSession(store, serial)) return DROPPED;
+      if (codeOf(error) !== "channel.not_found") return refusal(store(), error);
+      store().channelRemove(id); // the window says `missing` itself, once
+      return { ok: false, sentence: error instanceof Error ? error.message : "" };
+    }
+  }
+
+  return { load, refresh, readPage, readOne, setQuery, selectMatching };
 }

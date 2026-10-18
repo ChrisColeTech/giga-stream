@@ -1,5 +1,5 @@
-/* The Preview window's reads (`36` section 8), with the read injected so a test counts it: ONE read of the channels when
- * the window opens, ONE more for each `Retry`, and nothing else: no timer, no poll. After a retry's read the attempt is
+/* The Preview window's reads (`36` section 8.2), with the read injected so a test counts it: ONE read of the ONE channel
+ * when the window opens, ONE more for each `Retry`, and nothing else: no timer, no poll. After a retry's read the attempt is
  * raised, so the player attaches again even when the address did not change. */
 
 export interface PreviewSessionState {

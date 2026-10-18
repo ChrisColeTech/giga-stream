@@ -105,6 +105,17 @@ describe("the channels service", () => {
     );
   });
 
+  it("reads ONE channel from GET /api/admin-channels/:id, never the list route", async () => {
+    await withBackend(
+      () => success(live("a b", { state: "failed" })),
+      async (calls) => {
+        const row = await channels.readOne("a b");
+        assert.deepEqual([calls.length, calls[0]?.method, calls[0]?.url], [1, "GET", "/api/admin-channels/a%20b"]);
+        assert.deepEqual([row.kind, row.kind === "live" && row.state], ["live", "failed"]);
+      },
+    );
+  });
+
   it("sets a verdict with PUT /status and parses the answered row", async () => {
     await withBackend(
       () => success(stream("a", { status: "dead", checkedAt: 55 })),

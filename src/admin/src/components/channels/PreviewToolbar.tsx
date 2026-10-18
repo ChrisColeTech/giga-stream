@@ -9,8 +9,7 @@ import type { PreviewVerbs } from "@/hooks/usePreviewVerbs";
 import type { PreviewWalk } from "@/hooks/usePreviewWalk";
 
 export interface PreviewToolbarProps {
-  readonly name: string | undefined;
-  /** The window is reading the channels: the name and the place wear a shimmer. */
+  /** The window is reading the channel: the place wears a shimmer. */
   readonly reading: boolean;
   readonly walk: PreviewWalk;
   /** The state word (`live`, `loading`, `failed`, `missing`). */
@@ -25,9 +24,9 @@ const FLAT = "flex-none";
 /** The Preview's toolbar (`36` section 8.1), the shared pinned `Actions` strip directly under the header, laid out as LoRA
  *  Trainer's `ViewerToolbar`: tools LEFT, navigation RIGHT. Left, what changes the channel, as ghost verbs (icon first
  *  where the icon vocabulary has one): `Enable` (Check) / `Disable` (X), `Mark live` / `Mark dead` (a stream channel only;
- *  the word alone) and `Retry` when offered. Right, what moves around: the name, its state word, the `N / total` chip,
- *  then `Previous` and `Next`. The window header already has the close X, so the strip has none. */
-export function PreviewToolbar({ name, reading, walk, line, retry, onRetry, verbs }: PreviewToolbarProps) {
+ *  the word alone) and `Retry` when offered. Right, what moves around: the state word, the `N / total` chip, then
+ *  `Previous` and `Next`. The channel's name is the window's title (`36` section 8.2) and the header has the close X. */
+export function PreviewToolbar({ reading, walk, line, retry, onRetry, verbs }: PreviewToolbarProps) {
   const { plan } = verbs;
   const place = reading && walk.position === null ? null : `${walk.position ?? "–"} / ${walk.total}`;
   const Icon = plan.enable.label === "Enable" ? Check : X;
@@ -55,11 +54,6 @@ export function PreviewToolbar({ name, reading, walk, line, retry, onRetry, verb
         </>
       }
     >
-      {name === undefined ? (
-        reading && <span className={`${SHIMMER_TILE} h-3 w-24`} aria-hidden />
-      ) : (
-        <span className="min-w-0 max-w-44 truncate font-mono text-xs text-muted" title={name}>{name}</span>
-      )}
       <span role="status" className="flex-none font-mono text-xs text-faint">{line}</span>
       <Sep />
       {place === null ? (

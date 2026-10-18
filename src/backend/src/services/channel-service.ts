@@ -79,6 +79,9 @@ export function createChannelService(deps: {
     /** The admin's full view (both kinds, a live row's state, playlist and fault): whole, or a page (docs/41 3.1). */
     listAdmin: (base: string, query?: AdminChannelQuery) => adminChannels(store, live, base, query),
 
+    /** The admin view of ONE row, by the list's own view code (docs/36 section 8.2): the Preview reads one channel. */
+    getAdmin: (id: string, base: string): AdminChannel => adminChannel(existing(id), base, live),
+
     create(input: ChannelInput, actor: Actor, base: string): AdminChannel {
       const record = createRecord(input);
       store.transaction(() => store.channels.insert({ ...record, revision: store.revisions.next() }, now()));

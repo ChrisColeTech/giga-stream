@@ -18,6 +18,11 @@ export interface ChildWindowProps {
   /** Dismissal: the header's X, Escape by the spec's policy. It discards a Draft and commits nothing. */
   readonly onClose: () => void;
   readonly children: ReactNode;
+  /** The header's content in place of `spec.title`, for a window whose title is its subject (a channel's name); a
+   *  shimmer while that is read. Absent, the header shows `spec.title`. The remembered bounds stay keyed by `spec.key`. */
+  readonly heading?: ReactNode;
+  /** The name the window answers to (its `aria-label` and the close button's) when `heading` is not plain text. */
+  readonly label?: string;
 }
 
 /* THE AUTHORED CHILD WINDOW, drawn inside the main window (the family's in-app stand-in for a second OS window; the
@@ -28,7 +33,7 @@ export interface ChildWindowProps {
  * than its least, stays inside the main window, and remembers its size and place for the run. A modal one puts a scrim
  * over the main window and makes it deaf. Closing is dismissal, never a commit. Its entrance and exit are one
  * framer-motion fade-and-rise; the host holds the AnimatePresence. */
-export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
+export function ChildWindow({ spec, onClose, children, heading, label = spec.title }: ChildWindowProps) {
   const frame = useRef<HTMLDivElement | null>(null);
   const { box, move, grip } = useChildWindowBox(spec, useContext(ChildMemoryContext));
   const reduced = useReduceMotion();
@@ -40,7 +45,7 @@ export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
       <motion.div
         ref={frame}
         role="dialog"
-        aria-label={`${spec.title} window`}
+        aria-label={`${label} window`}
         aria-modal={spec.modal || undefined}
         tabIndex={-1}
         data-child-window={spec.key}
@@ -65,8 +70,10 @@ export function ChildWindow({ spec, onClose, children }: ChildWindowProps) {
           style={{ height: TITLE_HEIGHT, marginBottom: HEADER_GAP }}
           {...move}
         >
-          <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-sm font-semibold text-text">{spec.title}</h2>
-          <IconButton bordered title={`Close ${spec.title}`} aria-label={`Close ${spec.title}`} onClick={onClose}>
+          <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-sm font-semibold text-text" title={heading === undefined ? undefined : label}>
+            {heading ?? spec.title}
+          </h2>
+          <IconButton bordered title={`Close ${label}`} aria-label={`Close ${label}`} onClick={onClose}>
             <X className="size-3.5" aria-hidden />
           </IconButton>
         </div>
