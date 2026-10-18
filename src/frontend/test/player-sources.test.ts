@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { hasSourceChoice, playableSources, selectedPlayerSource } from "@/lib/player-sources";
+import { hasSourceChoice, playableSources, sameSources, selectedPlayerSource } from "@/lib/player-sources";
 import { playerStageRender } from "@/lib/player-render-state";
 import type { TitleSource } from "@/services/schemas/source-schema";
 import { useAppStore } from "@/store/app-store";
@@ -37,6 +37,28 @@ describe("Player source selection", () => {
     const sources = playableSources([provider(1, 1), provider(2, 2)], undefined);
     assert.equal(selectedPlayerSource(sources, null)?.id, "provider:1");
     assert.equal(selectedPlayerSource(sources, "old-item-source")?.id, "provider:1");
+  });
+});
+
+describe("sameSources (the identity-only recompute guard)", () => {
+  const first = playableSources([provider(1, 1), provider(2, 2)], "https://stream.example/a.m3u8");
+
+  it("answers true for a fresh recompute of the same media (new objects, same sources)", () => {
+    const again = playableSources([provider(1, 1), provider(2, 2)], "https://stream.example/a.m3u8");
+    assert.notEqual(first, again, "the recompute produces new objects");
+    assert.equal(sameSources(first, again), true, "the stage must not reset for the same media");
+    assert.equal(sameSources(first, first), true);
+    assert.equal(sameSources([], []), true);
+  });
+
+  it("answers false when the media, its order or its count changed", () => {
+    const moved = playableSources([provider(2, 1), provider(1, 2)], "https://stream.example/a.m3u8");
+    assert.equal(sameSources(first, moved), false, "a different order is a different selection");
+    const otherStream = playableSources([provider(1, 1), provider(2, 2)], "https://stream.example/b.m3u8");
+    assert.equal(sameSources(first, otherStream), false);
+    assert.equal(sameSources(first, playableSources([provider(1, 1)], undefined)), false);
+    assert.equal(sameSources(first, playableSources([provider(1, 1), provider(2, 2)], undefined)), false,
+      "losing the app stream changes the media");
   });
 });
 

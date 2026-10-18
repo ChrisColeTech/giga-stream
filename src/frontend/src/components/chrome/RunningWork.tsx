@@ -4,9 +4,18 @@ import { cancelJob, listJobs } from "@/services/jobs";
 import { useAppStore } from "@/store/app-store";
 import type { ActivityFlags } from "@/store/slices/shell-slice";
 import { isLive, type Job } from "@/types/job";
+import type { PlayerMediaState } from "@/types/player";
 
 /** The job the bar tracks: the first live one, as before (`50` section 2.3). */
 export const trackedJob = (jobs: readonly Job[]): Job | null => jobs.filter(isLive)[0] ?? null;
+
+/** Whether the playback stage is playing (`50` section 2.4): a source is hosted and the media is not paused. The
+ *  stage kind only disqualifies (`idle` = nothing open, `failed` = dead): it can sit at `loading` while the mounted
+ *  media plays, because only a media event advances it — so starting counts, as the live stage's does. */
+export function videoPlayingOf(media: PlayerMediaState, playerPaused: boolean): boolean {
+  return !playerPaused && media.sources.length > 0
+    && (media.stage.kind === "ready" || media.stage.kind === "loading");
+}
 
 const clampPercent = (percent: number): number => Math.max(0, Math.min(100, percent));
 
@@ -56,12 +65,7 @@ export function RunningWork() {
   const playerPaused = useAppStore((state) => state.playerPaused);
   const liveStage = useAppStore((state) => state.liveStage);
   const running = trackedJob(jobs);
-  const view = runningWorkView(
-    jobs,
-    activity,
-    !playerPaused && media.stage.kind === "ready" && media.sources.length > 0,
-    liveStage === "ready" || liveStage === "loading",
-  );
+  const view = runningWorkView(jobs, activity, videoPlayingOf(media, playerPaused), liveStage === "ready" || liveStage === "loading");
 
   const stopJob = async (): Promise<void> => {
     if (running === null) return;
