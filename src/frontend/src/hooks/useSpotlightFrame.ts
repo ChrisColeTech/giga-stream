@@ -1,8 +1,8 @@
 import { useEffect, useRef, type RefObject } from "react";
 
-/** The spotlight's frame behaviour: the card is placed by its own CSS (centred, 14% from the top), and the family
- *  `usePopupFrame` dismissal rules apply (Escape, a press outside the card, which includes the scrim, or focus leaving
- *  it close it), with one difference the `01` section 9 exception needs: while `paused()` answers true (Title
+/** The spotlight's frame behaviour: the window is placed by its own CSS (centred, 22% from the top), and Spotlight's
+ *  dismissal applies (Escape, a press outside the window, or focus leaving it close it; there is no scrim to press, and
+ *  the app under it stays live), with one difference the `01` section 9 exception needs: while `paused()` answers true (Title
  *  information stands over it) none of them does anything, and Escape is left alone so the window above hears it. */
 export function useSpotlightFrame(
   open: boolean,

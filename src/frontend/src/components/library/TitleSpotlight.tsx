@@ -1,11 +1,16 @@
 import type { KeyboardEvent } from "react";
-import { createPortal } from "react-dom";
 import { cn } from "@giga/ui/lib/cn";
 import { useSpotlightFrame } from "@/hooks/useSpotlightFrame";
-import { LIBRARY_COPY } from "@/lib/library-copy";
-import type { SpotlightAction, SpotlightState } from "@/lib/spotlight-state";
+import {
+  SPOTLIGHT_LIST_ID,
+  focusedItem,
+  spotlightOptionId,
+  type SpotlightAction,
+  type SpotlightState,
+} from "@/lib/spotlight-state";
 import type { LibraryItem } from "@/types/library";
 import { SpotlightBar } from "./SpotlightBar";
+import { SpotlightResults } from "./SpotlightResults";
 
 export interface TitleSpotlightProps {
   readonly state: SpotlightState;
@@ -18,11 +23,15 @@ export interface TitleSpotlightProps {
   readonly onInfo: (item: LibraryItem, opener: HTMLElement) => void;
 }
 
-/** Search titles (`06` section 4.6): a Spotlight bar. One floating card near the top of the window over a light scrim;
- *  no title bar, no close button. It sits one layer under the work windows so Title information can stand over it,
- *  dimming it while it does. */
+/** Search titles (`06` section 4.6): macOS Spotlight, not a modal. One borderless rounded window floating over the
+ *  app, with no scrim and no dimming of anything, no dialog semantics, no title bar and no close button. With nothing
+ *  typed it is only the search bar; with a query it grows the two-column results (list and preview). It is dismissed
+ *  by Escape, a press outside it or focus leaving it, and Title information stands over it without closing it. */
 export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSubmit, onPlay, onInfo }: TitleSpotlightProps) {
   const panel = useSpotlightFrame(state.open, paused, onClose);
+  const searched = state.query.trim() !== "";
+  const listed = searched && !state.searching && state.results.length > 0;
+  const focused = focusedItem(state);
 
   const onKey = (event: KeyboardEvent<HTMLDivElement>): void => {
     const inField = event.target instanceof HTMLInputElement;
@@ -37,25 +46,22 @@ export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSub
     event.stopPropagation();
   };
 
-  return createPortal(
-    <>
-      <div data-spotlight-scrim aria-hidden className="fixed inset-0 z-46 bg-scrim/40" />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-label={LIBRARY_COPY.searchTitles}
-        data-spotlight
-        className={cn(
-          "fixed top-[14%] left-1/2 z-47 flex w-[640px] max-w-[90vw] -translate-x-1/2 flex-col overflow-hidden",
-          "rounded-xl border border-border bg-panel font-sans shadow-[0_24px_64px_rgba(0,0,0,0.5)]",
-          "transition-opacity duration-fade ease-linear",
-          state.info !== null && "opacity-60",
-        )}
-        onKeyDown={onKey}
-      >
-        <SpotlightBar state={state} dispatch={dispatch} onType={onType} onPlay={onPlay} onInfo={onInfo} />
-      </div>
-    </>,
-    document.body,
+  return (
+    <div
+      ref={panel}
+      data-spotlight
+      className={cn(
+        "fixed top-[22%] left-1/2 z-47 flex w-[760px] max-w-[calc(100vw-48px)] -translate-x-1/2 flex-col overflow-hidden",
+        "rounded-2xl border border-border bg-panel font-sans shadow-[0_24px_80px_rgba(0,0,0,0.4)]",
+      )}
+      onKeyDown={onKey}
+    >
+      <SpotlightBar
+        query={state.query} onType={onType}
+        listId={listed ? SPOTLIGHT_LIST_ID : undefined}
+        activeId={listed && focused !== undefined ? spotlightOptionId(focused) : undefined}
+      />
+      {searched && <SpotlightResults state={state} dispatch={dispatch} onPlay={onPlay} onInfo={onInfo} />}
+    </div>
   );
 }

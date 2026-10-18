@@ -34,11 +34,19 @@ export type SpotlightAction =
 /** Skeleton rows while a search runs, and while there is nothing to list (`06` section 2.1). */
 export const SPOTLIGHT_SKELETON_ROWS = 6;
 
+/** The id the field's `aria-controls` names: the results listbox. */
+export const SPOTLIGHT_LIST_ID = "spotlight-listbox";
+
 export const SPOTLIGHT_CLOSED: SpotlightState = {
   open: false, query: "", searching: false, results: [], focused: -1, info: null,
 };
 
-const titlesOnly = (items: readonly LibraryItem[]): LibraryItem[] => items.filter((item) => item.kind !== "local");
+/** Titles only, in the list's category order: the movies, then the series (each keeping the read's own order), so the
+ *  grouped list and the arrow keys walk the same sequence. */
+const titlesOnly = (items: readonly LibraryItem[]): LibraryItem[] => [
+  ...items.filter((item) => item.kind === "movie"),
+  ...items.filter((item) => item.kind === "tv"),
+];
 const clamp = (index: number, length: number): number => (length === 0 ? -1 : Math.max(0, Math.min(length - 1, index)));
 
 export function spotlightReducer(state: SpotlightState, action: SpotlightAction): SpotlightState {
@@ -74,6 +82,26 @@ export function spotlightReducer(state: SpotlightState, action: SpotlightAction)
       return { ...state, info: null };
   }
 }
+
+export interface SpotlightGroup {
+  readonly kind: "movie" | "tv";
+  /** The index in `results` of the group's first row. */
+  readonly start: number;
+  readonly items: readonly LibraryItem[];
+}
+
+/** The results under their category headers (`Movies`, `Series`); an empty category has no header. */
+export function spotlightGroups(results: readonly LibraryItem[]): SpotlightGroup[] {
+  const movies = results.filter((item) => item.kind === "movie");
+  const groups: SpotlightGroup[] = [];
+  if (movies.length > 0) groups.push({ kind: "movie", start: 0, items: movies });
+  const series = results.slice(movies.length);
+  if (series.length > 0) groups.push({ kind: "tv", start: movies.length, items: series });
+  return groups;
+}
+
+/** The DOM id of a result row: the field's `aria-activedescendant` names the focused one. */
+export const spotlightOptionId = (item: LibraryItem): string => `spotlight-option-${item.ref.kind}-${item.ref.id}`;
 
 /** The row Enter would play: the focused one, if any. */
 export function focusedItem(state: SpotlightState): LibraryItem | undefined {

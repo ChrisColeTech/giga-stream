@@ -38,6 +38,9 @@ export const LIBRARY_COPY = {
   searchResults: "Search results",
   movie: "Movie",
   series: "Series",
+  /** The spotlight's category headers. */
+  moviesHeading: "Movies",
+  seriesHeading: "Series",
   playTitle: (title: string): string => `Play ${title}`,
   infoTitle: (title: string): string => `Info ${title}`,
   searchFailed: "Titles could not be searched.",

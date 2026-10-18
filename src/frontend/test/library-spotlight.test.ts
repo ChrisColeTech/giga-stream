@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpotlightRow } from "@/components/library/SpotlightRow";
-import { SpotlightBar } from "@/components/library/SpotlightBar";
 import { TypeStrip } from "@/components/library/TypeStrip";
 import { FilterField } from "@/components/library/FilterField";
 import {
@@ -11,6 +10,7 @@ import {
   focusedItem,
   playFromSpotlight,
   spotlightFacts,
+  spotlightGroups,
   spotlightReducer,
   type SpotlightAction,
   type SpotlightState,
@@ -34,7 +34,7 @@ describe("the spotlight's state", () => {
     assert.equal(typing.searching, true);
     const done = searched();
     assert.equal(done.searching, false);
-    assert.deepEqual(done.results.map((one) => one.ref.id), ["a", "b", "c"], "a local file is never a result");
+    assert.deepEqual(done.results.map((one) => one.ref.id), ["a", "c", "b"], "no local file; the movies, then the series");
     assert.equal(focusedItem(done)?.ref.id, "a");
   });
 
@@ -75,7 +75,7 @@ describe("the spotlight's state", () => {
 
   it("a Play closes the spotlight and asks the Player for the title", () => {
     const asked: ItemRef[] = [];
-    const next = playFromSpotlight(RESULTS[2] ?? item("x", "tv"), (ref) => asked.push(ref));
+    const next = playFromSpotlight(item("b", "tv", 2008), (ref) => asked.push(ref));
     assert.deepEqual(next, SPOTLIGHT_CLOSED);
     assert.deepEqual(asked, [{ kind: "title", id: "b" }]);
   });
@@ -111,31 +111,26 @@ describe("the markup", () => {
     }));
     assert.ok(row.includes('aria-label="Play Title a"'));
     assert.ok(row.includes('aria-label="Info Title a"'));
-    assert.ok(row.includes("1999 · Movie"));
-    assert.ok(row.includes('aria-current="true"'));
+    assert.ok(row.includes(">1999<"), "the year alone; the group header names the kind");
+    assert.ok(row.includes('aria-selected="true"') && row.includes('role="option"'));
     assert.ok(!PARAGRAPH.test(row), "no text under a control");
     const buttons = row.match(/<button[^>]*>[\s\S]*?<\/button>/g) ?? [];
     assert.equal(buttons.length, 2);
     for (const button of buttons) assert.ok(!/>[^<\s][^<]*</.test(button), "Play and Info are glyphs alone");
   });
 
-  it("draws the spotlight as a bar: the field first, no header and no close button, one icon pair per row", () => {
-    const state = spotlightReducer(
-      spotlightReducer(
-        spotlightReducer(SPOTLIGHT_CLOSED, { type: "open" }),
-        { type: "query", query: "ti" },
-      ),
-      { type: "results", items: RESULTS },
-    );
-    const bar = html(createElement(SpotlightBar, { state, dispatch: noop, onType: noop, onPlay: noop, onInfo: noop }));
-    assert.ok(!/<h[1-6][\s>]/.test(bar), "no header");
-    assert.ok(!bar.includes("Close"), "no close button");
-    assert.ok(!PARAGRAPH.test(bar), "no text under a control");
-    const input = bar.indexOf("<input");
-    assert.ok(input > 0 && input < bar.indexOf("<ul"), "the field is the first row, before the results");
-    assert.ok(bar.includes('aria-label="Search titles"'));
-    assert.equal((bar.match(/aria-label="Play /g) ?? []).length, 3);
-    assert.equal((bar.match(/aria-label="Info /g) ?? []).length, 3);
+  it("groups the results under Movies and Series in the order the arrows walk", () => {
+    const groups = spotlightGroups(searched().results);
+    assert.deepEqual(groups.map((group) => [group.kind, group.start, group.items.length]), [["movie", 0, 2], ["tv", 2, 1]]);
+    assert.deepEqual(spotlightGroups([item("b", "tv")]).map((group) => group.kind), ["tv"], "no empty header");
+  });
+
+  it("holds Title information over the search: results landing meanwhile keep it, and only info-closed frees it", () => {
+    const over = spotlightReducer(searched(), { type: "info", ref: { kind: "title", id: "a" } });
+    const landed = spotlightReducer(over, { type: "results", items: RESULTS });
+    assert.deepEqual(landed.info, { kind: "title", id: "a" });
+    assert.equal(spotlightReducer(landed, { type: "close" }), landed, "Escape and outside presses are refused");
+    assert.equal(spotlightReducer(spotlightReducer(landed, { type: "info-closed" }), { type: "close" }), SPOTLIGHT_CLOSED);
   });
 
   it("labels the rail's field Filter, with its clear control", () => {
