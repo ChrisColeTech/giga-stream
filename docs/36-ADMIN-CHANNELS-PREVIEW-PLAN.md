@@ -301,6 +301,48 @@ loaded preview, what does retry even do?". Verified: `usePreviewSession` calls `
   unheld row, and NEVER the list route (a fake counts both); the header shows the channel's name and `Close <name>`; the toolbar has no name;
   the list's pages survive opening, stepping and Retry.
 
+### 8.3 A status bar in the child window template (owner, 2026-10-18; supersedes where 8.1 puts the state word and the count)
+
+Owner: "so lets add a status bar to our child window template. it looks silly you have the status labels and counts in the toolbar. just
+give them a proper status bar". A window's STATE (words, counts) belongs in a status bar at its foot; the toolbar holds only controls.
+
+- **The template.** `ChildWindow` (`src/shared/ui/src/windows/ChildWindow.tsx`) gains an optional `status` prop `{ left?: ReactNode; right?:
+  ReactNode }`. Absent, nothing is drawn and every existing window (Settings, Collections, Title information, ...) is unchanged. Present, a
+  `ChildStatusbar` strip (new file in `windows/`, one exported component) is drawn as the LAST row inside the window frame, below the body
+  (the body keeps `flex-1 min-h-0`; the strip is `flex-none`): the main window's statusbar metrics (`shell/Statusbar.tsx`): `h-6`, hairline
+  above (`border-t border-hair`), `font-sans text-xs text-muted`, `gap-2.5`, items left, a `flex-1` spacer, items right; it spans the window's
+  full inner width. The strip is for state only: words and counts, never a control, a notice sentence or a progress bar (the app's one
+  notice line stays in the main statusbar). Plain text items use the muted colour; a state that is a failure may take the status tone
+  colour of the word (`st-failed`), never a dot (`06` section 1 rule 10).
+- **The Preview uses it.** Left: the state word (`live`, `loading`, `failed`, `missing`; the same `previewLine` words, `role="status"`).
+  Right: the position `N / total` (mono, tabular, faint; the shimmer pill while the window reads, as built). The toolbar (8.1) keeps ONLY the
+  verbs on the left (Enable / Disable, Mark live / Mark dead, Retry) and Previous / Next on the right; the name stays in the header (8.2), the
+  state word and the count leave the toolbar.
+- Tests: `ChildWindow` without `status` renders no strip (a markup test on an existing window); with `status` renders the strip after the body
+  with left and right items; the Preview markup test expects the state word and `N / total` in the strip and not in the toolbar.
+
+### 8.4 Child windows maximize (owner, 2026-10-18: "i need to be able to maximize the child windows")
+
+A template feature in `ChildWindow`, so EVERY child window (Preview, Settings, Collections, Title information, ...) gets it; a spec may opt out
+with `maximizable: false` (default true).
+
+- **The control.** A second bordered `IconButton` in the header, left of the close X (the header is the one place edged icon buttons are
+  allowed, `01` Buttons and surfaces): `Maximize2` while normal (aria-label and tooltip `Maximize <name>`), `Minimize2` while maximized
+  (`Restore <name>`). New rows in the icon vocabulary (`01`): `Maximize, Restore` -> `Maximize2`, `Minimize2` (LoRA Trainer's viewer uses
+  `Maximize2` for its enlarge verb; here it is the window verb).
+- **Also:** a double-click on the header (not on a button) toggles it, the desktop convention.
+- **Maximized.** The window fills the main window's available area: the main window minus its titlebar and its statusbar (the chrome stays
+  visible and the scrim behaves as for a normal modal window); the box is derived from the container, so resizing the main window keeps it
+  maximized and fitted. While maximized the grips are not drawn and the header does not drag.
+- **Restore** returns the window to the box it had (its size and place before maximizing). The remembered bounds (`ChildMemory`, per
+  `spec.key`, kept for the run) keep the NORMAL box only; the maximized flag is remembered for the run too, so closing and reopening a window
+  that was maximized opens it maximized, and `Restore` goes to the remembered normal box. A window opened for the first time is normal.
+- `Escape` and the X still close; a maximized window's content (the Preview's stage, the toolbar and the status bar of 8.3) simply gets the
+  space: the stage letterboxes (`object-contain`) and the toolbar and status bar keep their sizes.
+- Tests: toggling by the button and by the double-click; the maximized box equals the container area and follows a container resize; Restore
+  returns the previous box exactly; the normal box is not overwritten by maximizing; the flag survives close and reopen for the run; no grips
+  and no drag while maximized; `maximizable: false` draws no button; an existing window's markup gains only the one button.
+
 ## 9. Tests (`node:test`, written AND run by the worker; no server, no browser, no sleeping)
 
 | File | Cases |
