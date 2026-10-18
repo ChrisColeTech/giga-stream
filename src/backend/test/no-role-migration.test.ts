@@ -47,8 +47,8 @@ test("migrations 015 and 016 drop role and api_key and keep every row, id and th
     createStore(oldDatabase(dataDir)).close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
     try {
-      // Migrations 017 (account UI state) and 018 (security questions) run after 015 and 016: the schema is at 18.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 18 });
+      // Migrations 017 (account UI state), 018 (security questions) and 020 (deleted titles) run after 015 and 016.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 20 });
       verifyRows(db);
     } finally {
       db.close();

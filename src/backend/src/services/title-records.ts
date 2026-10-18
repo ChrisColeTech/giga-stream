@@ -26,8 +26,8 @@ const seasonsOf = (seasons: SeasonInput[]): unknown[] =>
  * The title records (docs/26 decision D20): create, edit, delete and revert. A title made by hand (`custom-<uuid>`)
  * is the admin's alone; a synced one records the fields an admin edited (`edited_fields`), which the store keeps
  * every later sync, fill-through and healing refetch from overwriting. `enabled` is a field of the record: a
- * disabled title leaves the public reads and no sync ever changes it. Deleting is a real delete, so a later sync or
- * read may add a synced title again. Titles are not channel data, so none of this touches the revision.
+ * disabled title leaves the public reads and no sync ever changes it. Deleting a synced title records it as deleted
+ * (`title-deleted.ts` lists and restores those). Titles are not channel data, so none of this touches the revision.
  */
 export function createTitleRecords(deps: {
   store: Store;
@@ -122,10 +122,18 @@ export function createTitleRecords(deps: {
       return viewOf(saved);
     },
 
-    /** A real delete. A synced title may come back with a later sync or read; `enabled` is how to keep it hidden. */
+    /**
+     * A title made by hand is deleted for real. A synced one is deleted and stays deleted: its TMDB identity is
+     * recorded (migration 020), so the browse, search, detail and the sync skip it until it is restored.
+     */
     remove(titleId: string, actor: Actor): { id: string } {
       const row = found(titleId);
-      store.titles.remove(titleId);
+      store.transaction(() => {
+        store.titles.remove(titleId);
+        if (row.origin === "tmdb" && row.tmdbId !== null) {
+          store.deletedTitles.record(row.kind, row.tmdbId, nameOf(row), now());
+        }
+      });
       audit.record(actor, { action: "title.deleted", subject: titleId, detail: { origin: row.origin } });
       return { id: titleId };
     },
