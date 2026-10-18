@@ -4,14 +4,13 @@ import { liveDraft, streamDraft, type LiveDraft, type StreamDraft } from "./chan
 
 /* The request bodies of the Channels tab (`36` sections 3.1 and 3.2). Pure. A create body never carries an `id`: the
  * backend assigns a live channel's (`live-<uuid>`) as it does a stream channel's. A PATCH carries only the fields that
- * changed; `folder` and `videos` only when the source changed, and then only the one the channel now plays. The number
- * is sent as text. */
+ * changed; `folder` and `videos` only when the source changed, and then only the one the channel now plays. A channel
+ * number is never sent (there is no guide: owner, 2026-10-17); a channel that has one keeps it. */
 
-/** The New channel form's values: Name, Kind, Number, Category, then Folder (live) or Stream address (stream). */
+/** The New channel form's values: Name, Kind, Category, then Folder (live) or Stream address (stream). */
 export interface NewChannelDraft {
   readonly name: string;
   readonly kind: "live" | "stream";
-  readonly number: string;
   readonly category: string;
   readonly folder: string;
   readonly streamUrl: string;
@@ -20,7 +19,6 @@ export interface NewChannelDraft {
 export const EMPTY_NEW_CHANNEL: NewChannelDraft = {
   name: "",
   kind: "live",
-  number: "",
   category: CATEGORIES[0] ?? "News",
   folder: "",
   streamUrl: "",
@@ -29,7 +27,6 @@ export const EMPTY_NEW_CHANNEL: NewChannelDraft = {
 export const sameNewChannel = (a: NewChannelDraft, b: NewChannelDraft): boolean =>
   a.name === b.name &&
   a.kind === b.kind &&
-  a.number === b.number &&
   a.category === b.category &&
   a.folder === b.folder &&
   a.streamUrl === b.streamUrl;
@@ -45,7 +42,7 @@ export type ChannelBody = Readonly<Record<string, unknown>>;
 
 /** `POST /api/channels`: the trimmed values the kind uses, and no id. */
 export function createBody(draft: NewChannelDraft): ChannelBody {
-  const base = { kind: draft.kind, name: draft.name.trim(), category: draft.category.trim(), number: draft.number.trim() };
+  const base = { kind: draft.kind, name: draft.name.trim(), category: draft.category.trim() };
   return draft.kind === "live" ? { ...base, folder: draft.folder.trim() } : { ...base, streamUrl: draft.streamUrl.trim() };
 }
 
@@ -56,7 +53,6 @@ function livePatch(channel: LiveAdminChannel, draft: LiveDraft): Record<string, 
   const was = liveDraft(channel);
   const patch: Record<string, unknown> = {};
   if (draft.name.trim() !== was.name) patch["name"] = draft.name.trim();
-  if (draft.number.trim() !== was.number) patch["number"] = draft.number.trim();
   if (draft.category !== was.category) patch["category"] = draft.category;
   if (draft.enabled !== was.enabled) patch["enabled"] = draft.enabled;
   if (draft.mode !== was.mode) patch["mode"] = draft.mode;
@@ -74,7 +70,7 @@ function livePatch(channel: LiveAdminChannel, draft: LiveDraft): Record<string, 
 function streamPatch(channel: StreamAdminChannel, draft: StreamDraft): Record<string, unknown> {
   const was = streamDraft(channel);
   const patch: Record<string, unknown> = {};
-  for (const key of ["name", "number", "category", "streamUrl", "logoUrl"] as const) {
+  for (const key of ["name", "category", "streamUrl", "logoUrl"] as const) {
     if (draft[key].trim() !== was[key]) patch[key] = draft[key].trim();
   }
   if (draft.enabled !== was.enabled) patch["enabled"] = draft.enabled;

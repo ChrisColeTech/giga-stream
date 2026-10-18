@@ -1,14 +1,12 @@
 import { z } from "zod";
 import type { AdminChannel } from "@/types/admin-channel";
 
-/* `GET /api/admin-channels` (`29` section 5). A live and a stream row share the base and differ by `kind`. The number is
- * text on the wire; a number is accepted and read as text. */
-const text = z.union([z.string(), z.number()]).transform(String);
+/* `GET /api/admin-channels` (`29` section 5). A live and a stream row share the base and differ by `kind`. A `number` the backend
+ * still sends for an old channel is ignored (owner, 2026-10-17). */
 const base = {
   id: z.string(),
   name: z.string(),
   category: z.string(),
-  number: text.optional(),
   logoUrl: z.string().optional(),
   streamUrl: z.string(),
   tvgId: z.string().optional(),

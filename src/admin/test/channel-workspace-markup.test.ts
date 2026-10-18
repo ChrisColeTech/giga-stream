@@ -56,9 +56,9 @@ describe("a live channel's workspace", () => {
     assert.ok(/<button[^>]*>Preview →<\/button>/.test(html), "a saved channel previews");
   });
 
-  it("draws Details in order: Name, Kind, Number, Category, Plays, Folder, Enabled, Logo, Id", () => {
+  it("draws Details in order: Name, Kind, Category, Plays, Folder, Enabled, Logo, Id", () => {
     const html = details(live("a"));
-    const order = ["Name", "Kind", "Number", "Category", "Plays", "Folder", "Enabled", "Logo", "Id"].map((label) =>
+    const order = ["Name", "Kind", "Category", "Plays", "Folder", "Enabled", "Logo", "Id"].map((label) =>
       at(html, `<span class="truncate">${label}</span>`),
     );
     assert.ok(order.every((value, index) => index === 0 || value > (order[index - 1] ?? 0)), String(order));

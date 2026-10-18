@@ -45,7 +45,7 @@ describe("the channel flows", () => {
   it("create a live channel: the answer is inserted, `<name> is preparing.`, the form may clear", async () => {
     const answer = live("live-1", { name: "Drive News", state: "preparing" });
     const flows = flowsOf(fake({ create: async () => answer }).service);
-    const result = await flows.create({ ...EMPTY_NEW_CHANNEL, name: "Drive News", number: "7", folder: "D:\\v" });
+    const result = await flows.create({ ...EMPTY_NEW_CHANNEL, name: "Drive News", folder: "D:\\v" });
     assert.equal(result.ok, true);
     assert.deepEqual(state().channels.items.map((item) => item.id), ["live-1"]);
     assert.equal(notice(), "Drive News is preparing.");
@@ -53,22 +53,27 @@ describe("the channel flows", () => {
 
   it("create a stream channel: `Created <name>.`", async () => {
     const flows = flowsOf(fake({ create: async () => stream("ch_1", { name: "Talk" }) }).service);
-    await flows.create({ ...EMPTY_NEW_CHANNEL, kind: "stream", name: "Talk", number: "3", streamUrl: "https://a.b/c" });
+    await flows.create({ ...EMPTY_NEW_CHANNEL, kind: "stream", name: "Talk", streamUrl: "https://a.b/c" });
     assert.equal(notice(), "Created Talk.");
   });
 
   it("refuse a bad value before any call, under its row", async () => {
     const { service, calls } = fake();
-    const result = await flowsOf(service).create({ ...EMPTY_NEW_CHANNEL, name: "N", number: "0", folder: "D:\\v" });
-    assert.deepEqual([result.ok, !result.ok && result.field, calls], [false, "number", []]);
+    const result = await flowsOf(service).create({
+      ...EMPTY_NEW_CHANNEL,
+      kind: "stream",
+      name: "N",
+      streamUrl: "http://a.b/c",
+    });
+    assert.deepEqual([result.ok, !result.ok && result.field, calls], [false, "streamUrl", []]);
   });
 
-  it("put channel.taken under Number and channel.invalid under its named row", async () => {
-    const taken = flowsOf(fake({ create: async () => Promise.reject(refuse("channel.taken", "number", 409)) }).service);
-    const result = await taken.create({ ...EMPTY_NEW_CHANNEL, name: "N", number: "7", folder: "D:\\v" });
-    assert.deepEqual(result, { ok: false, sentence: "Another channel already has that number.", field: "number" });
+  it("puts channel.invalid under its named row, and a taken id on the notice only (no number to blame)", async () => {
+    const taken = flowsOf(fake({ create: async () => Promise.reject(refuse("channel.taken", "id", 409)) }).service);
+    const result = await taken.create({ ...EMPTY_NEW_CHANNEL, name: "N", folder: "D:\\v" });
+    assert.deepEqual([result.ok, !result.ok && result.field], [false, undefined]);
     const missing = flowsOf(fake({ create: async () => Promise.reject(refuse("channel.invalid", "folder")) }).service);
-    const folder = await missing.create({ ...EMPTY_NEW_CHANNEL, name: "N", number: "7", folder: "D:\\nope" });
+    const folder = await missing.create({ ...EMPTY_NEW_CHANNEL, name: "N", folder: "D:\\nope" });
     assert.deepEqual([!folder.ok && folder.field, notice()], ["folder", "Server sentence."]);
   });
 
@@ -138,7 +143,7 @@ describe("the channel flows", () => {
   it("drop an answer that arrives after the session changed", async () => {
     let answer: (channel: AdminChannel) => void = () => undefined;
     const flows = flowsOf(fake({ create: () => new Promise((resolve) => (answer = resolve)) }).service);
-    const pending = flows.create({ ...EMPTY_NEW_CHANNEL, name: "N", number: "7", folder: "D:\\v" });
+    const pending = flows.create({ ...EMPTY_NEW_CHANNEL, name: "N", folder: "D:\\v" });
     useAppStore.setState({ serial: state().serial + 1 });
     answer(live("late"));
     assert.deepEqual(await pending, { ok: false, sentence: "", dropped: true });

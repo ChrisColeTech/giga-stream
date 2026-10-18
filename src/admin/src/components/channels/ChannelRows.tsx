@@ -8,7 +8,7 @@ import { channelRows } from "@/lib/channel-rows";
 import { useAppStore } from "@/store/app-store";
 import { ChannelRow } from "./ChannelRow";
 
-/** The channels grid: the header with its select-all tick, and a row for each channel, by number. Shimmer rows in the
+/** The channels grid: the header with its select-all tick, and a row for each channel, by name. Shimmer rows in the
  *  header's own columns draw while nothing has been read yet and when there is nothing to list (never a sentence, never
  *  an empty card); a refresh keeps the rows it has, and so does a failed read. */
 export function ChannelRows() {

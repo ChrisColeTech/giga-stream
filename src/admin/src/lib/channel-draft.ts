@@ -7,7 +7,6 @@ import type { AdminChannel, LiveAdminChannel, LiveMode, StreamAdminChannel, Vari
 export interface LiveDraft {
   readonly kind: "live";
   readonly name: string;
-  readonly number: string;
   readonly category: string;
   /** Which of the two sources the channel plays; the other is kept in the draft, not sent. */
   readonly plays: "folder" | "videos";
@@ -22,7 +21,6 @@ export interface LiveDraft {
 export interface StreamDraft {
   readonly kind: "stream";
   readonly name: string;
-  readonly number: string;
   readonly category: string;
   readonly streamUrl: string;
   readonly logoUrl: string;
@@ -35,7 +33,6 @@ export function liveDraft(channel: LiveAdminChannel): LiveDraft {
   return {
     kind: "live",
     name: channel.name,
-    number: channel.number ?? "",
     category: channel.category,
     plays: channel.videos === undefined ? "folder" : "videos",
     folder: channel.folder ?? "",
@@ -51,7 +48,6 @@ export function streamDraft(channel: StreamAdminChannel): StreamDraft {
   return {
     kind: "stream",
     name: channel.name,
-    number: channel.number ?? "",
     category: channel.category,
     streamUrl: channel.streamUrl,
     logoUrl: channel.logoUrl ?? "",
@@ -70,7 +66,6 @@ export function sameDraft(a: ChannelDraft, b: ChannelDraft): boolean {
   if (a.kind === "live" && b.kind === "live") {
     return (
       a.name === b.name &&
-      a.number === b.number &&
       a.category === b.category &&
       a.plays === b.plays &&
       a.folder === b.folder &&
@@ -84,7 +79,6 @@ export function sameDraft(a: ChannelDraft, b: ChannelDraft): boolean {
   if (a.kind === "stream" && b.kind === "stream") {
     return (
       a.name === b.name &&
-      a.number === b.number &&
       a.category === b.category &&
       a.streamUrl === b.streamUrl &&
       a.logoUrl === b.logoUrl &&
@@ -95,7 +89,7 @@ export function sameDraft(a: ChannelDraft, b: ChannelDraft): boolean {
 }
 
 /** Does saving this draft over the channel change what the engine builds from? The source, the mode, the captions or the
- *  qualities do (`29` section 10, flow 2): the answer is `preparing`. A name, a number, a category or `Enabled` does not
+ *  qualities do (`29` section 10, flow 2): the answer is `preparing`. A name, a category or `Enabled` does not
  *  rebuild by itself. */
 export function rebuilds(channel: LiveAdminChannel, draft: LiveDraft): boolean {
   const base = liveDraft(channel);

@@ -25,11 +25,11 @@ export interface NewChannelRowsProps {
   readonly onChoose: () => void;
 }
 
-/** The New channel rows, in the owner's order (Name first): Name, Kind, Number, Category, then Folder for a live channel or
+/** The New channel rows, in the owner's order (Name first): Name, Kind, Category, then Folder for a live channel or
  *  Stream address for a stream one. The rows a kind does not use are not rendered. An info glyph on every row but Name;
  *  no placeholder. Category is a six-value select for live and free text for stream. */
 export function NewChannelRows({ draft, errors, onChange, onKind, onEnter, chooseReason, onChoose }: NewChannelRowsProps) {
-  const text = (key: "name" | "number" | "category" | "streamUrl", label: string, mono = false) => (
+  const text = (key: "name" | "category" | "streamUrl", label: string, mono = false) => (
     <Input
       value={draft[key]}
       className={mono ? `${FIELD_CONTROL} font-mono` : FIELD_CONTROL}
@@ -37,7 +37,6 @@ export function NewChannelRows({ draft, errors, onChange, onKind, onEnter, choos
       aria-invalid={errors[key] !== undefined}
       autoComplete="off"
       spellCheck={false}
-      inputMode={key === "number" ? "numeric" : undefined}
       onChange={(event) => onChange({ [key]: event.target.value })}
       onKeyDown={(event) => {
         if (event.key === "Enter") onEnter();
@@ -52,9 +51,6 @@ export function NewChannelRows({ draft, errors, onChange, onKind, onEnter, choos
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kind}>
         <Segmented field options={KINDS} value={draft.kind} onChange={onKind} aria-label="Kind" className="w-full" />
-      </Row>
-      <Row label="Number" tip={CHANNEL_TIPS.number} error={errors["number"]}>
-        {text("number", "Number", true)}
       </Row>
       <Row label="Category" tip={CHANNEL_TIPS.categoryNew} error={errors["category"]}>
         {draft.kind === "live" ? (

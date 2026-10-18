@@ -23,7 +23,7 @@ export const ERROR_SENTENCES: SentenceTable = {
   "account_state.invalid": "Your saved settings are not valid.",
   "channel.not_found": "That channel does not exist.",
   "channel.invalid": "That channel is not valid.",
-  "channel.taken": "Another channel already has that id or number.",
+  "channel.taken": "Another channel already has that id.",
   "path.invalid": "That address is not valid.",
   "media.not_found": "That part of the stream is not available.",
   "range.unsatisfiable": "That byte range is outside the file.",

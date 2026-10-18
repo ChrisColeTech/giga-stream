@@ -13,7 +13,7 @@ export const MIN_VARIANTS = 2;
 export const MIN_VARIANTS_REASON = "A channel keeps at least two qualities.";
 
 /** The labels each page's rows carry, so a page fixes its label column once. Name first on every form. */
-export const NEW_CHANNEL_LABELS = ["Name", "Kind", "Number", "Category", "Folder", "Stream address"] as const;
+export const NEW_CHANNEL_LABELS = ["Name", "Kind", "Category", "Folder", "Stream address"] as const;
 export const CHANNEL_LABELS = [
   ...NEW_CHANNEL_LABELS,
   "Plays",
@@ -65,7 +65,6 @@ export const LOADING_REASON = "Loading.";
 export const WORKING_REASON = "Working.";
 
 /** Refusals shown under a row. */
-export const NUMBER_TAKEN = "Another channel already has that number.";
 export const fieldRequired = (label: string): string => `${label} is required.`;
 
 /** The toolbar's bulk verbs (`36` section 5.3). */
