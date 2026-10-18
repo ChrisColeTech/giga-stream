@@ -65,7 +65,7 @@ test("every window gains the Maximize button by default, beside the close X, and
   assert.ok(html.indexOf('aria-label="Maximize Settings"') < html.indexOf('aria-label="Close Settings"'), "left of the close X");
   assert.equal(count(html, "data-grip="), 8);
   assert.equal(count(html, "data-child-status"), 0, "no status strip without `status`");
-  assert.ok(html.includes("width:978px") && html.includes("height:752px"), "the normal box is untouched");
+  assert.ok(html.includes("width:1218px") && html.includes("height:768px"), "the normal box is untouched");
 });
 
 test("a spec may opt out: no button and no double-click toggle target", () => {
@@ -80,12 +80,12 @@ test("a window that was maximized opens maximized: the container's area, no grip
   assert.equal(count(html, "data-grip="), 0);
   assert.equal(count(html, 'aria-label="Restore Settings"'), 1);
   assert.equal(count(html, "Maximize Settings"), 0);
-  assert.ok(render({ memory: kept(false) }).includes("width:978px"), "a window never maximized opens normal");
+  assert.ok(render({ memory: kept(false) }).includes("width:1218px"), "a window never maximized opens normal");
 });
 
 test("an opted-out window ignores a remembered flag", () => {
   const html = render({ maximizable: false, memory: kept(true) });
-  assert.ok(html.includes("width:978px") && count(html, "data-grip=") === 8);
+  assert.ok(html.includes("width:1218px") && count(html, "data-grip=") === 8);
 });
 
 test("a status bar is the last row after the body: h-6, hairline above, left and right items", () => {

@@ -117,7 +117,7 @@ describe("the records", () => {
     await flows.load();
     state().openWorkspace("titles", "movie-1");
     await flows.remove("movie-1");
-    assert.deepEqual([state().workspaces.titles, notice()], [null, "Deleted movie-1."]);
+    assert.deepEqual([state().workspaces.titles, state().events.at(-1)?.sentence], [null, "Deleted movie-1."]);
   });
 
   it("keeps a deleted synced title's Browse row, reading deleted, and Refresh in Browse shows it again", async () => {

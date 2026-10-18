@@ -88,7 +88,7 @@ describe("Disable and Enable as one call", () => {
     assert.deepEqual(asked, [{ ids: ["a", "b", "c"], enabled: false }]);
     assert.deepEqual(singles, ["l"]);
     /* 2 changed in the call + the live row; 1 unchanged in the call + the row that was already disabled. */
-    assert.equal(state().notice?.sentence, "Disabled 3 channels; 2 skipped.");
+    assert.equal(state().events.at(-1)?.sentence, "Disabled 3 channels; 2 skipped.");
     assert.deepEqual(state().channels.ticked, ["e"], "the finished rows are unticked; the skipped one stays");
     assert.deepEqual([rereads(), state().work.syncing], [1, 0]);
   });
@@ -98,7 +98,7 @@ describe("Disable and Enable as one call", () => {
     const first = harness();
     await first.run(true, planOf("enable", ["a", "b"]));
     assert.deepEqual([first.asked.length, first.singles.length], [0, 0], "a and b are enabled: the plan refuses both");
-    assert.equal(state().notice?.sentence, "Enabled 0 channels; 2 skipped.");
+    assert.equal(state().events.at(-1)?.sentence, "Enabled 0 channels; 2 skipped.");
     assert.equal(first.rereads(), 0);
 
     state().channelsTickAll(false);
@@ -108,7 +108,7 @@ describe("Disable and Enable as one call", () => {
     assert.deepEqual([none.asked.length, none.singles.length], [1, 0]);
     assert.deepEqual(none.asked[0], { ids: ["a", "b"], enabled: true });
     assert.equal(none.rereads(), 1);
-    assert.equal(state().notice?.sentence, "Enabled 2 channels; 1 skipped.");
+    assert.equal(state().events.at(-1)?.sentence, "Enabled 2 channels; 1 skipped.");
   });
 
   it("report a refused call as failed rows, keep them ticked, and mark an unreachable backend", async () => {

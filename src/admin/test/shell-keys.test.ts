@@ -93,8 +93,8 @@ describe("what a shell key does", () => {
     state().openOverlay("settings");
     assert.equal(runShellAction("zoom-reset", state()), true);
     assert.equal(state().uiZoom, 1);
-    assert.equal(state().notice?.sentence, ZOOM_RESET_NOTICE);
-    assert.equal(state().notice?.tone, "info");
+    assert.equal(state().events.at(-1)?.sentence, ZOOM_RESET_NOTICE);
+    assert.equal(state().events.at(-1)?.tone, "info");
   });
 
   it("toggles the events drawer", () => {

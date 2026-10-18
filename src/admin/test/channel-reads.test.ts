@@ -155,7 +155,7 @@ describe("selection across pages and bulk resolve", () => {
     await reads.selectMatching();
     assert.equal(asked.length - 1, SELECT_MATCHING_MAX / 200);
     assert.equal(state().channels.ticked.length, SELECT_MATCHING_MAX);
-    assert.equal(state().notice?.sentence, "Selected the first 10,000 of 10,500 matching channels.");
+    assert.equal(state().events.at(-1)?.sentence, "Selected the first 10,000 of 10,500 matching channels.");
   });
 
   it("stops without ticking when the query changes while it reads", async () => {
