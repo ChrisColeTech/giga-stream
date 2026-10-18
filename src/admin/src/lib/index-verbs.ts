@@ -1,6 +1,6 @@
 import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import type { ForwardVerb } from "@/constants/index-frames";
-import { FORWARD_ICON } from "@/constants/toolbar-icons";
+import { FORWARD_ICONS, FORWARD_TOOLTIPS } from "@/constants/toolbar-icons";
 import type { Tab } from "@/types/shell";
 
 const NOTHING = (): void => undefined;
@@ -13,8 +13,8 @@ export function indexVerbs(forward: ForwardVerb | null, request: (tab: Tab) => v
   return [
     {
       id: "forward",
-      label: forward.label,
-      icon: FORWARD_ICON,
+      label: FORWARD_TOOLTIPS[forward.label],
+      icon: FORWARD_ICONS[forward.label],
       ...(forward.reason !== undefined && { reason: forward.reason }),
       onPress: to === undefined ? NOTHING : () => request(to),
     },

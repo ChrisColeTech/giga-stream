@@ -13,7 +13,7 @@ describe("a workspace's toolbar", () => {
   it("is the forward arrow alone: an icon verb whose label is the tooltip, with no arrow in the words", () => {
     const [verb, ...rest] = forwardVerbs({ label: "Titles", onPress: NOTHING });
     assert.equal(rest.length, 0);
-    assert.equal(verb?.label, "Titles");
+    assert.equal(verb?.label, "Go to Titles");
     assert.equal(typeof verb?.icon, "object", "a lucide icon component");
     assert.ok(!(verb?.label ?? "").includes("→"));
   });
@@ -48,7 +48,7 @@ describe("Save details and Discard changes", () => {
 describe("an index's toolbar", () => {
   it("has the forward arrow only", () => {
     const strip = indexVerbs(INDEX_FRAMES.providers.forward, NOTHING);
-    assert.deepEqual(strip.map((verb) => [verb.label, verb.reason]), [["Titles", undefined]]);
+    assert.deepEqual(strip.map((verb) => [verb.label, verb.reason]), [["Go to Titles", undefined]]);
   });
 
   it("switches to the named tab when its verb is pressed", () => {

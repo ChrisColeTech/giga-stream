@@ -3,6 +3,7 @@ import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { LOADING_REASON, TITLE_GONE } from "@/constants/title-copy";
 import { useTitleDetail } from "@/hooks/useTitleDetail";
 import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
+import type { ToolbarAction } from "@/lib/workspace-verbs";
 import { useAppStore } from "@/store/app-store";
 import { TitleEditor } from "./TitleEditor";
 import { TitleFrame } from "./TitleFrame";
@@ -19,7 +20,7 @@ export function TitleWorkspace({ id, active }: { readonly id: string; readonly a
   const value = detail?.status === "ready" ? detail.value : null;
   useWorkspaceGone("titles", row === undefined && value === null && detail?.status === "failed", TITLE_GONE, "Title");
 
-  const jobs = { label: "Jobs", onPress: () => requestTab("jobs") };
+  const jobs: ToolbarAction = { label: "Jobs", onPress: () => requestTab("jobs") };
   if (value !== null) return <TitleEditor key={id} detail={value} active={active} jobs={jobs} />;
   const series = row?.kind === "tv";
   return (

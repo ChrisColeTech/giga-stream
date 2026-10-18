@@ -1,10 +1,10 @@
 import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
-import { FORWARD_ICON } from "@/constants/toolbar-icons";
+import { FORWARD_ICONS, FORWARD_TOOLTIPS, type ForwardDestination } from "@/constants/toolbar-icons";
 
-/** One verb of a workspace: what it says, what it does, and why it cannot be used now. */
+/** One verb of a workspace: where it goes, what it does, and why it cannot be used now. */
 export interface ToolbarAction {
-  readonly label: string;
+  readonly label: ForwardDestination;
   readonly onPress: () => void;
   readonly reason?: string;
 }
@@ -23,8 +23,8 @@ export function forwardVerbs(forward: ToolbarAction | undefined): readonly Toolb
   return [
     {
       id: "forward",
-      label: forward.label,
-      icon: FORWARD_ICON,
+      label: FORWARD_TOOLTIPS[forward.label],
+      icon: FORWARD_ICONS[forward.label],
       onPress: forward.onPress,
       ...(forward.reason !== undefined && { reason: forward.reason }),
     },

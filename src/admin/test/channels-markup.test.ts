@@ -79,7 +79,7 @@ describe("the channels toolbar and table strip", () => {
 
   it("keeps only the Preview arrow in the page toolbar, waiting for a ticked row; no bulk verb is there", () => {
     const html = toolbar();
-    assert.ok(html.includes('aria-label="Preview. Tick a row first"'));
+    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"'));
     for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(!html.includes(verb), verb);
     assert.equal((html.match(/<button/g) ?? []).length, 1);
   });
@@ -98,9 +98,9 @@ describe("the channels toolbar and table strip", () => {
     state().channelsLoaded([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
-    assert.ok(toolbar().includes('aria-label="Preview. Tick only one row"'));
+    assert.ok(toolbar().includes('aria-label="Preview channel. Tick only one row"'));
     state().channelTick("a", false);
-    assert.ok(/<button[^>]*aria-label="Preview"[^>]*>/.test(toolbar()) && !toolbar().includes("Preview. "));
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(toolbar()) && !toolbar().includes("Preview channel. "));
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {

@@ -127,13 +127,13 @@ describe("a tab's page", () => {
   it("shows the toolbar strip over the skeleton: Channels' forward verb waits for a ticked row", () => {
     const html = renderToStaticMarkup(createElement(ChannelsPage, { active: true }));
     assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New channel"));
-    assert.ok(html.includes('aria-label="Preview. Tick a row first"'));
+    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"'));
     assert.ok(html.includes("h-10"));
   });
 
   it("gives Providers a forward arrow that works; Accounts' toolbar is empty and its table strip holds Refresh only", () => {
     const providers = renderToStaticMarkup(createElement(ProvidersPage, { active: true }));
-    const arrow = providers.match(/<button[^>]*aria-label="Titles"[^>]*>/)?.[0] ?? "";
+    const arrow = providers.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
     assert.ok(arrow.length > 0 && !arrow.includes('disabled=""'));
     const accounts = renderToStaticMarkup(createElement(AccountsPage, { active: true }));
     const toolbar = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("New account"));
@@ -150,7 +150,7 @@ describe("a workspace's pieces", () => {
       createElement(WorkspaceToolbar, { label: "Channel toolbar", forward: { label: "Titles", onPress: NOTHING } }),
     );
     assert.equal((html.match(/<button/g) ?? []).length, 1);
-    assert.ok(/<button[^>]*aria-label="Titles"[^>]*title="Titles"/.test(html));
+    assert.ok(/<button[^>]*aria-label="Go to Titles"[^>]*title="Go to Titles"/.test(html));
     assert.ok(!html.includes("Discard") && !html.includes("Save") && !/>[^<]+<\/button>/.test(html));
     assert.equal((renderToStaticMarkup(createElement(WorkspaceToolbar, { label: "Account toolbar" })).match(/<button/g) ?? []).length, 0);
   });
