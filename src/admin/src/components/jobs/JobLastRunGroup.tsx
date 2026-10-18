@@ -7,7 +7,16 @@ import { Row } from "@giga/ui/form/Row";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { StateWord } from "@/components/records/StateWord";
 import { LOADING_REASON } from "@/constants/account-copy";
-import { STALE_TIP } from "@/constants/job-copy";
+import {
+  COUNTS_TIP,
+  CREATED_TIP,
+  OUTCOME_TIP,
+  REFUSED_TIP,
+  RUN_STATE_TIP,
+  STALE_TIP,
+  TITLES_TIP,
+  WHEN_TIP,
+} from "@/constants/job-copy";
 import { catalogCounts, countsLine, playlistCounts } from "@/lib/job-counts";
 import { stateOfJob } from "@/lib/job-rows";
 import { formatWhen } from "@/lib/format-when";
@@ -59,6 +68,7 @@ export function JobLastRunGroup({ job, loading, onRefresh, onOpenChannel }: JobL
     <Group id="jw-last" icon={History} title="Last run" last>
       <Row
         label="State"
+        tip={RUN_STATE_TIP}
         trailing={
           <IconButton
             aria-label="Refresh last run"
@@ -75,21 +85,29 @@ export function JobLastRunGroup({ job, loading, onRefresh, onOpenChannel }: JobL
           {state.word === "running" && <RunningBar />}
         </span>
       </Row>
-      <Row label="When">{fact(formatWhen(job.lastRunAt))}</Row>
-      <Row label="Outcome">{fact(job.lastOutcome)}</Row>
+      <Row label="When" tip={WHEN_TIP}>
+        {fact(formatWhen(job.lastRunAt))}
+      </Row>
+      <Row label="Outcome" tip={OUTCOME_TIP}>
+        {fact(job.lastOutcome)}
+      </Row>
       {job.type === "playlist" ? (
         <>
-          <Row label="Counts">{fact(countsLine(playlist.counts))}</Row>
-          <Row label="Refused" align="start">
+          <Row label="Counts" tip={COUNTS_TIP}>
+            {fact(countsLine(playlist.counts))}
+          </Row>
+          <Row label="Refused" tip={REFUSED_TIP} align="start">
             {list(playlist.refused)}
           </Row>
-          <Row label="Created" align="start">
+          <Row label="Created" tip={CREATED_TIP} align="start">
             {list(playlist.created, onOpenChannel)}
           </Row>
         </>
       ) : (
         <>
-          <Row label="Titles">{fact(catalog.titles)}</Row>
+          <Row label="Titles" tip={TITLES_TIP}>
+            {fact(catalog.titles)}
+          </Row>
           <Row label="Stale" tip={STALE_TIP}>
             {fact(catalog.stale)}
           </Row>

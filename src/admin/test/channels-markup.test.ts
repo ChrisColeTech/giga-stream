@@ -47,10 +47,9 @@ describe("the New channel form", () => {
     assert.ok(!html.includes("<select") && label(html, "Folder") === -1 && !html.includes("Choose"));
   });
 
-  it("puts an info glyph on every row but Name", () => {
+  it("puts an info glyph on every row, Name included", () => {
     const html = rows();
-    for (const text of ["Kind", "Category", "Folder"]) assert.ok(html.includes(`About ${text}`), text);
-    assert.ok(!html.includes("About Name"));
+    for (const text of ["Name", "Kind", "Category", "Folder"]) assert.ok(html.includes(`About ${text}`), text);
   });
 
   it("keeps Choose in place, disabled with its reason, without the backend's window; enabled with it", () => {

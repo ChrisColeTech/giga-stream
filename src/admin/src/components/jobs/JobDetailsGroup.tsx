@@ -4,7 +4,7 @@ import { Toggle } from "@giga/ui/controls/Toggle";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { ENABLED_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
+import { ENABLED_TIP, NAME_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
 import type { JobDraft } from "@/lib/job-draft";
 import { typeWord } from "@/lib/job-rows";
 import type { FormErrors } from "@/lib/record-form";
@@ -27,7 +27,7 @@ export function JobDetailsGroup({ job, draft, errors, playlists, onChange }: Job
   const catalog = job.type === "catalog";
   return (
     <Group id="jw-details" icon={FileText} title="Details">
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={NAME_TIP} error={errors["name"]}>
         <Input
           type="text"
           value={draft.name}

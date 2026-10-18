@@ -58,8 +58,8 @@ describe("a stream channel's workspace", () => {
   it("tags a synced row's edited fields `Edited`, and says the next sync keeps them", () => {
     const html = details(SYNCED);
     assert.equal((html.match(/>Edited</g) ?? []).length, 1, "the name, in Details");
-    assert.ok(html.includes("About Name"), "the edited Name gains the glyph whose tip says the next sync keeps it");
-    assert.ok(!details(stream("s")).includes("About Name"));
+    assert.ok(html.includes("About Name"), "the edited Name's glyph carries the tip that the next sync keeps it");
+    assert.ok(details(stream("s")).includes("About Name"), "an unedited Name has its glyph too");
     const address = renderLive(
       createElement(StreamAddressGroup, {
         draft: streamDraft(SYNCED),

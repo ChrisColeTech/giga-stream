@@ -19,7 +19,7 @@ export interface StreamDetailsGroupProps {
 }
 
 const FIELDS = [
-  { key: "name", label: "Name", tip: undefined },
+  { key: "name", label: "Name", tip: CHANNEL_TIPS.name },
   { key: "category", label: "Category", tip: CHANNEL_TIPS.categoryStream },
 ] as const;
 

@@ -8,7 +8,7 @@ import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import type { SaveVerb } from "@/lib/workspace-verbs";
-import { ADDRESS_TIP, ENABLED_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
+import { ADDRESS_TIP, ENABLED_TIP, NAME_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
 import { replaceReason, startReplace, type PlaylistDraft } from "@/lib/playlist-draft";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
@@ -36,7 +36,7 @@ export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }
   );
   return (
     <Group id="pw-details" icon={FileText} title="Details">
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={NAME_TIP} error={errors["name"]}>
         <Input
           type="text"
           value={draft.name}

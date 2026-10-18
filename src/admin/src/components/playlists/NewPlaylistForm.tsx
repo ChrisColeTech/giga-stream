@@ -4,7 +4,7 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Row } from "@giga/ui/form/Row";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
-import { NEW_ADDRESS_TIP } from "@/constants/playlist-copy";
+import { NAME_TIP, NEW_ADDRESS_TIP } from "@/constants/playlist-copy";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { EMPTY_NEW_PLAYLIST, createReason, sameNewPlaylist } from "@/lib/playlist-draft";
@@ -33,7 +33,7 @@ export function NewPlaylistForm() {
 
   return (
     <NewRecordGroup id="pl-create" icon={Plus} title="New playlist" create={{ onPress: () => void create(), reason }}>
-      <Row label="Name" error={form.errors["name"]}>
+      <Row label="Name" tip={NAME_TIP} error={form.errors["name"]}>
         <Input
           type="text"
           value={form.draft.name}

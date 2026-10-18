@@ -7,7 +7,7 @@ import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import type { SaveVerb } from "@/lib/workspace-verbs";
-import { ENABLED_TIP, LAST_SIGN_IN_TIP, SECURITY_QUESTION_TIP } from "@/constants/account-copy";
+import { ENABLED_TIP, LAST_SIGN_IN_TIP, SECURITY_QUESTION_TIP, USERNAME_TIP } from "@/constants/account-copy";
 import type { AccountDraft } from "@/lib/account-draft";
 import { formatWhen } from "@/lib/format-when";
 import type { FormErrors } from "@/lib/record-form";
@@ -38,7 +38,7 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
   );
   return (
     <Group id="ac-details" icon={User} title="Details">
-      <Row label="Username" error={errors["username"]}>
+      <Row label="Username" tip={USERNAME_TIP} error={errors["username"]}>
         <Input
           type="text"
           value={draft.username}

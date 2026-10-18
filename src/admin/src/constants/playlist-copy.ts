@@ -20,6 +20,7 @@ export const PLAYLIST_SECTIONS = [
 export const PLAYLIST_SECTION_KEYS: readonly string[] = PLAYLIST_SECTIONS.map((section) => section.id);
 
 /** Tips (the mockup's words). Name carries none: its label explains itself. */
+export const NAME_TIP = "What the playlist is called in the list. 1 to 120 characters.";
 export const NEW_ADDRESS_TIP = "https only. The address is stored but never shown again.";
 export const ADDRESS_TIP = "https only. Never shown back. Replace it to set a new one.";
 export const ENABLED_TIP = "A disabled playlist is skipped by every job.";

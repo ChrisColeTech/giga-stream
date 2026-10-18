@@ -100,6 +100,18 @@ describe("a component renders props", () => {
   });
 });
 
+describe("every form row carries its info glyph", () => {
+  it("gives each Row of a New form or a workspace a `tip` in its opening tag (the family look: Name has one too)", () => {
+    const forms = COMPONENTS.filter((source) => !/[\\/]session[\\/]/.test(source.path));
+    const bare = forms.filter((source) =>
+      [...source.text.matchAll(/<Row\b/g)].some(
+        (hit) => !/^<Row\b[^>]*tip=/.test(source.text.slice(hit.index, hit.index + 260).replace(/\n\s*/g, " ")),
+      ),
+    );
+    assert.deepEqual(bare.map((source) => rel(source.path)), []);
+  });
+});
+
 describe("a loading or empty list is skeleton rows, never a sentence", () => {
   it("renders no paragraph in the list groups, the table strip or the workspace frames", () => {
     const frames = COMPONENTS.filter((source) => /(?:List|Rows|Frame|Strip|Index)\w*\.tsx$/.test(source.path));

@@ -55,6 +55,11 @@ export const SORT_OPTIONS = [
 /** Info tips (the mockup's sentences). */
 export const KIND_NEW_TIP = "A movie or a series. Fixed once the title exists.";
 export const KIND_FIXED_TIP = "Fixed once the title exists.";
+export const TITLE_TIP = "The title as the player app lists it. 1 to 200 characters.";
+export const PLOT_TIP = "The summary shown with the title.";
+export const SEASON_TIP = "The season's number, used once. Move it with the arrows.";
+export const EPISODE_TIP = "The episode's number and its title.";
+export const SEASON_COUNT_TIP = "How many episodes this season has.";
 export const YEAR_TIP = "The year it was first released.";
 export const SEARCH_TIP = "Searches TMDB and the titles made here. Press Enter or the search button.";
 export const KIND_FILTER_TIP = "Which kinds the list shows; at least one stays on.";

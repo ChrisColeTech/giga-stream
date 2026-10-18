@@ -5,7 +5,7 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Row } from "@giga/ui/form/Row";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
-import { PLAYLIST_TIP, TYPE_TIP } from "@/constants/job-copy";
+import { NAME_TIP, PLAYLIST_TIP, TYPE_TIP } from "@/constants/job-copy";
 import { useJobActions } from "@/hooks/useJobActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { createReason } from "@/lib/job-checks";
@@ -45,7 +45,7 @@ export function NewJobForm() {
 
   return (
     <NewRecordGroup id="jb-create" icon={Plus} title="New job" create={{ onPress: () => void create(), reason }}>
-      <Row label="Name" error={form.errors["name"]}>
+      <Row label="Name" tip={NAME_TIP} error={form.errors["name"]}>
         <Input
           type="text"
           value={form.draft.name}

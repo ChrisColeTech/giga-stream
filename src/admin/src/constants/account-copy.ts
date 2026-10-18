@@ -18,6 +18,9 @@ export const ACCOUNT_SECTIONS = [
 ] as const;
 export const ACCOUNT_SECTION_KEYS: readonly string[] = ACCOUNT_SECTIONS.map((section) => section.id);
 
+export const USERNAME_TIP = "Any text, 1 to 254 characters. It is how the account signs in.";
+export const PASSWORD_TIP = "Up to 256 characters. A space counts. It is never shown back.";
+export const NEW_PASSWORD_TIP = "Up to 256 characters. Setting it signs the account out everywhere.";
 export const ENABLED_TIP = "A disabled account cannot sign in.";
 export const LAST_SIGN_IN_TIP = "When this account last signed in.";
 export const SECURITY_QUESTION_TIP = "Each account sets its own, under Settings > Account.";

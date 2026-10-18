@@ -7,7 +7,7 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
-import { SET_PASSWORD_TIP, TYPE_PASSWORD } from "@/constants/account-copy";
+import { NEW_PASSWORD_TIP, SET_PASSWORD_TIP, TYPE_PASSWORD } from "@/constants/account-copy";
 import { setPasswordReason } from "@/lib/account-checks";
 import type { FlowResult } from "@/services/account-flows";
 
@@ -41,7 +41,7 @@ export function AccountPasswordGroup({ saving, unreachable, onSet }: AccountPass
 
   return (
     <Group id="ac-password" icon={KeyRound} title="Password" last>
-      <Row label="New password" error={error}>
+      <Row label="New password" tip={NEW_PASSWORD_TIP} error={error}>
         <Input
           type="password"
           value={value}

@@ -50,7 +50,7 @@ export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
 
   return (
     <Group id="lv-details" icon={FileText} title="Details">
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={CHANNEL_TIPS.name} error={errors["name"]}>
         {field("name", "Name")}
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kindFixed}>

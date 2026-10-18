@@ -46,7 +46,7 @@ export function NewChannelRows({ draft, errors, onChange, onKind, onEnter, choos
 
   return (
     <>
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={CHANNEL_TIPS.name} error={errors["name"]}>
         {text("name", "Name")}
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kind}>
