@@ -25,10 +25,10 @@ export interface TitleSpotlightProps {
 }
 
 /** Search titles (`06` section 4.6): macOS Spotlight, not a modal. One borderless rounded window floating over the
- *  app, with no scrim and no dimming of anything, no dialog semantics, no title bar and no close button. With nothing
- *  typed it is only the search bar; with a query it grows the two-column results (list and preview). It is dismissed
- *  by Escape, a press on the invisible click-catcher behind it or focus leaving it, and Title information stands over
- *  it without closing it. */
+ *  app — the catcher behind it wears the family backdrop (`bg-scrim`, `50` section 2.6), but the window itself has no
+ *  dialog semantics, no title bar and no close button, and nothing is dimmed by the window. With nothing typed it is
+ *  only the search bar; with a query it grows the two-column results (list and preview). It is dismissed by Escape,
+ *  a press on the catcher behind it or focus leaving it, and Title information stands over it without closing it. */
 export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSubmit, onPlay, onInfo }: TitleSpotlightProps) {
   const panel = useSpotlightFrame(state.open, paused, onClose);
   const searched = state.query.trim() !== "";

@@ -41,15 +41,21 @@ export function Titlebar() {
     return { side, lit, reason, onToggle: () => togglePane(side) };
   };
 
-  /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Giga Cut's Export slot, beside the pane toggles. */
+  /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Giga Cut's Export slot, beside the pane toggles. Asleep
+   * under an open window like every other titlebar control (`50` section 2.5): disabled with the tabs' sleeping
+   * wording, and reading unselected whatever Theatre is doing behind the window. */
+  const asleep = settingsOpen;
   const theatreButton = (
     <Button
       size="sm"
       variant="ghost"
-      title={theatre ? "Theatre mode is on. Press to leave it; reopen panes with their toggles." : "Theatre mode"}
+      disabled={asleep}
+      title={asleep
+        ? SLEEPING_TABS
+        : theatre ? "Theatre mode is on. Press to leave it; reopen panes with their toggles." : "Theatre mode"}
       aria-label="Theatre mode"
-      aria-pressed={theatre}
-      on={theatre}
+      aria-pressed={theatre && !asleep}
+      on={theatre && !asleep}
       onClick={toggleTheatre}
     >
       <MonitorPlay aria-hidden /> Theatre

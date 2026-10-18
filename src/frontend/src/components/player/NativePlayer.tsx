@@ -29,6 +29,13 @@ const positionOf = (media: HTMLVideoElement): [number, number | undefined] => [
 
 const isHls = (url: string): boolean => /\.m3u8(?:$|[?#])/i.test(url);
 export const nativeAttachmentKey = (url: string, retry: number): string => `${url}\u0000${retry}`;
+
+/** Stop's native action (`50` section 2.4): pause in place — the position stays for Resume, the source is never
+ *  cleared. */
+export function pauseForStop(media: { readonly pause: () => void } | null | undefined): void {
+  media?.pause();
+}
+
 const preferences = () => {
   const playback = useAppStore.getState().playback;
   return {
@@ -42,6 +49,7 @@ const preferences = () => {
 /** Native media host for local Range addresses and app-player streams. */
 export function NativePlayer(props: NativePlayerProps) {
   const video = useRef<HTMLVideoElement>(null);
+  const stopRequest = useAppStore((state) => state.stopRequest);
   const attachmentKey = nativeAttachmentKey(props.url, props.retry);
   useEffect(() => {
     const node = video.current;
@@ -70,6 +78,12 @@ export function NativePlayer(props: NativePlayerProps) {
       node.load();
     };
   }, [attachmentKey]);
+
+  /* Stop (`50` section 2.4): the serial's change pauses the element; the stage stays mounted. */
+  useEffect(() => {
+    if (stopRequest === 0) return;
+    pauseForStop(video.current);
+  }, [stopRequest]);
 
   return (
     <video

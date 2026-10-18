@@ -28,7 +28,6 @@ import type { LibraryItem } from "@/types/library";
 
 export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
-  const [paused, setPaused] = useState(true);
   const [retry, setRetry] = useState(0); const [dataRetry, setDataRetry] = useState(0);
   const [userInitiated, setUserInitiated] = useState(false);
   const handled = useRef(0); const navigation = useRef(new PlayerNavigation());
@@ -37,6 +36,9 @@ export function PlayerPage({ active }: { active: boolean }) {
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const libraryItems = useAppStore((state) => state.libraryItems);
   const media = useAppStore((state) => state.playerMedia);
+  /* The paused flag lives in the store (`50` section 2.4): the statusbar's Stop reads it while the page shows it. */
+  const paused = useAppStore((state) => state.playerPaused);
+  const setPaused = useAppStore((state) => state.setPlayerPaused);
   const mark = useAppStore((state) => session.current === null ? undefined : state.watchMarks[itemKey(session.current.ref)]);
   const setPlayerItem = useAppStore((state) => state.setPlayerItem);
   const setSources = useAppStore((state) => state.setPlayerSources);

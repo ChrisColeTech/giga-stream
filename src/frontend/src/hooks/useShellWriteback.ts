@@ -35,10 +35,7 @@ export function startShellWriteback(deps: ShellWritebackDeps): () => void {
     writing = true;
     try {
       await deps.write(write.layout);
-      if (active) {
-        deps.getState().markShellSaved(write.revision);
-        deps.getState().say("Layout saved.");
-      }
+      if (active) deps.getState().markShellSaved(write.revision);
     } catch (error: unknown) {
       const sentence = error instanceof Error ? error.message : "The layout was not saved.";
       if (active) deps.getState().say(sentence, "warn");

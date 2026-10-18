@@ -24,6 +24,15 @@ export interface ShellKinds extends ChromeKinds {
   box: Box;
 }
 
+/** Which areas of the interface are working (`50` section 2.3): the statusbar's bar reads it in real time. Transient
+ *  session state — the hydration snapshot never writes it and nothing restores it. */
+export interface ActivityFlags {
+  library: boolean;
+  video: boolean;
+  live: boolean;
+  search: boolean;
+}
+
 /** The interface's shell state: the shared chrome fields, plus its panes, Theatre, hydration and settings write-back.
  */
 export interface ShellSlice extends ChromeSlice<ShellKinds> {
@@ -41,6 +50,12 @@ export interface ShellSlice extends ChromeSlice<ShellKinds> {
    *  Always false outside Theatre. */
   chromeIdle: boolean;
   setChromeIdle: (value: boolean) => void;
+  activity: ActivityFlags;
+  setActivity: (area: keyof ActivityFlags, on: boolean) => void;
+  /** Bumped every time the statusbar's Stop asks playback to stop (`50` section 2.4). Consumers answer the change
+   *  itself, so a second press is just another idempotent action, never a queued one. */
+  stopRequest: number;
+  requestStop: () => void;
   hydrationApplied: boolean;
   shellVisible: boolean;
   shellWriteEnabled: boolean;
@@ -107,6 +122,14 @@ export function shellSlice(set: Set, get: Get): ShellSlice {
     toggleTheatre: () => toggleTheatre(set, get),
     chromeIdle: false,
     setChromeIdle: (value) => set({ chromeIdle: value }),
+    activity: { library: false, video: false, live: false, search: false },
+    setActivity: (area, on) => {
+      const activity = { ...get().activity };
+      activity[area] = on;
+      set({ activity });
+    },
+    stopRequest: 0,
+    requestStop: () => set({ stopRequest: get().stopRequest + 1 }),
     hydrationApplied: false,
     shellVisible: false,
     shellWriteEnabled: false,

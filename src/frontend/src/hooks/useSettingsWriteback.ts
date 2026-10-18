@@ -35,7 +35,6 @@ export function startSettingsWriteback(deps: SettingsWritebackDeps): () => void 
         if (!active) break;
         deps.getState().applyCommittedSettings(answer, write.revision, write.patch);
         observed = settingsOfFields(deps.getState());
-        deps.getState().say("Settings saved.");
       } catch (error: unknown) {
         if (!active) break;
         deps.getState().rejectSettings(write.revision, write.patch);

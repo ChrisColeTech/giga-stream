@@ -14,14 +14,22 @@ const preferencesOf = (): StreamPreferences => {
   };
 };
 
+/** Stop's live action (`50` section 2.4): the controller's detach primitive sends the engine back to the idle stage. */
+export function detachForStop(player: { readonly detach: () => void } | null | undefined): void {
+  player?.detach();
+}
+
 /** Connects the one Live video element to its controller; neither the store nor the component owns media objects. */
 export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void {
   const controller = useRef<StreamPlayerController | null>(null);
   const serial = useAppStore((state) => state.livePlaySerial);
+  const stopRequest = useAppStore((state) => state.stopRequest);
   const videoQuality = useAppStore((state) => state.playback.videoQuality);
   const audioLanguage = useAppStore((state) => state.playback.audioLanguage);
   const subtitleLanguage = useAppStore((state) => state.playback.subtitleLanguage);
   const lowLatency = useAppStore((state) => state.playback.lowLatency);
+  const channelsLoading = useAppStore((state) => state.channelsLoading);
+  const streamStarting = useAppStore((state) => state.liveStage === "loading");
 
   useEffect(() => {
     if (video.current === null) return;
@@ -39,6 +47,19 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
       controller.current = null;
     };
   }, [video]);
+
+  /* The statusbar's bar reads the store (`50` section 2.3): Live is busy while its channel list loads or a stream is
+     starting, and the flag clears on rest, failure and unmount alike. */
+  useEffect(() => {
+    useAppStore.getState().setActivity("live", channelsLoading || streamStarting);
+    return () => useAppStore.getState().setActivity("live", false);
+  }, [channelsLoading, streamStarting]);
+
+  /* Stop (`50` section 2.4): the serial's change detaches the engine; the idle stage is the answer. */
+  useEffect(() => {
+    if (stopRequest === 0) return;
+    detachForStop(controller.current);
+  }, [stopRequest]);
 
   useEffect(() => {
     const state = useAppStore.getState();

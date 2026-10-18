@@ -95,4 +95,18 @@ describe("Theatre mode", () => {
     assert.equal(barTone(false), "border-border bg-panel");
     assert.match(renderToStaticMarkup(createElement(Statusbar)), /duration-fast/);
   });
+
+  it("sleeps the Theatre button while a child window is open: disabled, unselected, the tabs' wording", () => {
+    useAppStore.setState({ overlay: "title-info" });
+    const button = /<button[^>]*aria-label="Theatre mode"[^>]*>/
+      .exec(renderToStaticMarkup(createElement(Titlebar)))?.[0] ?? "";
+    assert.ok(button.includes("disabled"), "natively disabled, like the sleeping tabs and pane toggles");
+    assert.ok(button.includes('aria-pressed="false"'), "reads unselected whatever Theatre is behind the window");
+    assert.ok(button.includes("Close the open window to switch surfaces."), "the exact sleeping wording the tabs use");
+
+    useAppStore.setState({ overlay: null });
+    const awake = /<button[^>]*aria-label="Theatre mode"[^>]*>/
+      .exec(renderToStaticMarkup(createElement(Titlebar)))?.[0] ?? "";
+    assert.ok(!awake.includes("disabled"), "awake again once the window closed");
+  });
 });

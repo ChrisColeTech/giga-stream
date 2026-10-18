@@ -74,6 +74,25 @@ describe("shell write-back", () => {
     stop();
   });
 
+  it("a saved layout write says nothing: no notice and no events row (`50` section 2.1)", async () => {
+    let timer: (() => void) | undefined;
+    useAppStore.setState({ shellWriteEnabled: true });
+    const stop = startShellWriteback({
+      getState: useAppStore.getState,
+      subscribe: useAppStore.subscribe,
+      write: async (layout) => layout,
+      schedule: (task) => { timer = task; return 1; },
+      cancel: () => undefined,
+    });
+    useAppStore.getState().setSurface("player");
+    timer?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(useAppStore.getState().notice, null);
+    assert.deepEqual(useAppStore.getState().events, []);
+    stop();
+  });
+
   it("does not retry a failed revision after event and notice mutations", async () => {
     const timer: { task?: () => void } = {};
     let writes = 0;

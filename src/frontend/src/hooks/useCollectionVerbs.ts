@@ -162,7 +162,6 @@ async function cancelFolderScan(
     state.upsertJob(await cancelJob(job.id));
     try {
       await refresh();
-      state.say("Folder scan is stopping.");
     } catch (error: unknown) {
       state.say(`Folder scan is stopping. Running work could not be refreshed. ${sentence(error)}`, "warn");
     }
