@@ -650,6 +650,29 @@ segments, with `Range`), `GET /logos/:id.png`, `GET /test/player.html` (only wit
 `/admin/` app. Further codes: `channel.taken` (409), `fault.invalid` (400), `path.invalid` (400), `playlist.unavailable`
 (500), `range.unsatisfiable` (416).
 
+**`GET /api/admin-channels` paging (`41` section 3.1, built).** Signed in, `Cache-Control: no-store`. Without query
+parameters it answers every row, `{ items: AdminChannel[], revision }`, exactly as before. `limit` turns paging on and is
+required by every other parameter (a filter or sort without it is `400 request.invalid`, `field: limit`, never silently
+ignored):
+
+| Parameter | Values | Meaning |
+|---|---|---|
+| `limit` | 1 to 200 | page size |
+| `offset` | 0 to 10,000,000 (default 0) | rows to skip |
+| `q` | up to 120 characters (trimmed; empty is no search) | case-insensitive contains over `name`, `number`, `tvg_id`, `source`; `%`, `_` and `\` are literal |
+| `kind` | `live` \| `stream` | |
+| `origin` | `synced` \| `edited` \| `manual` | stream rows only: `source` and no edits, `source` and edits, no `source` |
+| `enabled` | `true` \| `false` | |
+| `state` | `preparing` \| `starting` \| `live` \| `restarting` \| `stopped` \| `failed` | live rows only: the engine's state of each live row, applied as an id set |
+| `source` | a playlist host, up to 253 characters | exact match |
+| `sort` | `number` (default) \| `name` \| `category` \| `kind` \| `source` | `number` is numeric; rows with no number (or no source) last in either direction |
+| `dir` | `asc` (default) \| `desc` | |
+
+The paged answer is `{ items: AdminChannel[], revision, total, offset, limit }`; `total` counts the rows the filters keep,
+before `limit`. The order is total and stable: the sort, then the name (case-insensitive), then the id. Paging runs in SQL
+(`store/channel-page.ts`) and only the returned rows are decorated with the engine's state. `revision` is the change marker.
+An invalid value is `400 request.invalid` naming the field.
+
 ### 7.2b Providers
 
 Providers are the sources that produce playback URLs for a title. They follow the same admin-edit,
@@ -770,6 +793,7 @@ interface BackendTitle {
 | `GET /api/titles/:titleId/seasons/:season` | `{ episodes }`: each with season, episode, title, air date, runtime, still address and its `streamUrl` from the rule |
 | `GET /api/titles/:titleId/recommendations` | `{ items: BackendTitle[] }`: TMDB's recommendations, first page, in TMDB's order |
 | `DELETE /api/titles/:titleId` | signed in, audited `title.deleted`; answers `{ id }`. A title made by hand is deleted for real; a **synced** title is deleted and **stays deleted** (below) |
+| `GET /api/titles/stored` | signed in, `Cache-Control: no-store`, never a public read (`PUBLIC_READ` excludes it); every row of the `titles` table, synced and made by hand, read from the store alone (**never TMDB**; it works with no TMDB token). Query: `limit` 1 to 200 (default 100), `offset` 0 to 10,000,000 (default 0), `q` up to 200 characters (case-insensitive contains over the stored title, `%` `_` `\` literal), `kind` `movie`\|`tv`\|`all` (default), `origin` `tmdb`\|`manual`\|`all` (default), `edited` `true`\|`false`, `enabled` `true`\|`false`, `sort` `title` (default, case-insensitive)\|`year`\|`rating`\|`fetched`, `dir` `asc` (default)\|`desc`. Answers `{ items: StoredTitleRow[], total, offset, limit, inventory: { movie, tv, manual, edited, disabled }, version }` (`29` section 5): `total` after the filters; `inventory` counts the whole store, whatever the filters; `version` is `count:max(fetched_at)` of the whole table. The order is total: the sort (rows without a year or rating last in either direction), then the id. A deleted synced title has no stored copy, so it is never listed. Invalid values are `400 request.invalid` naming the field (`41` section 3.2) |
 | `GET /api/titles/deleted` | signed in, `Cache-Control: no-store`; `{ items: DeletedTitle[] }`, the latest deletion first |
 | `DELETE /api/titles/deleted/:titleId` | signed in, audited `title.restored`; the id is `movie-603`; removes the record and answers `{ id }`; `404 title.not_found` when none is recorded |
 

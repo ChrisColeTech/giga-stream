@@ -96,6 +96,9 @@ interface LiveAdminChannel extends BackendChannel {
   state: ChannelState; problem?: string; renditions: string[];
   playlist: { name: string; durationMs: number }[]; nowPlaying: { index: number; name: string } | null }
 type AdminChannel = StreamAdminChannel | LiveAdminChannel;             // GET /api/admin-channels: { items, revision }
+// paged (41 section 3.1; `limit` turns it on, every other parameter needs it; 03 section 7.2 has the parameters):
+// GET /api/admin-channels?limit&offset&q&kind&origin&enabled&state&source&sort&dir
+//   -> { items: AdminChannel[]; revision: number; total: number /* after the filters */; offset: number; limit: number }
 // a live row's streamUrl is `<caller origin>/live/<id>/master.m3u8` (channel-views.ts); there is no `masterUrl` field
 // live id: kebab-case, at most 64; number: whole 1..9999 sent as text or integer; category: News Sports Music Kids Movies Entertainment
 
@@ -109,6 +112,14 @@ interface AdminTitleRow { id: string /* movie-603 | tv-1399 | custom-<uuid> */; 
   rating?: number; genres?: string[]; posterUrl?; backdropUrl?; tmdbId?: number; streamUrl?; state: "synced" | "edited" | "manual"; enabled?: boolean }
 // detail adds plot?, cast?: string[], runtimeMs? (movie), seasons? [{ season, episodeCount } | { season, episodes[] }], sources? TitleSource[]
 // list: { items, page, totalPages, totalResults }
+// stored (41 section 3.2, built; signed in, no-store, never TMDB; 03 section 7.4 has the parameters):
+// GET /api/titles/stored?limit&offset&q&kind&origin&edited&enabled&sort=title|year|rating|fetched&dir
+interface StoredTitleRow { id; kind: "movie" | "tv"; title: string; year?: number; rating?: number; genres?: string[]; posterUrl?;
+  backdropUrl?; tmdbId?: number; streamUrl?; state: "synced" | "edited" | "manual"; enabled: boolean; editedFields: string[];
+  fetchedAt: number /* when it was stored or refreshed, epoch ms */ }       // an AdminTitleRow plus fetchedAt; never seasons
+//   -> { items: StoredTitleRow[]; total: number; offset: number; limit: number;
+//        inventory: { movie: number; tv: number; manual: number; edited: number; disabled: number } /* the whole store */;
+//        version: string /* "count:maxFetchedAt", the change marker */ }
 
 // playlists (types/playlist.ts)
 interface PlaylistView { id: number; name; host; masked; enabled: boolean; channels: number; lastSyncedAt?: number; lastOutcome?: string }
