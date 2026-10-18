@@ -1,12 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { TITLE_ID_MAX, TITLE_ID_MIN } from "../constants/titles.js";
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
 
-const TitleParams = z.object({ titleId: z.string().min(3).max(30) });
-const SeasonParams = z.object({ titleId: z.string().min(3).max(30), season: z.coerce.number().int().min(0).max(100) });
+const TitleId = z.string().min(TITLE_ID_MIN).max(TITLE_ID_MAX);
+const TitleParams = z.object({ titleId: TitleId });
+const SeasonParams = z.object({ titleId: TitleId, season: z.coerce.number().int().min(0).max(100) });
 
 /** The titles pass-through (docs/03 section 3.6): three reads, one service call each. */
 export function registerTitlesRoutes(app: FastifyInstance, services: AppServices): void {
