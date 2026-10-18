@@ -39,8 +39,11 @@ export function tlsOptions(settings: Config): { cert: Buffer; key: Buffer } | un
 export const corsOrigins = (settings: Config): string[] =>
   settings.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
 
-/** The public reads the fileserver makes (docs/03 sections 7.2 and 7.4): channels, providers and the title browse routes. */
-const PUBLIC_READ = /^\/api\/(channels|providers|titles(?!\/(sync|deleted)(\/|\?|$)))(\/|\?|$)/;
+/**
+ * The public reads the fileserver makes (docs/03 sections 7.2 and 7.4): channels, providers and the title browse routes.
+ * The titles' sync status, deleted list and stored list (docs/41 section 3.2) are the admin's and never public.
+ */
+const PUBLIC_READ = /^\/api\/(channels|providers|titles(?!\/(sync|deleted|stored)(\/|\?|$)))(\/|\?|$)/;
 
 /**
  * Routes whose answers must never be cached: every `/api` route, since each carries tokens, account details,

@@ -4,16 +4,11 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Fault } from "../live/engine/fault-state.js";
 import type { LiveEngine } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
-import type {
-  AdminChannel,
-  AdminChannelList,
-  BackendChannel,
-  ChannelList,
-  ChannelRecord,
-  LiveRecord,
-} from "../types/channel.js";
+import type { AdminChannel, BackendChannel, ChannelList, ChannelRecord, LiveRecord } from "../types/channel.js";
 import type { ChannelInput, ChannelPatch, LiveChannelInput } from "../types/channel-input.js";
+import type { AdminChannelQuery } from "../types/channel-query.js";
 import type { Actor, AuditService } from "./audit-service.js";
+import { adminChannels } from "./channel-admin-list.js";
 import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
 import { invalid, newStreamRecord, patchedStreamRecord, withEdits } from "./stream-channel-rules.js";
@@ -77,11 +72,8 @@ export function createChannelService(deps: {
       return publicChannel(record, base);
     },
 
-    /** The admin's full view: both kinds, with a live row's state, playlist and fault. */
-    listAdmin: (base: string): AdminChannelList => ({
-      items: store.channels.list().map((record) => adminChannel(record, base, live)),
-      revision: store.revisions.current(),
-    }),
+    /** The admin's full view (both kinds, a live row's state, playlist and fault): whole, or a page (docs/41 3.1). */
+    listAdmin: (base: string, query?: AdminChannelQuery) => adminChannels(store, live, base, query),
 
     create(input: ChannelInput, actor: Actor, base: string): AdminChannel {
       const record = createRecord(input);

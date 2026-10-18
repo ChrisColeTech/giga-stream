@@ -39,7 +39,8 @@ test("a refused start creates no database file", async () => {
 });
 
 test("sign-in, account and audit answers are never cached; channel reads may be", () => {
-  for (const url of ["/api/auth/login", "/api/auth/me", "/api/admin-accounts", "/api/admin-accounts/x", "/api/audit?limit=5", "/api/admin-channels"]) {
+  for (const url of ["/api/auth/login", "/api/auth/me", "/api/admin-accounts", "/api/admin-accounts/x", "/api/audit?limit=5", "/api/admin-channels",
+    "/api/admin-channels?limit=100", "/api/titles/stored", "/api/titles/stored?limit=100", "/api/titles/sync", "/api/titles/deleted"]) {
     assert.equal(isPrivateRoute(url), true, url);
   }
   for (const url of ["/api/channels", "/api/titles?kind=movie", "/healthz", "/apix", "/live/home/master.m3u8", "/admin/"]) {

@@ -41,6 +41,16 @@ export const LOCKOUT_MS = 15 * 60 * 1000;
 export const AUDIT_PAGE_DEFAULT = 50;
 export const AUDIT_PAGE_MAX = 200;
 
+// The admin's long lists (docs/41 section 3): a page is 100 rows by default, at most 200, as the audit page.
+export const LIST_PAGE_DEFAULT = 100;
+export const LIST_PAGE_MAX = 200;
+/** No real list is near this; it only keeps a hostile offset from becoming an unbounded scan. */
+export const LIST_OFFSET_MAX = 10_000_000;
+export const CHANNEL_SEARCH_MAX = 120;
+export const TITLE_SEARCH_MAX = 200;
+/** A playlist host as `source` carries it. */
+export const SOURCE_HOST_MAX = 253;
+
 // The sync settings (docs/26 section 3.11).
 export const PLAYLISTS_MAX = 20;
 
