@@ -59,8 +59,6 @@ export const ERRORS = {
     message: "The username or password is wrong.",
   },
   authRefreshInvalid: { code: "auth.refresh_invalid", status: 401, message: "That session has ended; sign in again." },
-  authRateLimited: { code: "auth.rate_limited", status: 429, message: "Too many sign-in attempts; wait a minute." },
-  authLocked: { code: "auth.locked", status: 429, message: "This account is locked for a while after failed sign-ins." },
   authResetInvalid: {
     code: "auth.reset_invalid",
     status: 401,

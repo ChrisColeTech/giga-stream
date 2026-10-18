@@ -3,7 +3,6 @@ import {
   RESET_DONE_TITLE,
   RESET_FAILED_TITLE,
   RESET_INVALID,
-  RESET_RATE_LIMITED,
   RESET_UNREACHABLE,
   RESET_WEAK,
 } from "@/constants/reset-copy";
@@ -57,14 +56,10 @@ export const RESET_START: ResetState = {
 };
 
 const failure = (sentence: string): ResetNotice => ({ title: RESET_FAILED_TITLE, sentence });
-const FAILED: Readonly<Record<"rate_limited" | "unreachable", ResetNotice>> = {
-  rate_limited: failure(RESET_RATE_LIMITED),
-  unreachable: failure(RESET_UNREACHABLE),
-};
 
 function started(state: ResetState, username: string, result: ResetStartResult): ResetState {
   if (state.view !== "reset-username" || !state.busy) return state;
-  if (!result.ok) return { ...state, busy: false, notice: FAILED[result.refusal] };
+  if (!result.ok) return { ...state, busy: false, notice: failure(RESET_UNREACHABLE) };
   return { ...state, view: "reset-answer", username, question: result.question, busy: false, notice: null };
 }
 
@@ -81,7 +76,7 @@ function finished(state: ResetState, result: ResetResult): ResetState {
     case "weak":
       return { ...rest, error: { field: "newPassword", sentence: RESET_WEAK } };
     default:
-      return { ...rest, notice: FAILED[result.refusal] };
+      return { ...rest, notice: failure(RESET_UNREACHABLE) };
   }
 }
 

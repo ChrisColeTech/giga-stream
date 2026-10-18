@@ -30,8 +30,8 @@ describe("the Sign in verb's reasons", () => {
     assert.equal(signInReason("", "", SUBMITTING), "Waiting for the answer.");
   });
 
-  it("stays enabled after a refusal, a lock or an unreachable backend: pressing it is the retry", () => {
-    for (const phase of ["refused", "locked", "unreachable"] as const) {
+  it("stays enabled after a refusal or an unreachable backend: pressing it is the retry", () => {
+    for (const phase of ["refused", "unreachable"] as const) {
       assert.equal(signInReason("a@b.test", "secret", { phase, sentence: "x" }), undefined, phase);
     }
   });

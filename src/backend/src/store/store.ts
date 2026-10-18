@@ -10,7 +10,6 @@ import { migrate } from "./migrate.js";
 import { createPlaylistRepository } from "./playlist-repository.js";
 import { createProviderRepository } from "./provider-repository.js";
 import { createRefreshTokenRepository } from "./refresh-token-repository.js";
-import { createResetAttemptsRepository } from "./reset-attempts-repository.js";
 import { createRevisionRepository } from "./revision-repository.js";
 import { createTitleRepository } from "./title-repository.js";
 import { createUiStateRepository } from "./ui-state-repository.js";
@@ -34,7 +33,6 @@ export function createStore(file: string) {
     revisions: createRevisionRepository(db),
     accounts: createAccountRepository(db),
     refreshTokens: createRefreshTokenRepository(db),
-    resetAttempts: createResetAttemptsRepository(db),
     audit: createAuditRepository(db),
     uiState: createUiStateRepository(db),
     transaction: <T>(work: () => T): T => runInTransaction(db, work),

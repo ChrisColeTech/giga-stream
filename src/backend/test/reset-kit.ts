@@ -1,6 +1,5 @@
 // Shared steps of the security-question reset tests (docs/40 section 3.4): set a question, ask for it, answer it,
-// read the attempt row and the audit log. Every unauthenticated call goes from its own address unless one is given,
-// so the per-address limiter only bites where a test means it to.
+// read the stored answer hash and the audit log.
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { FastifyInstance } from "fastify";
@@ -10,13 +9,6 @@ import { ADMIN_PASSWORD, pick, send, type Answer } from "./test-app.js";
 
 export const QUESTION_ONE = "What was the name of your first pet?";
 export const NEW_PASSWORD = "brand-new-password-456";
-
-let next = 0;
-/** A fresh peer address per call (10.x.y.z), so a test's calls never share the limiter's window by accident. */
-export const freshAddress = (): string => {
-  next += 1;
-  return `10.${(next >> 16) & 255}.${(next >> 8) & 255}.${next & 255}`;
-};
 
 export const code = (answer: { body: unknown }): unknown => pick(answer.body, "error.code");
 
@@ -30,27 +22,15 @@ export function setQuestion(
   return send(app, "PUT", "/api/auth/me/security-question", { currentPassword, question, answer }, token);
 }
 
-export const resetStart = (app: FastifyInstance, username: string, address = freshAddress()): Promise<Answer> =>
-  send(app, "POST", "/api/auth/reset-start", { username }, undefined, address);
+export const resetStart = (app: FastifyInstance, username: string): Promise<Answer> =>
+  send(app, "POST", "/api/auth/reset-start", { username });
 
 export const resetWith = (
   app: FastifyInstance,
   username: string,
   answer: string,
   newPassword = NEW_PASSWORD,
-  address = freshAddress(),
-): Promise<Answer> => send(app, "POST", "/api/auth/reset", { username, answer, newPassword }, undefined, address);
-
-/** The attempt row of a normalised username, read from the database file the app writes. */
-export function attemptRow(dataDir: string, usernameKey: string): Record<string, unknown> | undefined {
-  const db = new DatabaseSync(path.join(dataDir, DATABASE_FILE_NAME), { readOnly: true });
-  try {
-    const row = db.prepare("SELECT failed, locked_until FROM reset_attempts WHERE username_key = ?").get(usernameKey);
-    return row === undefined ? undefined : { ...row };
-  } finally {
-    db.close();
-  }
-}
+): Promise<Answer> => send(app, "POST", "/api/auth/reset", { username, answer, newPassword });
 
 /** The stored answer hash of an account, read from the database file. */
 export function storedAnswerHash(dataDir: string, username: string): unknown {

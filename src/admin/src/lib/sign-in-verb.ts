@@ -7,8 +7,8 @@ import {
 import type { GateState } from "./gate-state";
 
 /** Why `Sign in` cannot be used, or undefined when it can (the template's model: the button says why). Submitting wins,
- *  then both fields empty, then the one missing. The username is trimmed for the check; the password never is. A locked or
- *  unreachable gate leaves the verb enabled: the server decides when a lock ends, and pressing it is the retry. */
+ *  then both fields empty, then the one missing. The username is trimmed for the check; the password never is. An
+ *  unreachable gate leaves the verb enabled: pressing it is the retry. */
 export function signInReason(username: string, password: string, gate: GateState): string | undefined {
   if (gate.phase === "submitting") return SIGN_IN_WAITING_REASON;
   const noUsername = username.trim() === "";

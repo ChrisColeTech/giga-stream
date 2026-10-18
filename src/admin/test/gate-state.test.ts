@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { REFUSAL_SENTENCES, SESSION_ENDED_NOTICE } from "@/constants/sign-in-copy";
+import { SESSION_ENDED_NOTICE } from "@/constants/sign-in-copy";
 import { GATE_START, gateError, gateNotice, nextGate, phaseFor, type GateState } from "@/lib/gate-state";
 import type { AuthResult, RefusalKind } from "@/types/auth";
 
@@ -26,13 +26,6 @@ describe("the gate's state", () => {
     const next = nextGate(SUBMITTING, { type: "answer", result: refusal("invalid") });
     assert.deepEqual(next, { phase: "refused", sentence: "The username or password is wrong." });
     assert.equal(gateError(next), "The username or password is wrong.");
-  });
-
-  it("a lock and a rate limit are `locked`, each with its own sentence", () => {
-    const locked = nextGate(SUBMITTING, { type: "answer", result: refusal("locked") });
-    const limited = nextGate(SUBMITTING, { type: "answer", result: refusal("rate_limited") });
-    assert.deepEqual(locked, { phase: "locked", sentence: REFUSAL_SENTENCES.locked });
-    assert.deepEqual(limited, { phase: "locked", sentence: "Too many sign-in attempts; wait a minute." });
   });
 
   it("an unreachable backend is `unreachable`", () => {

@@ -31,9 +31,8 @@ export function createAuthPort(api: Pick<SessionApi, "login" | "logout" | "reset
     resetStart: async (username) => {
       try {
         return { ok: true, question: await api.resetStart(username) };
-      } catch (error: unknown) {
-        const refusal = resetRefusalFor(error);
-        return { ok: false, refusal: refusal === "rate_limited" ? refusal : "unreachable" };
+      } catch {
+        return { ok: false, refusal: "unreachable" };
       }
     },
     resetPassword: async (username, answer, newPassword) => {

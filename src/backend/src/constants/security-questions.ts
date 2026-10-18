@@ -16,8 +16,5 @@ export const SECURITY_QUESTIONS = [
 export const SECURITY_QUESTION_COUNT = 8;
 /** The longest answer accepted, counted before normalisation. */
 export const SECURITY_ANSWER_MAX = 200;
-/** Wrong answers in a row that lock the reset for one username, and how long the lock lasts. */
-export const RESET_LOCK_FAILURES = 5;
-export const RESET_LOCK_MS = 15 * 60 * 1000;
 /** The HMAC input prefix of the decoy question an unknown username or a question-less account is shown. */
 export const RESET_DECOY_PREFIX = "reset-decoy:";

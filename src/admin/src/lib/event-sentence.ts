@@ -83,10 +83,6 @@ function describe(entry: AuditEntry, names: SubjectNames, area: EventArea): [Eve
       return ["info", `${actor} set a security question`];
     case "auth.reset_failed":
       return ["warn", `Password reset failed for ${text(entry.detail, "username") ?? UNKNOWN_USERNAME}`];
-    case "auth.reset_locked": {
-      const who = text(entry.detail, "username") ?? UNKNOWN_USERNAME;
-      return ["warn", `Password reset locked for ${who} after five wrong answers`];
-    }
     case "auth.reset_completed":
       return ["info", `${actor} reset a password`];
     case "sync.started":
