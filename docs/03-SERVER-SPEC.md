@@ -633,7 +633,7 @@ interface BackendChannel {
 |---|---|---|
 | `GET /api/channels` | anyone | every channel, ordered by number then name: `{ items: BackendChannel[], revision }` |
 | `GET /api/channels/:channelId` | anyone | one channel |
-| `POST /api/channels` | signed in | `{ name, category, number?, logoUrl?, streamUrl }`; answers `201` with the channel |
+| `POST /api/channels` | signed in | `{ name, category, number?, logoUrl?, streamUrl }`; answers `201` with the channel. A live channel's `number` is optional too (owner, 2026-10-17: there is no guide, the admin sends none; an existing number is kept; several live rows may have none) |
 | `PATCH /api/channels/:channelId` | signed in | changes any of those fields |
 | `DELETE /api/channels/:channelId` | signed in | removes it; answers `{ id }` |
 
@@ -951,8 +951,8 @@ interface AdminAccount {
 |---|---|---|
 | `GET /api/admin-accounts` | signed in | every account, by username: `{ items: AdminAccount[] }` |
 | `GET /api/admin-accounts/:accountId` | signed in | one account |
-| `POST /api/admin-accounts` | signed in | `{ username, name, password }`; answers `201` with the account |
-| `PATCH /api/admin-accounts/:accountId` | signed in | any of `username`, `name`, `disabled`, `password` |
+| `POST /api/admin-accounts` | signed in | `{ username, password }`; answers `201` with the account (`name` removed: owner, 2026-10-17; migration 021 drops the column) |
+| `PATCH /api/admin-accounts/:accountId` | signed in | any of `username`, `disabled`, `password` |
 | `DELETE /api/admin-accounts/:accountId` | signed in | removes it; answers `{ id }` |
 
 There are no roles (owner, 2026-10-17): every signed-in account is equal and may call every write and read route.

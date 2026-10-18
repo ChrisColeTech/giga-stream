@@ -40,7 +40,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 10 | This wave builds what every later tab shares: `StateWord`, `useRecordForm`, the per-tab slice registry and the stale registry (section 5.6), so the parallel waves of `39` never edit the same file. |
 | 11 | Verification runs on a temporary backend that serves the built admin on its own free port, with a temporary `DATA_DIR`; the owner's backend, database and `.env` are never read or written by it (section 3). |
 
-| 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Username`, `Password`; Details is `Name`, `Username`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
+| 12 | **Name comes first on every form** (owner, 2026-10-17): the identity first. **Accounts have no name (removed, owner, 2026-10-17; migration 021)**, so the identity is the `Username`: New account is `Username`, `Password`; Details is `Username`, `Enabled`, `Last sign-in`, `Security question`; the list has no `name` column; the session actor and the Session page carry no name; the create body is `{ username, password }`. Old audit rows that carry a `name` still read (the sentence falls back to it). This is a program rule (`39` section 5). Every `Name` mention below for an account is superseded by this note. |
 | 13 | **Security question (`40`).** Accounts gain a read-only Details fact `Security question` (`Set` or `Not set`, from the answer's `securityQuestionSet`), placed after `Last sign-in`. The question itself is set by the account's own owner in Settings > Account (R, `40` 4.2), not in this Accounts workspace; no admin sets another account's question. |
 
 ## 2. Scope, in order (six commits)
