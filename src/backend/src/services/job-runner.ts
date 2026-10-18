@@ -41,9 +41,10 @@ export function createJobRunner(deps: {
   const { store, audit, now, playlistJob, titles, progress, onSettled } = deps;
   const flights = new Map<number, Flight>();
 
-  /** Why this job cannot be run by hand, or undefined when it can: its playlist must be enabled (docs/26 3.11). */
+  /** Why this job cannot be run by hand, or undefined when it can: a playlist job needs its playlist enabled; the
+   *  job's own `enabled` switch gates only the schedule (docs/26 3.11). */
   function refusal(job: JobRecord): string | undefined {
-    if (job.type === "catalog") return job.enabled ? undefined : "The job is disabled; enable it to run it.";
+    if (job.type === "catalog") return undefined;
     const playlist = store.playlists.find(job.playlistId);
     if (!playlist) return "The job's playlist no longer exists.";
     return playlist.enabled ? undefined : "The job's playlist is disabled; enable it to run this job.";

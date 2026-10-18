@@ -137,10 +137,12 @@ describe("a job's workspace", () => {
     assert.ok(html.split("text-accent-ink").length <= 3, "the primaries are Save details and the page toolbar's Titles →");
   });
 
-  it("disables the workspace's Run job for a disabled job, and shows a bad interval under its row", () => {
+  it("keeps the workspace's Run job enabled for a disabled job, and shows a bad interval under its row", () => {
     state().jobsLoaded([job(1, { enabled: false })]);
     state().openWorkspace("jobs", "1");
-    assert.ok(page().includes('aria-label="Run job. Jobs that are disabled cannot run."'));
+    const workspace = page();
+    assert.ok(workspace.includes('aria-label="Run job"') || workspace.includes(">Run job</button>"), "the job's switch gates only its schedule");
+    assert.ok(!workspace.includes("Jobs that are disabled cannot run."));
     const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
     const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined, save: { onPress: () => undefined } };
     const html = renderLive(createElement(JobScheduleGroup, props));

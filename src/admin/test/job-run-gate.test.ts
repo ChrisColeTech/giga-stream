@@ -9,14 +9,19 @@ const playlist = (id: number, enabled = true) => playlistRow(id, { enabled, chan
 const PLAYLISTS = [playlist(1), playlist(2, false)];
 
 describe("the Run job gate", () => {
-  it("gives its reasons in priority order: none ticked, disabled, running, playlist disabled, unreachable", () => {
+  it("gives its reasons in priority order: none ticked, running, playlist disabled, unreachable", () => {
     assert.equal(runGate([], PLAYLISTS, true), "Tick a job first");
-    const all = [job(1, { enabled: false }), job(1, { running: true }), job(2)];
-    assert.equal(runGate(all, PLAYLISTS, true), "Jobs that are disabled cannot run.");
-    assert.equal(runGate(all.slice(1), PLAYLISTS, true), "A ticked job is already running.");
-    assert.equal(runGate(all.slice(2), PLAYLISTS, true), "A ticked job's playlist is disabled.");
+    const all = [job(1, { running: true }), job(2)];
+    assert.equal(runGate(all, PLAYLISTS, true), "A ticked job is already running.");
+    assert.equal(runGate(all.slice(1), PLAYLISTS, true), "A ticked job's playlist is disabled.");
     assert.equal(runGate([job(1)], PLAYLISTS, true), "The admin backend cannot be reached.");
     assert.equal(runGate([job(1)], PLAYLISTS, false), undefined);
+  });
+
+  it("never refuses a job for its own Enabled switch: that gates only the schedule", () => {
+    assert.equal(runGate([job(1, { enabled: false })], PLAYLISTS, false), undefined);
+    assert.equal(runGate([catalogJob(9, { enabled: false })], PLAYLISTS, false), undefined);
+    assert.equal(workspaceRunReason(job(1, { enabled: false }), { dirty: false, busy: false, unreachable: false, playlists: PLAYLISTS }), undefined);
   });
 
   it("finds a job's playlist by its id, then by its name; a catalog job has none", () => {

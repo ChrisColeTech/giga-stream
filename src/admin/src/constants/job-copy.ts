@@ -57,7 +57,6 @@ export const PLAYLIST_JOB_OWNED = "A playlist's job goes with the playlist.";
 /** Disabled reasons, in the `Run job` order (`38` section 4.2). */
 export const RUN_JOB = "Run job";
 export const RUN_TIP = "Start the job now. Press Refresh on Last run to read its result.";
-export const RUN_DISABLED = "Jobs that are disabled cannot run.";
 export const RUN_RUNNING = "A ticked job is already running.";
 export const RUN_PLAYLIST_OFF = "A ticked job's playlist is disabled.";
 export const RESUME_JOB = "Resume";

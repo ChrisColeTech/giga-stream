@@ -104,13 +104,12 @@ test("a playlist's job is part of its playlist: named after it, rescheduled and 
   assert.equal((await read()).length, 2, "the job is still there");
 });
 
-test("running a catalog job starts it and keeps a typed result: the titles pulled and how many are stale", async () => {
+test("a DISABLED catalog job runs by hand (its switch gates only the schedule) and keeps a typed result: the titles pulled and how many are stale", async () => {
   const tmdb = await mutableTmdb();
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
   const id = Number(itemsOf((await send(t.app, "GET", "/api/jobs", undefined, token)).body)[0]?.id);
-  assert.equal((await send(t.app, "POST", `/api/jobs/${id}/run`, {}, token)).status, 422, "seeded off: disabled");
-  await send(t.app, "PATCH", `/api/jobs/${id}`, { enabled: true, config: { pages: 1 } }, token);
+  await send(t.app, "PATCH", `/api/jobs/${id}`, { enabled: false, config: { pages: 1 } }, token);
   const started = await send(t.app, "POST", `/api/jobs/${id}/run`, {}, token);
   assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
   const read = async () => pick((await send(t.app, "GET", `/api/jobs/${id}`, undefined, token)).body, "data") as Record<string, unknown>;
