@@ -48,16 +48,27 @@ export const LIST_PAGE_MAX = 200;
 export const LIST_OFFSET_MAX = 10_000_000;
 export const CHANNEL_SEARCH_MAX = 120;
 export const TITLE_SEARCH_MAX = 200;
-/** A playlist host as `source` carries it. */
-export const SOURCE_HOST_MAX = 253;
 
-// The sync settings (docs/26 section 3.11).
-export const PLAYLISTS_MAX = 20;
-
-// The playlist sync (docs/03 section 7.2c).
+// The playlist import and sync (docs/03 section 7.2c, docs/43 sections 3.2 and 3.4).
 export const PLAYLIST_FETCH_TIMEOUT_MS = 15_000;
+/** The hard cap on an uploaded or fetched playlist: past it is an error, never a silent truncation. */
+export const PLAYLIST_IMPORT_MAX_BYTES = 8 * 1024 * 1024;
+/** `@fastify/multipart` header pairs one upload may carry. */
+export const PLAYLIST_UPLOAD_HEADER_PAIRS = 20;
+/** Bytes a multipart envelope adds around the file part, so the route's body limit sits just above the file cap. */
+export const PLAYLIST_UPLOAD_OVERHEAD_BYTES = 64 * 1024;
+export const PLAYLIST_NAME_MAX = 120;
+/** The M3U detection window: an `#EXTINF` within this many lines proves a playlist with no `#EXTM3U` header. */
+export const M3U_DETECT_LINES = 20;
 export const TVG_ID_MAX = 128;
 export const PLAYLIST_SYNC_EXAMPLES_MAX = 10;
+/** A playlist's sync job starts at this schedule and may never be set faster (a web playlist is re-fetched each run). */
+export const PLAYLIST_JOB_DEFAULT_SCHEDULE = "24h";
+export const PLAYLIST_SCHEDULE_MIN_MS = 15 * 60 * 1000;
+/** The scheduler never fires earlier than process start plus this, so a due-at-once job never runs during boot. */
+export const FIRST_RUN_GRACE_MS = 30_000;
+/** A playlist delete waits this long for the aborted run to settle before it deletes anyway. */
+export const PLAYLIST_DELETE_SETTLE_MS = 10_000;
 
 // The iptv-org logo index the sync enriches from (docs/03 section 7.2c, "Enrichment").
 export const LOGO_INDEX_TIMEOUT_MS = 15_000;

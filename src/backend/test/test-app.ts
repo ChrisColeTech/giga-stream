@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import type { Config } from "../src/config.js";
 import type { LiveEngine, LiveSeams } from "../src/live/engine/live-engine.js";
+import { SafeFetchError, type SafeFetch } from "../src/services/safe-fetch.js";
 import { fakeBuild, type FakeTally } from "./live-fake-source.js";
 
 export const ADMIN_USERNAME ="admin@example.test";
@@ -36,7 +37,8 @@ export interface MakeAppOptions {
   loopback?: boolean;
   dataDir?: string;
   config?: Partial<Config>;
-  fetch?: typeof fetch;
+  /** The guarded outbound fetch for playlist addresses (docs/43 section 3.8): tests inject a fake, never the network. */
+  safeFetch?: SafeFetch;
   /** `real` runs the real build (ffprobe, ffmpeg); the default is a fake source, so no program runs. */
   engine?: "fake" | "real";
   live?: LiveSeams;
@@ -45,6 +47,11 @@ export interface MakeAppOptions {
 }
 
 const created: TestApp[] = [];
+
+/** The default outbound fetch of a test app: nothing is reachable, so no test touches the network by accident. */
+const offlineSafeFetch: SafeFetch = async () => {
+  throw new SafeFetchError("safe_fetch.failed");
+};
 
 /** A fresh app on a fresh temporary data folder, with the bootstrap admin: no shared state, no network. */
 export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
@@ -87,7 +94,7 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       ...options.config,
     },
     now,
-    options.fetch,
+    options.safeFetch ?? offlineSafeFetch,
     seams,
   );
   if (engine === undefined) throw new Error("the live engine was not created");

@@ -1,7 +1,6 @@
 import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
 import { createLiveEngine, type LiveSeams } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
-import type { PlaylistSyncStatus } from "../types/playlist-sync.js";
 import { createAccountService } from "./account-service.js";
 import { createAdminStatic } from "./admin-static-service.js";
 import { createAuditService } from "./audit-service.js";
@@ -9,11 +8,12 @@ import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
 import { createJobRunner } from "./job-runner.js";
 import { createJobService } from "./job-service.js";
-import { createLogoResolver } from "./logo-resolver.js";
 import { createOmdbClient } from "./omdb-client.js";
+import { createPlaylistImporter } from "./playlist-import.js";
+import { createPlaylistJob } from "./playlist-job.js";
 import { createPlaylistService } from "./playlist-service.js";
-import { createPlaylistSyncService } from "./playlist-sync-service.js";
 import { createProviderService } from "./provider-service.js";
+import { createSafeFetch, type SafeFetch } from "./safe-fetch.js";
 import { createSecurityQuestionService } from "./security-question-service.js";
 import { createSignInLimiter } from "./sign-in-limiter.js";
 import { createStreamTemplates } from "./stream-templates.js";
@@ -44,14 +44,12 @@ export interface ServiceOptions {
   log: (line: string) => void;
   /** Test seams of the live engine: a fake build, a fake sleep. */
   live?: LiveSeams;
-  /** The environment's sync values: they seed the playlists and jobs on the first start only (docs/26 section 3.11). */
+  /** The environment's catalog-sync interval: it seeds the catalog job on the first start only (docs/26 section 3.11). */
   titleSchedule: string;
-  playlistSchedule: string;
-  playlistUrls: string[];
   playlistSyncMaxBytes: number;
   playlistSyncMax: number;
-  logoIndexTtlHours: number;
-  fetchImpl?: typeof fetch;
+  /** The guarded outbound fetch for every address that comes from playlist content (docs/43 section 3.8). */
+  safeFetch?: SafeFetch;
 }
 
 /** Every service, built once from the store; routes receive this and call one service each. */
@@ -66,17 +64,6 @@ export function createServices(store: Store, options: ServiceOptions) {
   });
   const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now });
   const omdb = createOmdbClient({ key: options.omdbKey, base: options.omdbBase, dailyLimit: options.omdbDailyLimit, now });
-  const logos = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours, fetchImpl: options.fetchImpl, now });
-  const playlistSync = createPlaylistSyncService({
-    store,
-    audit,
-    logos,
-    maxBytes: options.playlistSyncMaxBytes,
-    maxEntries: options.playlistSyncMax,
-    allowLoopback: options.allowLoopback,
-    fetchImpl: options.fetchImpl,
-    now,
-  });
   const streams = createStreamTemplates({
     movieTemplate: options.movieStreamTemplate,
     episodeTemplate: options.episodeStreamTemplate,
@@ -95,8 +82,8 @@ export function createServices(store: Store, options: ServiceOptions) {
   });
   options.live?.onEngine?.(live);
 
-  // The first start seeds the playlists and the jobs from the environment; after that they are the truth.
-  seedSyncRecords(store, { playlistUrls: options.playlistUrls, playlistSchedule: options.playlistSchedule, titleSchedule: options.titleSchedule }, now());
+  // The first start seeds the catalog job from the environment; after that it is the truth. Playlists come from imports.
+  seedSyncRecords(store, { titleSchedule: options.titleSchedule }, now());
   /** The schedule a sync status shows: the first enabled job of the type that has one. */
   const scheduleOf = (type: "playlist" | "catalog"): string =>
     store.jobs.list().find((j) => j.type === type && j.enabled && j.schedule !== "off")?.schedule ?? "off";
@@ -105,9 +92,23 @@ export function createServices(store: Store, options: ServiceOptions) {
     allowLoopback: options.allowLoopback,
     scheduleLabel: () => scheduleOf("catalog"),
   });
-  const runner = createJobRunner({ store, now, playlistSync, titles });
+  const importer = createPlaylistImporter({
+    store, audit, now,
+    allowLoopback: options.allowLoopback,
+    maxBytes: options.playlistSyncMaxBytes,
+    maxEntries: options.playlistSyncMax,
+    safeFetch: options.safeFetch ?? createSafeFetch(),
+    onChange: () => scheduler.arm(),
+  });
+  const runner = createJobRunner({
+    store, audit, now, titles,
+    playlistJob: createPlaylistJob({ store, importer }),
+    onSettled: () => scheduler.arm(),
+  });
   const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "" });
   return {
+    runner,
+    importer,
     audit,
     auth,
     securityQuestions,
@@ -122,13 +123,8 @@ export function createServices(store: Store, options: ServiceOptions) {
     providers: createProviderService({ store, audit, now }),
     titles,
     storedTitles: createStoredTitles(store),
-    playlists: createPlaylistService({ store, audit, now, allowLoopback: options.allowLoopback, onChange: scheduler.arm }),
+    playlists: createPlaylistService({ store, audit, runner, allowLoopback: options.allowLoopback, onChange: scheduler.arm }),
     jobs: createJobService({ store, audit, now, runner, onChange: scheduler.arm }),
-    /** Thin wrappers over the same code: a run covers every enabled playlist; the status is the aggregate. */
-    playlistSync: {
-      run: playlistSync.run,
-      status: (): PlaylistSyncStatus => ({ ...playlistSync.status(), schedule: scheduleOf("playlist") }),
-    },
     hasAccounts: (): boolean => store.accounts.count() > 0,
     purgeExpiredSessions: (): void => store.refreshTokens.purgeExpired(now()),
     health: () => ({

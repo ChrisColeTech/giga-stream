@@ -6,6 +6,7 @@ import test from "node:test";
 import type { FastifyInstance } from "fastify";
 
 import { liveBody, streamBody } from "./live-channel-kit.js";
+import { M3U, uploadFile } from "./playlist-kit.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 
 /** The newest audit entry with this action, as the log answers it. */
@@ -23,9 +24,8 @@ test("an update of a provider, a playlist, a manual title or a stream channel na
   await send(t.app, "PUT", `/api/providers/${pick(provider.body, "data.id")}`, { name: "JustWatch 2" }, token);
   assert.equal(pick(await latest(t.app, token, "provider.updated"), "detail.name"), "JustWatch 2");
 
-  const address = "https://other.example/all.m3u8";
-  const playlist = await send(t.app, "POST", "/api/playlists", { name: "Main", address }, token);
-  await send(t.app, "PATCH", `/api/playlists/${pick(playlist.body, "data.id")}`, { enabled: false }, token);
+  const playlist = await uploadFile(t, token, "main.m3u", M3U);
+  await send(t.app, "PATCH", `/api/playlists/${pick(playlist.body, "data.id")}`, { name: "Main", enabled: false }, token);
   assert.equal(pick(await latest(t.app, token, "playlist.updated"), "detail.name"), "Main");
 
   const title = await send(t.app, "POST", "/api/titles", { kind: "movie", title: "Home Movie", year: 2020 }, token);

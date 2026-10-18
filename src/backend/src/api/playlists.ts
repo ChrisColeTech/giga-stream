@@ -1,7 +1,9 @@
-import type { FastifyInstance } from "fastify";
+import multipart from "@fastify/multipart";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 
-import { ERRORS } from "../constants/errors.js";
+import { AppError, ERRORS } from "../constants/errors.js";
+import { PLAYLIST_UPLOAD_HEADER_PAIRS, PLAYLIST_UPLOAD_OVERHEAD_BYTES } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
 import { PlaylistInputSchema, PlaylistPatchSchema } from "../types/playlist.js";
 import { ok } from "./envelope.js";
@@ -9,13 +11,45 @@ import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
 
 const PlaylistParams = z.object({ playlistId: z.string().regex(/^\d{1,12}$/) });
+const FILE_FIELD = "file";
+
+const badUpload = (): AppError => new AppError(ERRORS.requestInvalid, { field: FILE_FIELD }, "Send exactly one playlist file.");
 
 /**
- * The playlists (docs/26 section 3.11): records with a name, an address and `Enabled`, for a signed-in admin,
- * audited. No answer carries the address - only the host and a masked form - so these routes are not on the
- * no-store list (`network-policy.ts`): they hold nothing a cache could leak.
+ * Exactly one `file` part, read whole: a second part, a field, a part with another name, or a truncated one (past the
+ * size limit) is `400 request.invalid`. The client's file name is only a hint for the name; nothing is stored under it.
+ */
+async function readUpload(request: FastifyRequest): Promise<{ fileName: string; body: Buffer }> {
+  let upload: { fileName: string; body: Buffer } | undefined;
+  for await (const part of request.parts()) {
+    if (part.type !== "file" || part.fieldname !== FILE_FIELD || upload !== undefined) throw badUpload();
+    const body = await part.toBuffer();
+    if (part.file.truncated) throw badUpload();
+    upload = { fileName: part.filename, body };
+  }
+  if (upload === undefined) throw badUpload();
+  return upload;
+}
+
+/**
+ * The playlists (docs/43 section 3.2, docs/03 section 7.2c): a signed-in admin, audited. No answer carries the web
+ * address - only the host and a masked form - so these routes are not on the no-store list (`network-policy.ts`).
+ * The file import is multipart, registered in its own scope so no other route's parsing changes.
  */
 export function registerPlaylists(app: FastifyInstance, services: Services): void {
+  const { maxBytes } = services.importer;
+
+  void app.register(async (upload) => {
+    await upload.register(multipart, {
+      limits: { files: 1, fields: 0, fileSize: maxBytes, headerPairs: PLAYLIST_UPLOAD_HEADER_PAIRS },
+    });
+    upload.post("/api/playlists/import", { bodyLimit: maxBytes + PLAYLIST_UPLOAD_OVERHEAD_BYTES }, async (request, reply) => {
+      const principal = signedIn(services, request);
+      const answer = services.importer.importFile(await readUpload(request), actorOf(request, principal));
+      return ok(reply, answer, answer.created ? 201 : 200);
+    });
+  });
+
   app.get("/api/playlists", async (request, reply) => {
     signedIn(services, request);
     return ok(reply, services.playlists.list());
@@ -24,7 +58,8 @@ export function registerPlaylists(app: FastifyInstance, services: Services): voi
   app.post("/api/playlists", async (request, reply) => {
     const principal = signedIn(services, request);
     const input = parseInput(PlaylistInputSchema, request.body, ERRORS.playlistInvalid);
-    return ok(reply, services.playlists.create(input, actorOf(request, principal)), 201);
+    const answer = await services.importer.importUrl(input, actorOf(request, principal));
+    return ok(reply, answer, answer.created ? 201 : 200);
   });
 
   app.get("/api/playlists/:playlistId", async (request, reply) => {
@@ -43,6 +78,6 @@ export function registerPlaylists(app: FastifyInstance, services: Services): voi
   app.delete("/api/playlists/:playlistId", async (request, reply) => {
     const principal = signedIn(services, request);
     const { playlistId } = parseInput(PlaylistParams, request.params);
-    return ok(reply, services.playlists.remove(Number(playlistId), actorOf(request, principal)));
+    return ok(reply, await services.playlists.remove(Number(playlistId), actorOf(request, principal)));
   });
 }

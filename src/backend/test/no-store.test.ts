@@ -21,7 +21,6 @@ test("a signed-in read of every admin route answers no-store", async () => {
     "/api/admin-channels",
     "/api/admin-channels?limit=100",
     "/api/titles/stored",
-    "/api/playlist-sync",
     "/api/auth/me",
     "/api/auth/me/state",
   ]) {
