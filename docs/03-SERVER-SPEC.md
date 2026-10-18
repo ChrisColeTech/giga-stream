@@ -795,7 +795,9 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   either is `{ code }` (the `AppError` code, or `internal.failure`). No sentence is stored and an exception's message is
   never stored; the admin words the result. The run is audited as `playlist.synced` with the counts and the host.
 - **Stop and resume.** `POST /api/jobs/:id/stop` (signed in, audited `job.stopped`, `202`) cancels a running playlist job
-  and keeps everything already written (`409 job.not_running` when idle; `422 job.invalid` for a catalog job). A stopped run
+  and keeps everything already written (`409 job.not_running` when idle; a catalog job stops too, `44`). A job answer carries `progress` while it runs, and
+  `GET /api/jobs/events` (a read-only server-sent-event stream for a signed-in admin: `snapshot`, `progress`, `finished`;
+  job ids and numbers only; no heartbeat; `01` 4.4's dated exception) pushes it. A stopped run
   records `lastResult: stopped` and `stopped: true` in its counts, and sets `lastRunAt`, so the schedule does not fire it
   early. **Resume** is `POST /api/jobs/:id/run` again: the check order and the 7-day image window make it continue where
   it stopped. Pausing the schedule is the job's `Enabled` toggle; it does not stop a run in progress.

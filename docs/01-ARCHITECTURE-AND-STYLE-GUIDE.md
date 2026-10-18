@@ -270,7 +270,10 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 - Reads are public; every change needs a signed-in admin's JWT and writes an audit entry (`03` sections
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
 - The backend has no socket (its read-only `/ws` was removed on 2026-10-17; nothing connected to it). Each
-  change raises its `revision`, which channel and provider answers and `GET /healthz` carry.
+  change raises its `revision`, which channel and provider answers and `GET /healthz` carry. **One dated exception
+  (owner, 2026-10-18, plan `44`):** a read-only server-sent-event stream, `GET /api/jobs/events`, pushes a running sync's
+  progress to a signed-in admin (the statusbar bar must show real progress and application code may not poll). It carries
+  job ids and numbers only, has no timer or heartbeat, and no other route streams.
 - All backend outbound HTTP to a remote address goes through ONE function (`safe-fetch.ts`: http or https, no loopback or
   link-local targets, bounded redirects and byte caps; `03` 7.3); no service calls `fetch` on a remote address directly. A schema
   enforces its relations with foreign keys, not with service code alone.

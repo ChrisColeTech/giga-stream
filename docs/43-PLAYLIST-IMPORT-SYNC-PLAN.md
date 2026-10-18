@@ -231,15 +231,15 @@ the schedule** is the job's `Enabled` toggle and bulk `Disable`; disabling does 
 
 | Item | Detail |
 |---|---|
-| Route | `POST /api/jobs/:id/stop`, signed in, audited `job.stopped`, `202`; `running: true` until the next check (seconds: in-flight requests abort). `409 job.not_running` when idle; `422 job.invalid` for a catalog job. |
+| Route | `POST /api/jobs/:id/stop`, signed in, audited `job.stopped`, `202`; `running: true` until the next check (seconds: in-flight requests abort). `409 job.not_running` when idle. Catalog jobs stop too (`44` 3.2). |
 | Plumbing | `job-runner.ts` keeps an `AbortController` per running job and `stop(job)`; the sync passes a `signal` to every `safe-fetch` (combined with each timeout via `AbortSignal.any`); app shutdown aborts every run. |
 | Record | `last_run_at` = the stop time, `last_result='stopped'`, partial counts with `stopped: true`; the scheduler therefore does not fire it early (a never-run job is due at once, `sync-scheduler.ts:177`); unchecked streams wait for the next interval unless Resume is pressed. |
 
 Admin: Jobs strip gets a bulk `Stop` verb (ghost, `CircleStop`, always drawn, disabled reasons `Tick a job first` / `That job
-is not running.` / `A catalog sync cannot be stopped.`); a `stopped` row word (faint); the workspace `Run` group gets a ghost
+is not running.`); a `stopped` row word (faint); the workspace `Run` group gets a ghost
 `Stop` beside `Run job`, which reads `Resume` after a stop; `Last run` shows the typed counts; the statusbar `Stop`
-(today disabled `A sync cannot be cancelled.`, `record-copy.ts:30`, `running-work.ts:26`) is enabled while a playlist job
-runs. Not built: stopping a catalog job (no cancellation hook in `title-sync.ts`).
+(today disabled `A sync cannot be cancelled.`, `record-copy.ts:30`, `running-work.ts:26`) is enabled while any job runs and
+stops every running job; the progress bar shows real progress (plan `44`, which also adds catalog Stop and the Library fill).
 
 ### 3.5 Behaviour by source
 
