@@ -10,8 +10,8 @@ export interface Seen {
   seasons: number;
   /** Titles given an OMDb block. */
   enriched: number;
-  /** Stored titles the Library update's `/changes` window listed (docs/49); zero in a fill. */
-  changed: number;
+  /** Stored series that aired an episode in the Library update's window, forced to refresh (docs/49); zero in a fill. */
+  airing: number;
 }
 
 /** What one run shares with its phases: its stop signal, its progress report and its counts. */

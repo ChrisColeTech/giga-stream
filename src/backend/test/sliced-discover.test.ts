@@ -40,7 +40,7 @@ function drive(truth: Truth) {
   });
   const run = () => walk({ scope: "discover", pages: 1 }, {
     signal: controller.signal, report: (update) => void reports.push(update), notes,
-    seen: { titles: 0, detailed: 0, seasons: 0, enriched: 0, changed: 0 }, shuttingDown: () => false,
+    seen: { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 }, shuttingDown: () => false,
   });
   return { tmdb, written, reports, notes, run, stop: (): void => controller.abort() };
 }
@@ -169,7 +169,7 @@ test("a re-run keeps the id set, a stale detail keeps its shape and an edited fi
     storeRow: createStoreRow({ store, deleted: { isDeleted: () => false }, now: () => now }),
   });
   const pass = () => walk({ scope: "discover" }, {
-    signal: new AbortController().signal, report: () => undefined, seen: { titles: 0, detailed: 0, seasons: 0, enriched: 0, changed: 0 },
+    signal: new AbortController().signal, report: () => undefined, seen: { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 },
     shuttingDown: () => false,
   });
   await pass();

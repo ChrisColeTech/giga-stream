@@ -8,6 +8,6 @@ export interface SyncRequest {
   scope: SyncScope;
   kind?: Kind;
   pages?: number;
-  /** The Library update's cursor: where its `/changes` window starts, as a time (docs/49 section 2.4). */
+  /** The Library update's cursor: where its `airing` window starts, as a time (docs/49 section 2.4). */
   since?: number;
 }

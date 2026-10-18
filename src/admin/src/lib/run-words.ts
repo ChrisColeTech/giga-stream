@@ -31,7 +31,7 @@ function parts(counts: RunCounts): string[] {
   if (catalog === undefined) return [];
   const found: ReadonlyArray<readonly [number | undefined, string]> = [
     [catalog.titles, "titles"],
-    [catalog.changed, "changed"],
+    [catalog.airing, "airing"],
     [catalog.detailed, "details"],
     [catalog.seasons, "seasons"],
     [catalog.enriched, "enriched"],

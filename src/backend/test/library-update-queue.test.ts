@@ -82,7 +82,7 @@ test("with OMDb on, a detail with a gap and no fresh block is queued (not forced
 
 test("the Library update's phases weigh 0-10%, 10-20% and 20-100%; the fill's are unchanged; the bar never goes back", () => {
   const at = (phase: string, done: number, total: number): number => fractionOf({ phase, done, total });
-  assert.deepEqual([at("recent", 0, 4), at("recent", 4, 4), at("changes", 0, 9), at("changes", 9, 9)], [0, 0.1, 0.1, 0.2]);
+  assert.deepEqual([at("recent", 0, 4), at("recent", 4, 4), at("airing", 0, 9), at("airing", 9, 9)], [0, 0.1, 0.1, 0.2]);
   assert.deepEqual([at("refresh", 0, 5), at("refresh", 5, 5)].map((n) => Math.round(n * 100)), [20, 100]);
   assert.deepEqual([at("movies", 1, 1), at("details", 0, 3)], [0.05, 0.1], "the fill is as it was");
   const progress = createJobProgress({ now: () => 0 });
@@ -90,8 +90,8 @@ test("the Library update's phases weigh 0-10%, 10-20% and 20-100%; the fill's ar
   progress.subscribe((event) => event.type === "progress" && seen.push(fractionOf(event.progress)));
   const report = progress.start(1, "recent");
   for (const update of [
-    { phase: "recent", done: 2, total: 4 }, { phase: "recent", done: 4, total: 4 }, { phase: "changes", done: 0, total: 0 },
-    { phase: "changes", done: 3, total: 3 }, { phase: "refresh", done: 0, total: 2 }, { phase: "refresh", done: 2, total: 2 },
+    { phase: "recent", done: 2, total: 4 }, { phase: "recent", done: 4, total: 4 }, { phase: "airing", done: 0, total: 0 },
+    { phase: "airing", done: 3, total: 3 }, { phase: "refresh", done: 0, total: 2 }, { phase: "refresh", done: 2, total: 2 },
   ]) report(update);
   assert.deepEqual(seen, [...seen].sort((a, b) => a - b), "monotonic across the three phases");
   assert.equal(seen.at(-1), 1);
@@ -100,7 +100,7 @@ test("the Library update's phases weigh 0-10%, 10-20% and 20-100%; the fill's ar
 test("the first phase and the audited words of a Library update", () => {
   assert.deepEqual([firstPhase({ scope: "recent" }), firstPhase({ scope: "discover" }), firstPhase({ scope: "popular" })], ["recent", "movies", "list"]);
   assert.deepEqual(describeRequest({ scope: "recent", since: 5 }), {
-    scope: "recent", walk: "recent discover, then TMDB changes, then a refresh", since: 5,
+    scope: "recent", walk: "recent discover, then airing series, then a refresh", since: 5,
   });
   assert.equal(Object.hasOwn(describeRequest({ scope: "recent" }), "since"), false);
 });

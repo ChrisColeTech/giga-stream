@@ -1,5 +1,4 @@
-// The Library update as a job (docs/49): its config in the Jobs routes, its three phases on the progress stream, a window TMDB
-// pages only to 500 halved, and one catalog run at a time (a manual run during a fill is 409 sync.busy).
+// The Library update as a job (docs/49): its config in the Jobs routes, its three phases on the progress stream, and one catalog run at a time (a manual run during a fill is 409 sync.busy).
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -23,39 +22,25 @@ test("a recent job's config round-trips: pages is stored as 1 and ignored, kind 
   const refused = await f.api("POST", "/api/jobs", { ...created, config: { scope: "recent", pages: 501 } });
   assert.deepEqual([refused.status, pick(refused.body, "error.details.field")], [422, "config.pages"]);
   assert.equal((await f.run()).lastResult, "ok");
-  assert.equal(pick((await f.api("GET", "/api/jobs/2")).body, "data.lastCounts.changed"), 0);
+  assert.equal(pick((await f.api("GET", "/api/jobs/2")).body, "data.lastCounts.airing"), 0);
 });
 
-test("one run, three phases: recent, then changes, then refresh, each with its own total", async () => {
-  const f = await updateApp({ movie: [{ id: 100, date: daysAgo(2) }, { id: 101, date: daysAgo(3) }], tv: [{ id: 200, date: daysAgo(4) }] });
-  const [recent, changes, refresh] = [f.tmdb.hold("tv:discover:1"), f.tmdb.hold("movie:changes:1"), f.tmdb.hold("movie:detail:101")];
+test("one run, three phases: recent, then airing, then refresh, each with its own total", async () => {
+  const f = await updateApp({ movie: [{ id: 100, date: daysAgo(2) }, { id: 101, date: daysAgo(3) }], tv: [{ id: 200, date: daysAgo(4), aired: TODAY }] });
+  const [recent, airing, refresh] = [f.tmdb.hold("tv:discover:1"), f.tmdb.hold("tv:airing:1"), f.tmdb.hold("movie:detail:101")];
   await f.api("POST", "/api/jobs/2/run");
   await recent.started;
   assert.deepEqual(pick(await f.job(), "progress"), { jobId: 2, phase: "recent", done: 0, total: 0 });
   recent.release();
-  await changes.started;
-  assert.equal(pick(await f.job(), "progress.phase"), "changes");
-  changes.release();
+  await airing.started;
+  assert.equal(pick(await f.job(), "progress.phase"), "airing");
+  airing.release();
   await refresh.started;
   const progress = pick(await f.job(), "progress") as { phase: string; done: number; total: number };
   assert.deepEqual([progress.phase, progress.total, progress.done < progress.total], ["refresh", 3, true], "3 titles queued, the held one not done");
   refresh.release();
   await f.finished();
   assert.equal(pick(await f.job(), "lastResult"), "ok");
-});
-
-test("a window over 500 pages is halved: no page above 500 is asked, no window exceeds 14 days, every day is read to its end", async () => {
-  const f = await updateApp({});
-  f.tmdb.state.bulk.movie.set(TODAY, 26_000);
-  f.tmdb.state.bulk.movie.set(daysAgo(1), 26_000);
-  const job = await f.run();
-  assert.equal(job.lastResult, "ok", "the fake answers a 400 past page 500 and a 422 past 14 days");
-  const movie = f.tmdb.log.changes.filter((r) => r.kind === "movie");
-  assert.ok(movie.every((r) => Number(r.page) <= 500));
-  for (const day of [TODAY, daysAgo(1)]) {
-    const pages = movie.filter((r) => r.start_date === day && r.end_date === day).map((r) => Number(r.page));
-    assert.deepEqual(pages, Array.from({ length: 260 }, (_, i) => i + 1), `${day}: all 260 pages, once`);
-  }
 });
 
 test("a manual run of the update during the Library fill is 409 sync.busy; the fill goes on", async () => {

@@ -120,18 +120,14 @@ export const PLAYLIST_LOGOS_SHARE = 0.2;
 // The Library fill's phases (docs/47 section 3.1): fixed shares of one bar - the walk 0-10% (movies, then series, a half
 // each), `details` 10-100% (a series' seasons ride its detail calls).
 export const LIBRARY_WALK_SHARE = 0.1;
-// The Library update's phases (docs/49 section 2): `recent` 0-10%, `changes` 10-20%, `refresh` 20-100% (as end points).
+// The Library update's phases (docs/49 section 2): `recent` 0-10%, `airing` 10-20%, `refresh` 20-100% (as end points).
 export const UPDATE_RECENT_SHARE = 0.1;
-export const UPDATE_CHANGES_SHARE = 0.2;
+export const UPDATE_AIRING_SHARE = 0.2;
 /** The Library update reads the discover list of this many days back, today included. */
 export const RECENT_DAYS = 90;
-/**
- * The oldest start of a `/changes` window, in days before today. TMDB refuses a range longer than 14 days with a 422
- * (verified live 2026-10-18: a start 14 days back answers 200, 15 days back 422).
- */
-export const CHANGES_MAX_WINDOW_DAYS = 14;
-/** TMDB's `/changes` page size (verified live: 100 ids), and its page limit (500, a 400 beyond). */
-export const CHANGES_PAGE_SIZE = 100;
+/** The `airing` window of a job with no cursor, and the furthest back it ever starts (an older cursor is clamped). */
+export const AIRING_FIRST_DAYS = 14;
+export const AIRING_MAX_DAYS = 60;
 /** A Library update's cursor is the run's start minus this, so the next window overlaps the last by an hour. */
 export const CURSOR_OVERLAP_MS = 60 * 60 * 1000;
 /** The Library update job's name and schedule when migration 028 or the seed makes it (`TMDB_SYNC_SCHEDULE` is the fill's). */

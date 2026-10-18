@@ -7,9 +7,9 @@ import { type OmdbStep, newOmdbRun } from "./title-omdb-step.js";
 import { type PhaseRun, isStopping } from "./title-run.js";
 import { TITLE_FRESH_MS } from "./title-shapes.js";
 
-/** The Library update's `refresh` mode (docs/49 section 2.2): the title ids `changes` found, fetched whatever their age. */
+/** The Library update's `refresh` mode (docs/49 section 2.2): the airing series' title ids, fetched whatever their age. */
 export interface RefreshMode {
-  changed: readonly string[];
+  forced: readonly string[];
 }
 
 /**
@@ -22,7 +22,7 @@ export interface RefreshMode {
  * failure ends the run and keeps what was written. OMDb never fails a title or the run: when its budget is spent the
  * rest of the run is TMDB only, and the titles still lacking a block are picked up by the next run.
  *
- * With a `RefreshMode` it is the Library update's `refresh` phase: the queue has no age clause (the changed titles are
+ * With a `RefreshMode` it is the Library update's `refresh` phase: the queue has no age clause (the airing series are
  * forced instead), a gap title is fetched for the missing seasons alone, and the progress phase is `refresh`.
  */
 export function createDetailsPhase(deps: {
@@ -35,7 +35,7 @@ export function createDetailsPhase(deps: {
     const phase = mode === undefined ? "details" : "refresh";
     const queue: Array<PendingDetail & { force?: boolean }> = mode === undefined
       ? store.titles.queue.pendingDetails(staleBefore, TITLE_DETAIL_MAX_FAILURES, omdb.available())
-      : store.titles.update.refreshQueue(mode.changed, TITLE_DETAIL_MAX_FAILURES, omdb.available(), staleBefore);
+      : store.titles.update.refreshQueue(mode.forced, TITLE_DETAIL_MAX_FAILURES, omdb.available(), staleBefore);
     const omdbRun = newOmdbRun();
     run.report({ phase, done: 0, total: queue.length });
     let done = 0;

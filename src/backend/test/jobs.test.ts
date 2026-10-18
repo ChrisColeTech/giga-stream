@@ -116,7 +116,7 @@ test("a DISABLED catalog job runs by hand (its switch gates only the schedule) a
   const read = async () => pick((await send(t.app, "GET", `/api/jobs/${id}`, undefined, token)).body, "data") as Record<string, unknown>;
   await until(async () => (await read()).lastResult !== undefined, "the catalog run");
   const done = await read();
-  assert.deepEqual([done.lastResult, done.lastCounts, done.running, done.lastOutcome], ["ok", { titles: 2, detailed: 2, seasons: 0, enriched: 0, changed: 0, stale: 0 }, false, undefined]);
+  assert.deepEqual([done.lastResult, done.lastCounts, done.running, done.lastOutcome], ["ok", { titles: 2, detailed: 2, seasons: 0, enriched: 0, airing: 0, stale: 0 }, false, undefined]);
   assert.ok(tmdb.calls.includes("/discover/movie"));
 });
 

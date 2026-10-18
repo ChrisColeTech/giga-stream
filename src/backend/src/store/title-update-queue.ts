@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { OMDB_GAP_SQL, type PendingDetail } from "./title-details.js";
 
-/** A title the Library update's `refresh` phase fetches: forced when TMDB's `/changes` listed it (`49` section 2.2). */
+/** A title the Library update's `refresh` phase fetches: forced when it is a stored series that aired lately (`49` section 2.2). */
 export interface RefreshItem extends PendingDetail {
   force: boolean;
 }
@@ -18,12 +18,12 @@ const IdRow = z.object({ tmdb_id: z.number().int() });
  * The Library update's two store questions (`49` section 2), both set-based: the ids bound as ONE `json_each(?)` text,
  * never an `IN (...)` list, so a window of tens of thousands of ids is one statement.
  *
- * `storedAmong`: of the TMDB ids a `/changes` window listed, the ones this store holds as a TMDB title that is enabled
+ * `storedAmong`: of the TMDB ids an `airing` page listed, the ones this store holds as a TMDB title that is enabled
  * and not deleted (an admin's deletion is kept in `deleted_titles`).
  *
  * `refreshQueue`: the update's work, highest popularity first: a list-shaped title, a series whose detail stands but has
  * a season (not the specials) with no episodes stored, a title in `changed` (title ids, forced), and with OMDb on a gap
- * the OMDb step fills. There is NO age clause: staleness is what `changes` replaces. A title that failed `maxFailures`
+ * the OMDb step fills. There is NO age clause: staleness is not a rule here. A title that failed `maxFailures`
  * runs in a row is left out, forced or not. Disabled titles and titles made by hand are never queued, nor are the
  * seasons of a series whose `seasons` an admin edited.
  */

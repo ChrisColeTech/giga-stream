@@ -4,7 +4,7 @@ import type { SyncRequest } from "./title-shapes.js";
 export function describeRequest(request: SyncRequest): Record<string, unknown> {
   if (request.scope === "discover") return { scope: "discover", walk: "by year, both kinds, to the last page" };
   if (request.scope === "recent") {
-    const walk = "recent discover, then TMDB changes, then a refresh";
+    const walk = "recent discover, then airing series, then a refresh";
     return { scope: "recent", walk, ...(request.since !== undefined && { since: request.since }) };
   }
   return { scope: request.scope, kind: request.kind, pages: request.pages };
