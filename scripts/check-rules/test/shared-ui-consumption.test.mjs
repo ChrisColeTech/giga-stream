@@ -21,12 +21,15 @@ function tree(entries) {
   return root;
 }
 
-const LIBRARY_PKG = JSON.stringify({ dependencies: { react: "^19.2.8", "react-dom": "^19.2.8" } });
+/** The packages only the admin consumes (`docs/45` section 7): the library declares them, the admin pins and dedupes them. */
+const TABLE_PINS = { "@tanstack/react-table": "^9.3.1", "@tanstack/react-virtual": "^3.14.21" };
+const LIBRARY_PKG = JSON.stringify({ dependencies: { react: "^19.2.8", "react-dom": "^19.2.8", ...TABLE_PINS } });
 
 /** One consumer that passes the rule; `drop` removes one of the four required pieces to make it fail. */
 function consumer(dir, { drop = "", pin = "^19.2.8" } = {}) {
   const alias = drop === "alias" ? "" : "'@giga/ui': x, '@giga/http': y,";
-  const dedupe = drop === "dedupe" ? "" : `dedupe: ${DEDUPE},`;
+  const names = dir === "src/admin" ? `${DEDUPE.slice(0, -1)}, '@tanstack/react-table', '@tanstack/react-virtual']` : DEDUPE;
+  const dedupe = drop === "dedupe" ? "" : `dedupe: ${names},`;
   const fsAllow = drop === "fs" ? "" : "server: { fs: { allow: ['../..'] } },";
   const source = drop === "source" ? "" : '@source "../../shared/ui/src";';
   const paths =
@@ -37,7 +40,9 @@ function consumer(dir, { drop = "", pin = "^19.2.8" } = {}) {
     [`${dir}/vite.config.mts`]: `export default { resolve: { alias: { ${alias} }, ${dedupe} }, ${fsAllow} };\n`,
     [`${dir}/src/index.css`]: `@import "tailwindcss";\n${source}\n`,
     [`${dir}/tsconfig.app.json`]: `{ "compilerOptions": { ${paths} } }\n`,
-    [`${dir}/package.json`]: JSON.stringify({ dependencies: { react: pin, "react-dom": "^19.2.8" } }),
+    [`${dir}/package.json`]: JSON.stringify({
+      dependencies: { react: pin, "react-dom": "^19.2.8", ...(dir === "src/admin" ? TABLE_PINS : {}) },
+    }),
   };
 }
 

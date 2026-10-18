@@ -110,7 +110,9 @@ window-types, shimmer}`, `hooks/{useRangePager, useSelectAll}`, `lib/window-cons
 admin `lib/*-rows.ts`, services, slices, `useBulkSelection`.
 **New** (<= 200 lines each, one component per file): `lists/{RecordTable, RecordTableHead, RecordTableRow, RecordTableBody,
 RecordTableSkeletonRow}.tsx`, `lists/record-table-types.ts`, `hooks/{useRecordTable, useElementWidth, useRowWindow}.ts`,
-`lib/record-columns.ts`; per admin tab `components/<tab>/<Tab>Columns.tsx`; `ListGroup` gains `fill`. TanStack is confined to
+`lib/record-columns.ts`; per admin tab `lib/<tab>-columns.ts` (a `.tsx` file must export a component under the
+`frontend-structure` rule; cells that need JSX are small components such as `JobStateCell.tsx`); `ListGroup` gains `fill` and
+`Workspace fill`'s inner column is `min-h-full flex-1` (built in W1/W2). TanStack is confined to
 `useRecordTable.ts`, `record-columns.ts` and the three presentational files: swapping it later costs one folder.
 
 ## 4. Migration order
@@ -151,7 +153,7 @@ or under" becomes "body-only". `28`: Appendix A rows 32-36 and 6.x item 7 become
 
 | Concern | Choice |
 |---|---|
-| Tables | `@tanstack/react-table` v9 (`^9.2.4`, the references' pin): `useTable` + `tableFeatures`; sorting, visibility and sizing metadata only |
+| Tables | `@tanstack/react-table` v9 (`^9.3.1`; the references run 9.2.4): `useTable` + `tableFeatures`; sorting, visibility and sizing metadata only |
 | Row windowing | `@tanstack/react-virtual` `^3.14.x`, long admin lists only |
 
 Add to `src/shared/ui/package.json` and `src/admin/package.json` (same ranges); `src/admin/vite.config.mts` `resolve.dedupe` gains
@@ -165,7 +167,7 @@ Every table: (1) scroller `scrollWidth === clientWidth` (no horizontal scrollbar
 first-cell left edge, rows' left edge and content width identical across all eight tables; (4) header width equals row width; (5)
 the only vertical scroll inside the table is its own with a sticky header, the page scrolls only when form + 317px exceeds the pane;
 (6) unloaded rows show skeleton rows in the same columns. Per table: Providers/Accounts all columns at both sizes, blank space
-beneath, no page growth; Playlists at 900 `dead`, `live`, `enabled`, `last run` hidden as needed, all 8 at 1264; Jobs at 900 `last
+beneath, no page growth; Playlists at 900 `dead`, `live`, `enabled` hidden (measured 2026-10-18 at an 830px scroller; `last run` stays), all 8 at 1264; Jobs at 900 `last
 run` and `outcome` hide first, the running bar stays in the state cell; Titles Browse 40 rows plain, `Older/Newer`, state word and
 dimmed row unchanged; Deleted titles bounded at 10 rows, `Restore` fits 5.5rem; Channels 80 and 5,000 rows, DOM `li` <= 30 at
 1264x1000 and <= 20 at 900x640 while scrolling, header sort and `SortControl` agree, `Select all M matching` works, header `All`
