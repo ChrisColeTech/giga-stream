@@ -1,6 +1,6 @@
 # 40 - Admin password reset by security question (Waves B3 and R)
 
-**Status: plan, written before the code (backend worker B3, branch `backend/reset`; admin worker R, branch `admin/reset-gate`). This document replaces the earlier email and local-code design in full.** Owner, 2026-10-17: "add a password reset button to the login form", then "lets do security question instead of email for password reset." There is no email, no SMTP, no reset code, no console sink, no Electron dialog and no tray action. The reset is answered by a **security question** that each account sets for itself while signed in. The program is `39` (B3 takes migration `019`, merged after B2's `018`; R runs in parallel with Waves 3b to 3d once 3a and B3 have landed). Governed by `00`, `01`, `03` 7.11 and 7.12, `07`, `26` (D5, D22), `34`.
+**Status: plan, written before the code (backend worker B3, branch `backend/reset`; admin worker R, branch `admin/reset-gate`). This document replaces the earlier email and local-code design in full.** Owner, 2026-10-17: "add a password reset button to the login form", then "lets do security question instead of email for password reset." There is no email, no SMTP, no reset code, no console sink, no Electron dialog and no tray action. The reset is answered by a **security question** that each account sets for itself while signed in. The program is `39` (B3 is the next backend wave and takes migration `018`; R runs in parallel with Waves 3b to 3d once 3a and B3 have landed). Governed by `00`, `01`, `03` 7.11 and 7.12, `07`, `26` (D5, D22), `34`.
 
 ## 1. What exists (verified in source, `family-port`)
 
@@ -89,30 +89,28 @@ Events drawer sentences: `<email> set a security question`, `Password reset fail
 
 ## 3. Backend (worker B3; `src/backend` only)
 
-### 3.1 Migration `store/migrations/019-security-questions.sql`
+### 3.1 Migration `store/migrations/018-security-questions.sql`
 
 ```sql
 ALTER TABLE admin_accounts ADD COLUMN security_question INTEGER CHECK (security_question BETWEEN 1 AND 8);
 ALTER TABLE admin_accounts ADD COLUMN security_answer_hash TEXT;
 CREATE TABLE reset_attempts (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,   -- every backend table has a generated integer key (EVERYTHING, 39 section 7.1)
-  email_key    TEXT NOT NULL UNIQUE,                -- the normalised email the attempts belong to; known or unknown
+  email_key    TEXT PRIMARY KEY,                    -- the normalised email the attempts belong to; known or unknown
   failed       INTEGER NOT NULL DEFAULT 0,
   locked_until INTEGER
 );
 ```
 
-The two columns on `admin_accounts` are added to the table that migration `018` has already rebuilt: its primary key is the generated integer `id`, and the string account id is `api_id` (`39` section 7.1). The reset answers never show an id of any kind; the reset is keyed by the email, and the session tokens stay keyed by the API string `api_id` as they are today.
+No existing table's key changes. The reset answers never show an account id; the reset is keyed by the email.
 
-Existing accounts get no question (NULL): see 5.1. `user_version` becomes at least 19. The newer-schema rule (an older binary refuses a newer database) is unchanged. Migration 018 (real ids, `40` no longer owns it, see `39` 7.1) is applied first.
+Existing accounts get no question (NULL): see 5.1. `user_version` becomes at least 18 (the last migration today is `017-admin-ui-state.sql`). The newer-schema rule (an older binary refuses a newer database) is unchanged.
 
 ### 3.2 Constants, types, errors
 
 - `constants/security-questions.ts`: the eight questions (2.1), `SECURITY_QUESTION_COUNT = 8`, `SECURITY_ANSWER_MAX = 200`, `RESET_LOCK_FAILURES = 5`, `RESET_LOCK_MS = 15 * 60 * 1000`.
 - `constants/errors.ts`: `authResetInvalid: { code: "auth.reset_invalid", status: 401, message: "That answer is not right, or the reset is not available for this email." }`.
 - `types/account.ts`: `SecurityQuestionSetSchema = z.object({ currentPassword, question: z.number().int().min(1).max(8), answer: z.string().min(1).max(200) }).strict()`; `ResetStartSchema = z.object({ email: z.string().max(254) }).strict()`; `ResetSchema = z.object({ email, answer: z.string().max(200), newPassword: password })` (`password` is the existing 12-to-256 schema, so a short password is the body refusal of 2.4 step 1).
-- `AdminAccount` gains `securityQuestionSet: boolean` (read-only, for the Accounts workspace's Details row, `35`). Its `idNumber` (the generated database key, `39` 7.1) is added by 018, not by this plan.
-
+- `AdminAccount` gains `securityQuestionSet: boolean` (read-only, for the Accounts workspace's Details row, `35`).
 ### 3.3 Service, repositories and routes
 
 - `store/account-repository.ts`: `setSecurityQuestion(id, question, answerHash, at)`, `clearAttempts`, and the two fields on `StoredAccount` (`securityQuestion`, `securityAnswerHash`).
@@ -133,7 +131,7 @@ Routes parse, make one service call and return the envelope (`01` 4.3). All thre
 `security-question.test.ts`: a signed-in account sets its question with its current password; a wrong current password is `401 auth.invalid_credentials` with `field: currentPassword` and changes nothing; an empty answer after normalisation is `422`; a question outside 1 to 8 is `422`; setting does not revoke sessions; another account cannot set it (the route takes no account id); audit `auth.security_question_set` has no answer in it.
 `normalise.test.ts`: `  Rex  `, `rex`, `REX` are one answer; `Golden   Retriever` equals `golden retriever`; NFKC folds a full-width letter; an empty result is refused.
 `reset.test.ts`: `reset-start` answers the same shape for a known account with a question, an unknown email, an account with no question and a disabled account; the decoy is the same question on every call for the same email and differs between two emails (over enough emails both decoy values occur); the real question is returned for a real account; `reset` with the right answer sets the password (the old one fails, the new one signs in), revokes every refresh token and every access token (`ver`), clears the login lockout, deletes the attempt row, audits `auth.reset_completed`; a wrong answer is `401 auth.reset_invalid` and audits `auth.reset_failed`; the fifth wrong answer audits `auth.reset_locked` and sets the lock; during the lock the right answer is `401 auth.reset_invalid` and checks nothing; after 15 minutes (clock moved) a right answer works; the same five wrong answers on an **unknown** email lock it identically; every failure body is byte-identical (unknown, wrong, locked, decoy, disabled, no question); `newPassword` of 11 characters is `422` before any lookup and counts nothing (the attempt row is unchanged); the limiter answers `429` after ten requests in a minute, for both routes; the stored answer is a scrypt hash and no response or audit detail contains the answer.
-`reset-migration.test.ts`: `019` applies on a `018` database, `user_version` is at least 19, existing accounts have a NULL question, and a 019 database is refused by the older binary (the existing newer-schema rule).
+`reset-migration.test.ts`: `018` applies on a `017` database, `user_version` is at least 18, existing accounts have a NULL question, and an 018 database is refused by the older binary (the existing newer-schema rule).
 
 ## 4. The admin (worker R; `src/admin`)
 
@@ -183,7 +181,7 @@ Create: `lib/reset-state.ts`, `constants/reset-copy.ts`, `constants/security-que
 
 ## 5. Failure modes and their decisions
 
-1. **An account set up before this migration has no question.** Migration `019` cannot invent an answer, so every existing account starts without one. Until its owner signs in and sets one, that account cannot be reset from the gate. **Consequence:** the owner should set a question now, while signed in (Settings > Account), before relying on the reset. A question-less account that forgets its password has no in-app recovery (see 7, decision 1).
+1. **An account set up before this migration has no question.** Migration `018` cannot invent an answer, so every existing account starts without one. Until its owner signs in and sets one, that account cannot be reset from the gate. **Consequence:** the owner should set a question now, while signed in (Settings > Account), before relying on the reset. A question-less account that forgets its password has no in-app recovery (see 7, decision 1).
 2. **A `JWT_SECRET` change** changes every decoy question. An observer who saw the old decoy learns nothing new, and the real questions are unaffected. Accepted.
 3. **Decoy and real questions** come from the same eight-item list, so the shape is the same. A real account's question is fixed; an unknown email's decoy is fixed per email; an observer who asks many emails sees the same distribution for both.
 4. **A wrong answer is guessable** if the question is common (for example the favourite book). The five-wrong lock per email and the per-address limit bound a guessing run to about five attempts per 15 minutes per email. Accepted: the picklist is a convenience, and the owner may prefer a stronger question.
@@ -205,7 +203,7 @@ Create: `lib/reset-state.ts`, `constants/reset-copy.ts`, `constants/security-que
 |---|---|---|
 | 1 | The reason shown for a question-less account is generic (on every answer), not "this account has no question". Saying it per account would tell an observer which emails are real accounts. | generic, as 4.1; the owner may accept the disclosure if they prefer the literal reason |
 | 2 | The question is a fixed picklist of eight, not free text | picklist, because free text would make real accounts distinguishable from decoys |
-| 3 | Existing accounts start with no question (migration 019 cannot invent one) | the owner sets one for each account while signed in; no account is recoverable until it does |
+| 3 | Existing accounts start with no question (migration 018 cannot invent one) | the owner sets one for each account while signed in; no account is recoverable until it does |
 | 4 | Only an account may set its own question (another admin cannot set it for a locked-out person) | own account only; the owner can revisit if a reset of another account's question is wanted |
 | 5 | Email delivery is not part of this design | none planned; a later option only if the owner asks |
 
@@ -218,5 +216,5 @@ Create: `lib/reset-state.ts`, `constants/reset-copy.ts`, `constants/security-que
 | 3 | `29` 6.1: a sign-in failure has three kinds | the reset views add `auth.reset_invalid` and the `weak` password refusal |
 | 4 | `tray-menu.ts` pins two entries | unchanged: no tray action is added by this design |
 | 5 | `01` 4.4: no timers | the lock is a stored time checked on use; nothing is armed |
-| 6 | `03` 7.11: an account has an email, a name, a password and `disabled` | gains `security_question` and `security_answer_hash` (migration 019) and the read-only `securityQuestionSet` answer field |
+| 6 | `03` 7.11: an account has an email, a name, a password and `disabled` | gains `security_question` and `security_answer_hash` (migration 018) and the read-only `securityQuestionSet` answer field |
 | 7 | `03` 7.12: `auth.locked` is a 429 on sign-in only | the reset lock is silent (`auth.reset_invalid`, 401), so an observer cannot tell a locked email from an unknown one |
