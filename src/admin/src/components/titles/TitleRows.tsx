@@ -1,39 +1,31 @@
-import { RecordGrid } from "@giga/ui/lists/RecordGrid";
-import { SkeletonGrid } from "@giga/ui/lists/SkeletonGrid";
-import { TITLE_GRID, TITLE_HEADINGS } from "@/constants/title-grid";
-import { useTitleActions } from "@/hooks/useTitleActions";
+import { useMemo } from "react";
+import { RecordTable } from "@giga/ui/lists/RecordTable";
+import { useTitleRowView } from "@/hooks/useTitleRowView";
+import type { AdminTitleRow } from "@/services/schemas/title-schema";
 import { useAppStore } from "@/store/app-store";
-import { TitleRowItem } from "./TitleRowItem";
+import { titleColumns } from "./title-columns";
 
-/** The TMDB browse list's grid (`37` section 4.2, the `Browse TMDB` view): the header, then a row per title in TMDB's
- *  order (`TitleRowItem`). Shimmer rows while nothing is read, while a read fails with no rows (no TMDB token) and when
- *  there is nothing to list; never a sentence. A TMDB page is 40 rows at most, so it is the plain grid. */
+const idOf = (title: AdminTitleRow): string => title.id;
+
+/** The TMDB browse list's table (`37` section 4.2, the `Browse TMDB` view): a row per title in TMDB's order. Skeleton
+ *  rows in the same columns while nothing is read, while a read fails with no rows (no TMDB token) and when there is
+ *  nothing to list; never a sentence. A TMDB page is 40 rows at most, so every row is mapped. */
 export function TitleRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.titles);
   const serial = useAppStore((state) => state.serial);
   const tick = useAppStore((state) => state.titleTick);
-  const openWorkspace = useAppStore((state) => state.openWorkspace);
-  const { flows, saving, isBusy, track } = useTitleActions();
+  const rowView = useTitleRowView(unreachable);
   const waiting = items.length === 0 || status === "idle" || session !== serial;
+  const rows = useMemo(() => [...items], [items]);
 
   return (
-    <RecordGrid ariaLabel="Titles" layout={TITLE_GRID} headings={TITLE_HEADINGS} ticks>
-      {waiting ? (
-        <SkeletonGrid />
-      ) : (
-        items.map((title) => (
-          <TitleRowItem
-            key={title.id}
-            title={title}
-            ticked={ticked.includes(title.id)}
-            onTick={(on) => tick(title.id, on)}
-            onOpen={() => openWorkspace("titles", title.id)}
-            onDelete={() => void track(`delete:${title.id}`, () => flows.remove(title.id))}
-            busy={saving || isBusy(`delete:${title.id}`)}
-            unreachable={unreachable}
-          />
-        ))
-      )}
-    </RecordGrid>
+    <RecordTable
+      ariaLabel="Titles"
+      columns={titleColumns}
+      rows={rows}
+      idOf={idOf}
+      rowView={(title) => rowView(title, ticked.includes(title.id), (on) => tick(title.id, on))}
+      waiting={waiting}
+    />
   );
 }

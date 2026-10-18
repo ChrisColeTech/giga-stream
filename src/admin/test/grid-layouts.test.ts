@@ -3,21 +3,19 @@ import { describe, it } from "node:test";
 import type { GridHeading } from "@giga/ui/lists/RecordGrid";
 import { TICK_TRACK, type GridLayout } from "@giga/ui/lists/record-grid-layout";
 import { CHANNEL_GRID, CHANNEL_HEADINGS } from "@/constants/channel-grid";
-import { DELETED_GRID, DELETED_HEADINGS, TITLE_GRID, TITLE_HEADINGS } from "@/constants/title-grid";
+import { TITLE_GRID, TITLE_HEADINGS } from "@/constants/title-grid";
 
 /* The index lists' column sets as arithmetic: one track per cell (an extra track is an empty column that squeezes the
  * others), `minWidth` no smaller than the tracks' own minimums plus the row's gaps and padding (else the cells overflow
  * their tracks), and a mono date whole in its track. A render cannot measure a column; this can. */
-const REM = 16;
+
 const GAP_REM = 0.75;
 const PADDING_REM = 1.5;
-const MONO_12PX_REM = 7.2 / REM;
 const rem = (value: string): number => Number.parseFloat(value.replace("minmax(", ""));
 
 const LISTS: ReadonlyArray<readonly [string, GridLayout, readonly GridHeading[]]> = [
   ["channels", CHANNEL_GRID, CHANNEL_HEADINGS],
   ["titles", TITLE_GRID, TITLE_HEADINGS],
-  ["deleted titles", DELETED_GRID, DELETED_HEADINGS],
 ];
 
 const needed = (layout: GridLayout): number => {
@@ -32,8 +30,4 @@ describe("the index list grids", () => {
       assert.ok(rem(layout.minWidth) >= needed(layout), `${layout.minWidth} < ${needed(layout)}rem`);
     });
   }
-
-  it("deleted titles: the time track holds a formatted time whole", () => {
-    assert.ok(rem(DELETED_GRID.tracks[2] ?? "") >= 16 * MONO_12PX_REM);
-  });
 });

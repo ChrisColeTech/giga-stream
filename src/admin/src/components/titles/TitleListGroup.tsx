@@ -19,9 +19,9 @@ export function TitleListGroup() {
   const setMode = useAppStore((state) => state.storedSetMode);
   const badge = mode === "stored" ? storedBadge(inventory) : undefined;
   return (
-    <Group id="ti-list" icon={Clapperboard} title="Titles" badge={badge} last={false}>
-      <Wide>
-        <div className="flex flex-col gap-2">
+    <Group id="ti-list" icon={Clapperboard} title="Titles" badge={badge} last={false} fill collapsible>
+      <Wide fill>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
           <span title={VIEW_TIP} className="self-start px-3">
             <Segmented dense aria-label={VIEW_LABEL} options={VIEW_OPTIONS} value={mode} onChange={setMode} />
           </span>

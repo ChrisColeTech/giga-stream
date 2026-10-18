@@ -11,7 +11,7 @@ export function TitlesIndex() {
   return (
     <>
       <IndexToolbar tab="titles" />
-      <Workspace labels={TITLES_INDEX_LABELS}>
+      <Workspace labels={TITLES_INDEX_LABELS} fill>
         <NewTitleForm />
         <TitleListGroup />
         <DeletedTitlesGroup />
