@@ -1,11 +1,11 @@
-import { useMemo } from "react";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { RecordTable } from "@giga/ui/lists/RecordTable";
 import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { DELETE_TITLE } from "@/constants/account-copy";
 import { useAccountActions } from "@/hooks/useAccountActions";
 import { deleteReason } from "@/lib/account-guard";
-import { accountRow, isTicked, type AccountRowView } from "@/lib/account-rows";
+import { useAccountView } from "@/hooks/useAccountView";
+import { isTicked, type AccountRowView } from "@/lib/account-rows";
 import { useAppStore } from "@/store/app-store";
 import { accountColumns } from "./account-columns";
 
@@ -20,8 +20,8 @@ export function AccountRows() {
   const tick = useAppStore((state) => state.accountTick);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useAccountActions();
+  const { visible, sort } = useAccountView();
   const waiting = items.length === 0 || status === "idle";
-  const rows = useMemo(() => items.map(accountRow), [items]);
 
   const rowView = (row: AccountRowView): RecordRowView => {
     const account = items.find((item) => idOf(row) === String(item.id));
@@ -45,5 +45,15 @@ export function AccountRows() {
     };
   };
 
-  return <RecordTable ariaLabel="Accounts" columns={accountColumns} rows={rows} idOf={idOf} rowView={rowView} waiting={waiting} />;
+  return (
+    <RecordTable
+      ariaLabel="Accounts"
+      columns={accountColumns}
+      rows={visible}
+      idOf={idOf}
+      rowView={rowView}
+      waiting={waiting}
+      sort={sort}
+    />
+  );
 }

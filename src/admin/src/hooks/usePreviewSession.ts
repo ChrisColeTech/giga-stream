@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { channelById } from "@/lib/channel-list";
+import { previewChannel } from "@/lib/channel-list";
 import { createPreviewSession, SESSION_START, type PreviewSession } from "@/lib/preview-session";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
@@ -19,7 +19,7 @@ export function usePreviewSession(channelId: string): PreviewSessionView {
   const flows = useChannelFlows();
   const [state, setState] = useState(SESSION_START);
   const session = useRef<PreviewSession | null>(null);
-  const channel = useAppStore((store) => channelById(store.channels, channelId));
+  const channel = useAppStore((store) => previewChannel(store.channels, channelId));
 
   useEffect(() => {
     const current = createPreviewSession(flows.refresh, setState);

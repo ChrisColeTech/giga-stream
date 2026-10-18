@@ -4,29 +4,35 @@ import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/account-copy";
 import { useAccountActions } from "@/hooks/useAccountActions";
 import { useAccountBulk } from "@/hooks/useAccountBulk";
-import { selectAllState } from "@/lib/account-rows";
+import { useAccountView } from "@/hooks/useAccountView";
+import { LIST_BARS } from "@/constants/list-query-copy";
+import { tickState } from "@/lib/list-query";
 import { useAppStore } from "@/store/app-store";
+import { ListQueryBar } from "@/components/records/ListQueryBar";
 import { AccountRows } from "./AccountRows";
 
-/** `Accounts`: the list group. Its selection toolbar (`01` section 9) holds `Refresh` (it reads the accounts and the audit
- *  tail together, disabled with `Loading.` while a read runs), then `Enable`, `Disable` and the armed `Delete`, always
- *  drawn and disabled with their reason until a row is ticked, and the three-state `All` on the right. */
+/** `Accounts`: the list group. Its first rows (`01` section 9) are the query row (search, Sort, State and Sign-in) and
+ *  the selection toolbar: `Refresh` (it reads the accounts and the audit tail together, disabled with `Loading.` while a
+ *  read runs), then `Enable`, `Disable` and the armed `Delete`, always drawn and disabled with their reason until a row
+ *  is ticked; the three-state `All` ticks the rows the query shows. */
 export function AccountsList() {
-  const { status, items, ticked } = useAppStore((state) => state.accounts);
-  const tickAll = useAppStore((state) => state.accountsTickAll);
+  const { status, ticked } = useAppStore((state) => state.accounts);
+  const setTicked = useAppStore((state) => state.accountsSetTicked);
   const { flows, track } = useAccountActions();
   const { verbs } = useAccountBulk();
+  const view = useAccountView();
   const reason = status === "loading" ? LOADING_REASON : undefined;
   const all = {
     label: "Select all accounts",
-    checked: selectAllState(items, ticked),
-    onToggle: tickAll,
-    disabled: items.length === 0,
+    checked: tickState(view.visible.map((row) => String(row.id)), ticked.map(String)),
+    onToggle: (on: boolean) => setTicked(on ? view.visible.map((row) => row.id) : []),
+    disabled: view.visible.length === 0,
   };
   const strip = (
     <TableStrip
       label="Accounts table"
       noun="accounts"
+      query={<ListQueryBar def={LIST_BARS.accounts} query={view.query} handlers={view.handlers} />}
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
       selection={{ verbs }}
     />

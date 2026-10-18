@@ -29,6 +29,23 @@ export function channelById(holds: ChannelHolds, id: string): AdminChannel | und
   );
 }
 
+/** What the Preview window needs besides the holds: the list's total and the row it was opened on. */
+export interface PreviewHolds extends ChannelHolds {
+  readonly total: number | null;
+  readonly preview: { readonly channelId: string; readonly channel: AdminChannel | null } | null;
+}
+
+/** The channel the Preview window plays. The window's read drops the list's pages and a long list re-reads only the rows
+ *  it shows, so while the pages are not all loaded the row Preview was pressed on stands in for a copy the list lacks. A
+ *  list that IS fully loaded answers for itself: a channel missing from it is gone. */
+export function previewChannel(holds: PreviewHolds, id: string): AdminChannel | undefined {
+  const found = channelById(holds, id);
+  if (found !== undefined) return found;
+  const complete = holds.total === null || holds.items.length >= holds.total;
+  if (complete || holds.preview === null || holds.preview.channelId !== id) return undefined;
+  return holds.preview.channel ?? undefined;
+}
+
 /** Enabled live channels being built: what the statusbar's `N preparing` reads. A disabled row is never counted. */
 export const preparingCount = (items: readonly AdminChannel[]): number =>
   items.filter((item) => item.kind === "live" && item.enabled && BUILDING_STATES.has(item.state)).length;

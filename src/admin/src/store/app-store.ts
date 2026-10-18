@@ -6,6 +6,7 @@ import { APPEARANCE_DEFAULTS } from "@/constants/settings-sections";
 import type { EventArea } from "@/types/events";
 import type { OverlayId } from "@/types/overlays";
 import { auditSlice, type AuditSlice } from "./audit-slice";
+import { createListQueriesSlice, type ListQueriesSlice } from "./list-queries-slice";
 import { panesSlice, type PanesSlice } from "./panes-slice";
 import { sessionSlice, type SessionSlice } from "./session-slice";
 import { tabSlices, type TabSlices } from "./slices";
@@ -32,6 +33,7 @@ export type AppState = ChromeSlice<AdminKinds> &
   AuditSlice &
   WorkSlice &
   StaleSlice &
+  ListQueriesSlice &
   TabSlices;
 
 export const useAppStore = create<AppState>()((set, get) => {
@@ -47,6 +49,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     ...auditSlice(set, get),
     ...workSlice(set, get),
     ...createStaleSlice(set, get),
+    ...createListQueriesSlice(set, get),
     ...tabSlices(set, get),
   };
 });

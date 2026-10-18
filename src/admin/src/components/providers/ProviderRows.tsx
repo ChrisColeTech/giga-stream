@@ -1,10 +1,10 @@
-import { useMemo } from "react";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { RecordTable } from "@giga/ui/lists/RecordTable";
 import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { DELETE_PROVIDER_TITLE, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/provider-copy";
 import { useProviderActions } from "@/hooks/useProviderActions";
-import { providerRow, type ProviderRowView } from "@/lib/provider-rows";
+import { useProviderView } from "@/hooks/useProviderView";
+import type { ProviderRowView } from "@/lib/provider-rows";
 import { useAppStore } from "@/store/app-store";
 import { providerColumns } from "./provider-columns";
 
@@ -20,8 +20,8 @@ export function ProviderRows() {
   const tick = useAppStore((state) => state.providerTick);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useProviderActions();
+  const { visible, sort } = useProviderView();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
-  const rows = useMemo(() => items.map(providerRow), [items]);
 
   const rowView = (row: ProviderRowView): RecordRowView => {
     const busy = saving || isBusy(`delete:${row.id}`);
@@ -45,5 +45,15 @@ export function ProviderRows() {
     };
   };
 
-  return <RecordTable ariaLabel="Providers" columns={providerColumns} rows={rows} idOf={idOf} rowView={rowView} waiting={waiting} />;
+  return (
+    <RecordTable
+      ariaLabel="Providers"
+      columns={providerColumns}
+      rows={visible}
+      idOf={idOf}
+      rowView={rowView}
+      waiting={waiting}
+      sort={sort}
+    />
+  );
 }

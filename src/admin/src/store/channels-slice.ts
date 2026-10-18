@@ -133,7 +133,11 @@ export function createChannelsSlice(set: SliceSet<ChannelsSlice>, get: SliceGet<
     channelsSetTicked: (ids) => patch({ ticked: ids, held: keepHeld(get().channels.held, ids) }),
     channelsResolving: (resolving) => patch({ resolving }),
     channelsMarkUnreachable: (unreachable) => patch({ unreachable }),
-    channelsOpenPreview: (channelId) => patch({ preview: { channelId, serial: (get().channels.preview?.serial ?? 0) + 1 } }),
+    channelsOpenPreview: (channelId) => {
+      const s = get().channels;
+      const serial = (s.preview?.serial ?? 0) + 1;
+      patch({ preview: { channelId, serial, channel: channelById(s, channelId) ?? null } });
+    },
     channelsClosePreview: () => patch({ preview: null }),
     channelsReset: () => set({ channels: NO_CHANNELS }),
   };

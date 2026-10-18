@@ -4,30 +4,36 @@ import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/account-copy";
 import { useJobActions } from "@/hooks/useJobActions";
 import { useJobBulk } from "@/hooks/useJobBulk";
-import { selectAll } from "@/lib/playlist-rows";
+import { useJobView } from "@/hooks/useJobView";
+import { LIST_BARS } from "@/constants/list-query-copy";
+import { tickState } from "@/lib/list-query";
 import { useAppStore } from "@/store/app-store";
+import { ListQueryBar } from "@/components/records/ListQueryBar";
 import { JobRows } from "./JobRows";
 
-/** `Jobs`: the list group. Its selection toolbar (`01` section 9) holds `Refresh` (it reads the jobs, the playlists and the
- *  audit tail: how a catalog run's end is learnt, since nothing polls; disabled with `Loading.` while a read runs), then
- *  the bulk verbs with the armed `Delete` last, always drawn and disabled with their reason until a row is ticked, and the
- *  three-state `All` on the right. */
+/** `Jobs`: the list group. Its first rows (`01` section 9) are the query row (search, Sort, Type and State) and the
+ *  selection toolbar: `Refresh` (it reads the jobs, the playlists and the audit tail: how a catalog run's end is learnt,
+ *  since nothing polls; disabled with `Loading.` while a read runs), then the bulk verbs with the armed `Delete` last,
+ *  always drawn and disabled with their reason until a row is ticked; the three-state `All` ticks the rows the query
+ *  shows. */
 export function JobsList() {
-  const { status, items, ticked } = useAppStore((state) => state.jobs);
-  const tickAll = useAppStore((state) => state.jobsTickAll);
+  const { status, ticked } = useAppStore((state) => state.jobs);
+  const setTicked = useAppStore((state) => state.jobsSetTicked);
   const { flows, track } = useJobActions();
   const { verbs } = useJobBulk();
+  const view = useJobView();
   const reason = status === "loading" ? LOADING_REASON : undefined;
   const all = {
     label: "Select all jobs",
-    checked: selectAll(items, ticked),
-    onToggle: tickAll,
-    disabled: items.length === 0,
+    checked: tickState(view.visible.map((row) => String(row.id)), ticked.map(String)),
+    onToggle: (on: boolean) => setTicked(on ? view.visible.map((row) => row.id) : []),
+    disabled: view.visible.length === 0,
   };
   const strip = (
     <TableStrip
       label="Jobs table"
       noun="jobs"
+      query={<ListQueryBar def={LIST_BARS.jobs} query={view.query} handlers={view.handlers} />}
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
       selection={{ verbs }}
     />

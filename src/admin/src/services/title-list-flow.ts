@@ -31,6 +31,7 @@ export type TitleStore = Pick<
   | "titlesLoadFailed"
   | "titleUpsert"
   | "titleRemove"
+  | "titleMarkDeleted"
   | "titlesMarkUnreachable"
   | "titlesStored"
   | "storedType"

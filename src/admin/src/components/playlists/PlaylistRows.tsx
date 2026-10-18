@@ -1,11 +1,11 @@
-import { useMemo } from "react";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { RecordTable } from "@giga/ui/lists/RecordTable";
 import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import { DELETE_TITLE } from "@/constants/playlist-copy";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
-import { playlistRow, type PlaylistRowView } from "@/lib/playlist-rows";
+import { usePlaylistView } from "@/hooks/usePlaylistView";
+import type { PlaylistRowView } from "@/lib/playlist-rows";
 import { useAppStore } from "@/store/app-store";
 import { playlistColumns } from "./playlist-columns";
 
@@ -20,8 +20,8 @@ export function PlaylistRows() {
   const tick = useAppStore((state) => state.playlistTick);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = usePlaylistActions();
+  const { visible, sort } = usePlaylistView();
   const waiting = items.length === 0 || status === "idle";
-  const rows = useMemo(() => items.map(playlistRow), [items]);
 
   const rowView = (row: PlaylistRowView): RecordRowView => {
     const reason = unreachable ? UNREACHABLE_REASON : saving || isBusy(`delete:${row.id}`) ? SAVING_REASON : undefined;
@@ -44,5 +44,15 @@ export function PlaylistRows() {
     };
   };
 
-  return <RecordTable ariaLabel="Playlists" columns={playlistColumns} rows={rows} idOf={idOf} rowView={rowView} waiting={waiting} />;
+  return (
+    <RecordTable
+      ariaLabel="Playlists"
+      columns={playlistColumns}
+      rows={visible}
+      idOf={idOf}
+      rowView={rowView}
+      waiting={waiting}
+      sort={sort}
+    />
+  );
 }
