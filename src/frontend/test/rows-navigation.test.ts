@@ -1,70 +1,86 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { rowEnds, rowStep, scrollStep } from "@/components/library/rows/rows-navigation";
+import { ROWS_COPY } from "@/components/library/rows/rows-constants";
+import {
+  backChevron,
+  cardStep,
+  forwardChevron,
+  forwardNeedsPage,
+  nearestCard,
+  rowEnds,
+  scrollStep,
+} from "@/components/library/rows/rows-navigation";
 
-/* Three shelves of 4, 1 and 3 cards. */
-const SHELVES = [4, 1, 3];
-
-describe("rowStep across a row", () => {
-  it("moves one card left and right, and stops at the row's ends", () => {
-    assert.deepEqual(rowStep("ArrowRight", { shelf: 0, card: 1 }, SHELVES), { shelf: 0, card: 2 });
-    assert.deepEqual(rowStep("ArrowLeft", { shelf: 0, card: 1 }, SHELVES), { shelf: 0, card: 0 });
-    assert.equal(rowStep("ArrowLeft", { shelf: 0, card: 0 }, SHELVES), null);
-    assert.equal(rowStep("ArrowRight", { shelf: 0, card: 3 }, SHELVES), null);
+describe("cardStep within a shelf", () => {
+  it("moves one card left and right by index, and stops at the loaded ends", () => {
+    assert.equal(cardStep("ArrowRight", 1, 40), 2);
+    assert.equal(cardStep("ArrowLeft", 1, 40), 0);
+    assert.equal(cardStep("ArrowLeft", 0, 40), null);
+    assert.equal(cardStep("ArrowRight", 39, 40), null);
   });
 
-  it("jumps to the first and last card of the row with Home and End", () => {
-    assert.deepEqual(rowStep("Home", { shelf: 0, card: 2 }, SHELVES), { shelf: 0, card: 0 });
-    assert.deepEqual(rowStep("End", { shelf: 2, card: 0 }, SHELVES), { shelf: 2, card: 2 });
-    assert.equal(rowStep("Home", { shelf: 0, card: 0 }, SHELVES), null);
-    assert.equal(rowStep("End", { shelf: 0, card: 3 }, SHELVES), null);
-  });
-});
-
-describe("rowStep between shelves", () => {
-  it("moves to the same card index on the next or previous shelf", () => {
-    assert.deepEqual(rowStep("ArrowDown", { shelf: 0, card: 0 }, SHELVES), { shelf: 1, card: 0 });
-    assert.deepEqual(rowStep("ArrowUp", { shelf: 2, card: 2 }, SHELVES), { shelf: 1, card: 0 });
+  it("goes to the first and last loaded card with Home and End, mounted or not", () => {
+    assert.equal(cardStep("Home", 25, 40), 0);
+    assert.equal(cardStep("End", 2, 40), 39);
+    assert.equal(cardStep("Home", 0, 40), null);
+    assert.equal(cardStep("End", 39, 40), null);
   });
 
-  it("lands on the last card of a shorter shelf", () => {
-    assert.deepEqual(rowStep("ArrowDown", { shelf: 0, card: 3 }, SHELVES), { shelf: 1, card: 0 });
-    assert.deepEqual(rowStep("ArrowDown", { shelf: 2, card: 2 }, SHELVES), null);
-  });
-
-  it("stops at the first and last shelf", () => {
-    assert.equal(rowStep("ArrowUp", { shelf: 0, card: 1 }, SHELVES), null);
-    assert.equal(rowStep("ArrowDown", { shelf: 2, card: 1 }, SHELVES), null);
+  it("does nothing for other keys or a position outside the shelf", () => {
+    assert.equal(cardStep("ArrowUp", 1, 40), null);
+    assert.equal(cardStep("a", 1, 40), null);
+    assert.equal(cardStep("ArrowRight", -1, 40), null);
+    assert.equal(cardStep("ArrowRight", 0, 0), null);
   });
 });
 
-describe("rowStep for keys and positions it does not handle", () => {
-  it("does nothing for an unknown key, or with no card in focus", () => {
-    assert.equal(rowStep("a", { shelf: 0, card: 1 }, SHELVES), null);
-    assert.equal(rowStep("ArrowRight", { shelf: 0, card: -1 }, SHELVES), null);
-    assert.equal(rowStep("ArrowRight", { shelf: 5, card: 0 }, SHELVES), null);
-    assert.equal(rowStep("ArrowRight", { shelf: 0, card: 0 }, []), null);
+describe("nearestCard between shelves", () => {
+  it("lands on the card whose left edge is closest", () => {
+    assert.equal(nearestCard([12, 216, 420, 624], 400), 2);
+    assert.equal(nearestCard([12, 216], 9000), 1);
+    assert.equal(nearestCard([], 10), -1);
   });
 });
 
 describe("rowEnds", () => {
-  it("reports the start when the row is scrolled to zero", () => {
+  it("reports the start, the end within a pixel, and both when the row fits", () => {
     assert.deepEqual(rowEnds({ scrollLeft: 0, clientWidth: 300, scrollWidth: 900 }), { atStart: true, atEnd: false });
-  });
-
-  it("reports the end within a pixel of the far edge", () => {
-    const near = { scrollLeft: 599.5, clientWidth: 300, scrollWidth: 900 };
-    assert.deepEqual(rowEnds(near), { atStart: false, atEnd: true });
-  });
-
-  it("reports both ends when the row fits without scrolling", () => {
+    assert.deepEqual(rowEnds({ scrollLeft: 599.5, clientWidth: 300, scrollWidth: 900 }), { atStart: false, atEnd: true });
     assert.deepEqual(rowEnds({ scrollLeft: 0, clientWidth: 300, scrollWidth: 300 }), { atStart: true, atEnd: true });
   });
 });
 
-describe("scrollStep", () => {
-  it("scrolls by four fifths of the visible width, rounded", () => {
-    assert.equal(scrollStep(500), 400);
-    assert.equal(scrollStep(333), 266);
+describe("the Scroll right rule", () => {
+  const fits = { atStart: true, atEnd: true };
+  const beyond = { atStart: true, atEnd: false };
+
+  it("is enabled while loaded cards lie beyond the view, even with no next page", () => {
+    assert.deepEqual(forwardChevron(beyond, false), { disabled: false, title: ROWS_COPY.scrollForward });
+  });
+
+  it("is enabled while the server has a next page, even when every loaded card fits (the owner's report)", () => {
+    assert.deepEqual(forwardChevron(fits, true), { disabled: false, title: ROWS_COPY.scrollForward });
+  });
+
+  it("is disabled with its reason only at the true end", () => {
+    assert.deepEqual(forwardChevron(fits, false), { disabled: true, title: ROWS_COPY.atEnd });
+  });
+
+  it("Scroll left is disabled with its reason at the start only", () => {
+    assert.deepEqual(backChevron(fits), { disabled: true, title: ROWS_COPY.atStart });
+    assert.deepEqual(backChevron({ atStart: false, atEnd: true }), { disabled: false, title: ROWS_COPY.scrollBack });
+  });
+});
+
+describe("a Scroll right press", () => {
+  it("scrolls one row width", () => {
+    assert.equal(scrollStep(1200), 1200);
+    assert.equal(scrollStep(333.4), 333);
+  });
+
+  it("asks for the next page at once when the step brings the end within a row width", () => {
+    assert.equal(forwardNeedsPage({ scrollLeft: 0, clientWidth: 1000, scrollWidth: 2900 }, true), true);
+    assert.equal(forwardNeedsPage({ scrollLeft: 0, clientWidth: 1000, scrollWidth: 3100 }, true), false);
+    assert.equal(forwardNeedsPage({ scrollLeft: 0, clientWidth: 1000, scrollWidth: 1000 }, false), false);
   });
 });

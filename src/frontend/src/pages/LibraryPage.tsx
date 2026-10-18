@@ -74,14 +74,14 @@ export function LibraryPage({ active }: { active: boolean }) {
     );
   }, [items]);
   const rows = view === "rows";
-  const shelves = useRowsShelves({
+  const rowsShelves = useRowsShelves({
     enabled: rows && active, query, data, collections, history, showContinue: prefs.showContinue && query.source !== "history",
   });
   const center = rows ? (
     <LibraryRows
-      scope={query.scope} shelves={shelves} collections={collections} selected={selected}
-      onScope={onScope} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
-      onRefresh={data.refresh} loading={data.loading}
+      scope={query.scope} shelves={rowsShelves.shelves} positions={rowsShelves.positions} collections={collections}
+      selected={selected} onScope={onScope} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
+      onLoadMore={rowsShelves.loadMore} onRefresh={data.refresh} loading={data.loading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
   ) : (
