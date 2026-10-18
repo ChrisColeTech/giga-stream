@@ -9,7 +9,20 @@ export const TITLE_GRID: GridLayout = {
   minWidth: "52rem",
 };
 
-export const TITLE_HEADINGS: readonly GridHeading[] = [
+/** The Deleted titles list (`37` section 4.4): the name first, then the kind and when it was deleted. */
+export const DELETED_GRID: GridLayout = {
+  tracks: ["minmax(14rem,2fr)", "5.5rem", "10rem"],
+  end: "6rem",
+  minWidth: "40rem",
+};
+
+export const DELETED_HEADINGS: readonly GridHeading[] = [
+  { key: "name", label: "name" },
+  { key: "kind", label: "kind" },
+  { key: "deleted", label: "deleted" },
+];
+
+export const TITLE_HEADINGS:readonly GridHeading[] = [
   { key: "title", label: "title" },
   { key: "kind", label: "kind" },
   { key: "year", label: "year", align: "right" },

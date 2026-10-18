@@ -67,6 +67,18 @@ export const TitleListLenientSchema = z.object({
 
 export const TitleDeletedSchema = z.object({ id: z.string() });
 
+/** A deleted synced title (`GET /api/titles/deleted`): its TMDB identity, the last known title text if one was kept,
+ *  and when it was deleted. A restore answers `{ id }` like a delete. */
+export const DeletedTitleSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["movie", "tv"]),
+  tmdbId: z.number(),
+  title: z.string().optional(),
+  deletedAt: z.number(),
+});
+export const DeletedTitleListSchema = z.object({ items: z.array(DeletedTitleSchema) });
+export type AdminDeletedTitle = z.infer<typeof DeletedTitleSchema>;
+
 export type AdminTitleRow = z.infer<typeof TitleRowSchema>;
 export type AdminTitleDetail = z.infer<typeof TitleDetailSchema>;
 export type TitleEpisode = z.infer<typeof EpisodeSchema>;

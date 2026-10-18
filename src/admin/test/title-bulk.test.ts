@@ -65,7 +65,7 @@ describe("the titles plan over mixed rows", () => {
 });
 
 describe("a Delete run through the shared runner", () => {
-  it("one DELETE per row, one failure does not stop the rest, the summary says the synced ones come back", async () => {
+  it("one DELETE per row, one failure does not stop the rest, the summary says the synced ones stay deleted", async () => {
     state().titlesLoaded(START_VIEW, { items: LIST, page: 1, totalPages: 1, totalResults: 4 });
     state().titlesTickAll(true);
     const removed: string[] = [];
@@ -95,8 +95,7 @@ describe("a Delete run through the shared runner", () => {
     assert.deepEqual(removed, ALL);
     assert.equal(
       state().notice?.sentence,
-      "Deleted 3 titles; 3 were synced and come back on the next catalog sync or browse that lists them. " +
-        "Disable a title to keep it hidden; 1 failed.",
+      "Deleted 3 titles; 3 were synced and stay deleted until restored under Deleted titles; 1 failed.",
     );
     const left = state().titles.items.map((t) => t.id);
     assert.deepEqual([rereads, state().titles.ticked, left], [1, ["movie-2"], ["movie-2"]]);
@@ -104,6 +103,6 @@ describe("a Delete run through the shared runner", () => {
 
   it("words a delete with no synced title plainly, and one synced title in the singular", () => {
     assert.deepEqual(titleBulkWords("delete", 0), { past: "Deleted", noun: "title", nouns: "titles" });
-    assert.match(titleBulkWords("delete", 1).nouns, /; 1 was synced and comes back .* lists it\. Disable a title/);
+    assert.match(titleBulkWords("delete", 1).nouns, /; 1 was synced and stays deleted until restored under Deleted titles$/);
   });
 });

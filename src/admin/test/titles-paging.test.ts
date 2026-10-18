@@ -25,6 +25,8 @@ function rig(totalPages: number) {
     update: NEVER,
     remove: NEVER,
     revert: NEVER,
+    listDeleted: async () => [],
+    restore: NEVER,
   };
   const audit = { reload: async () => undefined };
   return { flows: createTitleFlows({ service, store: () => useAppStore.getState(), audit }), pages };

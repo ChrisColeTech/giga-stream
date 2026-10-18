@@ -13,13 +13,15 @@ export interface ListGroupProps {
   readonly action?: ReactNode;
   /** The list: the page's grid, or its skeleton rows while it loads. */
   readonly children: ReactNode;
+  /** False when another group follows (the Titles page's `Deleted titles`); the splitter then follows this one. */
+  readonly last?: boolean;
 }
 
 /** The list frame every index closes with: the tile, the mono title, the heading's action slot, the fold, and the list
- *  across the full width of the page. It is the page's last group, so no splitter follows it. */
-export function ListGroup({ id, icon, title, action, children }: ListGroupProps) {
+ *  across the full width of the page. It is the page's last group unless told otherwise, so no splitter follows it. */
+export function ListGroup({ id, icon, title, action, children, last = true }: ListGroupProps) {
   return (
-    <Group id={id} icon={icon} title={title} action={action} last>
+    <Group id={id} icon={icon} title={title} action={action} last={last}>
       <Wide>{children}</Wide>
     </Group>
   );

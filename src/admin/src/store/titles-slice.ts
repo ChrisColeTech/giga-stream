@@ -1,7 +1,8 @@
 import type { TitlePage } from "@/lib/title-merge";
 import { START_VIEW, type TitleView } from "@/lib/title-query";
+import { pruneDeletedTicks, withoutDeleted } from "@/lib/title-restore";
 import { pruneTitleTicks, upsertTitle, withoutTitle } from "@/lib/title-rows";
-import type { AdminTitleDetail, AdminTitleRow } from "@/services/schemas/title-schema";
+import type { AdminDeletedTitle, AdminTitleDetail, AdminTitleRow } from "@/services/schemas/title-schema";
 import type { SliceGet, SliceSet } from "./slices/slice-host";
 
 /* The Titles tab's data, a slice of the one store (`37` section 5). Facts only: no promise, no timer. `view` is what
@@ -18,7 +19,17 @@ export interface TitleDetailState {
   readonly value: AdminTitleDetail | null;
 }
 
+/** The Deleted titles group's data: the deleted synced titles and the ticked ones (`37` section 4.4). */
+export interface DeletedTitlesState {
+  readonly status: TitlesStatus;
+  readonly items: readonly AdminDeletedTitle[];
+  readonly ticked: readonly string[];
+}
+
+export const NO_DELETED: DeletedTitlesState = { status: "idle", items: [], ticked: [] };
+
 export interface TitlesState {
+  readonly deleted: DeletedTitlesState;
   readonly status: TitlesStatus;
   readonly items: readonly AdminTitleRow[];
   readonly unreachable: boolean;
@@ -31,6 +42,7 @@ export interface TitlesState {
 }
 
 export const NO_TITLES: TitlesState = {
+  deleted: NO_DELETED,
   status: "idle",
   items: [],
   unreachable: false,
@@ -62,11 +74,21 @@ export interface TitlesSlice {
   /** A detail answered (a read, a save, a revert); it is kept only for the workspace that asked. */
   titleDetailLoaded: (detail: AdminTitleDetail) => void;
   titleDetailFailed: (id: string) => void;
+  titlesDeletedStart: () => void;
+  /** The deleted list answered: it replaces the rows and keeps the ticks of rows still listed. */
+  titlesDeletedLoaded: (items: readonly AdminDeletedTitle[]) => void;
+  titlesDeletedFailed: () => void;
+  titleDeletedTick: (id: string, on: boolean) => void;
+  titlesDeletedTickAll: (on: boolean) => void;
+  titlesDeletedSetTicked: (ids: readonly string[]) => void;
+  /** A restored title leaves the list (and its tick). */
+  titleDeletedRemove: (id: string) => void;
 }
 
 export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<TitlesSlice>): TitlesSlice {
   const now = (): TitlesState => get().titles;
   const patch = (next: Partial<TitlesState>): void => set({ titles: { ...now(), ...next } });
+  const patchDeleted = (next: Partial<DeletedTitlesState>): void => patch({ deleted: { ...now().deleted, ...next } });
   const withItems = (items: readonly AdminTitleRow[]): Partial<TitlesState> => ({
     items,
     ticked: pruneTitleTicks(now().ticked, items),
@@ -104,6 +126,20 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
     titleDetailFailed: (id) => {
       const current = now().detail;
       if (current?.id === id) patch({ detail: { ...current, status: "failed" } });
+    },
+    titlesDeletedStart: () => patchDeleted({ status: "loading" }),
+    titlesDeletedLoaded: (items) =>
+      patchDeleted({ status: "ready", items, ticked: pruneDeletedTicks(now().deleted.ticked, items) }),
+    titlesDeletedFailed: () => patchDeleted({ status: "failed" }),
+    titleDeletedTick: (id, on) => {
+      const rest = now().deleted.ticked.filter((one) => one !== id);
+      patchDeleted({ ticked: on ? [...rest, id] : rest });
+    },
+    titlesDeletedTickAll: (on) => patchDeleted({ ticked: on ? now().deleted.items.map((item) => item.id) : [] }),
+    titlesDeletedSetTicked: (ids) => patchDeleted({ ticked: pruneDeletedTicks(ids, now().deleted.items) }),
+    titleDeletedRemove: (id) => {
+      const items = withoutDeleted(now().deleted.items, [id]);
+      patchDeleted({ items, ticked: pruneDeletedTicks(now().deleted.ticked, items) });
     },
   };
 }

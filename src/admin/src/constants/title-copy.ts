@@ -73,7 +73,8 @@ export const CAST_TIP = "Names separated by commas.";
 export const REVERT_TIP = "Drop the edits and refetch this title from TMDB";
 export const DELETE_MANUAL_TITLE = "Deletes the title made here.";
 export const DELETE_SYNCED_TITLE =
-  "Deletes the title; the next catalog sync or browse that lists it adds it again. Turn Enabled off to keep it hidden.";
+  "Deletes the title and keeps it deleted: no browse or catalog sync adds it back. Restore it under Deleted titles.";
+export const RESTORE_TITLE = "Lets the title return on the next browse or sync.";
 
 /** Disabled reasons. */
 export const MANUAL_NO_TMDB = "A title made by hand has no TMDB copy to go back to.";
@@ -96,6 +97,7 @@ export const titleCreated = (name: string): string => `Created ${name}.`;
 export const titleSaved = (name: string): string => `Saved ${name}.`;
 export const titleDeleted = (name: string): string => `Deleted ${name}.`;
 export const titleReverted = (name: string): string => `Reverted ${name} to TMDB.`;
+export const titleRestored = (name: string): string => `Restored ${name}. It returns on the next browse or sync.`;
 export const unreadableTitles = (count: number): string =>
   `${count} ${count === 1 ? "title" : "titles"} could not be read.`;
 export const editedTip = (fields: readonly string[]): string => `edited: ${fields.join(", ")}`;
@@ -103,5 +105,10 @@ export const editedTip = (fields: readonly string[]): string => `edited: ${field
 /** The bulk verbs (`37` section 4.2). */
 export const ALREADY_ENABLED = "Already enabled.";
 export const ALREADY_DISABLED = "Already disabled.";
-export const SYNCED_RETURN =
-  "come back on the next catalog sync or browse that lists them. Disable a title to keep it hidden";
+export const SYNCED_STAY = "stay deleted until restored under Deleted titles";
+export const SYNCED_STAYS = "stays deleted until restored under Deleted titles";
+
+/** The Deleted titles group (`37` section 4.4): its heading, the verbs' tips, and the bulk Restore's noun. */
+export const DELETED_TITLES = "Deleted titles";
+export const RESTORE_RETURN_ONE = "it returns on the next browse or sync";
+export const RESTORE_RETURN_MANY = "they return on the next browse or sync";

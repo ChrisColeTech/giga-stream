@@ -4,7 +4,8 @@ import {
   MANUAL_NO_TMDB,
   NOTHING_EDITED,
   SAVING_REASON,
-  SYNCED_RETURN,
+  SYNCED_STAY,
+  SYNCED_STAYS,
   UNREACHABLE_REASON,
 } from "@/constants/title-copy";
 import { TICK_FIRST } from "@/constants/record-copy";
@@ -14,7 +15,7 @@ import { isEnabledTitle, isManualTitle } from "./title-rows";
 
 /* The Titles toolbar's bulk verbs (`37` section 4.2, `39` section 6), pure. Enable and Disable skip a title already in
  * that state; Revert to TMDB skips a title made by hand and an unedited synced one; Delete runs on manual AND synced
- * titles alike (owner, 2026-10-17), and its summary says that a deleted synced title comes back. */
+ * titles alike (owner, 2026-10-17), and its summary says that a deleted synced title stays deleted. */
 
 export type TitleBulkVerb = "enable" | "disable" | "revert" | "delete";
 
@@ -69,19 +70,17 @@ export function titleBulkReason(
   return plan.runnable.length > 0 ? undefined : plan.refused[0]?.reason;
 }
 
-/** How many of a plan's runnable rows are synced titles (a deleted one comes back on the next sync or browse). */
+/** How many of a plan's runnable rows are synced titles (a deleted one stays deleted until it is restored). */
 export const syncedCount = (plan: BulkPlan<string>, items: readonly AdminTitleRow[]): number =>
   plan.runnable.filter((item) => items.some((one) => one.id === item.id && !isManualTitle(one))).length;
 
-const SYNCED_ONE = SYNCED_RETURN.replace("come back", "comes back").replace("lists them", "lists it");
-
 /** The summary's words. For Delete with synced titles in the plan the noun carries the consequence, so the shared
- *  summary reads `Deleted 5 titles; 3 were synced and come back on the next catalog sync or browse that lists them.
- *  Disable a title to keep it hidden.` (`37` section 4.2). */
+ *  summary reads `Deleted 5 titles; 3 were synced and stay deleted until restored under Deleted titles.`
+ *  (`37` section 4.2). */
 export function titleBulkWords(verb: TitleBulkVerb, synced: number): BulkWords {
   const words = WORDS[verb];
   if (verb !== "delete" || synced === 0) return words;
-  const clause = `; ${synced} ${synced === 1 ? "was" : "were"} synced and ${synced === 1 ? SYNCED_ONE : SYNCED_RETURN}`;
+  const clause = `; ${synced} ${synced === 1 ? "was" : "were"} synced and ${synced === 1 ? SYNCED_STAYS : SYNCED_STAY}`;
   return { ...words, noun: `${words.noun}${clause}`, nouns: `${words.nouns}${clause}` };
 }
 

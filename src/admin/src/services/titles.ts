@@ -5,6 +5,8 @@ import {
   TitleDetailSchema,
   TitleListLenientSchema,
   TitleRowSchema,
+  DeletedTitleListSchema,
+  type AdminDeletedTitle,
   type AdminTitleDetail,
   type AdminTitleRow,
   type TitleList,
@@ -16,7 +18,8 @@ import type { RecordInput } from "./service-types";
  *  A save is a `PATCH` of the changed fields (`null` clears); `detail` reads the fields a list row lacks; `revert`
  *  drops an admin's edits and refetches from TMDB (`409 title.manual` for a title made by hand). With no TMDB token and
  *  no manual title a read is `503 tmdb.unavailable`, which arrives as that `ApiError`. Writes take the 256 KiB body
- *  limit (B3). */
+ *  limit (B3). A synced title that is deleted stays deleted: `listDeleted` reads them (`GET /api/titles/deleted`) and
+ *  `restore` removes one's record (`DELETE /api/titles/deleted/:id`); it returns on the next browse or sync. */
 export interface TitlesService {
   readonly list: (query?: BrowseQuery) => Promise<TitleList>;
   readonly search: (query: SearchQuery) => Promise<TitleList>;
@@ -25,6 +28,8 @@ export interface TitlesService {
   readonly update: (id: string, patch: RecordInput) => Promise<AdminTitleDetail>;
   readonly remove: (id: string) => Promise<{ readonly id: string }>;
   readonly revert: (id: string) => Promise<AdminTitleDetail>;
+  readonly listDeleted: () => Promise<readonly AdminDeletedTitle[]>;
+  readonly restore: (id: string) => Promise<{ readonly id: string }>;
 }
 
 const path = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
@@ -54,4 +59,7 @@ export const titles: TitlesService = {
   update: (id, patch) => request(path(id), TitleDetailSchema, { method: "PATCH", body: patch, area: "Title" }),
   remove: (id) => request(path(id), TitleDeletedSchema, { method: "DELETE", area: "Title" }),
   revert: (id) => request(`${path(id)}/revert`, TitleDetailSchema, { method: "POST", area: "Title" }),
+  listDeleted: async () => (await request("/api/titles/deleted", DeletedTitleListSchema, { area: "Title" })).items,
+  restore: (id) =>
+    request(`/api/titles/deleted/${encodeURIComponent(id)}`, TitleDeletedSchema, { method: "DELETE", area: "Title" }),
 };

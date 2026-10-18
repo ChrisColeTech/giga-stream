@@ -23,5 +23,6 @@ export function useTitlesLoad(active: boolean): void {
     if (!active || !signedIn || owner !== serial || (status !== "idle" && !stale)) return;
     clearStale("titles");
     void flows.load();
-  }, [active, signedIn, owner, serial, status, stale, flows, clearStale]);
+    void flows.loadDeleted();
+  },[active, signedIn, owner, serial, status, stale, flows, clearStale]);
 }

@@ -6,6 +6,7 @@ import type { NewTitleDraft, TitleDraft } from "@/lib/title-draft";
 import { findTitle, isManualTitle } from "@/lib/title-rows";
 import { DROPPED, codeOf, done, refusalOf, type FlowRefused } from "./provider-flow-support";
 import type { AdminTitleDetail } from "./schemas/title-schema";
+import { createTitleDeletedFlow, type TitleDeletedFlow } from "./title-deleted-flow";
 import {
   createTitleListFlow,
   titlePorts,
@@ -24,7 +25,7 @@ export interface TitleFlowDeps {
   readonly audit: { readonly reload: (limit?: number) => Promise<void> };
 }
 
-export interface TitleFlows extends TitleListFlow {
+export interface TitleFlows extends TitleListFlow, TitleDeletedFlow {
   /** The list and the audit tail, read together (the list's Refresh). */
   refresh: () => Promise<TitleResult>;
   create: (draft: NewTitleDraft) => Promise<TitleResult>;
@@ -46,6 +47,7 @@ const BAD_ANSWER = "backend.bad_response";
 export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   const { service, store, audit } = deps;
   const list = createTitleListFlow(deps);
+  const deletedFlow = createTitleDeletedFlow(deps);
   const ports = titlePorts(store);
   const alive = (serial: number): boolean => store().signedIn && store().serial === serial;
   const rejected = (sentence: string, field?: TitleField): FlowRefused<TitleField> => {
@@ -114,6 +116,7 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
       if (store().workspaces.titles === id) store().closeWorkspace("titles");
       store().say(titleDeleted(title?.title ?? id));
       void audit.reload(AUDIT_AFTER_WRITE);
+      if (title === undefined || !isManualTitle(title)) void deletedFlow.loadDeleted(); // a synced title stays deleted
       return done(undefined);
     } catch (error: unknown) {
       return alive(serial) ? afterFailure(error) : DROPPED;
@@ -150,9 +153,9 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   }
 
   const refresh = async (): Promise<TitleResult> => {
-    const [result] = await Promise.all([list.load(), audit.reload(AUDIT_PAGE)]);
+    const [result] = await Promise.all([list.load(), audit.reload(AUDIT_PAGE), deletedFlow.loadDeleted()]);
     return result;
   };
 
-  return { ...list, refresh, create, save, remove, revert, detail };
+  return { ...list, ...deletedFlow, refresh, create, save, remove, revert, detail };
 }
