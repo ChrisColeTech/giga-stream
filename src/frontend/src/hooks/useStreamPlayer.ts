@@ -19,6 +19,14 @@ export function detachForStop(player: { readonly detach: () => void } | null | u
   player?.detach();
 }
 
+/** Whether the stream this hook holds is one the LIVE slice owns: the slice's playing channel is set. The stop
+ *  effect answers this before it acts — the instrumented re-drive caught the detach destroying an engine behind a
+ *  player-surface stream (`50` section 2.4), whose own stop is NativePlayer's pause. Read before `stopLive` clears
+ *  the fact. */
+export function liveOwnsStream(playingStreamUrl: string | null): boolean {
+  return playingStreamUrl !== null;
+}
+
 /** Connects the one Live video element to its controller; neither the store nor the component owns media objects. */
 export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void {
   const controller = useRef<StreamPlayerController | null>(null);
@@ -55,11 +63,15 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
     return () => useAppStore.getState().setActivity("live", false);
   }, [channelsLoading, streamStarting]);
 
-  /* Stop (`50` section 2.4): the serial's change is the stop — the store's live state returns to rest (the channel
-     list's marker with it) and the engine detaches back to the idle stage. */
+  /* Stop (`50` section 2.4): the serial's change is the stop — but only for a stream the LIVE slice owns (the
+     playing channel is set; read before `stopLive` clears it). The store's live state returns to rest and the
+     engine detaches back to the idle stage. A stream that is not the slice's (a player-surface stream this hook
+     does not own) gets no detach: that stop is NativePlayer's pause. */
   useEffect(() => {
     if (stopRequest === 0) return;
-    useAppStore.getState().stopLive();
+    const state = useAppStore.getState();
+    if (!liveOwnsStream(state.playingStreamUrl)) return;
+    state.stopLive();
     detachForStop(controller.current);
   }, [stopRequest]);
 

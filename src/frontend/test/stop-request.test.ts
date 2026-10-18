@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { blankForStop } from "@/components/player/EmbedHost";
 import { nativeAttachmentKey, pauseForStop } from "@/components/player/NativePlayer";
 import { videoPlayingOf } from "@/components/chrome/RunningWork";
-import { detachForStop } from "@/hooks/useStreamPlayer";
+import { detachForStop, liveOwnsStream } from "@/hooks/useStreamPlayer";
 import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";
 import { useAppStore } from "@/store/app-store";
@@ -88,6 +88,36 @@ describe("stop's live store action", () => {
     assert.equal(state().playingStreamUrl, "https://media.test/sport.m3u8");
     assert.equal(state().liveStage, "loading");
     assert.equal(state().livePlaySerial, serial + 1, "the play after a stop is an ordinary play");
+  });
+});
+
+describe("the live stop's ownership gate", () => {
+  it("owns the stream exactly while the live slice holds a playing channel, until stopLive clears it", () => {
+    const state = () => useAppStore.getState();
+    assert.equal(liveOwnsStream(state().playingStreamUrl), false,
+      "no channel played: this hook serves no live stream and the stop detach must not run");
+    state().playChannel("news", "https://media.test/news.m3u8", true);
+    assert.equal(liveOwnsStream(state().playingStreamUrl), true, "the live controller may be detached on stop");
+    state().stopLive();
+    assert.equal(liveOwnsStream(state().playingStreamUrl), false, "a second stop press detaches nothing");
+  });
+
+  it("a stop of a player-surface stream runs no live detach: the player video keeps its src and currentTime", () => {
+    let detaches = 0;
+    const liveController = { detach: (): void => { detaches += 1; } };
+    const playerVideo = {
+      pause: (): void => undefined, currentTime: 11.2, src: "https://media.test/movie.m3u8",
+    };
+    // The stop effect's decision, exactly as the hook runs it: the gate reads the live slice's fact first.
+    const state = useAppStore.getState();
+    if (liveOwnsStream(state.playingStreamUrl)) {
+      state.stopLive();
+      detachForStop(liveController);
+    }
+    pauseForStop(playerVideo);
+    assert.equal(detaches, 0, "the player's stream is not the live slice's; no engine of its is destroyed");
+    assert.equal(playerVideo.src, "https://media.test/movie.m3u8", "the player's source survives the stop");
+    assert.equal(playerVideo.currentTime, 11.2, "the player's position survives the stop");
   });
 });
 
