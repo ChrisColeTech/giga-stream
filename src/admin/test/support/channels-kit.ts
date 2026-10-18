@@ -18,7 +18,6 @@ export const live = (id: string, overrides: Partial<LiveAdminChannel> = {}): Liv
   variants: ["360p", "720p"],
   folder: "D:\\videos\\news",
   state: "live",
-  fault: null,
   renditions: ["360p", "720p"],
   playlist: [
     { name: "a.mp4", durationMs: 42_000 },

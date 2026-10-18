@@ -1,13 +1,11 @@
 import {
-  FAULT_NONE,
-  FAULT_NOT_LIVE,
   REBUILD_DISABLED,
   REVERT_HAND_MADE,
   REVERT_NONE,
   STREAM_NO_REBUILD,
 } from "@/constants/channel-copy";
 import { SAVE_FIRST, TICK_FIRST, TICK_ONE } from "@/constants/record-copy";
-import type { AdminChannel, LiveAdminChannel, StreamAdminChannel } from "@/types/admin-channel";
+import type { AdminChannel, StreamAdminChannel } from "@/types/admin-channel";
 import { writeReason, type WriteState } from "./channel-check";
 
 /* Every disabled reason of the Channels tab (`36` sections 5 to 8), in one place, pure. A control is enabled exactly when
@@ -28,16 +26,6 @@ export function rebuildReason(channel: AdminChannel, dirty: boolean, write: Writ
   if (dirty) return SAVE_FIRST;
   if (!channel.enabled) return REBUILD_DISABLED;
   return writeReason(write);
-}
-
-/** The Fault group's `Apply`: a test tool for a running stream, so only while the channel is live. */
-export function applyReason(channel: LiveAdminChannel, write: WriteState): string | undefined {
-  return channel.state === "live" ? writeReason(write) : FAULT_NOT_LIVE;
-}
-
-/** The Fault group's `Clear`: only while a fault is set. */
-export function clearReason(channel: LiveAdminChannel, write: WriteState): string | undefined {
-  return channel.fault === null ? FAULT_NONE : writeReason(write);
 }
 
 /** `Revert to playlist`: only a synced row with edits has anything to go back to. */

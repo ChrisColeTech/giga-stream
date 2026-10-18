@@ -5,8 +5,6 @@ import {
   channelPreparing,
   channelReverted,
   channelSaved,
-  faultApplied,
-  faultCleared,
   unreadableChannels,
 } from "@/constants/channel-copy";
 import { createBody, isEmptyBody, patchBody, type NewChannelDraft } from "@/lib/channel-body";
@@ -14,7 +12,7 @@ import { checkChannel, newChannelRefusal } from "@/lib/channel-check";
 import { rebuilds, type ChannelDraft } from "@/lib/channel-draft";
 import { findChannel } from "@/lib/channel-list";
 import { isSynced } from "@/lib/channel-rows";
-import type { AdminChannel, FaultName } from "@/types/admin-channel";
+import type { AdminChannel } from "@/types/admin-channel";
 import {
   DROPPED,
   codeOf,
@@ -29,12 +27,6 @@ import {
 
 export type { FlowResult } from "./channel-flow-support";
 
-export interface FaultRequest {
-  readonly fault: FaultName;
-  readonly durationMs?: number;
-  readonly delayMs?: number;
-}
-
 export interface ChannelFlows {
   /** Reads the list once the tab is shown. Does nothing while a read is already running. */
   load: () => Promise<FlowResult>;
@@ -46,8 +38,6 @@ export interface ChannelFlows {
   remove: (id: string) => Promise<FlowResult>;
   rebuild: (id: string) => Promise<FlowResult>;
   revert: (id: string) => Promise<FlowResult>;
-  applyFault: (id: string, request: FaultRequest) => Promise<FlowResult>;
-  clearFault: (id: string) => Promise<FlowResult>;
 }
 
 const BAD_ANSWER = "backend.bad_response";
@@ -167,18 +157,6 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
     return result.ok ? done(undefined) : result;
   }
 
-  /** A fault answer changes only the channel's `fault`; the rest of the held record stays. */
-  async function fault(id: string, call: () => Promise<{ fault: FaultName | null }>): Promise<FlowResult> {
-    const result = await write(id, call, (answer, channel) => {
-      if (channel.kind !== "live") return answer;
-      store().channelUpsert({ ...channel, fault: answer.fault });
-      const sentence = answer.fault === null ? faultCleared(channel.name) : faultApplied(answer.fault, channel.name);
-      store().say(sentence, "info", "Channel");
-      return answer;
-    });
-    return result.ok ? done(undefined) : result;
-  }
-
   return {
     load,
     refresh: read,
@@ -187,7 +165,5 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
     remove,
     rebuild,
     revert,
-    applyFault: (id, request) => fault(id, () => service.applyFault(id, { ...request })),
-    clearFault: (id) => fault(id, () => service.clearFault(id)),
   };
 }

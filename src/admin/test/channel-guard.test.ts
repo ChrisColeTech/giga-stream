@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  applyReason,
-  clearReason,
   previewIndexReason,
   previewWorkspaceReason,
   rebuildReason,
@@ -27,16 +25,6 @@ describe("the Channels tab's disabled reasons", () => {
     assert.equal(rebuildReason(live("a"), false, { saving: true, unreachable: false }), "Saving.");
     assert.equal(rebuildReason(live("a"), false, OPEN), undefined);
     assert.equal(rebuildReason(stream("s"), false, OPEN), "A stream channel has nothing to rebuild.");
-  });
-
-  it("allow Apply only while the channel is live, and Clear only while a fault is set", () => {
-    for (const state of ["preparing", "starting", "restarting", "stopped", "failed"] as const) {
-      assert.equal(applyReason(live("a", { state }), OPEN), "Apply a fault only while the channel is live.", state);
-    }
-    assert.equal(applyReason(live("a"), OPEN), undefined);
-    assert.equal(applyReason(live("a"), { saving: false, unreachable: true }), "The admin backend cannot be reached.");
-    assert.equal(clearReason(live("a"), OPEN), "No fault is applied.");
-    assert.equal(clearReason(live("a", { fault: "stall" }), OPEN), undefined);
   });
 
   it("allow Revert to playlist only on a synced row with edits", () => {

@@ -7,7 +7,7 @@ import { useChannelFlows } from "./useChannelFlows";
 
 /** The Channels page's verbs over the flows, each marked busy for the length of its call so its control can say
  *  `Saving.`; plus the two device calls a control makes: the backend window's folder dialog and the clipboard. Keys:
- *  `create`, `save`, `delete:<id>`, `rebuild`, `revert`, `fault`, `refresh`. */
+ *  `create`, `save`, `delete:<id>`, `rebuild`, `revert`, `refresh`. */
 export interface ChannelActions {
   readonly flows: ChannelFlows;
   /** True while any write is running. */

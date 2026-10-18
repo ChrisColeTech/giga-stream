@@ -28,8 +28,6 @@ function fake(overrides: Partial<ChannelsService> = {}): { service: ChannelsServ
     remove: unexpected("remove"),
     rebuild: unexpected("rebuild"),
     revert: unexpected("revert"),
-    applyFault: unexpected("applyFault"),
-    clearFault: unexpected("clearFault"),
     ...overrides,
   };
   return { service, calls };
@@ -135,21 +133,6 @@ describe("the channel flows", () => {
     await flows.revert("s");
     const reverted = state().channels.items.find((item) => item.id === "s");
     assert.deepEqual([reverted?.kind === "stream" && reverted.editedFields, notice()], [[], "Reverted Stream s."]);
-  });
-
-  it("apply and clear a fault: only the fault of the held channel changes", async () => {
-    hold(live("a"));
-    const flows = flowsOf(
-      fake({ applyFault: async () => ({ id: "a", fault: "stall" }), clearFault: async () => ({ id: "a", fault: null }) }).service,
-    );
-    await flows.applyFault("a", { fault: "stall", durationMs: 5000 });
-    const fault = (): string | null | undefined => {
-      const held = state().channels.items[0];
-      return held?.kind === "live" ? held.fault : undefined;
-    };
-    assert.equal(fault(), "stall");
-    await flows.clearFault("a");
-    assert.equal(fault(), null);
   });
 
   it("drop an answer that arrives after the session changed", async () => {

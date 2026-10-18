@@ -474,7 +474,7 @@ window stops the playback. Its bounds are remembered with the other work windows
     down. A changed source saves and rebuilds, which shows `preparing`.
   - **playback:** mode, captions, qualities. The tooltips carry the cost (loop is cheap; encode is a real-time ffmpeg
     per channel, `10` section 2).
-  - **fault:** a select of the seven faults, a duration, a delay, `Apply` and `Clear`. The tooltip marks it a test tool.
+  - **fault:** removed from the admin, owner 2026-10-17 (the backend keeps its routes). Was: a select of the seven faults, a duration, a delay, `Apply` and `Clear`. The tooltip marks it a test tool.
     `Apply` is disabled, with its reason, while the channel is not live.
   - **status** (read-only; skeleton while `preparing`): the state word, the `problem` sentence (only when `failed`, a
     line in the body), renditions, the playlist (ordered rows with durations; the playing one carries the accent strip),

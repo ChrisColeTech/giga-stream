@@ -17,6 +17,4 @@ export const CHANNEL_HEADINGS: readonly GridHeading[] = [
   { key: "kind", label: "kind" },
   { key: "state", label: "state" },
   { key: "mode", label: "mode" },
-  { key: "now-playing", label: "now playing" },
-  { key: "fault", label: "fault" },
-];
+  { key: "now-playing", label: "now playing" },];

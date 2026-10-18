@@ -10,9 +10,6 @@ export type LiveMode = "loop" | "encode";
 /** The six categories a live channel picks from; a stream channel's category is free text. */
 export type LiveCategory = "News" | "Sports" | "Music" | "Kids" | "Movies" | "Entertainment";
 
-/** The seven faults a running live stream can be given (a test tool). */
-export type FaultName = "stall" | "segment-404" | "slow-segments" | "playlist-500" | "discontinuity" | "restart" | "end";
-
 export interface BackendChannel {
   readonly id: string;
   readonly name: string;
@@ -52,7 +49,6 @@ export interface LiveAdminChannel extends BackendChannel {
   readonly videos?: readonly string[];
   readonly state: ChannelState;
   readonly problem?: string;
-  readonly fault: FaultName | null;
   readonly renditions: readonly string[];
   readonly playlist: readonly PlaylistEntry[];
   readonly nowPlaying: { readonly index: number; readonly name: string } | null;

@@ -1,28 +1,16 @@
-import type { FaultName, LiveCategory, LiveMode, Variant } from "@/types/admin-channel";
+import type { LiveCategory, LiveMode, Variant } from "@/types/admin-channel";
 
 /* The Channels tab's words and option lists (`28` sections 7.2 and 7.3, `36`): labels (also the `labelColumn` lists),
  * the rail's sections, what the pickers offer, the sentences a disabled control gives as its reason, and the notices.
  * Tooltips on info glyphs are in `channel-tips.ts`. */
 
 export const CATEGORIES: readonly LiveCategory[] = ["News", "Sports", "Music", "Kids", "Movies", "Entertainment"];
-export const FAULTS: readonly FaultName[] = [
-  "stall",
-  "segment-404",
-  "slow-segments",
-  "playlist-500",
-  "discontinuity",
-  "restart",
-  "end",
-];
 export const VARIANTS: readonly Variant[] = ["360p", "720p", "1080p"];
 export const MODE_LABEL: Readonly<Record<LiveMode, string>> = { loop: "Loop", encode: "Encode" };
 
 /** The least number of qualities a channel keeps. */
 export const MIN_VARIANTS = 2;
 export const MIN_VARIANTS_REASON = "A channel keeps at least two qualities.";
-
-/** The longest a fault lasts or waits: 24 hours, in milliseconds (`29` section 9.1). */
-export const FAULT_MAX_MS = 86_400_000;
 
 /** The labels each page's rows carry, so a page fixes its label column once. Name first on every form. */
 export const NEW_CHANNEL_LABELS = ["Name", "Kind", "Number", "Category", "Folder", "Stream address"] as const;
@@ -37,9 +25,6 @@ export const CHANNEL_LABELS = [
   "Mode",
   "Captions",
   "Qualities",
-  "Fault",
-  "Duration",
-  "Delay",
   "State",
   "Problem",
   "Renditions",
@@ -53,7 +38,6 @@ export const CHANNEL_LABELS = [
 export const LIVE_SECTIONS = [
   { id: "lv-details", label: "Details" },
   { id: "lv-playback", label: "Playback" },
-  { id: "lv-fault", label: "Fault" },
   { id: "lv-status", label: "Status" },
 ] as const;
 export const STREAM_SECTIONS = [
@@ -70,9 +54,6 @@ export const REBUILD_DISABLED = "Enable the channel to rebuild it.";
 export const STREAM_NO_REBUILD = "A stream channel has nothing to rebuild.";
 export const REVERT_HAND_MADE = "This channel was made by hand; there is nothing to revert.";
 export const REVERT_NONE = "Nothing was edited.";
-export const FAULT_NOT_LIVE = "Apply a fault only while the channel is live.";
-export const FAULT_NONE = "No fault is applied.";
-export const APPLY_TIP = "A test tool: break the running stream on purpose";
 export const CHOOSE_UNAVAILABLE = "Folders can be chosen only in the backend's own window; type the path.";
 export const ADD_VIDEO_EMPTY = "Type a path first.";
 export const ADD_VIDEO_DUPLICATE = "That video is already in the list.";
@@ -100,8 +81,6 @@ export const channelCreated = (name: string): string => `Created ${name}.`;
 export const channelSaved = (name: string): string => `Saved ${name}.`;
 export const channelDeleted = (name: string): string => `Deleted ${name}.`;
 export const channelReverted = (name: string): string => `Reverted ${name}.`;
-export const faultApplied = (fault: string, name: string): string => `Applied ${fault} to ${name}.`;
-export const faultCleared = (name: string): string => `Cleared the fault on ${name}.`;
 export const unreadableChannels = (count: number): string =>
   `${count} ${count === 1 ? "channel" : "channels"} could not be read.`;
 export const CHANNEL_GONE = "That channel no longer exists.";

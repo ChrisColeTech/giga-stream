@@ -22,7 +22,7 @@ landed and been accepted).
 ## 1. Goal and non-goals
 
 **Goal.** Every control of `src/admin` calls the backend through one request layer and shows what it answers: sign-in with the
-in-memory session, the six tabs' lists and records, every create, save, delete, rebuild, fault, revert, sync run and password
+in-memory session, the six tabs' lists and records, every create, save, delete, rebuild, revert, sync run and password
 change, the Events drawer's audit rows, the Settings window's session and about facts, **the Preview window's playback of a
 saved channel**, `Choose` through the Electron preload, and **the settings and shell layout saved per signed-in account in the
 backend and restored once after sign-in**. The fixtures, the fixture-load stand-in and the query switches of `28` are deleted. A
@@ -93,12 +93,11 @@ interface StreamAdminChannel extends BackendChannel { kind: "stream"; enabled: b
 interface LiveAdminChannel extends BackendChannel {
   kind: "live"; enabled: boolean; mode: "loop" | "encode"; captions: boolean; variants: ("360p" | "720p" | "1080p")[];
   folder?: string; videos?: string[];                                  // exactly one of the two
-  state: ChannelState; problem?: string; fault: string | null; renditions: string[];
+  state: ChannelState; problem?: string; renditions: string[];
   playlist: { name: string; durationMs: number }[]; nowPlaying: { index: number; name: string } | null }
 type AdminChannel = StreamAdminChannel | LiveAdminChannel;             // GET /api/admin-channels: { items, revision }
 // a live row's streamUrl is `<caller origin>/live/<id>/master.m3u8` (channel-views.ts); there is no `masterUrl` field
 // live id: kebab-case, at most 64; number: whole 1..9999 sent as text or integer; category: News Sports Music Kids Movies Entertainment
-// faults: stall segment-404 slow-segments playlist-500 discontinuity restart end
 
 // providers (types/provider.ts)           snake_case is the backend's own for two fields
 interface BackendProvider { id: number; name; source; is_active: boolean; order: number; family: "embed" | "stream";
@@ -218,7 +217,7 @@ reads below instead, which need the token.
 | `channel.not_found` | 404 | That channel does not exist. |
 | `channel.invalid` | 422 | the backend's sentence (names the field); under that field's row |
 | `channel.taken` | 409 | Another channel already has that id or number. |
-| `fault.invalid` | 400 | That fault is not valid. |
+| `fault.invalid` | 400 | (backend only; the admin no longer words it, owner 2026-10-17) |
 | `path.invalid` | 400 | That address is not valid. |
 | `media.not_found` | 404 | That part of the stream is not available. |
 | `range.unsatisfiable` | 416 | That byte range is outside the file. |
@@ -294,8 +293,7 @@ All routes are under `/api`; all except sign-in need `Authorization: Bearer`. "D
 | delete | `DELETE /channels/:id` | - | `{ id }` (a synced row is really deleted; the tooltip says the next sync adds it again) |
 | rebuild | `POST /channels/:id/rebuild` | - | `LiveAdminChannel`; refused `422 channel.invalid` (field `enabled`) while disabled |
 | revert | `POST /channels/:id/revert` | - | `StreamAdminChannel` with `editedFields` cleared; refused (field `source`) for a hand-made row |
-| apply fault | `PUT /channels/:id/fault` | `{ fault, durationMs?, delayMs? }` (positive ints, at most 24 h) | `{ id, fault }` |
-| clear fault | `DELETE /channels/:id/fault` | - | `{ id, fault: null }` |
+| (fault) | `PUT` and `DELETE /channels/:id/fault` | the backend keeps these routes for the interface's failure tests; **the admin does not call them** (removed, owner 2026-10-17) | - |
 
 - **Required-field and number refusals** are client-side first (`lib/field-checks.ts`), then the backend's `channel.invalid` with
   `details.field`, shown under the named row. `channel.taken` (409) names no field: shown under Number (and Id for live).
@@ -303,7 +301,7 @@ All routes are under `/api`; all except sign-in need `Authorization: Bearer`. "D
   `Apply` and makes `Preview` play; `stopped` and `failed` show their word, and `failed` shows `problem` as the first Status line; a disabled channel is dimmed with `disabled`.
   The page learns of a state change only on `Refresh`, a write of its own, or the workspace's `Refresh` in the Status heading (a `GET /admin-channels` that replaces the list): no polling.
   After a save or rebuild the page does **not** wait: the answer says `preparing`, the notice says `Fixture News is preparing.` and Refresh shows `live` later.
-- **`fault`** in the answer is a word or `null`; it shows in the list only when set.
+- **`fault`** in the answer is ignored by the admin: it neither shows it nor parses it (removed, owner 2026-10-17).
 - **Status playlist** rows come from `playlist[]` (name, `durationMs` as `mm:ss`); the playing row is `nowPlaying.index`.
 - **Stream address** shown for a live row is the answer's `streamUrl` (built from the caller's origin, so it works from `/admin/`); the copy
   icon writes it to the clipboard (`navigator.clipboard`, guarded: a plain-http page on a LAN address is not a secure context and has none, so the notice then says `The address could not be copied.`).
@@ -438,7 +436,7 @@ design.
    A source the engine cannot read is not a create error: the channel becomes `failed` with a `problem` the next read shows.
 2. **Edit a source** (Folder, Videos, mode, captions, qualities): Save sends the changed fields; the answer is `preparing`; Status shows its skeleton until Refresh.
 3. **Rebuild** re-reads a folder; the old stream keeps playing until the new is ready (backend comment); the page shows `preparing`.
-4. **Faults** are in memory on the backend and vanish on its restart; `Apply` is enabled only when `state === "live"`; the list's fault word comes from `fault`.
+4. **Faults** are in memory on the backend and vanish on its restart; the admin has no fault control (removed, owner 2026-10-17).
 5. **Restart of the backend stops every live channel until it rebuilds** (`26` D4): the admin shows them `preparing` on the next read; nothing special is coded.
 6. **Disabling** a live channel stops it (`stopped`); enabling starts it.
 
@@ -720,8 +718,8 @@ A wave's worker: `npm ci` in its own worktree, typecheck, lint, `node scripts/ch
 
 ### Wave 8 - Channels, Providers and the Preview window (worker A)
 
-- **Files.** `services/channels.ts`, `providers.ts`, schemas, `store/channels-slice.ts`, `providers-slice.ts`, the pages and components of `28` wired (New form `Create`, `Save`, `Delete`, `Rebuild`, `Revert`, fault `Apply`/`Clear`, `Refresh`), the statusbar's `N preparing`, **the Preview window wired**: `services/preview-player.ts`, `hooks/usePreviewPlayer.ts`, `hooks/usePreviewSession.ts` (the real session over `GET /admin-channels`, replacing the fixture), `components/channels/PreviewWindow.tsx` (the `Retry`, the close that detaches), `FolderRow` wired to `admin-host`, `hooks/useChannelsLoad.ts` (loads when first shown). Deletes `fixtures/channels.ts`, `providers.ts`.
-- **Tests.** `channels-service.test.ts` (each route of 9.1 with the body it sends: only changed fields in a PATCH; folder and videos exclusive; number sent as text), `channels-slice.test.ts` (answer replaces the record by id; delete removes it; a failed read keeps items), `channel-refusals.test.ts` (`channel.invalid` field to row; `channel.taken` under Number), `fault-service.test.ts`, `providers-service.test.ts` (PUT partial; `enabled` after B2); Preview: `preview-player.test.ts` (with a fake engine and a fake video: hls.js is used when supported, the native HLS only as the fallback, neither gives `This browser cannot play HLS streams.`; a fatal manifest error is `manifest failed`, another fatal network error `unreachable`, a media error `media error`; `detach` destroys the engine, pauses and empties the `src`), `preview-session.test.ts` (a live channel attaches only when `live` or `restarting` and uses the path of its `streamUrl`; `preparing` and `starting` attach nothing and flag the skeleton; `failed` shows its problem; a stream channel always attaches with its address as answered; `Retry` reads the channels exactly once and re-attaches when attachable; a missing channel says `That channel does not exist.`; nothing polls), `preview-gate.test.ts` (the verbs' reasons as in 9.7).
+- **Files.** `services/channels.ts`, `providers.ts`, schemas, `store/channels-slice.ts`, `providers-slice.ts`, the pages and components of `28` wired (New form `Create`, `Save`, `Delete`, `Rebuild`, `Revert`, `Refresh`), the statusbar's `N preparing`, **the Preview window wired**: `services/preview-player.ts`, `hooks/usePreviewPlayer.ts`, `hooks/usePreviewSession.ts` (the real session over `GET /admin-channels`, replacing the fixture), `components/channels/PreviewWindow.tsx` (the `Retry`, the close that detaches), `FolderRow` wired to `admin-host`, `hooks/useChannelsLoad.ts` (loads when first shown). Deletes `fixtures/channels.ts`, `providers.ts`.
+- **Tests.** `channels-service.test.ts` (each route of 9.1 with the body it sends: only changed fields in a PATCH; folder and videos exclusive; number sent as text), `channels-slice.test.ts` (answer replaces the record by id; delete removes it; a failed read keeps items), `channel-refusals.test.ts` (`channel.invalid` field to row; `channel.taken` under Number), `providers-service.test.ts` (PUT partial; `enabled` after B2); Preview: `preview-player.test.ts` (with a fake engine and a fake video: hls.js is used when supported, the native HLS only as the fallback, neither gives `This browser cannot play HLS streams.`; a fatal manifest error is `manifest failed`, another fatal network error `unreachable`, a media error `media error`; `detach` destroys the engine, pauses and empties the `src`), `preview-session.test.ts` (a live channel attaches only when `live` or `restarting` and uses the path of its `streamUrl`; `preparing` and `starting` attach nothing and flag the skeleton; `failed` shows its problem; a stream channel always attaches with its address as answered; `Retry` reads the channels exactly once and re-attaches when attachable; a missing channel says `That channel does not exist.`; nothing polls), `preview-gate.test.ts` (the verbs' reasons as in 9.7).
 - **Acceptance.** Create `zz-drive-news` live channel from a fixture folder via `Choose` in Electron; it shows `preparing` then (after Refresh) `live`; **Preview** opens from the index (one ticked row) and from the workspace, plays the channel through its own address with hls.js (the network tab shows `master.m3u8` and segments from the page's origin, no iframe, no `/test/` request), the status line says `live`, closing stops the requests, and the window returns focus to its opener; a failed or stopped channel opens it and says why with `Retry`; a stream channel plays or says its error; after an edit `Preview →` is disabled with `Save the channel first`; apply `segment-404`, Clear; edit and Save; Rebuild; Delete (armed question then removal); a stream channel is created, edited, and a synced one shows `Edited` after a save and `Revert to playlist` works; provider create/save/`Enabled`; every state word as in `28`. Both sizes; console and network clean. Records created are deleted afterwards.
 - **Exit.** As above; no import of the two fixtures.
 

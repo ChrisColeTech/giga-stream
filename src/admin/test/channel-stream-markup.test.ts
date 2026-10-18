@@ -36,7 +36,7 @@ describe("a stream channel's workspace", () => {
     state().openWorkspace("channels", "s");
     const html = page();
     assert.ok(html.indexOf(">Details<") < html.indexOf(">Stream<") && html.indexOf(">Stream<") < html.indexOf(">Status<"));
-    assert.ok(!html.includes(">Playback<") && !html.includes(">Fault<"));
+    assert.ok(!html.includes(">Playback<"));
     assert.ok(html.includes('aria-label="Save. Nothing has changed."') && /<button[^>]*>Preview →<\/button>/.test(html));
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));
   });
