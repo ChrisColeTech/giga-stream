@@ -4,6 +4,11 @@
 
 ## 1. What exists and what is measured (verified in source, `family-port` at `0f31982`)
 
+> **Amended 2026-10-18 (plan `45`, owner):** the table markup, sizing and scroll behaviour of 1.1 and 4.2 are superseded by one
+> TanStack-based table system (`RecordTable`): columns always fit the pane, the table fills the pane and scrolls inside, and the
+> 100-row threshold no longer decides the scroll strategy (it only decides, inside the body, virtualised vs plainly mapped). The
+> paging, selection-by-id, `onNeedRange`, `resetKey` and server-side search/sort contracts of this document stand.
+
 ### 1.1 The grid and the lists
 
 - **`RecordGrid` / `RecordGridRow` / `SkeletonGrid`** (`src/shared/ui/src/lists`): a header row, then a `ul` of 36px rows; the grid draws **every child it is given**. Its only scroller is `overflow-x-auto` around a `minWidth` box, so a narrow window scrolls the list sideways; vertically it grows with its rows and the **page** scrolls.
