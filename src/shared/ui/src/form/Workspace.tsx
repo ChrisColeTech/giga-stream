@@ -38,7 +38,7 @@ export function Workspace({
   return (
     <div className={cn('min-h-0 flex-1 overflow-y-auto bg-surface', fill && 'flex flex-col', className)}>
       <div
-        className={cn('flex w-full flex-col px-6 pb-8', fill && 'min-h-0 flex-1 pb-6')}
+        className={cn('flex w-full flex-col px-6 pb-8', fill && 'min-h-full flex-1 pb-6')}
         style={{ '--label-col': labelColumn(labels) } as CSSProperties}
       >
         {children}

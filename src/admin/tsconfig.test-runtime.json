@@ -16,7 +16,9 @@
       "framer-motion": ["./node_modules/framer-motion/dist/es/index.mjs"],
       "zustand": ["./node_modules/zustand/esm/index.mjs"],
       "lucide-react": ["./node_modules/lucide-react/dist/esm/lucide-react.mjs"],
-      "allotment": ["./node_modules/allotment/dist/legacy.js"]
+      "allotment": ["./node_modules/allotment/dist/legacy.js"],
+      "@tanstack/react-table": ["./node_modules/@tanstack/react-table/dist/index.js"],
+      "@tanstack/react-virtual": ["./node_modules/@tanstack/react-virtual/dist/esm/index.js"]
     }
   }
 }
