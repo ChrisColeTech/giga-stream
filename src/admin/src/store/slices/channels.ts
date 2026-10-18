@@ -1,9 +1,2 @@
-import type { SliceGet, SliceSet } from "./slice-host";
-
-/** PLACEHOLDER. The Channels wave replaces this file (it re-exports `store/channels-slice.ts`); until then the tab has
- *  no state of its own and the registry spreads nothing for it. */
-export type ChannelsSlice = Record<never, never>;
-
-export function createChannelsSlice(_set: SliceSet<ChannelsSlice>, _get: SliceGet<ChannelsSlice>): ChannelsSlice {
-  return {};
-}
+/** The Channels tab's slice, registered here (`39` section 5): every tab's file in this folder re-exports its own slice. */
+export { createChannelsSlice, NO_CHANNELS, type ChannelsSlice } from "../channels-slice";

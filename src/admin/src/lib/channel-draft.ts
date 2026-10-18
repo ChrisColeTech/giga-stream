@@ -31,7 +31,7 @@ export interface StreamDraft {
 
 export type ChannelDraft = LiveDraft | StreamDraft;
 
-function liveDraft(channel: LiveAdminChannel): LiveDraft {
+export function liveDraft(channel: LiveAdminChannel): LiveDraft {
   return {
     kind: "live",
     name: channel.name,
@@ -47,7 +47,7 @@ function liveDraft(channel: LiveAdminChannel): LiveDraft {
   };
 }
 
-function streamDraft(channel: StreamAdminChannel): StreamDraft {
+export function streamDraft(channel: StreamAdminChannel): StreamDraft {
   return {
     kind: "stream",
     name: channel.name,

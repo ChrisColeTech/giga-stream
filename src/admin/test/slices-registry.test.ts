@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { useAppStore } from "@/store/app-store";
 import { tabSlices } from "@/store/slices";
-import { createChannelsSlice } from "@/store/slices/channels";
 import { createJobsSlice } from "@/store/slices/jobs";
 import { createPlaylistsSlice } from "@/store/slices/playlists";
 import { createProvidersSlice } from "@/store/slices/providers";
@@ -27,7 +26,7 @@ describe("the per-tab slice registry", () => {
   });
 
   it("adds no key for a placeholder tab", () => {
-    for (const make of [createChannelsSlice, createProvidersSlice, createTitlesSlice, createPlaylistsSlice, createJobsSlice]) {
+    for (const make of [createProvidersSlice, createTitlesSlice, createPlaylistsSlice, createJobsSlice]) {
       assert.deepEqual(make(NEVER, NEVER), {});
     }
   });
