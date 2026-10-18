@@ -41,8 +41,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 11 | Verification runs on a temporary backend that serves the built admin on its own free port, with a temporary `DATA_DIR`; the owner's backend, database and `.env` are never read or written by it (section 3). |
 
 | 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Email`, `Password`; Details is `Name`, `Email`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
-| 13 | **A generated id number** (owner, second round: "I said a few responses back we should be generating ids"). Every account shows its backend-generated integer `idNumber` from the accounts sequence (migration `018`, Wave B2 of `39` section 7.1) as the list column `id` and the read-only `Id` row in Details. The number is **never derived and never reused**; it is the accounts table's integer primary key. The API keeps returning the string `id` `acct_<uuid>` unchanged, which the JWT `sub` and the audit log use. **3a's Id column lands after B2**: 3a is cut only after B2 has merged, so the column and row never show a placeholder. |
-| 14 | **Security question (`40`).** Accounts gain a read-only Details fact `Security question` (`Set` or `Not set`, from the answer's `securityQuestionSet`), placed after `Last sign-in` and before `Id`. The question itself is set by the account's own owner in Settings > Account (R, `40` 4.2), not in this Accounts workspace; no admin sets another account's question. |
+| 13 | **Security question (`40`).** Accounts gain a read-only Details fact `Security question` (`Set` or `Not set`, from the answer's `securityQuestionSet`), placed after `Last sign-in`. The question itself is set by the account's own owner in Settings > Account (R, `40` 4.2), not in this Accounts workspace; no admin sets another account's question. |
 
 ## 2. Scope, in order (six commits)
 
@@ -100,7 +99,7 @@ through `Win32_Process.Create` as `07` section 4 shows, keeping the PID. Do not 
 
 ### 4.1 Order
 
-`39` section 2: F lands and **B2 (the generated ids, migration `018`) merges**, then 3a alone, then 3b, 3c and 3d in parallel. 3a is cut only after B2, because its Id column is the generated number. 3a starts from `family-port` after the foundation has merged; it needs nothing from the Channels page work (the earlier "Wave 3" that planned it
+`39` section 2: F lands, then 3a alone, then 3b, 3c and 3d in parallel. 3a starts from `family-port` after the foundation has merged; it needs nothing from the Channels page work (the earlier "Wave 3" that planned it
 is retired: Channels is `36`). 3a lands first because it builds the shared pieces (decision 10); the parallel waves are cut from its result and inherit the real gate: a tab can be looked at only while signed in, so
 every drive needs a backend (section 3.3).
 
@@ -204,11 +203,11 @@ puts a refusal under its row. Both are consumed unchanged by every tab; their si
 - **NewAccountForm** (110): `NewRecordGroup` (`user-plus`, `New account`), rows in this order and no others: `Name`, `Email` (`type=email`, `autoComplete="off"`), `Password` (`type=password`, `autoComplete="new-password"`). No role, no info glyph on
   these three (`26` 4.4). `Create` is disabled with `Name is required.`, then `Email is required.`, then `Password is required.`, then `Saving.` while a call runs, or the unreachable sentence. Pressing it runs the value checks first (5.9); a refusal shows under its row with `aria-invalid`.
 - **AccountsList** (60): `ListGroup` (`users`, `Accounts`) with a ghost `Refresh` in the heading slot (`refresh-cw`); `SkeletonGrid` while `idle` or `loading` or with no items (never a sentence over it, never an empty card); a failed read keeps the last rows and sets one notice.
-- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `id`, `name`, `email`, `state`, `last sign-in` (`id` is `idNumber`, mono), the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
+- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `name`, `email`, `state`, `last sign-in`, the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
   the time in mono as `YYYY-MM-DD HH:mm` local (`never` if absent), tick label `Select <email>`, a press opens the workspace, the end is an `ArmedButton` `Delete`, question `Delete <email>?`; disabled with `The last enabled account cannot be deleted.` for the last
   enabled account (computed from the list by `lib/account-guard.ts`), at rest titled `Deletes the account and ends its sessions.`; also disabled with the unreachable sentence or while the call runs. The column set is `constants/account-grid.ts` (tracks in rem; the end track fits `Delete someone@example.test?`).
 - **AccountWorkspace** (90): `WorkspaceFrame` (tab `accounts`), `RecordRail` (`‹ Accounts`, `Details`, `Password`, the key list a module constant), `WorkspaceToolbar` with `Discard changes` and `Save` only. Opens from the held list; if the account is no longer in a `ready` list it closes with a notice.
-- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Name`, `Email`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), then the read-only facts `Last sign-in`, `Security question` (`Set` / `Not set`, `40`) and `Id` (the generated `idNumber`, last). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
+- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Name`, `Email`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), then the read-only facts `Last sign-in`, and `Security question` (`Set` / `Not set`, `40`). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
   One `Save` per page sends only the changed fields of `email`, `name`, `disabled`.
 - **AccountPasswordGroup** (70): `Group` `Password` (`key-round`): `New password` (`type=password`, `autoComplete="new-password"`) and a ghost `Set new password` inside the library `Tooltip` with `Signs this account out everywhere`; disabled with `Type a new password.` or the length
   refusal until valid. It is its own verb and is not part of `Save`.
@@ -288,7 +287,7 @@ The request layer and the session already have their tests (`api.test.ts`, `auth
 
 ## 8. Backend changes
 
-**For 3a itself, none is required, but two backend waves come first.** B2 (`39` 7.1, migration `018`) must have merged before 3a is cut: the Id column shows the generated `idNumber`. B3 (`40`) is not needed by 3a; it is needed only by R. The code already has every route and rule that 3a uses: `POST /api/auth/login|refresh|logout`, `GET /api/auth/me`, `GET|POST /api/admin-accounts`, `PATCH|DELETE /api/admin-accounts/:id`, `GET /api/audit`, the 15-minute access token, the single-use refresh token, `session_version`
+**None are required for 3a.** B3 (`40`, the security-question reset) is needed only by R. The code already has every route and rule that 3a uses: `POST /api/auth/login|refresh|logout`, `GET /api/auth/me`, `GET|POST /api/admin-accounts`, `PATCH|DELETE /api/admin-accounts/:id`, `GET /api/audit`, the 15-minute access token, the single-use refresh token, `session_version`
 revocation, the ten-a-minute address limit (in memory) and the five-failure 15-minute lockout, the last-enabled-account rule, and tests for them (`test/auth.test.ts`, `accounts.test.ts`, `audit.test.ts`). Two quirks are handled in the admin, not changed: the audit detail of
 `account.created` and `deleted` holds the email, not a name (5.5), and a disabled account's sign-in answers the same `auth.invalid_credentials` as a wrong password (so the gate shows `The email or password is wrong.`).
 
@@ -367,8 +366,6 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 19 | `01` 6: the store holds no promise and does no I/O | the foundation's `store/audit-slice.ts` awaits `audit.list` inside its actions; this wave moves that into a hook |
 | 20 | `35` (first version) planned a request layer, schemas and sentences | the foundation built them; this revision removes that scope |
 | 21 | `28` 7.3: the Account New form is `Email`, `Name`, `Password`; `26` 4.8 lists Email first | superseded (owner, 2026-10-17): Name first (decision 12) |
-| 22 | `29` 5: `AdminAccount.id` is a string | `acct_<uuid>`; an `idNumber` is added by migration `018` and the shapes of `29` 5 gain it (decision 13) |
-| 23 | `35` (second round) said no id was generated for accounts beyond the string key | every account gets a generated `idNumber`, its database primary key (`39` 7.1); the API's string `id` is unchanged |
 
 ## 13. Done when
 
