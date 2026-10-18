@@ -8,6 +8,7 @@ import { app, BrowserWindow, dialog, screen, session } from "electron";
 import { resolveAppUrl } from "./app-url.js";
 import { startOrAttach, type BackendHandle } from "./backend-host.js";
 import { installGuards } from "./guards.js";
+import { installMinimizeToTray, revealSteps } from "./minimize-to-tray.js";
 import { installNativeDialogIpc } from "./native-dialog.js";
 import { createTray, type TrayHandle } from "./tray.js";
 import { isTrustedSender } from "./trust.js";
@@ -16,7 +17,7 @@ import { installWindowOverlayIpc } from "./window-overlay.js";
 /**
  * The backend's desktop window (docs/26 section 4.1, the fileserver's pattern): this process runs the admin backend
  * itself, then opens ONE window on the admin app it serves at `/admin/`. Context isolation on, node integration
- * off, sandbox on. The app closes to the system tray: the close button hides the window and only Quit (the tray's,
+ * off, sandbox on. The app closes to the system tray: the close and minimize buttons hide the window and only Quit (the tray's,
  * or any other quit) stops the backend. Plain `npm start` stays the headless server; this file runs only under
  * `electron .`.
  */
@@ -57,9 +58,7 @@ function showWindow(): void {
     mainWindow = window;
     return;
   }
-  if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  for (const step of revealSteps(window.isMinimized())) window[step]();
 }
 
 function createWindow(url: string, origin: string): BrowserWindow {
@@ -103,6 +102,8 @@ function createWindow(url: string, origin: string): BrowserWindow {
     event.preventDefault();
     window.hide();
   });
+  // Minimize hides to the tray as well; the tray icon or a second launch restores it.
+  installMinimizeToTray(window, () => quitting);
   window.on("session-end", () => {
     quitting = true;
   });

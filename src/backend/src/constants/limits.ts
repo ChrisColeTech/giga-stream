@@ -29,8 +29,11 @@ export const USERNAME_MAX = 254;
 export const PASSWORD_MIN = 1;
 export const PASSWORD_MAX = 256;
 export const JWT_SECRET_MIN = 32;
-export const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
-export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// No session timeout (docs/03 section 7.12): a session ends by sign-out or password change, not by the clock. Browsers
+// cap a cookie's Max-Age at 400 days, so the refresh token's 365 days is honoured whole.
+const DAY_MS = 24 * 60 * 60 * 1000;
+export const ACCESS_TOKEN_TTL_MS = 30 * DAY_MS;
+export const REFRESH_TOKEN_TTL_MS = 365 * DAY_MS;
 export const REFRESH_TOKEN_BYTES = 32;
 
 // The audit log (section 7.13).

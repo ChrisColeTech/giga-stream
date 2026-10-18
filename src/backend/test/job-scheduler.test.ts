@@ -14,7 +14,7 @@ const nap = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 test("a playlist job runs by schedule once due, and every change to its switches re-arms at once", async () => {
   const s = await setupPlaylists();
   await s.importUrl(ONE);
-  // The session token expires on the app's clock (15 minutes), so each long step signs in again.
+  // The session token lives on the app's clock (30 days); each step still signs in again so a long jump never matters.
   let token = s.token;
   const api = (method: "GET" | "PATCH", url: string, body?: unknown) => send(s.t.app, method, url, body, token);
   const later = async (ms: number): Promise<void> => {
