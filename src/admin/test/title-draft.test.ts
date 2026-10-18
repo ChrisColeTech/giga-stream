@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { discardForm, isDirty, setFields, startForm } from "@/lib/record-form";
 import { createReason, firstCreateRefusal, firstSaveRefusal, formKeyOf, titleFieldOf } from "@/lib/title-checks";
 import { draftOfTitle, EMPTY_NEW_TITLE, sameTitleDraft } from "@/lib/title-draft";
-import { seasonCounts, sourcesOf } from "@/lib/title-sources";
+import { seasonCounts } from "@/lib/title-seasons";
 import type { AdminTitleDetail } from "@/services/schemas/title-schema";
 
 const SERIES: AdminTitleDetail = {
@@ -66,12 +66,10 @@ describe("the title checks", () => {
 });
 
 describe("the read-only parts", () => {
-  it("count a synced series' episodes and narrow the sources", () => {
+  it("count a synced series' episodes", () => {
     assert.deepEqual(seasonCounts(SERIES), [
       { season: 1, episodes: "10 episodes" },
       { season: 2, episodes: "1 episode" },
     ]);
-    const sources = sourcesOf({ sources: [{ name: "VidSrc", url: "https://v.test/1" }, { name: 3 }] });
-    assert.deepEqual(sources.map((s) => s.name), ["VidSrc"]);
   });
 });

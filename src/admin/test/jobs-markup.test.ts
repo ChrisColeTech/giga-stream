@@ -5,7 +5,7 @@ import { CatalogRows } from "@/components/jobs/CatalogRows";
 import { JobScheduleGroup } from "@/components/jobs/JobScheduleGroup";
 import { JobDetailsGroup } from "@/components/jobs/JobDetailsGroup";
 import { NewJobForm } from "@/components/jobs/NewJobForm";
-import { ADD_PLAYLIST_FIRST, NO_PLAYLISTS, PLAYLISTS_UNREAD } from "@/constants/job-copy";
+import { ADD_PLAYLIST_FIRST, PLAYLISTS_UNREAD } from "@/constants/job-copy";
 import { createReason } from "@/lib/job-checks";
 import { EMPTY_NEW_JOB, draftOf } from "@/lib/job-draft";
 import { JobsPage } from "@/pages/JobsPage";
@@ -59,19 +59,28 @@ describe("the New job form", () => {
     assert.ok(html.includes('aria-label="Create. Name is required."'));
   });
 
-  it("draws the Playlist row as a shimmer while the playlists are loading: no invented option", () => {
+  /** The Playlist row is always the real select; with none it is natively disabled, no options, no sentence. */
+  const disabledSelect = (html: string, reason: string): void => {
+    const select = html.match(/<select[^>]*>/)?.[0] ?? "";
+    assert.ok(select.includes('disabled=""') && select.includes('aria-label="Playlist"'), select);
+    assert.ok(html.includes(`aria-label="Playlist. ${reason}"`));
+    for (const text of ["No playlists", "Loading playlists", "Could not read", "Add a playlist<", "<option"]) {
+      assert.ok(!html.includes(text), text);
+    }
+    assert.ok(!html.includes("animate-skel-shimmer"));
+  };
+
+  it("keeps the Playlist select, disabled with `Loading.` as its tooltip, while the playlists load", () => {
     for (const start of [false, true]) {
       if (start) state().jobsStartLoad();
-      const html = renderLive(createElement(NewJobForm));
-      assert.ok(html.includes("animate-skel-shimmer") && !html.includes("<option") && !html.includes(NO_PLAYLISTS));
+      disabledSelect(renderLive(createElement(NewJobForm)), "Loading.");
     }
   });
 
-  it("says `No playlists yet.` with an `Add a playlist` link once the read answered with none", () => {
+  it("keeps the Playlist select, disabled with `Add a playlist first.`, once the read answered with none", () => {
     state().jobsPlaylistsLoaded([]);
     const html = renderLive(createElement(NewJobForm));
-    assert.ok(html.includes(NO_PLAYLISTS) && html.includes(">Add a playlist</button>"));
-    assert.ok(!html.includes("animate-skel-shimmer") && !html.includes("<option"));
+    disabledSelect(html, "Add a playlist first.");
     assert.ok(html.includes('aria-label="Create. Name is required."'));
   });
 
@@ -83,21 +92,19 @@ describe("the New job form", () => {
     assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N", type: "catalog" }, "", undefined, true), undefined);
   });
 
-  it("says the playlists could not be read when that read failed, not a shimmer", () => {
+  it("keeps the Playlist select, disabled with the failure as its tooltip, when the read failed", () => {
     state().jobsPlaylistsLoaded(null);
-    const html = renderLive(createElement(NewJobForm));
-    assert.ok(html.includes(PLAYLISTS_UNREAD) && !html.includes("animate-skel-shimmer"));
-    assert.ok(!html.includes(NO_PLAYLISTS) && !html.includes("<option"));
+    disabledSelect(renderLive(createElement(NewJobForm)), PLAYLISTS_UNREAD);
   });
 
-  it("the workspace Details Playlist row has the same three states", () => {
+  it("the workspace Details Playlist row is the same control in the same states", () => {
     const props = { job: job(1), draft: draftOf(job(1)), errors: {}, playlists: [], onChange: () => undefined };
     const details = (): string => renderLive(createElement(JobDetailsGroup, props));
-    assert.ok(details().includes("animate-skel-shimmer"));
+    disabledSelect(details(), "Loading.");
     state().jobsPlaylistsLoaded([]);
-    assert.ok(details().includes(NO_PLAYLISTS) && details().includes(">Add a playlist</button>"));
+    disabledSelect(details(), "Add a playlist first.");
     state().jobsPlaylistsLoaded(null);
-    assert.ok(details().includes(PLAYLISTS_UNREAD));
+    disabledSelect(details(), PLAYLISTS_UNREAD);
     state().jobsPlaylistsLoaded([playlist(1)]);
     const html = renderLive(createElement(JobDetailsGroup, { ...props, playlists: [playlist(1)] }));
     assert.ok(html.includes('aria-label="Playlist"') && html.includes(">List 1</option>"));
@@ -119,7 +126,7 @@ describe("the jobs list", () => {
     assert.ok(page().includes("animate-skel-shimmer"));
     state().jobsLoaded([
       job(1, { running: true }),
-      job(2, { enabled: false }),
+      job(2, { enabled: false, schedule: "off" }),
       job(3, { ...CATALOG, lastRunAt: 5, lastOutcome: "TMDB down", lastCounts: { titles: 0 } }),
     ]);
     const html = page();
@@ -130,6 +137,7 @@ describe("the jobs list", () => {
     assert.ok(html.includes('data-st="disabled"') && html.includes("opacity-45") && html.includes('data-st="failed"'));
     assert.ok(html.includes(">popular series<") && html.includes(">List 1<") && html.includes(">never<"));
     assert.ok(html.includes('title="A running job cannot be deleted."'));
+    assert.ok(html.includes(">Every day<") && html.includes(">Off<"), "the schedule column words");
   });
 
   it("draws Enable, Disable, Delete and the filled Run job, each disabled with `Tick a job first`", () => {
@@ -181,8 +189,8 @@ describe("a job's workspace", () => {
     state().jobsLoaded([job(1, { enabled: false })]);
     state().openWorkspace("jobs", "1");
     assert.ok(page().includes('aria-label="Run job. Jobs that are disabled cannot run."'));
-    const sentence = "Interval is a number and m or h, like 30m or 6h, or off.";
-    const props = { value: "x", error: sentence, onChange: () => undefined };
+    const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
+    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined };
     const html = renderLive(createElement(JobScheduleGroup, props));
     assert.ok(html.includes('role="alert"') && html.includes(sentence) && html.includes('aria-invalid="true"'));
   });

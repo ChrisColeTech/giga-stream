@@ -13,7 +13,8 @@ export type Refusal = string | null;
 
 const WHOLE = /^\d+$/;
 const DECIMAL = /^\d+(\.\d+)?$/;
-const SCHEDULE = /^[1-9]\d*[mh]$/;
+/** The backend's forms (`job-schedule.ts`), so a stored `45s` still saves. */
+const SCHEDULE = /^[1-9]\d*(ms|s|m|h)$/;
 
 export function required(label: string, value: string): Refusal {
   return value.trim() === "" ? `${label} is required.` : null;
@@ -38,11 +39,11 @@ export function httpsAddress(label: string, value: string): Refusal {
   }
 }
 
-/** A job's interval: a whole number and `m` or `h` (`30m`, `6h`, `24h`), or `off`. */
+/** A job's interval: a whole number and `ms`, `s`, `m` or `h` (`30m`, `6h`, `24h`), or `off`. */
 export function schedule(label: string, value: string): Refusal {
   const text = value.trim().toLowerCase();
   if (text === "" || text === "off" || SCHEDULE.test(text)) return null;
-  return `${label} is a number and m or h, like 30m or 6h, or off.`;
+  return `${label} is a number and s, m or h, like 30m or 6h, or off.`;
 }
 
 export function year(label: string, value: string): Refusal {

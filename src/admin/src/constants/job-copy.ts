@@ -12,6 +12,8 @@ export const JOB_WORKSPACE_LABELS: readonly string[] = [
   "Enabled",
   "Pages",
   "Interval",
+  "Custom interval",
+  "Status",
   "Dry run",
   "Prune",
   "State",
@@ -41,7 +43,9 @@ export const SCOPE_TIP = "Which TMDB list to walk: what is trending now, or what
 export const KIND_TIP = "Whether the job syncs movies or series.";
 export const ENABLED_TIP = "A disabled job is never run, by the timer or by hand.";
 export const PAGES_TIP = "How many pages of the list to walk, 1 to 25.";
-export const INTERVAL_TIP = "How often the job runs by itself: 6h, 30m or 24h, or off to stop it.";
+export const INTERVAL_TIP = "How often the job runs by itself. Off stops it; a job also needs Enabled to run.";
+export const CUSTOM_TIP = "A number and s, m or h, like 90m or 3h.";
+export const STATUS_TIP = "Scheduled runs by itself; Not scheduled has the interval off; Disabled never runs.";
 export const DRY_RUN_TIP = "Count what a run would do and write nothing. Sent with this run only.";
 export const PRUNE_TIP =
   "Deletes synced channels whose entry vanished. Channels you edited are kept. Sent with this run only.";
@@ -59,8 +63,6 @@ export const RUNNING_REASON = "Running.";
 export const WORKING_REASON = "Working.";
 export const PLAYLIST_REQUIRED = "Playlist is required.";
 export const ADD_PLAYLIST_FIRST = "Add a playlist first.";
-export const NO_PLAYLISTS = "No playlists yet.";
-export const ADD_A_PLAYLIST = "Add a playlist";
 export const PLAYLISTS_UNREAD = "The playlists could not be read.";
 export const DELETE_RUNNING = "A running job cannot be deleted.";
 export const EVERY_JOB_ENABLED = "Every ticked job is already enabled.";

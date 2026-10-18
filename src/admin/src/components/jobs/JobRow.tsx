@@ -40,7 +40,9 @@ export function JobRow({ row, ticked, deleteReason, onTick, onOpen, onDelete }: 
       <span className="truncate text-text">{row.name}</span>
       <span className="truncate text-muted">{row.type}</span>
       <span className="truncate text-muted">{row.target}</span>
-      <span className="truncate font-mono text-xs text-muted">{row.schedule}</span>
+      <span className="truncate text-muted" title={row.schedule}>
+        {row.schedule}
+      </span>
       <span className="truncate font-mono text-xs text-muted">{row.lastRun}</span>
       <span className="truncate font-mono text-xs text-muted" title={row.outcome}>
         {row.outcome}

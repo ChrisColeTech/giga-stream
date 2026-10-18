@@ -15,10 +15,10 @@ export interface TitlePlotGroupProps {
 
 const PLOT_ROWS = 4;
 
-/** `People and plot` (`37` section 4.3): the Plot (a `Textarea`) and the Cast (a comma list, sent as `string[]`). */
+/** `Plot` (`37` section 4.3): the Plot (a `Textarea`) and the Cast (a comma list, sent as `string[]`). */
 export function TitlePlotGroup({ draft, errors, onChange }: TitlePlotGroupProps) {
   return (
-    <Group id="tw-people" icon={Users} title="People and plot">
+    <Group id="tw-plot" icon={Users} title="Plot">
       <Row label="Plot" error={errors["plot"]} align="start">
         <Textarea
           rows={PLOT_ROWS}

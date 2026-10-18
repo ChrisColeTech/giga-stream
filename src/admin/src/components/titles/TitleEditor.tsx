@@ -11,9 +11,9 @@ import type { AdminTitleDetail } from "@/services/schemas/title-schema";
 import { useAppStore } from "@/store/app-store";
 import { TitleDetailsGroup } from "./TitleDetailsGroup";
 import { TitleFrame } from "./TitleFrame";
+import { TitleImagesGroup } from "./TitleImagesGroup";
 import { TitlePlotGroup } from "./TitlePlotGroup";
 import { TitleSeasonsGroup } from "./TitleSeasonsGroup";
-import { TitleSourcesGroup } from "./TitleSourcesGroup";
 
 export interface TitleEditorProps {
   readonly detail: AdminTitleDetail;
@@ -86,8 +86,11 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
               revert={{ reason: revertReason(detail, saving, unreachable), onPress: () => void revert() }}
             />
           </div>
-          <div ref={spy.bind("tw-people")}>
+          <div ref={spy.bind("tw-plot")}>
             <TitlePlotGroup draft={form.draft} errors={form.errors} onChange={form.set} />
+          </div>
+          <div ref={spy.bind("tw-images")}>
+            <TitleImagesGroup draft={form.draft} errors={form.errors} onChange={form.set} last={!series} />
           </div>
           {series && (
             <div ref={spy.bind("tw-seasons")}>
@@ -100,9 +103,6 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
               />
             </div>
           )}
-          <div ref={spy.bind("tw-sources")}>
-            <TitleSourcesGroup detail={detail} />
-          </div>
         </>
       )}
     </TitleFrame>

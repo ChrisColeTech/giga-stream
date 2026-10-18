@@ -49,6 +49,26 @@ describe("the PATCH body", () => {
     assert.deepEqual(titleChanges(MOVIE, draft, SYNCED), expected);
   });
 
+  it("covers every field the backend lets an admin edit, and only those that changed", () => {
+    const draft = {
+      ...draftOfTitle(MOVIE),
+      title: " Matrix ",
+      year: "2000",
+      rating: "7.5",
+      plot: "New plot",
+      cast: "A, B",
+      posterUrl: "https://x.test/p.jpg",
+      backdropUrl: "https://x.test/b.jpg",
+      streamUrl: "https://x.test/s.m3u8",
+    };
+    const body = titleChanges(MOVIE, draft, SYNCED);
+    assert.deepEqual(Object.keys(body).sort(), [
+      "backdropUrl", "cast", "plot", "posterUrl", "rating", "streamUrl", "title", "year",
+    ]);
+    assert.equal(body["title"], "Matrix");
+    assert.deepEqual(body["cast"], ["A", "B"]);
+  });
+
   it("clears an emptied optional field with null", () => {
     const draft = { ...draftOfTitle(MOVIE), plot: " ", year: "", rating: "", cast: "", runtime: "" };
     const expected = { year: null, rating: null, runtimeMs: null, plot: null, cast: null };

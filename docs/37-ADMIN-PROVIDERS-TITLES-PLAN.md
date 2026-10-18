@@ -116,18 +116,19 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
 
   The single-row `Delete` of a synced title in the grid keeps its place. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
 
-### 4.3 Workspace (rail `‹ Titles`, `Details`, `People and plot`, `Seasons` (series only), `Sources`; toolbar `Discard changes`, `Save`, `Jobs →`)
+### 4.3 Workspace (rail `‹ Titles`, `Details`, `Plot`, `Images`, `Seasons` (series only); toolbar `Discard changes`, `Save`, `Jobs →`)
 
 The workspace opens from the held row, then reads `GET /api/titles/:id?includeDisabled=true` for the fields a list row lacks (plot, cast, runtime, seasons, sources);
 its groups wear shimmer lines in their shape until it answers.
 - **Details** (`file-text`; action slot `Revert to TMDB`, `undo-2`): Title, Kind (read-only), Year, **Enabled**, **TMDB id** (editable only on a manual title; read-only on a synced
-  one), Rating, Genres (comma list, sent as `string[]`), Runtime (minutes in the form, `runtimeMs` on the wire; `lib/title-units.ts`), Poster address, Backdrop address, Stream address, State
+  one), Rating, Genres (comma list, sent as `string[]`), Runtime (minutes in the form, `runtimeMs` on the wire; `lib/title-units.ts`), Stream address, State
   (read-only word). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
   otherwise posts `.../revert` (an `ArmedButton`-free ghost verb: it only drops local edits).
-- **People and plot** (`users`): Plot (`Textarea`), Cast (comma list).
+- **Plot** (`users`): Plot (`Textarea`), Cast (comma list).
+- **Images** (`image`): Poster address, Backdrop address.
 - **Seasons** (`layers`, series only): for a **manual** series an editable ordered `SeasonList` (season number, episodes with number and title, remove, `Add season`); for a **synced**
   series the seasons are read-only with their `episodeCount`. A movie's workspace has no Seasons rail item and no Seasons group.
-- **Sources** (`plug`): the stream sources the providers produce, **read-only** because they are derived (`sources[]` of the detail); a title with none shows shimmer lines, never a sentence.
+- There is no Sources group (owner, 2026-10-17: a read-only list took the space of the fields an admin fills in); every field the backend's `TitlePatch` accepts is a control above.
 - One `Save` sends only changed fields (`lib/title-body.ts`); a cleared optional field is `null`; the answer replaces the row and baseline.
 
 ### 4.4 Deleted titles (soft delete)
