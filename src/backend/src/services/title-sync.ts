@@ -1,42 +1,40 @@
 import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
+import type { ProgressReport } from "../types/job-progress.js";
 import { type Actor, type AuditService } from "./audit-service.js";
 import { type OmdbClient } from "./omdb-client.js";
 import { type TitleDeleted } from "./title-deleted.js";
-import { describeRequest } from "./title-sync-request.js";
 import { type TmdbClient } from "./tmdb-client.js";
-import {
-  type Kind,
-  type SyncRequest,
-  DEFAULT_DISCOVER_PAGES,
-  DEFAULT_SYNC_PAGES,
-  KINDS,
-  MAX_DISCOVER_PAGES,
-  MAX_SYNC_PAGES,
-  TITLE_FRESH_MS,
-  asRecord,
-  listOf,
-  num,
-  parseTitleId,
-  rowOf,
-  storedRowOf,
-} from "./title-shapes.js";
+import { describeRequest } from "./title-sync-request.js";
+import { createStoreRow } from "./title-store-row.js";
+import { TITLE_FRESH_MS, type SyncRequest } from "./title-shapes.js";
+import { createTitleWalk } from "./title-walk.js";
 
-/** What one finished run reports: the sentence (`ok` or why it failed) and how many titles it pulled. */
+/** How one finished run ended (docs/44 section 3.2): `titles` counts the rows seen before the end. */
 export interface SyncResult {
-  outcome: string;
+  result: "ok" | "failed" | "stopped";
+  /** The `AppError` code of a failed run; `internal.failure` for anything unexpected. */
+  code?: string;
   titles: number;
+}
+
+/** What a caller hands one run: its stop signal and where its progress goes. */
+export interface RunOptions {
+  signal?: AbortSignal;
+  report?: ProgressReport;
 }
 
 /** An in-flight sync, kept in memory for the status and the single-flight rule. */
 interface Running {
   startedAt: number;
-  request: SyncRequest;
 }
+
+const noReport: ProgressReport = () => undefined;
 
 /**
  * The catalog sync (docs/03 section 7.6b): single-flight and audited; its outcome is read from the status. Nothing
  * here owns a timer: a catalog job (`job-runner.ts`) asks for a run, and the backend's one scheduler decides when.
+ * Each run has its own `AbortSignal` (the job's `Stop`); the module's `stopped` flag is for shutdown only.
  */
 export function createTitleSync(deps: {
   store: Store;
@@ -45,87 +43,16 @@ export function createTitleSync(deps: {
   omdb: OmdbClient;
   deleted: TitleDeleted;
   now: () => number;
-  /** A full-detail fetch for the explicit-ids scope. */
-  ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
+  const walk = createTitleWalk({ store, tmdb, storeRow: createStoreRow({ store, deleted: deps.deleted, now }) });
 
   let running: Running | null = null;
   let lastRun: { finishedAt: number; outcome: string } | null = null;
   let stopped = false;
 
-  function listPage(kind: Kind, source: "trending" | "popular", page: number) {
-    const path = source === "trending" ? `/trending/${kind}/week` : `/${kind}/popular`;
-    return tmdb.get<Record<string, unknown>>(path, { page });
-  }
-
-  /** One discover page by popularity: the library fill's source (`03` section 7.6b). */
-  function discoverPage(kind: Kind, page: number) {
-    return tmdb.get<Record<string, unknown>>(`/discover/${kind}`, { sort_by: "popularity.desc", page });
-  }
-
-  /** One list row into the store: the shaped payload unless a fresh stored one stands; the popularity always. */
-  function storeRow(kind: Kind, record: Record<string, unknown>): boolean {
-    const id = num(record.id);
-    if (id === undefined || deps.deleted.isDeleted(kind, id)) return false;
-    const shaped = rowOf(kind, record, now());
-    if (shaped === undefined) return false;
-    const existing = store.titles.find(kind, id);
-    const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS
-      && storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt) !== undefined;
-    const popularity = num(record.popularity);
-    store.titles.put({
-      kind,
-      tmdbId: id,
-      payload: fresh ? asRecord(existing.payload) : shaped,
-      popularityScore: popularity ?? existing?.popularityScore ?? null,
-      popularityReadAt: popularity !== undefined || popularity === null ? now() : existing?.popularityReadAt ?? null,
-      fetchedAt: fresh ? existing.fetchedAt : now(),
-    });
-    return true;
-  }
-
-  async function runSync(request: SyncRequest): Promise<number> {
-    let pulled = 0;
-    if (request.scope === "titles") {
-      for (const titleId of request.ids ?? []) {
-        if (stopped) return pulled;
-        const [kind, id] = parseTitleId(titleId);
-        if (deps.deleted.isDeleted(kind, id)) continue; // deleted stays deleted until it is restored
-        await deps.ensureTitle(kind, id);
-        pulled += 1;
-      }
-    } else if (request.scope === "discover") {
-      // The library fill (03 section 7.6b): one run walks both kinds, each capped at `pages`.
-      const pages = Math.min(request.pages ?? DEFAULT_DISCOVER_PAGES, MAX_DISCOVER_PAGES);
-      for (const kind of KINDS) {
-        for (let page = 1; page <= pages; page++) {
-          if (stopped) return pulled;
-          const answer = asRecord(await discoverPage(kind, page));
-          if (stopped) return pulled;
-          for (const row of listOf(answer.results)) {
-            if (stopped) return pulled;
-            if (storeRow(kind, asRecord(row))) pulled += 1;
-          }
-        }
-      }
-    } else {
-      const kind = request.kind ?? "movie";
-      const pages = Math.min(request.pages ?? DEFAULT_SYNC_PAGES, MAX_SYNC_PAGES);
-      for (let page = 1; page <= pages; page++) {
-        if (stopped) return pulled;
-        const answer = asRecord(await listPage(kind, request.scope, page));
-        if (stopped) return pulled;
-        for (const row of listOf(answer.results)) {
-          if (stopped) return pulled;
-          if (storeRow(kind, asRecord(row))) pulled += 1;
-        }
-      }
-    }
-    return pulled;
-  }
-
-  function recordSyncAudit(action: "sync.started" | "sync.finished" | "sync.failed", actor: Actor, detail: Record<string, unknown>): void {
+  type AuditAction = "sync.started" | "sync.finished" | "sync.failed" | "sync.stopped";
+  function recordSyncAudit(action: AuditAction, actor: Actor, detail: Record<string, unknown>): void {
     if (stopped) return; // shutting down: the store may already be closed
     try {
       audit.record(actor, { action, subject: "titles", detail });
@@ -134,44 +61,44 @@ export function createTitleSync(deps: {
     }
   }
 
-  /** One observed sync run: audited started/finished/failed, the outcome kept, the slot released. */
-  async function syncOnce(request: SyncRequest, actor: Actor, triggered: "admin" | "system"): Promise<SyncResult> {
+  /** One observed sync run: audited started and finished, failed or stopped; the result typed; the slot released. */
+  async function syncOnce(request: SyncRequest, actor: Actor, triggered: "admin" | "system", options: RunOptions) {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
+    const signal = options.signal ?? new AbortController().signal;
     recordSyncAudit("sync.started", actor, detail);
+    const seen = { titles: 0 };
     let result: SyncResult;
     try {
-      const titles = await runSync(request);
-      recordSyncAudit("sync.finished", actor, { ...detail, titles });
-      result = { outcome: "ok", titles };
+      await walk(request, { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped });
+      result = { result: signal.aborted || stopped ? "stopped" : "ok", titles: seen.titles };
     } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : "failed";
-      recordSyncAudit("sync.failed", actor, { ...detail, reason });
-      result = { outcome: reason, titles: 0 };
+      if (signal.aborted || stopped) result = { result: "stopped", titles: seen.titles };
+      else {
+        const code = error instanceof AppError ? error.code : ERRORS.internalFailure.code;
+        result = { result: "failed", code, titles: seen.titles };
+      }
     } finally {
       running = null;
     }
-    if (!stopped) lastRun = { finishedAt: now(), outcome: result.outcome };
+    const audited = { ...detail, titles: result.titles };
+    if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
+    else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);
+    else recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });
+    if (!stopped) lastRun = { finishedAt: now(), outcome: result.result === "failed" ? (result.code ?? "failed") : result.result };
     return result;
-  }
-
-  function claim(request: SyncRequest): void {
-    if (running !== null) throw new AppError(ERRORS.syncBusy, { startedAt: running.startedAt });
-    running = { startedAt: now(), request };
   }
 
   return {
     isRunning: (): boolean => running !== null,
 
-    /** Start a sync and return at once (docs/03 section 7.6b). Single flight; `409 sync.busy` when one runs. */
-    startSync(request: SyncRequest, actor: Actor): void {
-      claim(request);
-      void syncOnce(request, actor, "admin");
-    },
-
-    /** Run a sync and wait for it: the scheduler's run and a catalog job's. Single flight like `startSync`. */
-    runNow(request: SyncRequest, actor: Actor, triggered: "admin" | "system"): Promise<SyncResult> {
-      claim(request);
-      return syncOnce(request, actor, triggered);
+    /**
+     * Run a sync and wait for it: the scheduler's run and a catalog job's. Single flight: `409 sync.busy` while one
+     * runs. The answer is typed and never throws once the run began.
+     */
+    runNow(request: SyncRequest, actor: Actor, triggered: "admin" | "system", options: RunOptions = {}): Promise<SyncResult> {
+      if (running !== null) throw new AppError(ERRORS.syncBusy, { startedAt: running.startedAt });
+      running = { startedAt: now() };
+      return syncOnce(request, actor, triggered, options);
     },
 
     status() {

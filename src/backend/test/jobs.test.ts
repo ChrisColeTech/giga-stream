@@ -33,7 +33,7 @@ test("the environment seeds the catalog job on the first start only; a playlist 
     const token = (await signIn(first.app)).access;
     const jobs = itemsOf((await send(first.app, "GET", "/api/jobs", undefined, token)).body);
     assert.deepEqual(jobs.map((j) => [j.type, j.name, j.enabled, j.schedule, j.config]), [
-      ["catalog", "Library fill", true, "12h", { scope: "discover", pages: 100 }],
+      ["catalog", "Library fill", true, "12h", { scope: "discover", pages: 500 }],
     ]);
     assert.equal(itemsOf((await send(first.app, "GET", "/api/playlists", undefined, token)).body).length, 0);
     await send(first.app, "DELETE", `/api/jobs/${jobs[0]?.id}`, undefined, token);
@@ -120,7 +120,7 @@ test("running a catalog job starts it and keeps a typed result: the titles pulle
   assert.ok(tmdb.calls.includes("/discover/movie"));
 });
 
-test("a catalog run that fails keeps its code, never the exception's message", async () => {
+test("a catalog run that fails keeps the error's code, never the exception's message", async () => {
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: "http://127.0.0.1:1" } });
   const token = (await signIn(t.app)).access;
   const id = Number(itemsOf((await send(t.app, "GET", "/api/jobs", undefined, token)).body)[0]?.id);
@@ -130,5 +130,5 @@ test("a catalog run that fails keeps its code, never the exception's message", a
   await until(async () => (await read()).lastResult !== undefined, "the failed run");
   const done = await read();
   assert.equal(done.lastResult, "failed");
-  assert.deepEqual(done.lastCounts, { code: "internal.failure" });
+  assert.deepEqual(done.lastCounts, { code: "tmdb.unavailable" });
 });

@@ -141,7 +141,7 @@ test("without TMDB the list shows the titles made by hand; with none it is still
 test("every item carries its state: synced, edited or manual", async () => {
   const h = await titleApp();
   const { t, token } = h;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   await send(t.app, "POST", "/api/titles", HOME, token);
   const states = async () => itemsOf((await send(t.app, "GET", "/api/titles?kind=movie&sort=az")).body).map((i) => [i.title, i.state]);
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "synced"]]);
@@ -164,7 +164,7 @@ test("revert has nothing to go back to for a title made by hand, and a missing t
 test("enabled is a field of the title: a disabled title leaves the public reads, and an admin's read keeps it", async () => {
   const h = await titleApp();
   const { t, token } = h;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   const manual = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
   assert.equal(field(await send(t.app, "GET", `/api/titles/${manual}?includeDisabled=true`, undefined, token), "enabled"), true);
   await send(t.app, "GET", "/api/titles/movie-603");
@@ -187,7 +187,7 @@ test("enabled is a field of the title: a disabled title leaves the public reads,
   }
   // A sync neither re-enables it nor skips it.
   await later(h, FOUR_DAYS_MS);
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603?includeDisabled=true", undefined, await later(h, 0)), "enabled"), false);
   await send(t.app, "PATCH", "/api/titles/movie-603", { enabled: true }, await later(h, 0));
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");

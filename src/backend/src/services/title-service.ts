@@ -44,7 +44,7 @@ export function createTitleService(deps: {
   const { store } = deps;
   const deleted = createTitleDeleted(deps);
   const reads = createTitleReads({ ...deps, deleted });
-  const sync = createTitleSync({ ...deps, deleted, ensureTitle: reads.ensureTitle });
+  const sync = createTitleSync({ ...deps, deleted });
   const sources = createTitleSources(store);
   const streams = deps.streams;
   const overlay = createTitleOverlay(store);
@@ -87,7 +87,6 @@ export function createTitleService(deps: {
     ...records,
     listDeleted: deleted.list,
     restore: deleted.restore,
-    startSync: sync.startSync,
     runNow: sync.runNow,
     isSyncRunning: sync.isRunning,
     ensureTitle: reads.ensureTitle,

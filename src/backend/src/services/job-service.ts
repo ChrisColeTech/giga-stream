@@ -5,6 +5,7 @@ import type { JobRecord } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
 import { type JobInput, type JobPatch, type JobView, CatalogConfigSchema } from "../types/job.js";
 import type { Actor, AuditService } from "./audit-service.js";
+import type { JobProgressRegistry } from "./job-progress.js";
 import type { JobRunner } from "./job-runner.js";
 import { normalisePlaylistSchedule, normaliseSchedule } from "./job-schedule.js";
 import { DEFAULT_DISCOVER_PAGES, DEFAULT_SYNC_PAGES } from "./title-shapes.js";
@@ -31,16 +32,20 @@ export function createJobService(deps: {
   audit: AuditService;
   now: () => number;
   runner: JobRunner;
+  progress: JobProgressRegistry;
   onChange: () => void;
 }) {
-  const { store, audit, now, runner, onChange } = deps;
+  const { store, audit, now, runner, progress, onChange } = deps;
 
   function view(job: JobRecord): JobView {
+    const running = runner.isRunning(job.id);
+    const live = running ? progress.get(job.id) : undefined;
     const common = {
       id: job.id,
       enabled: job.enabled,
       schedule: job.schedule,
-      running: runner.isRunning(job.id),
+      running,
+      ...(live !== undefined && { progress: live }),
       ...(job.lastRunAt !== undefined && { lastRunAt: job.lastRunAt }),
       ...(job.lastResult !== undefined && { lastResult: job.lastResult }),
       ...(job.lastCounts !== undefined && { lastCounts: job.lastCounts }),
@@ -104,12 +109,23 @@ export function createJobService(deps: {
     },
 
     /**
-     * `Stop` (docs/43 section 3.4a): cancels the run in progress and keeps everything already written. The run ends
-     * within seconds (its requests abort); the job reads `running` until then. A catalog sync has no cancellation hook.
+     * Starts the Library fill (the first catalog job with the discover scope) for `POST /api/titles/sync`, the same run
+     * as `Run job`: stoppable, reporting progress, refused when the job is disabled. `409 job.no_library_fill` when none.
+     */
+    startLibraryFill(actor: Actor): JobView {
+      const fill = store.jobs.list().find((job) => job.type === "catalog" && job.config.scope === "discover");
+      if (fill === undefined) throw new AppError(ERRORS.jobNoLibraryFill);
+      runner.run(fill, actor);
+      return view(existing(fill.id));
+    },
+
+    /**
+     * `Stop` (docs/43 section 3.4a, docs/44 section 3.2), playlist and catalog jobs alike: cancels the run in progress
+     * and keeps everything already written. The run ends within seconds (its requests abort); the job reads `running`
+     * until then.
      */
     stop(id: number, actor: Actor): JobView {
       const current = existing(id);
-      if (current.type === "catalog") throw invalid("id", "A catalog sync cannot be stopped.");
       if (!runner.abort(id)) throw new AppError(ERRORS.jobNotRunning, { id });
       audit.record(actor, { action: "job.stopped", subject: String(id), detail: { name: view(current).name } });
       return view(existing(id));

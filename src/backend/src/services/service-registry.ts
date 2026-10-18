@@ -7,6 +7,8 @@ import { createAdminStatic } from "./admin-static-service.js";
 import { createAuditService } from "./audit-service.js";
 import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
+import { createJobEvents } from "./job-events.js";
+import { createJobProgress } from "./job-progress.js";
 import { createJobRunner } from "./job-runner.js";
 import { createJobService } from "./job-service.js";
 import { createLogoCache } from "./logo-cache.js";
@@ -104,8 +106,10 @@ export function createServices(store: Store, options: ServiceOptions) {
   const limiter = createRequestLimiter({ global: SYNC_CONCURRENCY, perHost: SYNC_PER_HOST_CONCURRENCY });
   const logoCache = createLogoCache({ store, safeFetch, limiter, dataDir: options.dataDir, now });
   const resolver = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours ?? 24, safeFetch, now });
+  const progress = createJobProgress({ now });
+  const events = createJobEvents({ progress });
   const runner = createJobRunner({
-    store, audit, now, titles,
+    store, audit, now, titles, progress,
     playlistJob: createPlaylistJob({
       store, importer, now, logoCache,
       fillLogos: createLogoFill({ store, resolver }),
@@ -116,6 +120,7 @@ export function createServices(store: Store, options: ServiceOptions) {
   const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "" });
   return {
     runner,
+    events,
     importer,
     logoCache,
     audit,
@@ -133,7 +138,7 @@ export function createServices(store: Store, options: ServiceOptions) {
     titles,
     storedTitles: createStoredTitles(store),
     playlists: createPlaylistService({ store, audit, runner, onChange: scheduler.arm }),
-    jobs: createJobService({ store, audit, now, runner, onChange: scheduler.arm }),
+    jobs: createJobService({ store, audit, now, runner, progress, onChange: scheduler.arm }),
     hasAccounts: (): boolean => store.accounts.count() > 0,
     purgeExpiredSessions: (): void => store.refreshTokens.purgeExpired(now()),
     health: () => ({

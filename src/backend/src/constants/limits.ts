@@ -101,3 +101,20 @@ export const LOGO_CACHE_MAX_AGE_S = 31_536_000;
 export const CHANNEL_BULK_MAX = 5_000;
 
 export const DATABASE_BUSY_TIMEOUT_MS = 5000;
+
+// Job progress and its event stream (docs/44 sections 3.1 and 3.3).
+/** Same-phase `done` increments of one job reach the stream at most this often a second. */
+export const PROGRESS_EVENTS_PER_SECOND = 4;
+export const PROGRESS_MIN_GAP_MS = 1000 / PROGRESS_EVENTS_PER_SECOND;
+/** Open `GET /api/jobs/events` streams; the next one is refused. */
+export const EVENT_SUBSCRIBERS_MAX = 8;
+/** The share of a playlist run's bar that the logo phase fills; the stream check fills the rest. */
+export const PLAYLIST_LOGOS_SHARE = 0.2;
+
+// The TMDB client (docs/03 section 7.6, docs/44 section 3.2).
+/** About 4.8 requests a second. */
+export const TMDB_MIN_GAP_MS = 210;
+/** A 429 or 5xx is retried after this times the attempt number, at most `TMDB_RETRIES` times. */
+export const TMDB_BACKOFF_MS = 2_500;
+export const TMDB_RETRIES = 3;
+export const TMDB_TIMEOUT_MS = 10_000;

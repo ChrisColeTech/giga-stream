@@ -104,7 +104,12 @@ export async function buildApp(
     if (bootstrap === "none") {
       app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_USERNAME/PASSWORD: nobody can sign in");
     }
+    // First: an open progress stream must not hold the server open. Fastify 5 waits for the open connections BEFORE it runs
+    // the `onClose` hooks (a test showed `app.close()` hanging on an open stream), so the streams are ended in `preClose`;
+    // `onClose` ends any that opened since.
+    app.addHook("preClose", async () => ready.events.closeAll());
     app.addHook("onClose", async () => {
+      ready.events.closeAll();
       ready.scheduler.stop();
       ready.titles.close();
       // Every playlist run is aborted and has settled before the store closes.

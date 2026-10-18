@@ -47,8 +47,12 @@ export function createStreamCheck(deps: { store: Store; safeFetch: SafeFetch; li
         pending.push({ url, status, at: now() });
         if (pending.length >= HEALTH_BATCH) flush();
       });
+    let finished = 0;
+    run.report({ phase: "checking", done: 0, total: urls.length });
     try {
-      await Promise.all(urls.map((url) => one(url).catch(() => undefined)));
+      await Promise.all(urls.map((url) =>
+        one(url).catch(() => undefined).finally(() => run.report({ phase: "checking", done: ++finished, total: urls.length })),
+      ));
     } finally {
       flush();
     }

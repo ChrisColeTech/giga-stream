@@ -3,6 +3,7 @@ import { SYNC_RUN_MAX_MS } from "../constants/limits.js";
 import type { PlaylistJob } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistCounts, RunCounts, RunResult } from "../types/job-counts.js";
+import type { ProgressReport } from "../types/job-progress.js";
 import type { SyncRun } from "../types/sync-run.js";
 import type { LogoCache } from "./logo-cache.js";
 import type { LogoFill } from "./logo-fill.js";
@@ -35,18 +36,20 @@ export function createPlaylistJob(deps: {
 }) {
   const { store, importer, fillLogos, logoCache, checkStreams, now } = deps;
 
-  return async function runPlaylistJob(job: PlaylistJob, signal: AbortSignal): Promise<RunOutcome> {
+  return async function runPlaylistJob(job: PlaylistJob, signal: AbortSignal, report: ProgressReport): Promise<RunOutcome> {
     const playlist = store.playlists.find(job.playlistId);
     if (!playlist) throw new AppError(ERRORS.playlistNotFound, { id: job.playlistId });
-    const run: SyncRun = { playlistId: playlist.id, signal, endsAt: now() + SYNC_RUN_MAX_MS };
+    const run: SyncRun = { playlistId: playlist.id, signal, endsAt: now() + SYNC_RUN_MAX_MS, report };
     let source: PlaylistCounts["source"] = "file";
     let changes = NOTHING;
+    report({ phase: "reading", done: 0, total: 0 });
     if (playlist.kind === "url" && !signal.aborted) {
       const refreshed = await importer.refresh(playlist, signal);
       source = refreshed.source;
       changes = refreshed.counts;
     }
     let logos = { cached: 0, failed: 0 };
+    report({ phase: "logos", done: 0, total: 0 });
     if (!signal.aborted) await fillLogos(run);
     if (!signal.aborted) logos = await logoCache.run(run);
     if (!signal.aborted) await checkStreams(run);

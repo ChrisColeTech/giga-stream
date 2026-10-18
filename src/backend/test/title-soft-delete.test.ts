@@ -13,20 +13,19 @@ const HOME = { kind: "movie", title: "Home Movie", year: 2020, genres: ["Drama"]
 test("a deleted synced title is recorded, and a re-sync and a re-browse do not bring it back", async () => {
   const h = await titleApp();
   const { t, token } = h;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 200);
   assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 404, "nothing stored");
 
   h.tmdb.calls.length = 0;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
-  await syncAll(h, { scope: "titles", ids: ["movie-603"] });
+  await syncAll(h);
   const browse = await send(t.app, "GET", "/api/titles?kind=movie");
   assert.deepEqual([browse.status, itemsOf(browse.body).length, field(browse, "skipped")], [200, 0, 1]);
   const search = await send(t.app, "GET", "/api/titles/search?kind=movie&q=matrix");
   assert.deepEqual([itemsOf(search.body).length, field(search, "skipped")], [0, 1]);
   assert.ok(!h.tmdb.calls.includes("/movie/603"), "the sync did not fetch it");
   const status = await send(t.app, "GET", "/api/titles/sync", undefined, token);
-  assert.equal(pick(status.body, "data.titles"), 0, "nothing was stored again");
+  assert.equal(pick(status.body, "data.titles"), 1, "only the series is stored: the deleted movie was not stored again");
 
   for (const url of ["/api/titles/movie-603", "/api/titles/movie-603?includeDisabled=true", "/api/titles/movie-603/recommendations"]) {
     const gone = await send(t.app, "GET", url, undefined, token);
@@ -37,7 +36,7 @@ test("a deleted synced title is recorded, and a re-sync and a re-browse do not b
 test("the deleted list names the title and the time; a restore lets it return on the next browse and sync", async () => {
   const h = await titleApp();
   const { t, token } = h;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token);
   const list = await send(t.app, "GET", "/api/titles/deleted", undefined, token);
   assert.equal(list.status, 200);
@@ -50,8 +49,8 @@ test("the deleted list names the title and the time; a restore lets it return on
   assert.equal((await send(t.app, "DELETE", "/api/titles/deleted/movie-603", undefined, token)).status, 404, "already restored");
   const browse = await send(t.app, "GET", "/api/titles?kind=movie");
   assert.deepEqual(itemsOf(browse.body).map((i) => i.title), ["The Matrix"]);
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
-  assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.titles"), 1);
+  await syncAll(h);
+  assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.titles"), 2, "the Library fill walks both kinds: the restored movie and the series");
   assert.equal((await send(t.app, "GET", "/api/titles/movie-603")).status, 200);
 });
 
@@ -63,7 +62,7 @@ test("a title made by hand is deleted for real: nothing is recorded, and the aud
   assert.deepEqual(pick((await send(t.app, "GET", "/api/titles/deleted", undefined, token)).body, "data.items"), []);
   assert.equal((await send(t.app, "DELETE", `/api/titles/deleted/${id}`, undefined, token)).status, 404);
 
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token);
   await send(t.app, "DELETE", "/api/titles/deleted/movie-603", undefined, token);
   const audit = await actionsOf(t, token);

@@ -34,7 +34,8 @@ test("a thin list row is enriched to a full detail on read, and then carries its
 
   // The sync stores thin rows (shape "list"); opening one refetches the full record and enriches it.
   const access = (await signIn(t.app)).access;
-  await send(t.app, "POST", "/api/titles/sync", { scope: "trending", kind: "movie", pages: 1 }, access);
+  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, access);
+  await send(t.app, "POST", "/api/titles/sync", undefined, access);
   await settled(t);
 
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
