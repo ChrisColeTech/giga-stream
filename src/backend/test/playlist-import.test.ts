@@ -88,7 +88,9 @@ test("the name is the sanitised file name; a derived clash is suffixed, a new fi
   await importUrl("https://cdn.example/lists/us.m3u8?token=x", { name: "web" });
   const clash = await uploadFile(t, token, "us.m3u", M3U);
   assert.deepEqual([clash.status, pick(clash.body, "data.name"), pick(clash.body, "data.fileName")], [201, "us.m3u (2)", "us.m3u"]);
-  for (const bad of ["日本語.m3u", "list.txt", "list.m3u8", ".m3u"]) {
+  const hls = await uploadFile(t, token, "D:\\x\\Live List.M3U8", M3U);
+  assert.deepEqual([hls.status, pick(hls.body, "data.fileName"), pick(hls.body, "data.name")], [201, "live-list.m3u8", "live-list.m3u8"]);
+  for (const bad of ["日本語.m3u", "日本語.m3u8", "list.txt", "list.m3u9", ".m3u", ".m3u8"]) {
     const refused = await uploadFile(t, token, bad, M3U);
     assert.deepEqual([refused.status, pick(refused.body, "error.code"), pick(refused.body, "error.details.field")], [422, "playlist.invalid", "file"], bad);
   }
