@@ -51,7 +51,7 @@ There is no API key (`26` D24).
 `NewProviderForm` (`NewRecordGroup`, `plus`, id prefix `pv-`): **Name**, **Family** (`Segmented` Embed / Stream, a row switcher: an embed provider
 shows the **Movie template** row, a stream provider does not), **Source**, **Movie template** (embed only). `Create` is disabled with `<Label> is required.`;
 the template needs `https` and `{tmdbId}` (client-side by `lib/provider-checks.ts`, then the backend's `422` under the named row). The list
-(`ListGroup`, `plug`, `Refresh`): `RecordGrid` with headings `id` (the provider's generated `id`, mono; migration `018` does not renumber it, `39` section 7.1), `order`, `name`, `source`, `family`, `state`; the state word is `enabled` or `disabled`
+(`ListGroup`, `plug`, `Refresh`): `RecordGrid` with headings `order`, `name`, `source`, `family`, `state`; the state word is `enabled` or `disabled`
 (`enabledState(is_active)`), a disabled provider dimmed; row `Delete` is an `ArmedButton`; skeleton while loading or empty. Rows sort by `order`, then name.
 **Bulk verbs** (owner, 2026-10-17; the mechanism is `39` section 6, consumed through `useBulkAction`): ghost verbs `Enable`, `Disable` and `Delete` beside the forward verb `Titles →`, always drawn, disabled with `Tick a row first`
 until a row is ticked (`lib/provider-bulk.ts`, pure): `Enable` / `Disable` are `PUT { enabled }`, skipping a provider already in that state (`Already enabled.` / `Already disabled.`; all skipped: `Every ticked provider is already enabled.` / `...disabled.`);
@@ -60,7 +60,7 @@ until a row is ticked (`lib/provider-bulk.ts`, pure): `Enable` / `Disable` are `
 ### 3.3 Workspace (rail `‹ Providers`, `Details`, `Templates`, `Player`; toolbar `Discard changes`, `Save`, `Titles →`)
 
 - **Details** (`file-text`): Name, Family (`Segmented`; changing it is allowed and re-renders the template rows), Source, Movie template (embed),
-  **Enabled** (`Toggle` over `is_active`), Order (`NumericInput`), then read-only: Created (`YYYY-MM-DD HH:mm` local) and **Id** (the generated `id`, last).
+  **Enabled** (`Toggle` over `is_active`), Order (`NumericInput`), Created (read-only, `YYYY-MM-DD HH:mm` local).
 - **Templates** (`link`): Episode template (the info tip carries the `{tmdbId}`, `{season}`, `{episode}` placeholders), Start parameter, Subtitle parameter.
 - **Player** (`monitor-play`): Origin, **Frame origins** (`ChipsInput`: Enter or comma adds, a chip's X removes, a malformed origin or a ninth is refused inline with its sentence;
   the chips box takes the field height through the new `className`), **Message shape** (`Select`: None, `vidsrc-status`, `player-event`).
@@ -98,7 +98,7 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
   and `totalPages` is the larger of the two (`TitleListGroup` owns this; `lib/title-query.ts` and `lib/title-merge.ts` are pure).
 - `Older` raises `page`, `Newer` lowers it, each re-reads; `Newer` is disabled at page 1 with `This is the first page.`, `Older` at `totalPages` with `This is
   the last page.`. A search, a kind change or a sort change returns to page 1. Page, search text, kinds and sort live in the slice (and are not remembered across sessions).
-- Headings `id`, `title`, `kind`, `year`, `rating`, `state`; **`id` shows the title's generated `idNumber`**, the title's database primary key, for every title, synced and manual alike (owner, final: every backend record gets a generated, never-reused integer; Wave B2 of `39` section 7.1, migration `018`). The API keeps returning the string `id` unchanged: `movie-603` / `tv-1399` for synced titles and `custom-<uuid>` for manual ones; the TMDB id is shown only in its own "TMDB id" row. State words `synced`, `edited` (its tooltip `edited: plot` names the `editedFields`), `manual`, `disabled` (`titleState`); `Jobs →` in the toolbar;
+- Headings `title`, `kind`, `year`, `rating`, `state`; state words `synced`, `edited` (its tooltip `edited: plot` names the `editedFields`), `manual`, `disabled` (`titleState`); `Jobs →` in the toolbar;
   `Delete` is an `ArmedButton` whose rest title for a synced title says the next sync adds it again and points to `Enabled`.
 - **Bulk verbs** (owner, 2026-10-17; `39` section 6; `lib/title-bulk.ts`, pure), ghost, beside `Jobs →`, disabled with `Tick a row first` until a row is ticked:
 
@@ -106,7 +106,9 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
   |---|---|---|---|
   | `Enable` / `Disable` | `PATCH { enabled }` | already in that state: `Already enabled.` / `Already disabled.` | all skipped |
   | `Revert to TMDB` | `POST .../revert` | a manual title: `A title made by hand has no TMDB copy to go back to.`; an unedited synced title: `Nothing was edited.` | nothing left: the first skipped reason |
-  | `Delete` | `DELETE` (two-step: `Delete N titles?`) | a **synced** title: `A synced title returns on the next sync; disable it instead.` (only manual titles are deleted in bulk) | no manual title ticked: that reason |
+  | `Delete` | `DELETE` (two-step: `Delete N titles?`), **manual and synced titles alike** (owner, 2026-10-17: "bulk delete should apply for manual and auto added") | none | none ticked |
+
+  **What the backend does with a deleted synced title (read in `services/title-records.ts`, `title-list-cache.ts`, `title-reads.ts`, `title-sync.ts`):** `DELETE` really removes the row (`store.titles.remove`; there is no tombstone: migration `012` dropped tombstones in favour of `Enabled`). Nothing refuses it. The title comes back as a fresh synced row the next time TMDB data for it is stored: the next catalog sync that lists it, a browse or search page that lists it (the list cache stores what it reads), or a detail read of its id. Its admin edits, if any, are gone with it. The admin adds no refusal. The run's summary says it: `Deleted 5 titles; 3 were synced and come back on the next catalog sync or browse that lists them. Disable a title to keep it hidden.` (the count of synced ones from the plan), and each synced row's single `Delete` keeps its rest tooltip saying the same.
 
   The single-row `Delete` of a synced title in the grid is unchanged. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
 
@@ -116,7 +118,7 @@ The workspace opens from the held row, then reads `GET /api/titles/:id?includeDi
 its groups wear shimmer lines in their shape until it answers.
 - **Details** (`file-text`; action slot `Revert to TMDB`, `undo-2`): Title, Kind (read-only), Year, **Enabled**, **TMDB id** (editable only on a manual title; read-only on a synced
   one), Rating, Genres (comma list, sent as `string[]`), Runtime (minutes in the form, `runtimeMs` on the wire; `lib/title-units.ts`), Poster address, Backdrop address, Stream address, State
-  (read-only word) and **Id** (read-only, last: the generated `idNumber`, for every title). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
+  (read-only word). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
   otherwise posts `.../revert` (an `ArmedButton`-free ghost verb: it only drops local edits).
 - **People and plot** (`users`): Plot (`Textarea`), Cast (comma list).
 - **Seasons** (`layers`, series only): for a **manual** series an editable ordered `SeasonList` (season number, episodes with number and title, remove, `Add season`); for a **synced**
@@ -198,5 +200,4 @@ Temporary backend (`39` 9) with `TMDB_READ_TOKEN` unset (the Titles list then sh
 | 6 | `29` 9.3 "with both Kind chips on, search makes two calls" | `GET /api/titles` already merges two kinds on the backend (`kind=all`); only search needs the admin to merge |
 | 7 | `26` 4.9b: a manual row's id `custom-0001` | the backend id is `custom-<uuid>`; the tooltip shows the id as the backend gives it |
 | 8 | `28` 7.2: Providers and Titles toolbars have only the forward verb | superseded (owner, 2026-10-17): bulk verbs on the ticked rows (3.2, 4.2) |
-| 9 | `29` 5: `AdminTitleRow.id` is `movie-603`, `tv-1399` or `custom-<uuid>` | the API keeps that string in `id`; every title also carries `idNumber` (Wave B2, the database key), and the grid's and Details' `Id` show it; the TMDB id is its own row |
-| 10 | `37` (first round) showed a synced title's TMDB id as its Id | superseded (owner, final): every title shows its generated `idNumber` |
+| 9 | `26` 3.10 rule 4: deleting a synced row really deletes it and the next sync adds it again | confirmed in code (no tombstone since `012`); a synced title also returns on a browse, search or detail read that stores it; bulk `Delete` covers synced titles and says so (4.2) |
