@@ -1,7 +1,7 @@
 import type { z } from "zod";
 
 import { AppError, ERRORS } from "../constants/errors.js";
-import type { JobRecord } from "../store/job-repository.js";
+import type { CatalogJobConfig, JobRecord } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
 import { type JobInput, type JobPatch, type JobView, CatalogConfigSchema } from "../types/job.js";
 import type { Actor, AuditService } from "./audit-service.js";
@@ -18,8 +18,21 @@ const configField = (issue: z.ZodIssue | undefined): string => {
   return `config.${issue?.path.join(".") ?? ""}`;
 };
 
-const pagesOf = (scope: string, pages: number | undefined): number =>
-  pages ?? (scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES);
+/** A recent job's `pages` is the constant `1`: it is required in every stored config and ignored by the run (docs/49 2.1). */
+const RECENT_PAGES = 1;
+
+const pagesOf = (scope: string, pages: number | undefined): number => {
+  if (scope === "recent") return RECENT_PAGES;
+  return pages ?? (scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES);
+};
+
+/** The config a catalog job stores: a Library update has no kind; the others keep what they were given. */
+type ConfigInput = { scope: CatalogJobConfig["scope"]; kind?: "movie" | "tv"; pages?: number };
+const configOf = (config: ConfigInput): CatalogJobConfig => ({
+  scope: config.scope,
+  ...(config.scope !== "recent" && config.kind !== undefined && { kind: config.kind }),
+  pages: pagesOf(config.scope, config.pages),
+});
 
 /**
  * The sync jobs (docs/26 section 3.11, docs/43 section 3.1). A playlist job is part of its playlist: made and
@@ -71,7 +84,7 @@ export function createJobService(deps: {
     get: (id: number): JobView => view(existing(id)),
 
     create(input: JobInput, actor: Actor): JobView {
-      const config = { scope: input.config.scope, kind: input.config.kind, pages: pagesOf(input.config.scope, input.config.pages) };
+      const config = configOf(input.config);
       const id = store.jobs.insertCatalog(
         { name: input.name, enabled: input.enabled ?? true, schedule: normaliseSchedule(input.schedule ?? "off"), config },
         now(),
@@ -93,7 +106,7 @@ export function createJobService(deps: {
         const parsed = CatalogConfigSchema.safeParse({ ...current.config, ...patch.config });
         if (!parsed.success) throw invalid(configField(parsed.error.issues[0]), "That config is not valid.");
         const schedule = patch.schedule === undefined ? current.schedule : normaliseSchedule(patch.schedule);
-        const config = { scope: parsed.data.scope, kind: parsed.data.kind, pages: pagesOf(parsed.data.scope, parsed.data.pages) };
+        const config = configOf(parsed.data);
         store.jobs.update({ ...current, name: patch.name ?? current.name, enabled, schedule, config });
       }
       const name = current.type === "catalog" ? (patch.name ?? current.name) : view(current).name;

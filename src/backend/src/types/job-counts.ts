@@ -34,6 +34,8 @@ export const CatalogCountsSchema = z
     detailed: count.default(0),
     seasons: count.default(0),
     enriched: count.default(0),
+    /** Stored titles TMDB's `/changes` listed and the Library update refreshed (docs/49); zero for the fill. */
+    changed: count.default(0),
     stale: count,
     stopped: z.boolean().optional(),
   })

@@ -21,12 +21,13 @@ test("a fresh database with no TMDB_SYNC_SCHEDULE seeds the Library fill enabled
   const jobs = await jobsOf(t);
   assert.deepEqual(jobs.map((j) => [j.name, j.type, j.enabled, j.schedule, j.config]), [
     ["Library fill", "catalog", true, "off", FILL],
+    ["Library update", "catalog", true, "24h", { scope: "recent", pages: 1 }],
   ]);
 });
 
-test("a fresh database with TMDB_SYNC_SCHEDULE seeds it enabled on that schedule", async () => {
-  const jobs = await jobsOf(await makeApp({ config: { TMDB_SYNC_SCHEDULE: "24h" } }));
-  assert.deepEqual(jobs.map((j) => [j.enabled, j.schedule]), [[true, "24h"]]);
+test("a fresh database with TMDB_SYNC_SCHEDULE seeds it enabled on that schedule; the update's stays 24h", async () => {
+  const jobs = await jobsOf(await makeApp({ config: { TMDB_SYNC_SCHEDULE: "6h" } }));
+  assert.deepEqual(jobs.map((j) => [j.enabled, j.schedule]), [[true, "6h"], [true, "24h"]]);
 });
 
 test("an admin who disabled the Library fill finds it disabled after a restart, whatever the environment says", async () => {
@@ -39,7 +40,9 @@ test("an admin who disabled the Library fill finds it disabled after a restart, 
     assert.equal(off.status, 200);
     await first.dispose();
     const second = await makeApp({ dataDir, config: { TMDB_SYNC_SCHEDULE: "2h" } });
-    assert.deepEqual((await jobsOf(second)).map((j) => [j.id, j.enabled, j.schedule]), [[id, false, "12h"]]);
+    assert.deepEqual((await jobsOf(second)).map((j) => [j.id, j.enabled, j.schedule]), [
+      [id, false, "12h"], [Number(id) + 1, true, "24h"],
+    ]);
     await second.dispose();
   } finally {
     try {

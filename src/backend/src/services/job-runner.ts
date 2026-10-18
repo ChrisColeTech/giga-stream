@@ -1,5 +1,5 @@
 import { AppError, ERRORS } from "../constants/errors.js";
-import { PLAYLIST_DELETE_SETTLE_MS } from "../constants/limits.js";
+import { CURSOR_OVERLAP_MS, PLAYLIST_DELETE_SETTLE_MS } from "../constants/limits.js";
 import type { CatalogJob, JobRecord, PlaylistJob } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
 import type { RunCounts, RunResult } from "../types/job-counts.js";
@@ -7,7 +7,7 @@ import type { Actor, AuditService } from "./audit-service.js";
 import type { JobFinished, ProgressReport } from "../types/job-progress.js";
 import type { JobProgressRegistry } from "./job-progress.js";
 import type { PlaylistJobBody, RunOutcome } from "./playlist-job.js";
-import type { TitleService } from "./title-service.js";
+import type { SyncRequest, TitleService } from "./title-service.js";
 import { firstPhase } from "./title-walk.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
@@ -54,8 +54,8 @@ export function createJobRunner(deps: {
   const scheduledRefusal = (job: JobRecord): string | undefined =>
     !job.enabled ? "The job is disabled; enable it to run it." : refusal(job);
 
-  function keep(job: JobRecord, result: RunResult, counts: RunCounts): void {
-    if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), result, counts);
+  function keep(job: JobRecord, result: RunResult, counts: RunCounts, cursorAt?: number): void {
+    if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), result, counts, cursorAt);
   }
 
   /** The end of a run as the stream tells it: the result the job now holds (none when the job is gone or the store closed). */
@@ -91,15 +91,24 @@ export function createJobRunner(deps: {
     }
   }
 
-  /** A catalog run's typed result becomes the job's: `ok`, `stopped` (the rows seen are kept) or `failed` with a code. */
+  /**
+   * A catalog run's typed result becomes the job's: `ok`, `stopped` (the rows seen are kept) or `failed` with a code. A
+   * Library update (scope `recent`) takes no kind or page count and asks from its cursor; only an `ok` run moves the cursor,
+   * to the run's START minus an hour, so a stopped or failed run is covered again by the next (docs/49 section 2.4).
+   */
   async function runCatalog(
     job: CatalogJob, actor: Actor, triggered: "admin" | "system", signal: AbortSignal, report: ProgressReport,
   ): Promise<void> {
+    const startedAt = now();
+    const recent = job.config.scope === "recent";
     try {
-      const request = { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages };
+      const request: SyncRequest = recent
+        ? { scope: "recent", ...(job.cursorAt !== undefined && { since: job.cursorAt }) }
+        : { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages };
       const done = await titles.runNow(request, actor, triggered, { signal, report });
-      const counts = { titles: done.titles, detailed: done.detailed, seasons: done.seasons, enriched: done.enriched, stale: titles.status().stale };
-      if (done.result === "ok") keep(job, "ok", counts);
+      const { titles: seen, detailed, seasons, enriched, changed } = done;
+      const counts = { titles: seen, detailed, seasons, enriched, changed, stale: titles.status().stale };
+      if (done.result === "ok") keep(job, "ok", counts, recent ? startedAt - CURSOR_OVERLAP_MS : undefined);
       else if (done.result === "stopped") keep(job, "stopped", { ...counts, stopped: true });
       else keep(job, "failed", { code: done.code ?? ERRORS.internalFailure.code });
     } catch (error) {

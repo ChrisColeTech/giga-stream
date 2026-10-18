@@ -11,6 +11,22 @@ export interface PendingDetail {
 const DetailRow = z.object({ id: z.string(), kind: z.enum(["movie", "tv"]), tmdb_id: z.number().int() });
 
 /**
+ * The OMDb gap condition (`11` section 7.3), alias `t`, shared with the Library update's queue (`title-update-queue.ts`).
+ * Three placeholders: OMDb on (1 or 0), the freshness window of an `omdb` block and of a recorded miss.
+ */
+export const OMDB_GAP_SQL = `(? = 1 AND json_extract(t.payload, '$.shape') = 'detail'
+          AND json_extract(t.payload, '$.imdbId') IS NOT NULL
+          AND COALESCE(json_extract(t.payload, '$.omdb.fetchedAt'), 0) < ? AND COALESCE(t.omdb_failed_at, 0) < ?
+          AND (
+            (COALESCE(json_extract(t.payload, '$.plot'), '') = '' AND COALESCE(t.edited_fields, '') NOT LIKE '%"plot"%')
+            OR (t.kind = 'movie' AND COALESCE(json_extract(t.payload, '$.runtimeMs'), 0) <= 0
+              AND COALESCE(t.edited_fields, '') NOT LIKE '%"runtimeMs"%')
+            OR (COALESCE(json_array_length(t.payload, '$.genres'), 0) = 0
+              AND COALESCE(t.edited_fields, '') NOT LIKE '%"genres"%')
+            OR (COALESCE(json_extract(t.payload, '$.rating'), 0) <= 0
+              AND COALESCE(t.edited_fields, '') NOT LIKE '%"rating"%')))`;
+
+/**
  * The Library fill's work queue (docs/47 section 3.1), answered by QUERY so a stopped run resumes with what is still
  * missing: a title whose payload is a list row, a detail read before `staleBefore`, or a series whose detail stands but
  * has a season (not the specials) with no episodes stored or stored before `staleBefore`. Highest popularity first. A
@@ -31,16 +47,7 @@ export function createTitleDetails(db: DatabaseSync) {
           SELECT 1 FROM json_each(t.payload, '$.seasons') s
           WHERE json_extract(s.value, '$.season') >= 1
             AND (json_extract(s.value, '$.episodesAt') IS NULL OR json_extract(s.value, '$.episodesAt') < ?)))
-        OR (? = 1 AND json_extract(t.payload, '$.shape') = 'detail' AND json_extract(t.payload, '$.imdbId') IS NOT NULL
-          AND COALESCE(json_extract(t.payload, '$.omdb.fetchedAt'), 0) < ? AND COALESCE(t.omdb_failed_at, 0) < ?
-          AND (
-            (COALESCE(json_extract(t.payload, '$.plot'), '') = '' AND COALESCE(t.edited_fields, '') NOT LIKE '%"plot"%')
-            OR (t.kind = 'movie' AND COALESCE(json_extract(t.payload, '$.runtimeMs'), 0) <= 0
-              AND COALESCE(t.edited_fields, '') NOT LIKE '%"runtimeMs"%')
-            OR (COALESCE(json_array_length(t.payload, '$.genres'), 0) = 0
-              AND COALESCE(t.edited_fields, '') NOT LIKE '%"genres"%')
-            OR (COALESCE(json_extract(t.payload, '$.rating'), 0) <= 0
-              AND COALESCE(t.edited_fields, '') NOT LIKE '%"rating"%')))
+        OR ${OMDB_GAP_SQL}
       )
     ORDER BY t.popularity_score DESC, t.id`);
   const failDetail = db.prepare(

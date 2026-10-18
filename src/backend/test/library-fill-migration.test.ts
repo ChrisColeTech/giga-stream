@@ -63,8 +63,8 @@ const FILL = { name: "Library fill", type: "catalog", enabled: 1, schedule: "off
 
 test("a version-24 database with the four per-slice jobs and a playlist job ends with the playlist job and one Library fill", () => {
   const { version, jobs, check } = migrated({ seeded: true });
-  assert.equal(version, 27);
-  assert.deepEqual(jobs.map((j) => [j.name, j.type]), [[null, "playlist"], ["Library fill", "catalog"]]);
+  assert.equal(version, 28);
+  assert.deepEqual(jobs.map((j) => [j.name, j.type]), [[null, "playlist"], ["Library fill", "catalog"], ["Library update", "catalog"]]);
   assert.deepEqual({ ...jobs[1], created_at: undefined }, { ...FILL, created_at: undefined });
   assert.ok(Number(jobs[1]?.created_at) > 1_700_000_000_000, "created now, in milliseconds");
   assert.deepEqual(check, []);
@@ -74,7 +74,7 @@ test("a database that already has a discover job keeps it and gains none; the fo
   const mine = `INSERT INTO sync_jobs (name, type, enabled, schedule, config, created_at)
     VALUES ('My fill', 'catalog', 1, '12h', '{"scope":"discover","pages":40}', 4)`;
   const { jobs } = migrated({ seeded: true, extra: mine });
-  assert.deepEqual(jobs.map((j) => j.name), [null, "My fill"]);
+  assert.deepEqual(jobs.map((j) => j.name), [null, "My fill", "Library update"]);
   assert.deepEqual([jobs[1]?.schedule, jobs[1]?.config], ["12h", '{"scope":"discover","pages":40}']);
 });
 
@@ -88,12 +88,15 @@ test("only the seeded slices go: a renamed one, a near-name and one with a confi
     ('Trending movies ', 'catalog', 1, 'off', '{"scope":"trending","kind":"movie","pages":3}', 5);
     INSERT INTO sync_jobs (name, type, enabled, schedule, config, created_at) VALUES ('Popular movies', 'catalog', 1, 'off', 'not json', 6)`;
   const { jobs } = migrated({ seeded: true, extra });
-  assert.deepEqual(jobs.map((j) => j.name), [null, "My trending", "Trending movies ", "Popular movies", "Library fill"]);
+  assert.deepEqual(jobs.map((j) => j.name), [null, "My trending", "Trending movies ", "Popular movies", "Library fill", "Library update"]);
 });
 
-test("a fresh database ends with exactly one Library fill, made by the seed with 500 pages", async () => {
+test("a fresh database ends with exactly one Library fill, made by the seed with 500 pages (and the Library update)", async () => {
   const t = await makeApp({ config: { TMDB_SYNC_SCHEDULE: "12h" } });
   const token = (await signIn(t.app)).access;
   const jobs = pick((await send(t.app, "GET", "/api/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
-  assert.deepEqual(jobs.map((j) => [j.name, j.schedule, j.config]), [["Library fill", "12h", { scope: "discover", pages: 500 }]]);
+  assert.deepEqual(jobs.map((j) => [j.name, j.schedule, j.config]), [
+    ["Library fill", "12h", { scope: "discover", pages: 500 }],
+    ["Library update", "24h", { scope: "recent", pages: 1 }],
+  ]);
 });

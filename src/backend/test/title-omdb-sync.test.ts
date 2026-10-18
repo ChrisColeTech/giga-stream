@@ -31,7 +31,7 @@ test("the details phase asks OMDb for a gapped title once and fills the gap; the
   const [tmdb, omdb] = [await withImdb(), await fakeOmdb()];
   const f = await fillApp(tmdb, 1, omdbConfig(omdb));
   const job = await run(f);
-  assert.deepEqual(job.lastCounts, { titles: 4, detailed: 4, seasons: 4, enriched: 4, stale: 0 });
+  assert.deepEqual(job.lastCounts, { titles: 4, detailed: 4, seasons: 4, enriched: 4, changed: 0, stale: 0 });
   assert.deepEqual([...omdb.calls].sort(), ALL, "one call per title, by its IMDb id");
   assert.deepEqual(await Promise.all(["omdb.rated", "omdb.imdbRating", "omdb.ratings.1.source", "omdb.boxOffice", "omdb.director", "imdbId", "plot"]
     .map((k) => read(f, "movie-1010", k))), ["PG-13", "8.7", "Rotten Tomatoes", "$177,559,005", "A Director", "tt1010",
@@ -45,7 +45,7 @@ test("the details phase asks OMDb for a gapped title once and fills the gap; the
   assert.deepEqual([tmdb.asked.length, omdb.calls.length], [tmdbSeen, omdbSeen], "a read never asks TMDB or OMDb");
 
   const again = await run(f);
-  assert.deepEqual(again.lastCounts, { titles: 4, detailed: 0, seasons: 0, enriched: 0, stale: 0 }, "a fresh block is not asked for again");
+  assert.deepEqual(again.lastCounts, { titles: 4, detailed: 0, seasons: 0, enriched: 0, changed: 0, stale: 0 }, "a fresh block is not asked for again");
   assert.equal(omdb.calls.length, omdbSeen);
 });
 
@@ -139,5 +139,5 @@ test("Stop during an OMDb call ends the run there: the TMDB detail stays, no lat
 });
 
 test("a result stored before OMDb came back reads with enriched 0", () => {
-  assert.deepEqual(CatalogCountsSchema.parse({ titles: 3, stale: 1 }), { titles: 3, detailed: 0, seasons: 0, enriched: 0, stale: 1 });
+  assert.deepEqual(CatalogCountsSchema.parse({ titles: 3, stale: 1 }), { titles: 3, detailed: 0, seasons: 0, enriched: 0, changed: 0, stale: 1 });
 });

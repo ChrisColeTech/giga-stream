@@ -34,9 +34,10 @@ test("the environment seeds the catalog job on the first start only; a playlist 
     const jobs = itemsOf((await send(first.app, "GET", "/api/jobs", undefined, token)).body);
     assert.deepEqual(jobs.map((j) => [j.type, j.name, j.enabled, j.schedule, j.config]), [
       ["catalog", "Library fill", true, "12h", { scope: "discover", pages: 500 }],
+      ["catalog", "Library update", true, "24h", { scope: "recent", pages: 1 }],
     ]);
     assert.equal(itemsOf((await send(first.app, "GET", "/api/playlists", undefined, token)).body).length, 0);
-    await send(first.app, "DELETE", `/api/jobs/${jobs[0]?.id}`, undefined, token);
+    for (const job of jobs) await send(first.app, "DELETE", `/api/jobs/${job.id}`, undefined, token);
     await first.dispose();
     const second = await makeApp({ dataDir, config: { TMDB_SYNC_SCHEDULE: "2h" } });
     const again = (await signIn(second.app)).access;
@@ -101,7 +102,7 @@ test("a playlist's job is part of its playlist: named after it, rescheduled and 
   assert.deepEqual(await patch({ config: { pages: 3 } }), [422, "job.invalid", "config"]);
   const refusedDelete = await api("DELETE", `/api/jobs/${id}`);
   assert.deepEqual([refusedDelete.status, pick(refusedDelete.body, "error.code")], [422, "job.invalid"]);
-  assert.equal((await read()).length, 2, "the job is still there");
+  assert.equal((await read()).length, 3, "the job is still there (the fill, the update and the playlist's)");
 });
 
 test("a DISABLED catalog job runs by hand (its switch gates only the schedule) and keeps a typed result: the titles pulled and how many are stale", async () => {
@@ -115,7 +116,7 @@ test("a DISABLED catalog job runs by hand (its switch gates only the schedule) a
   const read = async () => pick((await send(t.app, "GET", `/api/jobs/${id}`, undefined, token)).body, "data") as Record<string, unknown>;
   await until(async () => (await read()).lastResult !== undefined, "the catalog run");
   const done = await read();
-  assert.deepEqual([done.lastResult, done.lastCounts, done.running, done.lastOutcome], ["ok", { titles: 2, detailed: 2, seasons: 0, enriched: 0, stale: 0 }, false, undefined]);
+  assert.deepEqual([done.lastResult, done.lastCounts, done.running, done.lastOutcome], ["ok", { titles: 2, detailed: 2, seasons: 0, enriched: 0, changed: 0, stale: 0 }, false, undefined]);
   assert.ok(tmdb.calls.includes("/discover/movie"));
 });
 

@@ -52,6 +52,13 @@ describe("the New job form", () => {
     for (const label of [">Trending<", ">Popular<", ">Discover<", ">Movies<", ">Series<"]) assert.ok(rows.includes(label), label);
     assert.ok(!renderLive(createElement(CatalogRows, { ...props, scope: "discover" })).includes('aria-label="Kind"'));
   });
+
+  it("offers Recent, the Library update's scope, and hides its Kind", () => {
+    const props = { scope: "trending", kind: "movie", onChange: () => undefined } as const;
+    assert.ok(renderLive(createElement(CatalogRows, props)).includes(">Recent<"));
+    const recent = renderLive(createElement(CatalogRows, { ...props, scope: "recent" }));
+    assert.ok(recent.includes('aria-label="Scope"') && !recent.includes('aria-label="Kind"'));
+  });
 });
 
 describe("the jobs list", () => {

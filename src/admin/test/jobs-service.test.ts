@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { ApiError } from "@giga/http/api-error";
 import { changedFields, createBody } from "@/lib/job-body";
+import { firstSaveRefusal } from "@/lib/job-checks";
 import { EMPTY_NEW_JOB, draftOf } from "@/lib/job-draft";
 import { jobs } from "@/services/jobs";
 import { json, success } from "./support/fake-backend";
@@ -56,6 +57,15 @@ describe("the jobs service", () => {
         assert.deepEqual(calls[1]?.body, { type: "catalog", name: "Pop", config: { scope: "discover" } });
       },
     );
+  });
+
+  it("a recent job sends only its scope - no kind on create, no kind or pages on a patch - and checks no Pages", () => {
+    const made = createBody({ ...EMPTY_NEW_JOB, name: " Update ", scope: "recent", kind: "tv" });
+    assert.deepEqual(made, { type: "catalog", name: "Update", config: { scope: "recent" } });
+    const draft = { ...draftOf(catalogJob), scope: "recent", kind: "tv", pages: "" } as const;
+    assert.deepEqual(changedFields(catalogJob, draft), { config: { scope: "recent" } });
+    assert.equal(firstSaveRefusal(draft, true), null, "the hidden Pages row is never asked for");
+    assert.equal(firstSaveRefusal({ ...draft, scope: "popular" }, true)?.field, "pages");
   });
 
   it("patches only what changed; a playlist job sends enabled and schedule only, never a name or a config", async () => {

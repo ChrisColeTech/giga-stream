@@ -91,9 +91,13 @@ export function createServices(store: Store, options: ServiceOptions) {
 
   // The first start seeds the catalog job from the environment; after that it is the truth. Playlists come from imports.
   seedSyncRecords(store, { titleSchedule: options.titleSchedule }, now());
-  /** The schedule a sync status shows: the first enabled job of the type that has one. */
+  /**
+   * The schedule a sync status shows: the first enabled job of the type that has one. The Library update (scope `recent`)
+   * is not the fill, so the status never shows its schedule.
+   */
   const scheduleOf = (type: "playlist" | "catalog"): string =>
-    store.jobs.list().find((j) => j.type === type && j.enabled && j.schedule !== "off")?.schedule ?? "off";
+    store.jobs.list().find((j) => j.type === type && j.enabled && j.schedule !== "off"
+      && !(j.type === "catalog" && j.config.scope === "recent"))?.schedule ?? "off";
   const titles = createTitleService({
     store, audit, tmdb, omdb, streams, now,
     scheduleLabel: () => scheduleOf("catalog"),

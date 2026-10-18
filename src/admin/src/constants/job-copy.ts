@@ -35,12 +35,13 @@ export const JOB_SECTION_KEYS: readonly string[] = JOB_SECTIONS.map((section) =>
 /** Tips (the mockup's words). */
 export const TYPE_FIXED_TIP = "A playlist job syncs one playlist. A catalog job syncs a TMDB list into titles. Fixed once the job exists.";
 export const PLAYLIST_TIP = "The playlist this job syncs. The job goes with the playlist.";
-export const SCOPE_TIP = "Which TMDB list to walk: what is trending now, what is popular overall, or the whole library.";
-export const KIND_TIP = "Whether the job syncs movies or series. A discover walk covers both.";
+export const SCOPE_TIP =
+  "Which TMDB list to walk: what is trending now, what is popular overall, the whole library, or only what is new " +
+  "and what changed since the last run.";
+export const KIND_TIP = "Whether the job syncs movies or series. A discover or recent job covers both.";
 export const ENABLED_TIP = "A disabled job is not run by the timer. A playlist job still runs by hand while its playlist is enabled.";
 export const PAGES_TIP =
-  "How many pages of a trending or popular list to walk, 1 to 500. The Library fill walks every year to the end.";
-export const INTERVAL_TIP = "How often the job runs by itself. Off stops it; a job also needs Enabled to run.";
+  "How many pages of a trending or popular list to walk, 1 to 500. The Library fill walks every year to the end.";export const INTERVAL_TIP = "How often the job runs by itself. Off stops it; a job also needs Enabled to run.";
 export const CUSTOM_TIP = "A number and s, m or h, like 90m or 3h.";
 export const STATUS_TIP = "Scheduled runs by itself; Not scheduled has the interval off; Disabled never runs.";
 export const NAME_TIP = "What the job is called in the list. 1 to 120 characters.";

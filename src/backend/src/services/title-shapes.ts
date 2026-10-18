@@ -22,11 +22,7 @@ export interface BrowseQuery {
   page: number;
 }
 
-export interface SyncRequest {
-  scope: "trending" | "popular" | "discover";
-  kind?: Kind;
-  pages?: number;
-}
+export type { SyncRequest } from "./sync-request.js";
 
 export interface SyncStatus {
   running: boolean;

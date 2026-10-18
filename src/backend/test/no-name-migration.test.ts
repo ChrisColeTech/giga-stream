@@ -66,7 +66,7 @@ test("021 drops the account name and keeps every account, hash, session and secu
     try {
       const columns = db.prepare("PRAGMA table_info(admin_accounts)").all().map((r) => String(r.name));
       assert.equal(columns.includes("name"), false);
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 27 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 28 });
       assert.equal(Object.values(db.prepare("SELECT COUNT(*) AS n FROM admin_ui_state").get() ?? {})[0], 1);
     } finally {
       db.close();

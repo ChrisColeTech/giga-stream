@@ -1,5 +1,5 @@
 import type { AdminJob, CatalogJobConfig } from "@/services/schemas/job-schema";
-import type { JobDraft, NewJobDraft } from "./job-draft";
+import { type JobDraft, type NewJobDraft, hasPages, walksBothKinds } from "./job-draft";
 import { catalogConfigOf } from "./job-rows";
 
 /* The request bodies of the Jobs routes (`03` section 7.2c, `43` section 3.1), pure. A create is a catalog job (a
@@ -15,9 +15,9 @@ export type JobCreateBody = {
 };
 type JobKindWord = NonNullable<CatalogJobConfig["kind"]>;
 
-/** `POST /api/jobs`: the trimmed name and the scope; a discover walk covers both kinds, so it sends none. */
+/** `POST /api/jobs`: the trimmed name and the scope; a discover or recent job covers both kinds, so it sends none. */
 export function createBody(draft: NewJobDraft): JobCreateBody {
-  const config = draft.scope === "discover" ? { scope: draft.scope } : { scope: draft.scope, kind: draft.kind };
+  const config = walksBothKinds(draft.scope) ? { scope: draft.scope } : { scope: draft.scope, kind: draft.kind };
   return { type: "catalog", name: draft.name.trim(), config };
 }
 
@@ -36,11 +36,11 @@ export type JobPatch = {
 
 function configChanges(catalog: CatalogJobConfig, draft: JobDraft): JobConfigPatch {
   const pages = Number(draft.pages.trim());
-  const kind = draft.scope !== "discover" && draft.kind !== catalog.kind;
+  const kind = !walksBothKinds(draft.scope) && draft.kind !== catalog.kind;
   return {
     ...(draft.scope !== catalog.scope && { scope: draft.scope }),
     ...(kind && { kind: draft.kind }),
-    ...(pages !== catalog.pages && { pages }),
+    ...(hasPages(draft.scope) && pages !== catalog.pages && { pages }),
   };
 }
 
