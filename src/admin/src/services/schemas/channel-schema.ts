@@ -76,3 +76,12 @@ export interface ChannelPage extends ChannelList {
 }
 
 export const DeletedChannelSchema = z.object({ id: z.string() });
+
+/** `PATCH /api/channels` (`43` section 3.3): `changed` flipped, `unchanged` already in that state, `skipped` live-kind or
+ *  unknown ids. */
+export const ChannelSwitchedSchema = z.object({
+  changed: z.number().int().min(0),
+  unchanged: z.number().int().min(0),
+  skipped: z.number().int().min(0),
+});
+export type ChannelSwitched = z.infer<typeof ChannelSwitchedSchema>;

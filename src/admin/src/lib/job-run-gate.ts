@@ -1,5 +1,7 @@
 import { UNREACHABLE_REASON } from "@/constants/account-copy";
-import { RUNNING_REASON, RUN_DISABLED, RUN_PLAYLIST_OFF, RUN_RUNNING, SAVE_JOB_FIRST } from "@/constants/job-copy";
+import {
+  NOT_RUNNING_REASON, RUNNING_REASON, RUN_DISABLED, RUN_PLAYLIST_OFF, RUN_RUNNING, SAVE_JOB_FIRST, STOPPING_REASON,
+} from "@/constants/job-copy";
 import { TICK_JOB_FIRST } from "@/constants/record-copy";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
@@ -40,6 +42,12 @@ export function workspaceRunReason(
   },
 ): string | undefined {
   if (state.dirty) return SAVE_JOB_FIRST;
-  if (state.busy) return RUNNING_REASON;
+  if (state.busy || job.running) return RUNNING_REASON;
   return runGate([job], state.playlists, state.unreachable);
+}
+
+/** The workspace's `Stop` (`43` section 3.4a): enabled only while the job runs; `Stopping.` while its own call runs. */
+export function workspaceStopReason(job: AdminJob, busy: boolean): string | undefined {
+  if (busy) return STOPPING_REASON;
+  return job.running ? undefined : NOT_RUNNING_REASON;
 }

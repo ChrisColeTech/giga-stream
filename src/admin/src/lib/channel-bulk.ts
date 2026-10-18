@@ -71,6 +71,15 @@ export function planChannelBulk(
   });
 }
 
+/** The most stream ids one `PATCH /api/channels` takes (`43` section 3.3); Enable and Disable never chunk. */
+export const CHANNEL_SWITCH_MAX = 5_000;
+
+/** Does Enable or Disable have more stream rows to switch than the one call takes? */
+export function overSwitchLimit(plan: BulkPlan<string>, items: readonly AdminChannel[]): boolean {
+  const live = new Set(items.filter((channel) => channel.kind === "live").map((channel) => channel.id));
+  return plan.runnable.filter((row) => !live.has(row.id)).length > CHANNEL_SWITCH_MAX;
+}
+
 /** Why a verb is disabled, or undefined when at least one ticked row can run: nothing ticked, a run going, the backend
  *  unreachable, or every ticked row skipped (Enable and Disable say so for the whole set; Rebuild gives the first row's
  *  reason). Delete skips nothing. */

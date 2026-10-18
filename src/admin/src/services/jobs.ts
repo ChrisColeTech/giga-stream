@@ -11,6 +11,10 @@ import type { RecordService } from "./service-types";
 export interface JobsService extends RecordService<AdminJob, number, JobList> {
   /** Starts the job now; no body. */
   run: (id: number) => Promise<AdminJob>;
+  /** Stops the running job (`POST /api/jobs/:id/stop`, `202`): it answers `running: true` until the run notices, and the
+   *  result (`stopped`) is read on a refresh. `409 job.not_running` when idle; a catalog job is stoppable once the
+   *  backend accepts it (until then `422 job.invalid` arrives as an `ApiError`). */
+  stop: (id: number) => Promise<AdminJob>;
 }
 
 const path = (id: number): string => `/api/jobs/${encodeURIComponent(String(id))}`;
@@ -31,4 +35,5 @@ export const jobs: JobsService = {
   update: (id, patch) => request(path(id), JobSchema, { method: "PATCH", body: patch, area: "Job" }),
   remove: (id) => request(path(id), JobDeletedSchema, { method: "DELETE", area: "Job" }),
   run: (id) => request(`${path(id)}/run`, JobSchema, { method: "POST", area: "Job" }),
+  stop: (id) => request(`${path(id)}/stop`, JobSchema, { method: "POST", area: "Job" }),
 };

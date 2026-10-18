@@ -9,6 +9,8 @@ export type ChannelSortKey = "name" | "category" | "kind" | "playlist";
 export type KindFilter = "all" | "live" | "stream";
 export type OriginFilter = "all" | "synced" | "edited" | "manual";
 export type EnabledFilter = "all" | "true" | "false";
+/** The sync's verdict on a stream row's address; `unchecked` is `not checked` in the list. */
+export type StatusFilter = "all" | "live" | "dead" | "unchecked";
 export type LiveStateFilter = "all" | "preparing" | "starting" | "live" | "restarting" | "stopped" | "failed";
 
 export interface ChannelQuery {
@@ -18,6 +20,8 @@ export interface ChannelQuery {
   readonly origin: OriginFilter;
   readonly enabled: EnabledFilter;
   readonly state: LiveStateFilter;
+  /** The stream status of a stream row (`43` section 3.3); a live-kind row has none. */
+  readonly status: StatusFilter;
   /** A playlist's id, as the select holds it: the channels that playlist created. Empty is every playlist. */
   readonly playlist: string;
   readonly sort: ChannelSortKey;
@@ -31,6 +35,7 @@ export const DEFAULT_CHANNEL_QUERY: ChannelQuery = {
   origin: "all",
   enabled: "all",
   state: "all",
+  status: "all",
   playlist: "",
   sort: "name",
   dir: "asc",
@@ -42,21 +47,23 @@ export const isSortKey = (key: string): key is ChannelSortKey => CHANNEL_SORT_KE
 
 /** The same query, to the byte: a result for another key is dropped, and a key change scrolls the list to the top. */
 export const queryKey = (query: ChannelQuery): string =>
-  [query.q, query.kind, query.origin, query.enabled, query.state, query.playlist, query.sort, query.dir].join("\u0001");
+  [query.q, query.kind, query.origin, query.enabled, query.state, query.status, query.playlist, query.sort, query.dir]
+    .join("\u0001");
 
 export const isDefaultQuery = (query: ChannelQuery): boolean => queryKey(query) === queryKey(DEFAULT_CHANNEL_QUERY);
 
-/** A filter changed. `state` only exists on live rows and `origin` only on stream rows, so choosing one clears the
- *  filter that contradicts it (the backend would answer nothing). */
-export function withFilter<K extends "kind" | "origin" | "enabled" | "state">(
+/** A filter changed. `state` only exists on live rows and `origin` and `status` only on stream rows, so choosing one
+ *  clears the filter that contradicts it (the backend would answer nothing). */
+export function withFilter<K extends "kind" | "origin" | "enabled" | "state" | "status">(
   query: ChannelQuery,
   field: K,
   value: ChannelQuery[K],
 ): ChannelQuery {
   const next: ChannelQuery = { ...query, [field]: value };
-  if (field === "state" && value !== "all") return { ...next, kind: "live", origin: "all", playlist: "" };
+  if (field === "state" && value !== "all") return { ...next, kind: "live", origin: "all", status: "all", playlist: "" };
   if (field === "origin" && value !== "all") return { ...next, kind: "stream", state: "all" };
-  if (field === "kind" && value === "live") return { ...next, origin: "all", playlist: "" };
+  if (field === "status" && value !== "all") return { ...next, kind: "stream", state: "all" };
+  if (field === "kind" && value === "live") return { ...next, origin: "all", status: "all", playlist: "" };
   if (field === "kind" && value === "stream") return { ...next, state: "all" };
   return next;
 }
@@ -93,6 +100,7 @@ export function pagePath(query: ChannelQuery, pageIndex: number, limit: number =
   if (query.origin !== "all") params.set("origin", query.origin);
   if (query.enabled !== "all") params.set("enabled", query.enabled);
   if (query.state !== "all") params.set("state", query.state);
+  if (query.status !== "all") params.set("status", query.status);
   if (query.playlist !== "") params.set("playlist", query.playlist);
   params.set("sort", query.sort);
   params.set("dir", query.dir);

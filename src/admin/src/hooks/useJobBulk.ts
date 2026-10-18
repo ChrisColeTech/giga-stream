@@ -2,7 +2,7 @@ import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
 import { BULK_ICONS } from "@/constants/bulk-icons";
 import { BULK_TIPS } from "@/constants/bulk-tips";
-import { RUN_JOB } from "@/constants/job-copy";
+import { RUN_JOB, STOP_JOB } from "@/constants/job-copy";
 import { JOB_BULK_ORDER, JOB_BULK_WORDS, jobVerbReason, planJobBulk, type JobBulkVerb } from "@/lib/job-bulk";
 import { runningCount } from "@/lib/job-rows";
 import { useAppStore } from "@/store/app-store";
@@ -10,12 +10,13 @@ import { useBulkAction } from "./useBulkAction";
 import { useJobActions } from "./useJobActions";
 
 export interface JobBulk {
-  /** The table strip's verbs, in order: Enable, Disable, the armed Delete, then `Run job`. */
+  /** The table strip's verbs, in order: `Run job`, `Stop`, Enable, Disable, the armed Delete. */
   readonly verbs: readonly StripVerb[];
 }
 
 const LABELS: Readonly<Record<JobBulkVerb, string>> = {
   run: RUN_JOB,
+  stop: STOP_JOB,
   enable: BULK_ENABLE,
   disable: BULK_DISABLE,
   delete: BULK_DELETE,
@@ -46,7 +47,7 @@ export function useJobBulk(): JobBulk {
           now.jobsSetTicked(now.jobs.ticked.filter((id) => !outcome.done.some((item) => item.id === id)));
           /* A run is started, not awaited: the runner's own count has gone back down, the started jobs are still going. */
           now.setWork({ syncing: runningCount(now.jobs.items) });
-          if (outcome.done.length === 0) return;
+          if (outcome.done.length === 0 || verb === "stop") return;
           now.markStale("playlists");
           if (verb === "run") now.markStale("channels");
         },

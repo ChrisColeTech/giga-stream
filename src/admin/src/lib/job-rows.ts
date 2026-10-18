@@ -21,8 +21,11 @@ export const playlistIdOf = (job: AdminJob): number | null => job.playlistId ?? 
  *  that never ran has not failed. */
 export const lastRunFailed = (job: AdminJob): boolean => job.lastRunAt !== undefined && job.lastResult === "failed";
 
+/** The last run was stopped (`43` section 3.4a): the row reads `stopped` and the workspace offers `Resume`. */
+export const lastRunStopped = (job: AdminJob): boolean => job.lastRunAt !== undefined && job.lastResult === "stopped";
+
 export const stateOfJob = (job: AdminJob): RowState =>
-  jobState({ enabled: job.enabled, running: job.running, failed: lastRunFailed(job) });
+  jobState({ enabled: job.enabled, running: job.running, failed: lastRunFailed(job), stopped: lastRunStopped(job) });
 
 const KIND_WORD: Readonly<Record<NonNullable<CatalogJobConfig["kind"]>, string>> = { movie: "movies", tv: "series" };
 

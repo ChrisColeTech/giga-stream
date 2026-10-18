@@ -15,7 +15,9 @@ export type StateWord =
   | "manual"
   | "idle"
   | "running"
-  | "enabled";
+  | "enabled"
+  | "dead"
+  | "not checked";
 
 /** The colour a word takes: the status tokens (`done`, `loading`, `failed`), the faint text, or the accent. */
 export type StateTone = "done" | "loading" | "failed" | "faint" | "accent";
@@ -39,6 +41,8 @@ const TONES: Readonly<Record<StateWord, StateTone>> = {
   running: "loading",
   edited: "loading",
   failed: "failed",
+  dead: "failed",
+  "not checked": "faint",
   stopped: "faint",
   held: "faint",
   synced: "faint",
@@ -65,6 +69,19 @@ export function channelState(channel: ChannelStateInput): RowState {
   return state(channel.state ?? channel.origin ?? "manual");
 }
 
+const STREAM_HINTS: Readonly<Partial<Record<StateWord, string>>> = {
+  live: "The address answered with an HLS manifest",
+  dead: "No HLS manifest at this address",
+  "not checked": "No check has run on this address yet",
+};
+
+/** The `stream` column word of a stream channel (`43` section 4.1): `live`, `dead` or `not checked` (no verdict yet). A
+ *  live-kind channel has no stream to check and no word. Never dimmed: a disabled row dims as a whole. */
+export function streamStatusState(status: "live" | "dead" | undefined): RowState {
+  const word: StateWord = status ?? "not checked";
+  return { word, tone: TONES[word], dimmed: false, hint: STREAM_HINTS[word] };
+}
+
 export interface TitleStateInput {
   readonly enabled: boolean;
   /** Added by hand, with no TMDB id. */
@@ -83,11 +100,13 @@ export interface JobStateInput {
   readonly running: boolean;
   /** The last run failed. */
   readonly failed: boolean;
+  /** The last run was stopped by an admin (`43` section 3.4a). */
+  readonly stopped?: boolean;
 }
 
 export function jobState(job: JobStateInput): RowState {
   if (!job.enabled) return state("disabled");
-  return state(job.running ? "running" : job.failed ? "failed" : "idle");
+  return state(job.running ? "running" : job.failed ? "failed" : job.stopped === true ? "stopped" : "idle");
 }
 
 /** A provider, a playlist or an account: enabled or disabled and nothing else. */

@@ -1,6 +1,6 @@
 import { DELETE_SYNCED_TIP, MODE_LABEL } from "@/constants/channel-copy";
 import type { AdminChannel } from "@/types/admin-channel";
-import { channelState, type RowState } from "./row-state";
+import { channelState, streamStatusState, type RowState } from "./row-state";
 
 /** One channel as the list draws it (`28` section 7.2, Channels index): every cell a string or the state word. Pure. */
 export interface ChannelRowView {
@@ -10,6 +10,8 @@ export interface ChannelRowView {
   /** `Live` or `Stream`. */
   readonly kind: string;
   readonly state: RowState;
+  /** The sync's verdict on a stream row's address (`live`, `dead`, `not checked`); null on a live-kind row (blank). */
+  readonly stream: RowState | null;
   /** `Loop` or `Encode`; blank for a stream channel, which has no engine. */
   readonly mode: string;
   /** What is on air; blank when nothing is, and for a stream channel. */
@@ -32,6 +34,7 @@ export function channelRow(channel: AdminChannel): ChannelRowView {
     return {
       ...base,
       kind: "Live",
+      stream: null,
       state: channelState({ enabled: channel.enabled, published: channel.published, state: channel.state }),
       mode: MODE_LABEL[channel.mode],
       nowPlaying: channel.nowPlaying?.name ?? "",
@@ -40,7 +43,7 @@ export function channelRow(channel: AdminChannel): ChannelRowView {
   const edited = (channel.editedFields ?? []).length > 0;
   const origin = channel.playlistId === undefined ? "manual" : edited ? "edited" : "synced";
   const state = channelState({ enabled: channel.enabled, published: channel.published, origin });
-  return { ...base, kind: "Stream", state, mode: "", nowPlaying: "" };
+  return { ...base, kind: "Stream", state, stream: streamStatusState(channel.status), mode: "", nowPlaying: "" };
 }
 
 /** The rows in the order the list shows them: by name (there is no guide, so no number: owner, 2026-10-17). */

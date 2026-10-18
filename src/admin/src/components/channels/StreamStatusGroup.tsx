@@ -1,8 +1,11 @@
-import { Activity, Undo2 } from "lucide-react";
+import { Activity, Image as ImageIcon, Undo2 } from "lucide-react";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
+import { StateWord } from "@/components/records/StateWord";
 import { CHANNEL_TIPS } from "@/constants/channel-tips";
+import { formatWhen } from "@/lib/format-when";
+import { streamStatusState } from "@/lib/row-state";
 import type { StreamAdminChannel } from "@/types/admin-channel";
 
 const FACT = "flex h-9 min-w-0 items-center truncate font-mono text-sm text-muted";
@@ -34,6 +37,26 @@ export function StreamStatusGroup({ channel, revertReason, onRevert }: StreamSta
       >
         <span className={FACT}>
           {channel.playlistId === undefined ? "Added by hand" : `Synced from ${channel.playlistName ?? channel.source ?? ""}`}
+        </span>
+      </Row>
+      <Row label="Stream" tip={CHANNEL_TIPS.stream}>
+        <span className="flex h-9 items-center">
+          <StateWord state={streamStatusState(channel.status)} />
+        </span>
+      </Row>
+      <Row label="Checked" tip={CHANNEL_TIPS.checked}>
+        <span className={FACT}>{formatWhen(channel.checkedAt)}</span>
+      </Row>
+      <Row label="Logo" tip={CHANNEL_TIPS.logoCached} align="start">
+        <span
+          data-logo={channel.cachedLogoUrl === undefined ? "none" : "cached"}
+          className="my-1 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-hair bg-panel text-faint"
+        >
+          {channel.cachedLogoUrl === undefined ? (
+            <ImageIcon className="size-5" aria-hidden />
+          ) : (
+            <img src={channel.cachedLogoUrl} alt="" className="size-full object-contain" />
+          )}
         </span>
       </Row>
       <Row label="Published" tip={CHANNEL_TIPS.published}>

@@ -30,6 +30,8 @@ export const CHANNEL_LABELS = [
   "Renditions",
   "Playlist",
   "Synced from",
+  "Stream",
+  "Checked",
   "Published",
   "Revision",
 ] as const;
@@ -90,6 +92,8 @@ export const selectionCapped = (ticked: number, total: number): string =>
   `Selected the first ${ticked.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} matching channels.`;
 /** A ticked channel the tab holds no row for: a bulk run skips it and says so. */
 export const NOT_LOADED = "Not loaded.";
+/** Enable and Disable make one call for the stream rows, which the backend takes up to 5,000 ids at a time. */
+export const TOO_MANY_TO_SWITCH = "Tick at most 5,000 channels to enable or disable.";
 export const CHANNEL_GONE = "That channel no longer exists.";
 export const REQUEST_FAILED = "The request failed.";
 export const ADDRESS_COPIED = "Address copied.";
