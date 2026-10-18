@@ -1,14 +1,17 @@
-import { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
 import { RecordTable } from "@giga/ui/lists/RecordTable";
 import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
+import { ListQueryBar } from "@/components/records/ListQueryBar";
+import { LIST_BARS } from "@/constants/list-query-copy";
 import { DELETED_TITLES, LOADING_REASON, RESTORE_TITLE } from "@/constants/title-copy";
 import { useDeletedTitles } from "@/hooks/useDeletedTitles";
+import { useDeletedView } from "@/hooks/useDeletedView";
 import { useTitleActions } from "@/hooks/useTitleActions";
-import { deletedRow, deletedSelectAll, type DeletedRowView } from "@/lib/title-restore";
+import { tickState } from "@/lib/list-query";
+import type { DeletedRowView } from "@/lib/title-restore";
 import { useAppStore } from "@/store/app-store";
 import { deletedTitleColumns } from "./deleted-title-columns";
 
@@ -24,22 +27,23 @@ export function DeletedTitlesGroup() {
   const session = useAppStore((state) => state.titles.session);
   const serial = useAppStore((state) => state.serial);
   const tick = useAppStore((state) => state.titleDeletedTick);
-  const tickAll = useAppStore((state) => state.titlesDeletedTickAll);
+  const setTicked = useAppStore((state) => state.titlesDeletedSetTicked);
   const { flows, track } = useTitleActions();
   const { verbs, row } = useDeletedTitles();
+  const view = useDeletedView();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
-  const rows = useMemo(() => items.map(deletedRow), [items]);
   const all = {
     label: "Select all deleted titles",
-    checked: deletedSelectAll(items, ticked),
-    onToggle: tickAll,
-    disabled: items.length === 0,
+    checked: tickState(view.visible.map(idOf), ticked),
+    onToggle: (on: boolean) => setTicked(on ? view.visible.map(idOf) : []),
+    disabled: view.visible.length === 0,
   };
 
   const strip = (
     <TableStrip
       label="Deleted titles table"
       noun="deleted titles"
+      query={<ListQueryBar def={LIST_BARS.deleted} query={view.query} handlers={view.handlers} />}
       refresh={{
         onPress: () => void track("deleted", flows.loadDeleted),
         reason: status === "loading" ? LOADING_REASON : undefined,
@@ -69,7 +73,7 @@ export function DeletedTitlesGroup() {
       <RecordTable
         ariaLabel={DELETED_TITLES}
         columns={deletedTitleColumns}
-        rows={rows}
+        rows={view.visible}
         idOf={idOf}
         rowView={rowView}
         waiting={waiting}

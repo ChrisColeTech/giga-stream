@@ -5,7 +5,8 @@ import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import { DELETE_RUNNING, DELETE_TITLE, PLAYLIST_JOB_OWNED } from "@/constants/job-copy";
 import { useJobActions } from "@/hooks/useJobActions";
-import { jobRow, type JobRowView } from "@/lib/job-rows";
+import { useJobView } from "@/hooks/useJobView";
+import type { JobRowView } from "@/lib/job-rows";
 import { useAppStore } from "@/store/app-store";
 import { jobColumns } from "./job-columns";
 
@@ -21,8 +22,8 @@ export function JobRows() {
   const tick = useAppStore((state) => state.jobTick);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useJobActions();
+  const { visible, sort } = useJobView();
   const waiting = items.length === 0 || status === "idle";
-  const rows = useMemo(() => items.map(jobRow), [items]);
   const jobs = useMemo(() => new Map(items.map((job) => [job.id, job])), [items]);
 
   const rowView = (row: JobRowView): RecordRowView => {
@@ -53,5 +54,15 @@ export function JobRows() {
     return saving || isBusy(`delete:${id}`) ? SAVING_REASON : undefined;
   };
 
-  return <RecordTable ariaLabel="Jobs" columns={jobColumns} rows={rows} idOf={idOf} rowView={rowView} waiting={waiting} />;
+  return (
+    <RecordTable
+      ariaLabel="Jobs"
+      columns={jobColumns}
+      rows={visible}
+      idOf={idOf}
+      rowView={rowView}
+      waiting={waiting}
+      sort={sort}
+    />
+  );
 }

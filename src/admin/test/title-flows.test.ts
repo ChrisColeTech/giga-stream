@@ -117,7 +117,35 @@ describe("the records", () => {
     await flows.load();
     state().openWorkspace("titles", "movie-1");
     await flows.remove("movie-1");
-    assert.deepEqual([state().titles.items.length, state().workspaces.titles, notice()], [0, null, "Deleted movie-1."]);
+    assert.deepEqual([state().workspaces.titles, notice()], [null, "Deleted movie-1."]);
+  });
+
+  it("keeps a deleted synced title's Browse row, reading deleted, and Refresh in Browse shows it again", async () => {
+    const gone = row("movie-1", { stored: true, deleted: false });
+    const { flows, calls } = rig({
+      list: async () => (calls.push("list"), list([row("movie-1", { stored: false, deleted: true }), row("movie-2")])),
+    });
+    const browse = { items: [gone, row("movie-2")], page: 1, totalPages: 2, totalResults: 2 };
+    state().titlesLoaded(state().titles.view, browse);
+    state().storedSetMode("browse");
+    await flows.remove("movie-1");
+    const kept = state().titles.items.find((item) => item.id === "movie-1");
+    assert.deepEqual([kept?.stored, kept?.deleted, state().titles.items.length], [false, true, 2]);
+    await flows.refresh();
+    const shown = state().titles.items.find((item) => item.id === "movie-1");
+    assert.deepEqual([calls.includes("list"), shown?.deleted, state().titles.items.length], [true, true, 2]);
+  });
+
+  it("removes a deleted manual title's row: TMDB has no copy of it", async () => {
+    const { flows } = rig();
+    state().titlesLoaded(state().titles.view, {
+      items: [row("custom-1", { state: "manual" })],
+      page: 1,
+      totalPages: 1,
+      totalResults: 1,
+    });
+    await flows.remove("custom-1");
+    assert.equal(state().titles.items.length, 0);
   });
 
   it("reads a detail for the open workspace; a save keeps its sources and sends only changed fields", async () => {

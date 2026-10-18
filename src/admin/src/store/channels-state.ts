@@ -9,6 +9,9 @@ export type ChannelsStatus = "idle" | "loading" | "ready" | "failed";
 export interface ChannelPreview {
   readonly channelId: string;
   readonly serial: number;
+  /** The row as the list held it when Preview was pressed: the window's own read drops the list's pages, and a long
+   *  list reads only the rows it shows, so the window may have no other copy until the pages come back. */
+  readonly channel: AdminChannel | null;
 }
 
 export interface ChannelsState {
