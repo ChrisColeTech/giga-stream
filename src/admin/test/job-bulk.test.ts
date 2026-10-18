@@ -52,7 +52,7 @@ describe("the Jobs bulk verbs", () => {
     }
     const reason = (verb: "run" | "enable" | "disable" | "delete", ticked: number[], busy = false) =>
       jobVerbReason(verb, planJobBulk(verb, ITEMS, ticked), context(ticked, busy));
-    assert.equal(reason("run", [1, 2]), "Jobs that are disabled cannot run.");
+    assert.equal(reason("run", [1, 2]), undefined, "a disabled job's switch gates only its schedule");
     assert.equal(reason("enable", [1, 4]), "Every ticked job is already enabled.");
     assert.equal(reason("disable", [2]), "Every ticked job is already disabled.");
     assert.equal(reason("delete", [3]), "A playlist's job goes with the playlist.");

@@ -13,10 +13,9 @@ test("sync is admin-only, single-flight, audited, and reports its outcome in the
   const denied = await send(t.app, "POST", "/api/titles/sync");
   assert.equal(denied.status, 401);
 
-  // It starts the Library fill job (docs/44): refused while that job is disabled, like `Run job` on it.
-  const off = await send(t.app, "POST", "/api/titles/sync", undefined, access);
-  assert.deepEqual([off.status, pick(off.body, "error.code")], [422, "job.disabled"]);
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 2 } }, access);
+  // It starts the Library fill job (docs/44) even while that job is disabled: its switch gates only the schedule.
+  const job = await send(t.app, "PATCH", "/api/jobs/1", { enabled: false, config: { pages: 2 } }, access);
+  assert.equal(pick(job.body, "data.enabled"), false);
   const started = await send(t.app, "POST", "/api/titles/sync", undefined, access);
   assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
 
