@@ -180,15 +180,18 @@ Wachowski, Lilly Wachowski"; Game of Thrones — `totalSeasons` 8, `Type` series
 
 ### 7.3 How it runs (the owner's decision, 2026-10-16)
 
-- **Enrich in the sync, after TMDB** (changed 2026-10-18, `47`: reads are store-only and never call TMDB or OMDb): the Library
-  fill's `details` phase stores a title's TMDB detail and then, if an OMDb key is configured, the stored payload has no OMDb block
-  (or an old one) and an `imdb_id` exists, makes **one** OMDb call, merges the fields of section 7.2 into the stored payload as an
-  `omdb` object. Readers and every restart read it from the store; the block is fresh for days. A title OMDb cannot answer is
-  recorded (`omdb_failed_at`) and asked again only after the freshness window; the job's counts carry `enriched`.
-- **The quota is a budget, not a rule.** One call per opened title; a title is enriched at most once
-  every few days. The backend counts the day's calls and stops enriching (leaving details TMDB-only)
-  when the count nears the 1,000; it resumes at the next UTC day. A `Request limit reached.` answer
-  is treated the same way, never as an error a person sees.
+- **OMDb is a gap filler, not an enrichment of every title** (owner, 2026-10-18: "omdb should be used when we dont get the data
+  from tmdb"). The Library fill's `details` phase stores a title's TMDB detail; ONLY IF that stored detail has a gap, an OMDb key
+  is configured and an `imdb_id` exists, it makes **one** OMDb call. A gap is exactly one of: an empty `overview` (OMDb `Plot`,
+  `plot=full`), no runtime (OMDb `Runtime`), no genres (OMDb `Genre`, mapped to the stored genre dictionary by name). OMDb fills
+  only the empty fields and never replaces a present one; the answer's fields of section 7.2 are kept as the payload's `omdb`
+  object for that title. A title whose TMDB detail has no gap makes no OMDb call. The age rating, ratings block, awards and box
+  office rows of 7.2 are not shown anywhere today (nothing reads them), so they are not collected for every title. A title OMDb
+  cannot answer is recorded (`omdb_failed_at`) and asked again only after the freshness window; the job's counts carry `enriched`
+  (titles a gap was filled for).
+- **The quota is a budget, not a rule.** Because only gap titles call OMDb the daily 1,000 is rarely reached. The backend counts the
+  day's calls and stops calling (leaving the gap) when the count nears the 1,000; the next run asks again, from the next UTC day.
+  A `Request limit reached.` answer is treated the same way, never as an error a person sees.
 - **The sync does not call OMDb.** The catalog sync (`03` section 7.6b) walks TMDB's lists only; OMDb
   spend follows what is actually opened.
 - **Nothing falls back to OMDb alone.** A title without an `imdb_id`, or an OMDb miss
