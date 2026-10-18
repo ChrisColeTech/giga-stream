@@ -1,3 +1,4 @@
+import { deleteQuestion } from "@/constants/playlist-copy";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { formatWhen } from "./format-when";
 import { enabledState, type RowState } from "./row-state";
@@ -49,23 +50,40 @@ export function idOf(text: string): number | null {
   return Number.isInteger(id) ? id : null;
 }
 
+/** Where a playlist came from, as the list and the workspace show it: a web playlist's masked address, a file
+ *  playlist's file name. The address itself is never shown. */
+export const sourceOf = (playlist: AdminPlaylist): string =>
+  playlist.kind === "file" ? (playlist.fileName ?? playlist.name) : (playlist.masked ?? playlist.host ?? "");
+
+const num = (value: number): string => value.toLocaleString("en-US");
+
 export interface PlaylistRowView {
   readonly id: number;
   readonly name: string;
-  readonly host: string;
+  readonly source: string;
   readonly channels: string;
+  /** How many of its channels are enabled. */
+  readonly enabled: string;
+  readonly live: string;
+  readonly dead: string;
   /** `YYYY-MM-DD HH:mm`, or `never`. */
-  readonly lastSynced: string;
+  readonly lastRun: string;
   readonly state: RowState;
+  /** The armed Delete's question: the channels go with the playlist. */
+  readonly deleteQuestion: string;
 }
 
 export function playlistRow(playlist: AdminPlaylist): PlaylistRowView {
   return {
     id: playlist.id,
     name: playlist.name,
-    host: playlist.host,
-    channels: String(playlist.channels),
-    lastSynced: formatWhen(playlist.lastSyncedAt),
+    source: sourceOf(playlist),
+    channels: num(playlist.channels),
+    enabled: num(playlist.enabledChannels),
+    live: num(playlist.live),
+    dead: num(playlist.dead),
+    lastRun: formatWhen(playlist.lastRunAt),
     state: enabledState(playlist.enabled),
+    deleteQuestion: deleteQuestion(playlist.name, playlist.channels),
   };
 }

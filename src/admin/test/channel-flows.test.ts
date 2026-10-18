@@ -117,7 +117,7 @@ describe("the channel flows", () => {
   });
 
   it("remove a channel, close its open workspace, and remove a gone one on not_found", async () => {
-    hold(live("a"), stream("b", { source: "lists.example" }));
+    hold(live("a"), stream("b", { source: "lists.example", playlistId: 3 }));
     state().openWorkspace("channels", "a");
     const { service } = fake({
       remove: async (id) => (id === "a" ? { id } : Promise.reject(refuse("channel.not_found", undefined, 404))),
@@ -132,11 +132,11 @@ describe("the channel flows", () => {
   });
 
   it("rebuild and revert replace the record with the answer", async () => {
-    hold(live("a"), stream("s", { source: "lists.example", editedFields: ["name"] }));
+    hold(live("a"), stream("s", { source: "lists.example", playlistId: 3, editedFields: ["name"] }));
     const flows = flowsOf(
       fake({
         rebuild: async () => live("a", { state: "preparing" }),
-        revert: async () => stream("s", { source: "lists.example", editedFields: [] }),
+        revert: async () => stream("s", { source: "lists.example", playlistId: 3, editedFields: [] }),
       }).service,
     );
     await flows.rebuild("a");

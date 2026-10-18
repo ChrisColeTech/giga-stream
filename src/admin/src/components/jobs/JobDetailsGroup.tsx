@@ -6,24 +6,22 @@ import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { ENABLED_TIP, NAME_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
 import type { JobDraft } from "@/lib/job-draft";
-import { typeWord } from "@/lib/job-rows";
+import { targetOf, typeWord } from "@/lib/job-rows";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminJob } from "@/services/schemas/job-schema";
-import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { CatalogRows } from "./CatalogRows";
-import { JobPlaylistSelect } from "./JobPlaylistSelect";
 
 export interface JobDetailsGroupProps {
   readonly job: AdminJob;
   readonly draft: JobDraft;
   readonly errors: FormErrors;
-  readonly playlists: readonly AdminPlaylist[];
   readonly onChange: (patch: Partial<JobDraft>) => void;
 }
 
-/** `Details` (`38` section 4.3): Name first, Type (read-only: it never changes), then the type's rows (Playlist, or
+/** `Details` (`38` section 4.3, `43` section 3.1): Name first (a playlist job's is `Sync <playlist>`, built by the backend,
+ *  so read-only), Type (read-only: it never changes), then the type's rows (the Playlist it belongs to, read-only, or
  *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 25). */
-export function JobDetailsGroup({ job, draft, errors, playlists, onChange }: JobDetailsGroupProps) {
+export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGroupProps) {
   const catalog = job.type === "catalog";
   return (
     <Group id="jw-details" icon={FileText} title="Details">
@@ -31,7 +29,8 @@ export function JobDetailsGroup({ job, draft, errors, playlists, onChange }: Job
         <Input
           type="text"
           value={draft.name}
-          className={FIELD_CONTROL}
+          readOnly={!catalog}
+          className={catalog ? FIELD_CONTROL : `${FIELD_CONTROL} text-faint`}
           aria-label="Name"
           aria-invalid={errors["name"] !== undefined}
           autoComplete="off"
@@ -45,13 +44,8 @@ export function JobDetailsGroup({ job, draft, errors, playlists, onChange }: Job
       {catalog ? (
         <CatalogRows scope={draft.scope} kind={draft.kind} onChange={onChange} />
       ) : (
-        <Row label="Playlist" tip={PLAYLIST_TIP} error={errors["playlistId"]}>
-          <JobPlaylistSelect
-            playlists={playlists}
-            value={draft.playlistId}
-            invalid={errors["playlistId"] !== undefined}
-            onChange={(playlistId) => onChange({ playlistId })}
-          />
+        <Row label="Playlist" tip={PLAYLIST_TIP}>
+          <Input type="text" value={targetOf(job)} readOnly className={`${FIELD_CONTROL} text-faint`} aria-label="Playlist" />
         </Row>
       )}
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>

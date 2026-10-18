@@ -8,8 +8,9 @@ import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import type { SaveVerb } from "@/lib/workspace-verbs";
-import { ADDRESS_TIP, ENABLED_TIP, NAME_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
+import { ADDRESS_TIP, ENABLED_TIP, FILE_ADDRESS_TIP, NAME_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
 import { replaceReason, startReplace, type PlaylistDraft } from "@/lib/playlist-draft";
+import { sourceOf } from "@/lib/playlist-rows";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 
@@ -22,13 +23,14 @@ export interface PlaylistDetailsGroupProps {
   readonly save: SaveVerb;
 }
 
-/** `Details` (`38` section 3.3): Name (first, optional), Address, Enabled. The Address shows the backend's `masked`,
- *  read-only and mono, with a ghost `Replace` at the row's end. `Replace` unlocks it as an EMPTY password field (never
- *  prefilled: the address is never shown back) and disables itself with `Type the new value, then Save.`; left empty,
- *  nothing is sent. Masking is display only: the stored address changes only when a new one is saved. */
+/** `Details` (`38` section 3.3): Name (first), Address, Enabled. The Address shows the backend's `masked` (a file
+ *  playlist, its file name), read-only and mono, with a ghost `Replace` at the row's end. `Replace` unlocks it as an EMPTY
+ *  password field (never prefilled: the address is never shown back) and disables itself with `Type the new value, then
+ *  Save.`; left empty, nothing is sent. For a file playlist `Replace` is disabled: it has no web address, so the file is
+ *  imported again. Masking is display only: the stored address changes only when a new one is saved. */
 export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }: PlaylistDetailsGroupProps) {
   const locked = !draft.replacing;
-  const reason = replaceReason(draft);
+  const reason = replaceReason(draft, playlist);
   const replace = (
     <Button variant="ghost" reason={reason} onClick={() => onChange(startReplace(draft))}>
       <Link aria-hidden /> Replace
@@ -50,14 +52,14 @@ export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }
       </Row>
       <Row
         label="Address"
-        tip={ADDRESS_TIP}
+        tip={playlist.kind === "file" ? FILE_ADDRESS_TIP : ADDRESS_TIP}
         error={errors["address"]}
         trailing={reason === undefined ? <Tooltip text={REPLACE_TITLE}>{replace}</Tooltip> : replace}
       >
         {locked ? (
           <Input
             type="text"
-            value={playlist.masked}
+            value={sourceOf(playlist)}
             readOnly
             className={`${FIELD_CONTROL} font-mono text-faint`}
             aria-label="Address"

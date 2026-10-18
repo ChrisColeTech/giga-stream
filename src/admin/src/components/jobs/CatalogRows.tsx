@@ -6,6 +6,7 @@ import type { JobKind, JobScope } from "@/lib/job-draft";
 const SCOPES = [
   { value: "trending", label: "Trending" },
   { value: "popular", label: "Popular" },
+  { value: "discover", label: "Discover" },
 ] as const;
 const KINDS = [
   { value: "movie", label: "Movies" },
@@ -18,17 +19,20 @@ export interface CatalogRowsProps {
   readonly onChange: (patch: { scope?: JobScope; kind?: JobKind }) => void;
 }
 
-/** A catalog job's two rows, the same on the New form and in Details: Scope (Trending / Popular) and Kind (Movies /
- *  Series), each a field-size Segmented spanning the row. They are rendered only for a catalog job. */
+/** A catalog job's rows, the same on the New form and in Details: Scope (Trending / Popular / Discover) and Kind (Movies /
+ *  Series), each a field-size Segmented spanning the row. A discover walk covers both kinds, so it has no Kind row. They
+ *  are rendered only for a catalog job. */
 export function CatalogRows({ scope, kind, onChange }: CatalogRowsProps) {
   return (
     <>
       <Row label="Scope" tip={SCOPE_TIP}>
         <Segmented options={SCOPES} value={scope} aria-label="Scope" onChange={(next) => onChange({ scope: next })} />
       </Row>
-      <Row label="Kind" tip={KIND_TIP}>
-        <Segmented options={KINDS} value={kind} aria-label="Kind" onChange={(next) => onChange({ kind: next })} />
-      </Row>
+      {scope !== "discover" && (
+        <Row label="Kind" tip={KIND_TIP}>
+          <Segmented options={KINDS} value={kind} aria-label="Kind" onChange={(next) => onChange({ kind: next })} />
+        </Row>
+      )}
     </>
   );
 }

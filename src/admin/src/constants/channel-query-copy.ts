@@ -9,18 +9,22 @@ export interface QueryOption<V extends string> {
 }
 
 export const SEARCH_LABEL = "Search channels";
-export const SEARCH_TIP = "Searches name, number, tvg-id and source. Press Enter.";
+export const SEARCH_TIP = "Searches name, number, tvg-id and the playlist's name and host. Press Enter.";
 export const SORT_LABEL = "Sort by";
 export const KIND_LABEL = "Kind";
 export const STATE_LABEL = "State";
 export const ORIGIN_LABEL = "Origin";
 export const ENABLED_LABEL = "Enabled";
+export const PLAYLIST_LABEL = "Playlist";
+/** The most playlist names the Playlist select lists (the one chosen is always listed). */
+export const PLAYLIST_OPTIONS_MAX = 20;
+export const ALL_PLAYLISTS = "All playlists";
 
 export const SORT_OPTIONS: readonly QueryOption<ChannelSortKey>[] = [
   { value: "name", label: "Name" },
   { value: "category", label: "Category" },
   { value: "kind", label: "Kind" },
-  { value: "source", label: "Source" },
+  { value: "playlist", label: "Playlist" },
 ];
 
 export const KIND_OPTIONS: readonly QueryOption<KindFilter>[] = [

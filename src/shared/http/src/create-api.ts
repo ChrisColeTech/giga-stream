@@ -54,13 +54,17 @@ export function createApi<Area extends string>(config: ApiConfig<Area>): ApiClie
 
   function init(method: HttpMethod, options: RequestOptions<Area>): RequestInit {
     const headers: Record<string, string> = { ...config.headers?.() };
-    if (options.body !== undefined) headers["content-type"] = JSON_TYPE;
+    if (options.body !== undefined && options.form === undefined) headers["content-type"] = JSON_TYPE;
     return {
       method,
       signal: options.signal,
       headers,
       ...(options.keepalive === true && { keepalive: true }),
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.form !== undefined
+        ? { body: options.form }
+        : options.body === undefined
+          ? {}
+          : { body: JSON.stringify(options.body) }),
     };
   }
 

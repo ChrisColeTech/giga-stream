@@ -1,15 +1,14 @@
 import { Activity } from "lucide-react";
-import type { ReactNode } from "react";
-import { InlineLink } from "@giga/ui/controls/InlineLink";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
-import { CHANNELS_TIP, HOST_TIP, LAST_SYNCED_TIP, OUTCOME_TIP } from "@/constants/playlist-copy";
-import type { PlaylistChannels } from "@/hooks/usePlaylistChannels";
+import {
+  CHANNELS_TIP, FILE_NAME_TIP, HOST_TIP, LAST_RUN_TIP, RESULT_TIP, SOURCE_FILE, SOURCE_TYPE_TIP, SOURCE_URL,
+} from "@/constants/playlist-copy";
 import { formatWhen } from "@/lib/format-when";
-import { openPlaylistChannel } from "@/lib/open-playlist-channel";
+import { countsText } from "@/lib/playlist-counts";
+import { runWords } from "@/lib/run-words";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
-import { useAppStore } from "@/store/app-store";
 
 const FACT = "flex h-9 min-w-0 items-center font-mono text-sm text-muted";
 
@@ -22,52 +21,38 @@ function Shimmer({ width = "40%" }: { readonly width?: string }) {
   );
 }
 
-export interface PlaylistStatusGroupProps {
-  readonly playlist: AdminPlaylist;
-  /** The channels read for its host (`usePlaylistChannels`). */
-  readonly channels: PlaylistChannels;
-}
-
-/** `Status` (`38` section 3.3), read-only: Host, the Channels synced from it (each a link that opens the channel on the
- *  Channels tab), Last synced (local time or `never`), Outcome. No sync verb here: syncing is a Jobs matter. The
- *  channels are read through the channels service; until it answers, or when it refuses, shimmer lines stand in their place. */
-export function PlaylistStatusGroup({ playlist, channels }: PlaylistStatusGroupProps) {
-  const requestTab = useAppStore((state) => state.requestTab);
-  const channelRemember = useAppStore((state) => state.channelRemember);
-  const store = { requestTab, channelRemember };
-  let list: ReactNode = (
-    <span className="flex w-full flex-col">
-      <Shimmer width="46%" />
-      <Shimmer width="32%" />
-    </span>
-  );
-  if (channels.status === "ready" && channels.items.length > 0) {
-    list = (
-      <ul className="m-0 flex list-none flex-col gap-1 p-0 py-2" aria-label="Channels from this playlist">
-        {channels.items.map((channel) => (
-          <li key={channel.id}>
-            <InlineLink onClick={() => openPlaylistChannel(channel, store)}>{channel.name}</InlineLink>
-          </li>
-        ))}
-      </ul>
-    );
-  }
+/** `Status` (`38` section 3.3, `43` section 4.1), read-only: the Host (a file playlist, its File), the Source type (`File`
+ *  or `Web address`), the Channels counts line (`2,598 channels · 0 enabled · 1,904 live · 640 dead`), the Last run time
+ *  and the run in words, built here from the job's typed result. No sync verb and no channel list here: syncing is a Jobs
+ *  matter, and the toolbar's `Channels →` opens this playlist's channels. */
+export function PlaylistStatusGroup({ playlist }: { readonly playlist: AdminPlaylist }) {
+  const words = runWords(playlist.lastResult, playlist.lastCounts);
+  const file = playlist.kind === "file";
   return (
     <Group id="pw-status" icon={Activity} title="Status" last>
-      <Row label="Host" tip={HOST_TIP}>
-        <span className={FACT}>{playlist.host}</span>
+      {file ? (
+        <Row label="File" tip={FILE_NAME_TIP}>
+          <span className={FACT}>{playlist.fileName ?? playlist.name}</span>
+        </Row>
+      ) : (
+        <Row label="Host" tip={HOST_TIP}>
+          <span className={FACT}>{playlist.host ?? ""}</span>
+        </Row>
+      )}
+      <Row label="Source type" tip={SOURCE_TYPE_TIP}>
+        <span className={FACT}>{file ? SOURCE_FILE : SOURCE_URL}</span>
       </Row>
-      <Row label="Channels" tip={CHANNELS_TIP} align="start">
-        {list}
+      <Row label="Channels" tip={CHANNELS_TIP}>
+        <span className={FACT}>{countsText(playlist)}</span>
       </Row>
-      <Row label="Last synced" tip={LAST_SYNCED_TIP}>
-        <span className={FACT}>{formatWhen(playlist.lastSyncedAt)}</span>
+      <Row label="Last run" tip={LAST_RUN_TIP}>
+        <span className={FACT}>{formatWhen(playlist.lastRunAt)}</span>
       </Row>
-      <Row label="Outcome" tip={OUTCOME_TIP}>
-        {playlist.lastOutcome === undefined ? (
+      <Row label="Result" tip={RESULT_TIP}>
+        {words === undefined ? (
           <Shimmer />
         ) : (
-          <span className="flex min-h-9 items-center py-2 text-sm text-muted">{playlist.lastOutcome}</span>
+          <span className="flex min-h-9 items-center py-2 text-sm text-muted">{words}</span>
         )}
       </Row>
     </Group>

@@ -6,12 +6,14 @@ import { LOADING_REASON } from "@/constants/channel-copy";
 import { QUERY_BUSY_REASON } from "@/constants/channel-query-copy";
 import { useChannelActions } from "@/hooks/useChannelActions";
 import type { ChannelBulk } from "@/hooks/useChannelBulk";
+import { useQueryPlaylists } from "@/hooks/useQueryPlaylists";
+import { playlistChoices } from "@/lib/channel-playlist-options";
 import { useAppStore } from "@/store/app-store";
 import { ChannelQueryRow } from "./ChannelQueryRow";
 import { ChannelRows } from "./ChannelRows";
 
 /** `Channels`: the list group. Its first row (`01` section 9, LoRA Studio `LibraryToolbar`) opens with the search field,
- *  the Sort select and the Kind, State, Origin and Enabled selects, then `Refresh` (it drops the pages and the window
+ *  the Sort select and the Kind, State, Origin, Playlist and Enabled selects, then `Refresh` (it drops the pages and the window
  *  reads what it shows again, keeping its place: the only way a `preparing` row is seen `live`, since nothing polls;
  *  disabled with `Loading.` while a read runs), then `Enable`, `Disable`, `Rebuild` and the armed `Delete`, always drawn
  *  and disabled with their reason until a row is ticked; on the right `Select all M matching` once every loaded row is
@@ -21,6 +23,7 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
   const { status, query, total, items, ticked, resolving } = useAppStore((state) => state.channels);
   const tickAll = useAppStore((state) => state.channelsTickAll);
   const { flows, track } = useChannelActions();
+  const playlists = useQueryPlaylists();
   const reason = status === "loading" ? LOADING_REASON : undefined;
   const ids = items.map((item) => item.id);
   const selection = { mode: "ids" as const, ids: new Set(ticked) };
@@ -38,6 +41,7 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
       query={
         <ChannelQueryRow
           query={query}
+          playlists={playlistChoices(playlists, query.playlist)}
           onQuery={(next) => void flows.setQuery(next)}
           reason={bulk.working ? QUERY_BUSY_REASON : undefined}
         />

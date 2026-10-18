@@ -2,6 +2,7 @@ import type { AdminJob, CatalogJobConfig, PlaylistJobConfig } from "@/services/s
 import { formatWhen } from "./format-when";
 import { scheduleLabel } from "./job-schedule";
 import { jobState, type RowState } from "./row-state";
+import { runWords } from "./run-words";
 
 /* A job as pure data (`38` section 4.2): its config narrowed by type, whether its last run failed, and the row a list
  * draws. No React, no store. */
@@ -14,28 +15,21 @@ export function catalogConfigOf(job: AdminJob): CatalogJobConfig | null {
   return job.type === "catalog" && "scope" in job.config ? job.config : null;
 }
 
-export const playlistIdOf = (job: AdminJob): number | null => playlistConfigOf(job)?.playlistId ?? null;
+export const playlistIdOf = (job: AdminJob): number | null => job.playlistId ?? playlistConfigOf(job)?.playlistId ?? null;
 
-/** The catalog sync's own success word (`title-sync.ts`). */
-const CATALOG_OK = "ok";
-
-/** The last run failed: a playlist run that failed keeps its sentence and no counts; a catalog run's outcome is `ok` or
- *  the reason it failed. A job that never ran has not failed. */
-export function lastRunFailed(job: AdminJob): boolean {
-  if (job.lastRunAt === undefined) return false;
-  if (job.type === "playlist") return job.lastCounts === undefined;
-  return job.lastOutcome !== undefined && job.lastOutcome !== CATALOG_OK;
-}
+/** The last run failed: the backend records `failed` as a result of its own, never inferred from a missing field. A job
+ *  that never ran has not failed. */
+export const lastRunFailed = (job: AdminJob): boolean => job.lastRunAt !== undefined && job.lastResult === "failed";
 
 export const stateOfJob = (job: AdminJob): RowState =>
   jobState({ enabled: job.enabled, running: job.running, failed: lastRunFailed(job) });
 
-const KIND_WORD: Readonly<Record<CatalogJobConfig["kind"], string>> = { movie: "movies", tv: "series" };
+const KIND_WORD: Readonly<Record<NonNullable<CatalogJobConfig["kind"]>, string>> = { movie: "movies", tv: "series" };
 
-/** What the job syncs: the playlist's name, or the scope and kind (`trending movies`). */
+/** What the job syncs: the playlist's name, or the scope and kind (`trending movies`; a discover walk covers both). */
 export function targetOf(job: AdminJob): string {
   const catalog = catalogConfigOf(job);
-  if (catalog !== null) return `${catalog.scope} ${KIND_WORD[catalog.kind]}`;
+  if (catalog !== null) return catalog.kind === undefined ? catalog.scope : `${catalog.scope} ${KIND_WORD[catalog.kind]}`;
   return job.playlistName ?? `playlist ${playlistIdOf(job) ?? ""}`.trim();
 }
 
@@ -63,7 +57,7 @@ export function jobRow(job: AdminJob): JobRowView {
     target: targetOf(job),
     schedule: scheduleLabel(job.schedule),
     lastRun: formatWhen(job.lastRunAt),
-    outcome: job.lastOutcome ?? "",
+    outcome: runWords(job.lastResult, job.lastCounts) ?? "",
     state: stateOfJob(job),
   };
 }

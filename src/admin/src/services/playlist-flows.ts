@@ -1,21 +1,23 @@
 import { AUDIT_AFTER_WRITE, AUDIT_PAGE } from "@/constants/audit-limits";
 import {
+  FILE_REQUIRED,
   PLAYLIST_GONE,
   SYNC_NO_JOB,
-  playlistCreated,
   playlistDeleted,
+  playlistImported,
   playlistSaved,
   unreadablePlaylists,
 } from "@/constants/playlist-copy";
 import type { BulkItem } from "@/lib/bulk-plan";
 import { jobForPlaylists, type PlaylistBulkVerb } from "@/lib/playlist-bulk";
-import { changedFields, createBody, isEmptyPatch } from "@/lib/playlist-body";
+import { changedFields, isEmptyPatch, urlBody } from "@/lib/playlist-body";
 import {
   firstRefusal, newAddressOf, type NewPlaylistDraft, type PlaylistDraft, type PlaylistField,
 } from "@/lib/playlist-draft";
 import {
-  BAD_ANSWER, DROPPED, codeOf, done, fieldOf, isUnreachable, sentenceOf, type FlowRefused, type FlowResult,
+  BAD_ANSWER, DROPPED, codeOf, done, isUnreachable, sentenceOf, type FlowRefused, type FlowResult,
 } from "@/lib/playlist-flow-result";
+import { playlistRowOf } from "@/lib/playlist-field";
 import { findById } from "@/lib/playlist-rows";
 import type { AppState } from "@/store/app-store";
 import type { JobsService } from "./jobs";
@@ -30,7 +32,7 @@ export type PlaylistStore = Pick<
 >;
 
 export interface PlaylistFlowDeps {
-  readonly service: Pick<PlaylistsService, "list" | "create" | "update" | "remove">;
+  readonly service: Pick<PlaylistsService, "list" | "create" | "importFile" | "update" | "remove">;
   /** The jobs service: its list for `Sync now`'s reasons, its `run` for `Sync now` itself. Never the Jobs slice. */
   readonly jobs: Pick<JobsService, "list" | "run">;
   readonly store: () => PlaylistStore;
@@ -42,20 +44,22 @@ export type PlaylistResult<T = undefined> = FlowResult<T, PlaylistField>;
 export interface PlaylistFlows {
   load: () => Promise<PlaylistResult>;
   refresh: () => Promise<PlaylistResult>;
-  create: (draft: NewPlaylistDraft) => Promise<PlaylistResult>;
+  /** The one import: a chosen file as multipart, or a web address as JSON. Creates the playlist and every channel. */
+  importPlaylist: (draft: NewPlaylistDraft) => Promise<PlaylistResult>;
   save: (id: number, draft: PlaylistDraft) => Promise<PlaylistResult<AdminPlaylist | null>>;
   remove: (id: number) => Promise<PlaylistResult>;
   /** One bulk verb's single-record call (`39` section 6): null on success, the failure's sentence otherwise. Delete
-   *  adds each answer's `released` to `tally`. */
-  bulkCall: (verb: PlaylistBulkVerb, tally: { released: number }) => (item: BulkItem<number>) => Promise<string | null>;
+   *  adds each answer's `deletedChannels` and `deletedJobs` to `tally`. */
+  bulkCall: (
+    verb: PlaylistBulkVerb,
+    tally: { channels: number; jobs: number },
+  ) => (item: BulkItem<number>) => Promise<string | null>;
 }
 
-const FIELDS: readonly PlaylistField[] = ["name", "address", "enabled"];
-
-/** The Playlists tab's orchestration (`38` section 3). Each flow records the session's serial before it awaits and
- *  writes only if the session is unchanged after; a failure is said once as a `warn` notice and returned typed, so the
- *  form puts a field's refusal under its row. The address goes to the service and nowhere else: never a notice, the store or an
- *  error of this module (the backend's sentence for a bad address does not repeat it). */
+/** The Playlists tab's orchestration (`38` section 3, `43` section 3.2). Each flow records the session's serial before
+ *  it awaits and writes only if the session is unchanged after; a failure is said once as a `warn` notice and returned
+ *  typed, so the form puts a field's refusal under its row. The address goes to the service and nowhere else: never a
+ *  notice, the store or an error of this module (the backend's sentence for a bad address does not repeat it). */
 export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
   const { service, jobs, store, audit } = deps;
   const alive = (serial: number): boolean => store().signedIn && store().serial === serial;
@@ -67,7 +71,7 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
   };
   const refused = (error: unknown): FlowRefused<PlaylistField> => {
     if (isUnreachable(error)) store().playlistsMarkUnreachable(true);
-    return refuse(sentenceOf(error), fieldOf(error, FIELDS));
+    return refuse(sentenceOf(error), playlistRowOf(error));
   };
   /** A write whose answer could not be read may still have happened: read the list again. */
   const failed = (error: unknown): FlowRefused<PlaylistField> => {
@@ -92,16 +96,21 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
     return done(undefined);
   }
 
-  async function create(draft: NewPlaylistDraft): Promise<PlaylistResult> {
-    const bad = firstRefusal(draft.name, draft.address);
+  async function importPlaylist(draft: NewPlaylistDraft): Promise<PlaylistResult> {
+    const { file } = draft;
+    if (draft.source === "file" && file === null) return refuse(FILE_REQUIRED, "file");
+    const bad = draft.source === "url" ? firstRefusal("", draft.address.trim()) : null;
     if (bad !== null) return refuse(bad.sentence, bad.field);
     const serial = store().serial;
     try {
-      const playlist = await service.create(createBody(draft));
+      const answer = await (file !== null && draft.source === "file"
+        ? service.importFile(file)
+        : service.create(urlBody(draft)));
       if (!alive(serial)) return DROPPED;
-      store().playlistUpsert(playlist);
+      store().playlistUpsert(answer.playlist);
+      store().markStale("channels");
       store().markStale("jobs");
-      say(playlistCreated(playlist.name));
+      say(playlistImported(answer.playlist.name, answer.created, answer.imported));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
     } catch (error: unknown) {
@@ -128,6 +137,7 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
       if (!alive(serial)) return DROPPED;
       store().playlistUpsert(playlist);
       store().markStale("jobs");
+      store().markStale("channels");
       say(playlistSaved(playlist.name));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(playlist);
@@ -148,7 +158,7 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
       if (store().workspaces.playlists === String(id)) store().closeWorkspace("playlists");
       store().markStale("jobs");
       store().markStale("channels");
-      say(playlistDeleted(playlist.name, answer.released));
+      say(playlistDeleted(playlist.name, { channels: answer.deletedChannels }));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
     } catch (error: unknown) {
@@ -161,7 +171,9 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
   const bulkCall: PlaylistFlows["bulkCall"] = (verb, tally) => async (item) => {
     try {
       if (verb === "delete") {
-        tally.released += (await service.remove(item.id)).released;
+        const answer = await service.remove(item.id);
+        tally.channels += answer.deletedChannels;
+        tally.jobs += answer.deletedJobs;
         store().playlistRemove(item.id);
       } else if (verb === "sync") {
         const link = store().playlists.jobFor[item.id];
@@ -182,5 +194,5 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
     return result;
   };
 
-  return { load, refresh, create, save, remove, bulkCall };
+  return { load, refresh, importPlaylist, save, remove, bulkCall };
 }

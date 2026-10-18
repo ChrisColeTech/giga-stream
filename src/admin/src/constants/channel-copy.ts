@@ -30,6 +30,7 @@ export const CHANNEL_LABELS = [
   "Renditions",
   "Playlist",
   "Synced from",
+  "Published",
   "Revision",
 ] as const;
 
@@ -50,7 +51,9 @@ export const STREAM_SECTION_IDS: readonly string[] = STREAM_SECTIONS.map((sectio
 
 /** Tooltips at rest and disabled reasons (shown as the control's tooltip). */
 export const DELETE_TIP = "Delete this channel permanently";
-export const DELETE_SYNCED_TIP ="The next sync adds it again. Disable it to keep it off.";
+export const DELETE_SYNCED_TIP ="The playlist adds it again the next time it is imported or synced. Disable it to keep it off.";
+/** The word `held` on an enabled channel whose playlist is disabled: players do not read it until the playlist is on. */
+export const HELD_HINT = "Enabled, but its playlist is disabled, so players do not read it.";
 export const REBUILD_DISABLED = "Enable the channel to rebuild it.";
 export const STREAM_NO_REBUILD = "A stream channel has nothing to rebuild.";
 export const REVERT_HAND_MADE = "This channel was made by hand; there is nothing to revert.";

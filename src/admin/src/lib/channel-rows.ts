@@ -18,8 +18,8 @@ export interface ChannelRowView {
   readonly deleteTip: string | undefined;
 }
 
-/** Is this a stream row a playlist sync created? It carries the playlist host as its `source`. */
-export const isSynced = (channel: AdminChannel): boolean => channel.kind === "stream" && channel.source !== undefined;
+/** Is this a stream row a playlist made? It carries its playlist's id (the foreign key), never the derived `source`. */
+export const isSynced = (channel: AdminChannel): boolean => channel.kind === "stream" && channel.playlistId !== undefined;
 
 export function channelRow(channel: AdminChannel): ChannelRowView {
   const base = {
@@ -32,14 +32,15 @@ export function channelRow(channel: AdminChannel): ChannelRowView {
     return {
       ...base,
       kind: "Live",
-      state: channelState({ enabled: channel.enabled, state: channel.state }),
+      state: channelState({ enabled: channel.enabled, published: channel.published, state: channel.state }),
       mode: MODE_LABEL[channel.mode],
       nowPlaying: channel.nowPlaying?.name ?? "",
     };
   }
   const edited = (channel.editedFields ?? []).length > 0;
-  const origin = channel.source === undefined ? "manual" : edited ? "edited" : "synced";
-  return { ...base, kind: "Stream", state: channelState({ enabled: channel.enabled, origin }), mode: "", nowPlaying: "" };
+  const origin = channel.playlistId === undefined ? "manual" : edited ? "edited" : "synced";
+  const state = channelState({ enabled: channel.enabled, published: channel.published, origin });
+  return { ...base, kind: "Stream", state, mode: "", nowPlaying: "" };
 }
 
 /** The rows in the order the list shows them: by name (there is no guide, so no number: owner, 2026-10-17). */

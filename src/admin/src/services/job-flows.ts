@@ -1,10 +1,10 @@
 import { AUDIT_AFTER_WRITE, AUDIT_PAGE } from "@/constants/audit-limits";
-import { JOB_GONE, jobCreated, jobDeleted, jobRan, jobSaved, jobStarted, unreadableJobs } from "@/constants/job-copy";
+import { JOB_GONE, jobCreated, jobDeleted, jobSaved, jobStarted, unreadableJobs } from "@/constants/job-copy";
 import type { BulkItem } from "@/lib/bulk-plan";
 import type { JobBulkVerb } from "@/lib/job-bulk";
 import { changedFields, createBody, isEmptyPatch } from "@/lib/job-body";
 import { JOB_FIELDS, firstCreateRefusal, firstSaveRefusal, type JobField } from "@/lib/job-checks";
-import type { JobDraft, NewJobDraft, RunToggles } from "@/lib/job-draft";
+import type { JobDraft, NewJobDraft } from "@/lib/job-draft";
 import { catalogConfigOf, runningCount } from "@/lib/job-rows";
 import {
   BAD_ANSWER, DROPPED, codeOf, done, fieldOf, isUnreachable, sentenceOf, type FlowRefused, type FlowResult,
@@ -36,11 +36,12 @@ export type JobResult<T = undefined> = FlowResult<T, JobField>;
 export interface JobFlows {
   load: () => Promise<JobResult>;
   refresh: () => Promise<JobResult>;
-  create: (draft: NewJobDraft, playlistId: string) => Promise<JobResult>;
+  /** A catalog job: a playlist's job is made with the playlist. */
+  create: (draft: NewJobDraft) => Promise<JobResult>;
   save: (id: number, draft: JobDraft) => Promise<JobResult<AdminJob | null>>;
   remove: (id: number) => Promise<JobResult>;
-  /** `Run job` on one job; a playlist job sends `toggles` as the once-only override. A refusal sits under `run`. */
-  run: (id: number, toggles?: RunToggles) => Promise<JobResult>;
+  /** `Run job` on one job: STARTED, not awaited. The result is read on Refresh. A refusal sits under `run`. */
+  run: (id: number) => Promise<JobResult>;
   /** One bulk verb's single-record call: null on success, the failure's sentence otherwise. */
   bulkCall: (verb: JobBulkVerb) => (item: BulkItem<number>) => Promise<string | null>;
 }
@@ -90,12 +91,12 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
     return done(undefined);
   }
 
-  async function create(draft: NewJobDraft, playlistId: string): Promise<JobResult> {
+  async function create(draft: NewJobDraft): Promise<JobResult> {
     const bad = firstCreateRefusal(draft);
     if (bad !== null) return refuse(bad.sentence, bad.field);
     const serial = store().serial;
     try {
-      const job = await service.create(createBody(draft, playlistId));
+      const job = await service.create(createBody(draft));
       if (!alive(serial)) return DROPPED;
       upsert(job);
       say(jobCreated(job.name));
@@ -152,18 +153,16 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
     }
   }
 
-  async function run(id: number, toggles?: RunToggles): Promise<JobResult> {
-    const job = findById(store().jobs.items, id);
-    if (job === undefined) return gone();
+  async function run(id: number): Promise<JobResult> {
+    if (findById(store().jobs.items, id) === undefined) return gone();
     if (pressed.has(id)) return done(undefined);
     pressed.add(id);
     const serial = store().serial;
     try {
-      const answer = await service.run(id, job.type === "playlist" ? toggles : undefined);
+      const answer = await service.run(id);
       if (!alive(serial)) return DROPPED;
       upsert(answer);
-      say(answer.running ? jobStarted(answer.name) : jobRan(answer.name, answer.lastOutcome));
-      if (answer.type === "playlist") for (const tab of ["playlists", "channels"] as const) store().markStale(tab);
+      say(jobStarted(answer.name));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
     } catch (error: unknown) {

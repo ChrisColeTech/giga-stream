@@ -3,17 +3,12 @@ import { beforeEach, describe, it } from "node:test";
 import { selectAll } from "@/lib/playlist-rows";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { useAppStore } from "@/store/app-store";
+import { playlist } from "./support/run-kit";
 import { resetStore } from "./support/store";
 
 const state = () => useAppStore.getState();
-const row = (id: number, enabled = true): AdminPlaylist => ({
-  id,
-  name: `List ${id}`,
-  host: `h${id}.test`,
-  masked: `h${id}.test/…`,
-  enabled,
-  channels: id,
-});
+const row = (id: number, enabled = true): AdminPlaylist =>
+  playlist(id, { host: `h${id}.test`, masked: `https://h${id}.test/…`, enabled, channels: id });
 
 beforeEach(() => resetStore());
 

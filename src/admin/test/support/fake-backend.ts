@@ -10,6 +10,8 @@ export interface Call {
   readonly method: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: unknown;
+  /** A multipart body, as the request layer sent it (`form` option); absent for JSON. */
+  readonly form?: FormData;
 }
 
 export type Handler = (call: Call) => Response | Promise<Response>;
@@ -37,7 +39,8 @@ export function scripted(handler: Handler): { fetch: FetchLike; calls: Call[] } 
   const fetch: FetchLike = async (input, init) => {
     const headers = Object.fromEntries(Object.entries((init?.headers as Record<string, string> | undefined) ?? {}));
     const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-    const call: Call = { url: input, method: init?.method ?? "GET", headers, body };
+    const form = init?.body instanceof FormData ? init.body : undefined;
+    const call: Call = { url: input, method: init?.method ?? "GET", headers, body, ...(form && { form }) };
     calls.push(call);
     return handler(call);
   };

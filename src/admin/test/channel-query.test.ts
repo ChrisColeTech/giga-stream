@@ -7,6 +7,8 @@ import {
   pagePath,
   pressHeading,
   queryKey,
+  queryOfPlaylist,
+  withPlaylist,
   withDirection,
   withFilter,
   withSearch,
@@ -24,11 +26,12 @@ describe("the Channels query builder (the contract of docs/41 section 3.1)", () 
   });
 
   it("carries every set parameter by its backend name", () => {
-    const query = { ...DEFAULT_CHANNEL_QUERY, q: "bbc one", kind: "stream", origin: "synced", enabled: "false", source: "lists.example", sort: "source", dir: "desc" } as const;
+    const query = { ...DEFAULT_CHANNEL_QUERY, q: "bbc one", kind: "stream", origin: "synced", enabled: "false", playlist: "7", sort: "playlist", dir: "desc" } as const;
     assert.deepEqual(params(pagePath(query, 1)), {
       limit: "100", offset: "100", q: "bbc one", kind: "stream", origin: "synced", enabled: "false",
-      source: "lists.example", sort: "source", dir: "desc",
+      playlist: "7", sort: "playlist", dir: "desc",
     });
+    assert.equal("source" in params(pagePath(query, 1)), false, "the old source filter is gone");
     assert.deepEqual(params(pagePath({ ...DEFAULT_CHANNEL_QUERY, kind: "live", state: "failed" }, 0)).state, "failed");
   });
 
@@ -72,9 +75,21 @@ describe("the Channels query builder (the contract of docs/41 section 3.1)", () 
       queryKey(withFilter(DEFAULT_CHANNEL_QUERY, "kind", "live")),
       queryKey(withFilter(DEFAULT_CHANNEL_QUERY, "enabled", "true")),
       queryKey(withDirection(DEFAULT_CHANNEL_QUERY, "desc")),
-      queryKey({ ...DEFAULT_CHANNEL_QUERY, source: "h" }),
+      queryKey(withPlaylist(DEFAULT_CHANNEL_QUERY, "3")),
     ]);
     assert.equal(keys.size, 6);
     assert.equal(isDefaultQuery(withSearch(DEFAULT_CHANNEL_QUERY, "x")), false);
+  });
+
+  it("the Playlist select narrows to one playlist's stream rows and goes back to all; Channels → starts from the default", () => {
+    const live = withFilter(DEFAULT_CHANNEL_QUERY, "state", "failed");
+    const narrowed = withPlaylist(live, "4");
+    assert.deepEqual([narrowed.playlist, narrowed.kind, narrowed.state], ["4", "all", "all"]);
+    assert.equal(withPlaylist(narrowed, "").playlist, "");
+    assert.equal(withFilter(narrowed, "kind", "live").playlist, "", "a live kind has no playlist");
+    assert.equal(withFilter(narrowed, "state", "live").playlist, "");
+    const opened = queryOfPlaylist(12);
+    assert.deepEqual(opened, { ...DEFAULT_CHANNEL_QUERY, playlist: "12" });
+    assert.equal(params(pagePath(opened, 0))["playlist"], "12");
   });
 });

@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { ChannelQueryRow } from "@/components/channels/ChannelQueryRow";
 import { ChannelRows } from "@/components/channels/ChannelRows";
 import { ChannelsIndex } from "@/components/channels/ChannelsIndex";
+import { playlistChoices } from "@/lib/channel-playlist-options";
 import { DEFAULT_CHANNEL_QUERY, queryKey } from "@/lib/channel-query";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
@@ -32,16 +33,16 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
     const html = firstRow();
     const at = (needle: string): number => html.indexOf(needle);
     assert.ok(html.startsWith('role="search"') && at('role="search"') < at('aria-label="Channels table"'));
-    const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Enabled"', 'title="Refresh channels"'];
+    const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Playlist"', 'aria-label="Enabled"', 'title="Refresh channels"'];
     assert.ok(order.every((needle, i) => at(needle) > (i === 0 ? -1 : at(order[i - 1] ?? ""))), order.map(at).join());
-    assert.equal(count(html, "<select"), 5);
+    assert.equal(count(html, "<select"), 6);
   });
 
-  it("is a search with a leading icon that runs on Enter, and a sort SELECT (Name, Category, Kind, Source) with a direction", () => {
+  it("is a search with a leading icon that runs on Enter, and a sort SELECT (Name, Category, Kind, Playlist) with a direction", () => {
     const html = firstRow();
     assert.ok(/<input[^>]*type="search"[^>]*data-search=""/.test(html) && html.includes("lucide-search"));
     const sort = html.slice(html.indexOf('aria-label="Sort by"'), html.indexOf("</select>", html.indexOf('aria-label="Sort by"')));
-    assert.deepEqual([...sort.matchAll(/>([A-Za-z]+)<\/option>/g)].map((m) => m[1]), ["Name", "Category", "Kind", "Source"]);
+    assert.deepEqual([...sort.matchAll(/>([A-Za-z]+)<\/option>/g)].map((m) => m[1]), ["Name", "Category", "Kind", "Playlist"]);
     assert.ok(html.includes('aria-label="Ascending. Sort direction"'));
   });
 
@@ -51,6 +52,18 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
       const from = html.indexOf(`aria-label="${label}"`);
       assert.ok(html.slice(from, html.indexOf("</select>", from)).includes(`<option value="all" selected="">${all}</option>`), label);
     }
+    const playlist = html.indexOf('aria-label="Playlist"');
+    assert.ok(html.slice(playlist, html.indexOf("</select>", playlist)).includes('<option value="" selected="">All playlists</option>'));
+  });
+
+  it("lists the playlist names after All playlists, at most twenty, and always the one the query holds", () => {
+    const row = (name: string, id: number) => ({ id, name, kind: "url", enabled: true, channels: 1, enabledChannels: 0, live: 0, dead: 0 }) as const;
+    const many = Array.from({ length: 25 }, (_, i) => row(`List ${i + 1}`, i + 1));
+    const labels = (selected: string) => playlistChoices(many, selected).map((one) => one.label);
+    assert.equal(labels("").length, 21);
+    assert.deepEqual(labels("").slice(0, 3), ["All playlists", "List 1", "List 2"]);
+    assert.equal(labels("24").at(-1), "List 24", "a chosen playlist beyond the twenty is still listed");
+    assert.equal(playlistChoices([], "9").at(-1)?.label, "Playlist 9");
   });
 
   it("has no chip rows, no labelled form rows, no placeholder text and no text under the controls", () => {
@@ -61,10 +74,14 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
 
   it("waits while a bulk run is going: every control is disabled, the reason its tooltip", () => {
     const row = (reason?: string) =>
-      renderLive(createElement(ChannelQueryRow, { query: DEFAULT_CHANNEL_QUERY, onQuery: () => undefined, reason }));
+      renderLive(
+        createElement(ChannelQueryRow, {
+          query: DEFAULT_CHANNEL_QUERY, onQuery: () => undefined, playlists: playlistChoices([], ""), reason,
+        }),
+      );
     const waiting = row("Working.");
-    assert.equal(count(waiting, 'disabled=""'), 7, "search, sort, four filters and the direction are natively disabled");
-    assert.equal(count(waiting, 'title="Working."'), 11, "the search, and each select and the span a disabled select hovers through");
+    assert.equal(count(waiting, 'disabled=""'), 8, "search, sort, five filters and the direction are natively disabled");
+    assert.equal(count(waiting, 'title="Working."'), 13, "the search, and each select and the span a disabled select hovers through");
     assert.ok(!row().includes('disabled=""'));
   });
 });
