@@ -41,4 +41,10 @@ export const CollectionLibraryPageSchema = LibraryPageSchema.extend({
 
 export const ContinuePageSchema = z.object({ items: z.array(LibraryItemSchema) });
 
+/** `POST /api/library/refresh` (`03` section 5.1, `46` section C): the titles were synced; `readAt` is when. */
+export const LibraryRefreshSchema = z.object({
+  titlesAvailable: z.boolean(),
+  readAt: z.number().int().nonnegative().optional(),
+});
+
 export const FavoriteSchema = z.object({ ref: ItemRefSchema, favorite: z.boolean() });

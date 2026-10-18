@@ -4,9 +4,9 @@ import { categoryOptions, keyTarget, openingChannel, tabStopId } from "@/lib/liv
 import type { Channel } from "@/types/channel";
 
 const items: readonly Channel[] = [
-  { id: "news", name: "Fixture News", category: "News", number: "1", revision: 1, streamUrl: "https://stream.test/news.m3u8", status: "live" },
-  { id: "sports", name: "Court Side", category: "Sports", number: "2", revision: 1, streamUrl: "https://stream.test/sports.m3u8", status: "offline" },
-  { id: "desk", name: "Night Desk", category: "News", number: "3", revision: 1, streamUrl: "https://stream.test/desk.m3u8", status: "unknown" },
+  { id: "news", name: "Fixture News", category: "News", number: "1", revision: 1, streamUrl: "https://stream.test/news.m3u8" },
+  { id: "sports", name: "Court Side", category: "Sports", number: "2", revision: 1, streamUrl: "https://stream.test/sports.m3u8" },
+  { id: "desk", name: "Night Desk", category: "News", number: "3", revision: 1, streamUrl: "https://stream.test/desk.m3u8" },
 ];
 const categories = [{ value: "News", count: 2 }, { value: "Sports", count: 1 }];
 describe("categoryOptions", () => {

@@ -4,7 +4,6 @@ import { detailRows } from "@/lib/live-details";
 import { channelListRender } from "@/lib/live-channels";
 import { EMPTY_VALUE } from "@/lib/live-constants";
 import { objectFitOf, PICTURE_FIT_OPTIONS } from "@/lib/live-picture";
-import { statusBar, statusWord } from "@/lib/live-status";
 import { channelListUnavailable, stageStateFor } from "@/lib/live-stage";
 import type { Channel } from "@/types/channel";
 
@@ -15,22 +14,7 @@ const channel: Channel = {
   number: "1",
   revision: 1,
   streamUrl: "https://stream.test/news.m3u8",
-  status: "live",
 };
-
-describe("status bar", () => {
-  it("maps live to success, offline to error and an unprobed channel to inactive", () => {
-    assert.equal(statusBar("live"), "success");
-    assert.equal(statusBar("offline"), "error");
-    assert.equal(statusBar("unknown"), "inactive");
-  });
-
-  it("gives every status a word for the meta line", () => {
-    assert.equal(statusWord("live"), "Live");
-    assert.equal(statusWord("offline"), "Offline");
-    assert.equal(statusWord("unknown"), "Not checked");
-  });
-});
 
 describe("stage state", () => {
   it("is ready with channels and no channels when the list is empty", () => {

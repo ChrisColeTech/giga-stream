@@ -12,7 +12,7 @@ import { usePlayerSources } from "@/hooks/usePlayerSources";
 import { collectionRow } from "@/lib/collections-model";
 import { itemKey } from "@/lib/library-marks";
 import type { PlayerCommands } from "@/lib/player-commands";
-import { sourceFailureReason } from "@/lib/player-copy";
+import { BACKEND_UNREACHABLE_REASON, sourceFailureReason } from "@/lib/player-copy";
 import { reportedDuration } from "@/lib/player-opening";
 import { PlayerNavigation, settleLatestNavigation } from "@/lib/player-navigation";
 import { settleFinalProgress } from "@/lib/player-progress";
@@ -70,7 +70,8 @@ export function PlayerPage({ active }: { active: boolean }) {
   const stageLoading = (data.basePending
     || (session.current?.kind === "tv" && playing !== undefined && data.playingPending)) && sources.length === 0;
   const browserLoading = data.basePending || data.seasonPending;
-  const noSourceReason = sourceFailureReason(session.current?.kind === "local", data.localInfo?.error?.message);
+  const noSourceReason = sourceFailureReason(session.current?.kind === "local",
+    data.localInfo?.error?.message ?? (data.detail?.fromCache === true ? BACKEND_UNREACHABLE_REASON : undefined));
   const runtimeMs = session.current?.kind === "tv" ? data.playingEpisode?.runtimeMs : data.detail?.runtimeMs;
 
   const openItem = async (item: LibraryItem) => {
@@ -118,10 +119,7 @@ export function PlayerPage({ active }: { active: boolean }) {
 
   useEffect(() => {
     if (session.current === null || (session.current.kind === "tv" && playing === undefined) || !playableUnitResolved) return;
-    if (sources.length === 0) {
-      const reason = sourceFailureReason(session.current.kind === "local", data.localInfo?.error?.message);
-      setStage({ kind: "failed", reason });
-    }
+    if (sources.length === 0) setStage({ kind: "failed", reason: noSourceReason });
   }, [data.detail, data.localInfo, data.playingEpisode, playbackKey, sources.length]);
 
   const close = async () => {

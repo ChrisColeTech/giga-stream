@@ -12,6 +12,7 @@ import { listCollections } from "@/services/collections";
 import { acceptCount, resultCount } from "@/lib/library-counts";
 import { reloadDecision } from "@/lib/library-reload";
 import { logLibraryPage } from "@/services/library-log";
+import { syncLibrary } from "@/services/library-refresh";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 
@@ -192,6 +193,6 @@ export function useLibraryData(
   }, query) && (query.source !== "favorites" || item.favorite));
   const hasMore = canLoadLibraryPage(acceptedQueryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
   const pageFor = { queryKey: acceptedQueryKey, serial: acceptedSerial };
-  const refresh = (): void => { read(false); readSideData(); };
+  const refresh = (): void => { void syncLibrary(readSideData); };
   return { page, continuing: filtered, loading, paging, hasMore, loadMore, refresh, sideReady, pageFor };
 }

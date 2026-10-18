@@ -26,7 +26,6 @@ describe("live slice", () => {
       category: "News",
       revision: 1,
       streamUrl: "https://media.test/news.m3u8",
-      status: "live" as const,
     };
     state().setChannels({ items: [channel], categories: [{ value: "News", count: 1 }], revision: 1 });
     state().setChannelQuery("news");

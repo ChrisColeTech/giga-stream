@@ -20,6 +20,9 @@ export interface TitleDetail {
   /** Absent when no stream rule is set. */
   readonly streamUrl?: string;
   readonly sources?: readonly import("@/services/schemas/source-schema").TitleSource[];
+  /** Set when the fileserver answered from its cache because the backend was not reachable: nothing can play
+   *  (`46` section A). */
+  readonly fromCache?: true;
 }
 
 export interface Episode {

@@ -1,5 +1,5 @@
 import type { CachedChannelRepository } from "../store/cached-channel-repository.js";
-import { LEGACY_CHANNEL_STATUS, type ChannelList, type ChannelSummary } from "../types/channel.js";
+import type { ChannelList, ChannelSummary } from "../types/channel.js";
 import type { CachedChannelRow } from "../types/backend-cache.js";
 import { badResponse, unreachable, type AdminFailure } from "./admin-client.js";
 import type { BackendCacheService } from "./backend-cache-service.js";
@@ -44,7 +44,6 @@ export function createLiveChannelsService(deps: {
       category: row.category,
       revision: row.revision,
       streamUrl: row.streamUrl,
-      status: LEGACY_CHANNEL_STATUS,
       ...(row.logoUrl !== undefined && { logoUrl: rewriteImageUrl(row.logoUrl) }),
       ...(row.number !== undefined && { number: row.number }),
     };

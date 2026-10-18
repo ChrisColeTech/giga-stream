@@ -11,13 +11,13 @@ import { workSpec } from "@/constants/child-window";
 import { collectionRow } from "@/lib/collections-model";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { NO_HISTORY, resolveItem, type ResolvedItem } from "@/lib/library-marks";
+import { titlePlay } from "@/lib/title-play";
 import { readTitle } from "@/services/titles";
 import { useAppStore } from "@/store/app-store";
 import type { TitleDetail } from "@/types/title";
 import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
 const SPEC = workSpec("title-info", "Title information", { width: 640, body: 480 });
-const NO_SOURCE = "No stream source is set up for titles.";
 
 export function TitleInfoWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
@@ -44,13 +44,7 @@ export function TitleInfoWindow() {
     return () => controller.abort();
   }, [ref]);
 
-  /* A series plays through its episodes, not the series payload (the backend fills streamUrl and sources on movies
-   * only), so a TV title is playable as soon as its information is read; the player resolves the episode. */
-  const playable = item?.kind === "local" || (detail !== undefined && (
-    item?.kind === "tv" || detail.streamUrl !== undefined || (detail.sources?.length ?? 0) > 0
-  ));
-  const unavailable = item === undefined ? LIBRARY_COPY.noItem : item.kind !== "local" && detail === undefined
-    ? "Title information is loading." : !playable ? NO_SOURCE : undefined;
+  const { playable, reason: unavailable } = titlePlay(item?.kind, detail);
 
   return (
     <ChildWindow spec={SPEC} onClose={closeOverlay}>

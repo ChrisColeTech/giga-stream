@@ -17,6 +17,8 @@ export const TitleSchema = z.object({
   backdropUrl: ImageUrlSchema.optional(),
   streamUrl: z.string().url().optional(),
   sources: z.array(SourceSchema).optional(),
+  /** Answered from the fileserver's cache while the backend could not give the live detail: no sources (`46` A). */
+  fromCache: z.literal(true).optional(),
 });
 
 export const EpisodeSchema = z.object({
