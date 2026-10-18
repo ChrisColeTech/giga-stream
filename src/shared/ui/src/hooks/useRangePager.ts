@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { sameRange } from "../lib/list-window";
 import { pagerCanRequest, requestVisiblePageOnce } from "../lib/pager-rules";
 import { pageSpan, pagesToRequest } from "../lib/range-pages";
+import { sameRange } from "../lib/row-window";
 import type { RowRange } from "../lib/window-types";
 
 export interface RangePagerInput {

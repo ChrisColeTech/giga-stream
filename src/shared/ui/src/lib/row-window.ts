@@ -1,28 +1,17 @@
-import { gridStep, visibleRows } from "./window-rows";
+import { gridStep } from "./window-rows";
 import type { RowLayout, RowRange } from "./window-types";
-import { HEADER_HEIGHT, LIST_MIN_HEIGHT, LIST_PAGE_MARGIN, OVERSCAN_ROWS, ROW_HEIGHT } from "./window-constants";
+import { ROW_HEIGHT } from "./window-constants";
 
-/* The one-column case of the windowing maths (`docs/41` section 4.2): a record list of fixed 36px rows under a sticky
-   header. Pure; the hook `useWindowedList` feeds it measurements. */
+/* The pure parts of a record table's row window (`docs/45` section 2.1, ported from `list-window`): one column of 36px
+   rows under a sticky header, which rows a key moves to, which offset a surface shown again keeps. The virtualizer
+   (`useRowWindow`) decides what is mounted; these decide the rest. */
 
 /** One column of 36px rows with no gap between them. */
 export const LIST_LAYOUT: RowLayout = { columns: 1, rowHeight: ROW_HEIGHT, pitch: ROW_HEIGHT };
 
-/** The rows to mount for a viewport `height` tall whose top edge is `top` pixels into the rows. */
-export function listRange(top: number, height: number, count: number): RowRange {
-  return visibleRows({ top, height }, LIST_LAYOUT, count, OVERSCAN_ROWS);
-}
-
 /** How many whole rows a viewport of `height` shows (at least one): the PageUp / PageDown step. */
 export function rowsInView(height: number): number {
   return Math.max(1, Math.floor(Math.max(0, height) / ROW_HEIGHT));
-}
-
-/** The windowed list's own height: its content up to the room the page offers, never under the minimum. `pageHeight`
- *  is the page scroller's client height, 0 while it is unknown (server rendering, a hidden tab). */
-export function listHeight(total: number, pageHeight: number): number {
-  const content = Math.max(0, total) * ROW_HEIGHT + HEADER_HEIGHT;
-  return Math.min(content, Math.max(LIST_MIN_HEIGHT, pageHeight - LIST_PAGE_MARGIN));
 }
 
 /** The row a key moves focus to, by index, so it reaches rows that are not mounted: the arrows, Home and End as
@@ -45,4 +34,21 @@ export function restoredTop(memory: { readonly hidden: boolean; readonly lastTop
 /** Two ranges mount the same rows. */
 export function sameRange(a: RowRange, b: RowRange): boolean {
   return a.first === b.first && a.last === b.last;
+}
+
+/** The indexes to mount: the virtualizer's own, plus the focused row while focus is in it (kept mounted wherever it is). */
+export function withPinned(base: readonly number[], pinned: number | null, count: number): number[] {
+  if (pinned === null || pinned < 0 || pinned >= count || base.includes(pinned)) return [...base];
+  return [...base, pinned].sort((a, b) => a - b);
+}
+
+/** The rows the window mounts: the virtualizer's visible range widened by `overscan` each side, clamped to the list;
+ *  empty (`last < first`) while the list has no rows or the surface is hidden (no range). */
+export function mountedRange(
+  visible: { readonly startIndex: number; readonly endIndex: number } | null,
+  count: number,
+  overscan: number,
+): RowRange {
+  if (visible === null || count <= 0) return { first: 0, last: -1 };
+  return { first: Math.max(0, visible.startIndex - overscan), last: Math.min(count - 1, visible.endIndex + overscan) };
 }
