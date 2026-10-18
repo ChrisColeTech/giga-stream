@@ -198,5 +198,5 @@ Temporary backend (`39` 9) with `TMDB_READ_TOKEN` unset (the Titles list then sh
 | 6 | `29` 9.3 "with both Kind chips on, search makes two calls" | `GET /api/titles` already merges two kinds on the backend (`kind=all`); only search needs the admin to merge |
 | 7 | `26` 4.9b: a manual row's id `custom-0001` | the backend id is `custom-<uuid>`; the tooltip shows the id as the backend gives it |
 | 8 | `28` 7.2: Providers and Titles toolbars have only the forward verb | superseded (owner, 2026-10-17): bulk verbs on the ticked rows (3.2, 4.2) |
-| 9 | `29` 5: `AdminTitleRow.id` is `movie-603`, `tv-1399` or `custom-<uuid>` | still the key; every title also carries `idNumber` (Wave B2), and the grid's and Details' `Id` show it; the TMDB id is its own row |
+| 9 | `29` 5: `AdminTitleRow.id` is `movie-603`, `tv-1399` or `custom-<uuid>` | the API keeps that string in `id`; every title also carries `idNumber` (Wave B2, the database key), and the grid's and Details' `Id` show it; the TMDB id is its own row |
 | 10 | `37` (first round) showed a synced title's TMDB id as its Id | superseded (owner, final): every title shows its generated `idNumber` |
