@@ -43,8 +43,8 @@ test("migrations after v3 safely type old collections and backfill local titles"
     PRAGMA user_version = 3;
   `);
 
-  assert.equal(migrate(db), 6);
-  assert.equal(readSchemaVersion(db), 6);
+  assert.equal(migrate(db), 7);
+  assert.equal(readSchemaVersion(db), 7);
   assert.equal(
     (db.prepare("SELECT title FROM local_files WHERE id = 'file-1'").get() as { title: string }).title,
     "Feature.mkv",
