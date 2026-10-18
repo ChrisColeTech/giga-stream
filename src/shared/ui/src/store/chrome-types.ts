@@ -34,6 +34,8 @@ export interface ChromeSlice<K extends ChromeKinds> {
   overlayAnchor: K["anchor"] | null;
   overlayItem: K["item"] | null;
   childBounds: Readonly<Record<string, K["box"]>>;
+  /** Which child windows were maximized, by window key, kept for the run (`36` section 8.4). */
+  childMaximized: Readonly<Record<string, boolean>>;
   folded: Readonly<Record<string, boolean>>;
   setTheme: (theme: ThemeChoice) => void;
   setAccent: (accent: AccentId) => void;
@@ -43,6 +45,7 @@ export interface ChromeSlice<K extends ChromeKinds> {
   openOverlay: (id: K["overlay"], anchor?: K["anchor"] | null, item?: K["item"] | null) => void;
   closeOverlay: () => void;
   rememberChild: (key: string, box: K["box"]) => void;
+  rememberMaximized: (key: string, on: boolean) => void;
   toggleFold: (id: string) => void;
   /** A warn or an error is also a row of the events log; an info notice is not. `area` defaults to the program's. */
   say: (sentence: string, tone?: EventTone, area?: K["area"]) => void;

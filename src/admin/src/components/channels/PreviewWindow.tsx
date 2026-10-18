@@ -31,6 +31,23 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   const shimmer = <span className={`${SHIMMER_TILE} block h-3.5 w-32`} aria-hidden />;
   const heading = name ?? (session.reading ? shimmer : status.line);
 
+  /* The window's state is its status bar (`36` section 8.3): the state word left (a failure in the failure tone), the
+     position right, a shimmer while the window reads. */
+  const place = session.reading && walk.position === null ? null : `${walk.position ?? "–"} / ${walk.total}`;
+  const bar = {
+    left: (
+      <span role="status" className={status.line.startsWith("failed") ? "text-st-failed" : undefined}>
+        {status.line}
+      </span>
+    ),
+    right:
+      place === null ? (
+        <span className={`${SHIMMER_TILE} h-3 w-10`} aria-hidden />
+      ) : (
+        <span className="font-mono tabular-nums text-faint">{place}</span>
+      ),
+  };
+
   /* The only way the window closes: every request stops first, then the flow ends. The request value stays until the
      next open raises its serial, so the window keeps its body through its exit fade. */
   const close = (): void => {
@@ -39,11 +56,9 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   };
 
   return (
-    <ChildWindow spec={SPEC} onClose={close} heading={heading} label={session.channel?.name ?? PREVIEW_TITLE}>
+    <ChildWindow spec={SPEC} onClose={close} heading={heading} label={name ?? PREVIEW_TITLE} status={bar}>
       <PreviewToolbar
-        reading={session.reading}
         walk={walk}
-        line={status.line}
         retry={status.retry}
         onRetry={session.retry}
         verbs={verbs}

@@ -20,6 +20,10 @@ export const INSET = 8;
 /** The titlebar's height: a window never covers it, so the titlebar stays reachable behind any modal. */
 export const TITLEBAR_HEIGHT = 40;
 
+/** The main window's statusbar height (`shell/Statusbar.tsx`, `h-6`): a maximized window stops above it, and a window's
+ *  own status bar (`ChildStatusbar`) is the same height. */
+export const STATUSBAR_HEIGHT = 24;
+
 /** The work surfaces (Settings, Collections): what their content wants. The width is the rail (210), a form at its full
  *  width and the workspace's side padding, with air; the height shows the first groups and scrolls the rest. Never less
  *  than the least, which nothing clips. */

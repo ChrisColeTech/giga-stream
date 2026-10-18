@@ -5,7 +5,7 @@ import type { PlayerError } from "@/lib/preview-state";
 export const PREVIEW_TITLE = "Preview";
 
 /** The window's size: standard, opened centred at most 80% of the main window. */
-export const PREVIEW_SIZE = { width: 640, body: 420, minWidth: 420, minBody: 300 } as const;
+export const PREVIEW_SIZE = { width: 640, body: 450, minWidth: 420, minBody: 330 } as const;
 
 /** The line while the window reads the channels. */
 export const READING_WORD = "loading";

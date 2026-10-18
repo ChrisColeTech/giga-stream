@@ -1,4 +1,4 @@
-import { BORDER, CORNER_OFFSET, HEADER_GAP, INSET, OPEN_SHARE, TITLEBAR_HEIGHT, TITLE_HEIGHT } from "./child-metrics";
+import { BORDER, CORNER_OFFSET, HEADER_GAP, INSET, OPEN_SHARE, STATUSBAR_HEIGHT, TITLEBAR_HEIGHT, TITLE_HEIGHT } from "./child-metrics";
 import type { Box, ChildLimits, ChildSpec, Size } from "./child-types";
 
 /** What the window's padding and border add around its content on each axis. */
@@ -13,6 +13,13 @@ export function sized(width: number, body: number): Size {
  *  starts under it. */
 export function roomOf(viewport: Size): Box {
   return { x: 0, y: TITLEBAR_HEIGHT, width: viewport.width, height: Math.max(0, viewport.height - TITLEBAR_HEIGHT) };
+}
+
+/** The maximized box (`36` section 8.4): the main window minus its titlebar and its statusbar, derived from the viewport
+ *  so a resize of the main window keeps it fitted. */
+export function maximizedBox(viewport: Size): Box {
+  const room = roomOf(viewport);
+  return { ...room, height: Math.max(0, room.height - STATUSBAR_HEIGHT) };
 }
 
 /** The sizes a window may take. `max` is the room; `min` is the surface's least, capped to `max`; `open` is the content
