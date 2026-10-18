@@ -69,6 +69,7 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
       page: query.page,
       totalPages: Math.max(...answers.map((a) => a.totalPages)),
       totalResults: answers.reduce((sum, a) => sum + a.totalResults, 0),
+      skipped: answers.reduce((sum, a) => sum + (a.skipped ?? 0), 0),
     });
   });
 
@@ -101,6 +102,18 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
     const principal = signedIn(services, request);
     const input = parseInput(TitleInputSchema, request.body, ERRORS.titleInvalid);
     return ok(reply, services.titles.create(input, actorOf(request, principal)), 201);
+  });
+
+  // The deleted synced titles (docs/03 section 7.4): listed, and restored by removing the record.
+  app.get("/api/titles/deleted", async (request, reply) => {
+    signedIn(services, request);
+    return ok(reply, services.titles.listDeleted());
+  });
+
+  app.delete("/api/titles/deleted/:titleId", async (request, reply) => {
+    const principal = signedIn(services, request);
+    const { titleId } = parseInput(TitleParams, request.params);
+    return ok(reply, services.titles.restore(titleId, actorOf(request, principal)));
   });
 
   app.patch("/api/titles/:titleId", WRITE, async (request, reply) => {
