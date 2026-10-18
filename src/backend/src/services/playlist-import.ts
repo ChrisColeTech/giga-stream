@@ -40,13 +40,12 @@ export function createPlaylistImporter(deps: {
   store: Store;
   audit: AuditService;
   now: () => number;
-  allowLoopback: boolean;
   maxBytes: number;
   maxEntries: number;
   safeFetch: SafeFetch;
   onChange: () => void;
 }) {
-  const { store, audit, now, allowLoopback, maxBytes, maxEntries, safeFetch, onChange } = deps;
+  const { store, audit, now, maxBytes, maxEntries, safeFetch, onChange } = deps;
   const newId = (): string => `ch_${randomUUID()}`;
 
   /** Creates (or, for a known file, updates) the playlist and its channels; the caller wraps it in the transaction. */
@@ -93,7 +92,7 @@ export function createPlaylistImporter(deps: {
     }
   }
 
-  const screen = (text: string): ScreenedPlaylist => screenPlaylist(text, { maxEntries, allowLoopback });
+  const screen = (text: string): ScreenedPlaylist => screenPlaylist(text, { maxEntries });
 
   return {
     maxBytes,
@@ -101,15 +100,15 @@ export function createPlaylistImporter(deps: {
     /** An uploaded file: the name is sanitised, the body parsed, and nothing is stored but the channels. */
     importFile(upload: { fileName: string; body: Buffer }, actor: Actor): ImportAnswer {
       const fileName = sanitizeFileName(upload.fileName);
-      if (fileName === undefined) throw invalid("file", "The file must be an .m3u playlist with a name made of letters or digits.");
+      if (fileName === undefined) throw invalid("file", "The file must be an .m3u or .m3u8 playlist with a name.");
       return commit({ kind: "file", fileName }, screen(new TextDecoder().decode(upload.body)), actor);
     },
 
     /** A web address: checked, fetched once through the guarded fetch, parsed, then written. */
     async importUrl(input: PlaylistInput, actor: Actor): Promise<ImportAnswer> {
       const url = input.url.trim();
-      if (url.length > ADDRESS_MAX || !isAcceptedAddress(url, allowLoopback)) {
-        throw invalid("url", addressRefusal("playlist address", allowLoopback));
+      if (url.length > ADDRESS_MAX || !isAcceptedAddress(url)) {
+        throw invalid("url", addressRefusal("playlist address"));
       }
       const screened = screen(await fetchPlaylistText(safeFetch, url, { maxBytes }));
       return commit({ kind: "url", url, host: new URL(url).host, enabled: input.enabled ?? true, ...(input.name && { name: input.name }) }, screened, actor);

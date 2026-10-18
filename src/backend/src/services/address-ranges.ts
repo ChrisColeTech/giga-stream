@@ -1,35 +1,13 @@
 import { isIPv4, isIPv6 } from "node:net";
 
-/** The refused IPv4 ranges (docs/43 section 3.8): [base address, prefix length]. 255.255.255.255 is inside 240/4. */
-const BLOCKED_V4: ReadonlyArray<readonly [string, number]> = [
-  ["0.0.0.0", 8],
-  ["10.0.0.0", 8],
-  ["100.64.0.0", 10],
-  ["169.254.0.0", 16],
-  ["172.16.0.0", 12],
-  ["192.0.0.0", 24],
-  ["192.0.2.0", 24],
-  ["192.168.0.0", 16],
-  ["198.18.0.0", 15],
-  ["198.51.100.0", 24],
-  ["203.0.113.0", 24],
-  ["224.0.0.0", 4],
-  ["240.0.0.0", 4],
-];
-const LOOPBACK_V4: readonly [string, number] = ["127.0.0.0", 8];
-
 function v4Number(text: string): number {
   return text.split(".").reduce((sum, part) => sum * 256 + Number(part), 0);
 }
 
-function inRange(value: number, [base, prefix]: readonly [string, number]): boolean {
-  const size = 2 ** (32 - prefix);
-  return Math.floor(value / size) === Math.floor(v4Number(base) / size);
-}
-
+/** Loopback (127/8), `0.0.0.0` and link-local (169.254/16): the only IPv4 addresses refused (docs/43 section 3.8). */
 function blockedV4(value: number, allowLoopback: boolean): boolean {
-  if (inRange(value, LOOPBACK_V4)) return !allowLoopback;
-  return BLOCKED_V4.some((range) => inRange(value, range));
+  if (Math.floor(value / 2 ** 24) === 127) return !allowLoopback;
+  return value === 0 || Math.floor(value / 2 ** 16) === 169 * 256 + 254;
 }
 
 /** The eight 16-bit groups of an IPv6 text address, or null. Handles `::` and a dotted IPv4 tail. */
@@ -54,26 +32,18 @@ function v6Groups(text: string): number[] | null {
   return all.map((group) => parseInt(group, 16));
 }
 
+/** `::`, `::1`, link-local `fe80::/10`, and an IPv4-mapped form judged by the IPv4 inside it. */
 function blockedV6(g: number[], allowLoopback: boolean): boolean {
   const at = (i: number): number => g[i] ?? 0;
-  const embedded = (hi: number, lo: number): number => at(hi) * 65536 + at(lo);
-  if (g.slice(0, 7).every((x) => x === 0)) return at(7) === 1 ? !allowLoopback : true; // :: , ::1, ::a.b.c.d
-  if (g.slice(0, 5).every((x) => x === 0) && at(5) === 0xffff) return blockedV4(embedded(6, 7), false);
-  if (at(0) === 0x64 && at(1) === 0xff9b) {
-    return g.slice(2, 6).every((x) => x === 0) ? blockedV4(embedded(6, 7), false) : true;
-  }
-  if (at(0) === 0x2002) return blockedV4(embedded(1, 2), false);
-  if (at(0) === 0x2001 && (at(1) === 0 || at(1) === 0xdb8)) return true; // Teredo, documentation
-  if (at(0) === 0x100 && g.slice(1, 4).every((x) => x === 0)) return true; // discard-only
-  const first = at(0);
-  const ula = (first & 0xfe00) === 0xfc00;
-  const linkOrSite = (first & 0xffc0) === 0xfe80 || (first & 0xffc0) === 0xfec0;
-  return ula || linkOrSite || (first & 0xff00) === 0xff00;
+  if (g.slice(0, 7).every((x) => x === 0)) return at(7) === 1 ? !allowLoopback : at(7) === 0;
+  if (g.slice(0, 5).every((x) => x === 0) && at(5) === 0xffff) return blockedV4(at(6) * 65536 + at(7), false);
+  return (at(0) & 0xffc0) === 0xfe80;
 }
 
 /**
- * True when `address` (an IP literal) must not be connected to. `allowLoopback` permits only 127.0.0.0/8 and ::1.
- * Anything that is not a parseable IP literal is blocked.
+ * True when `address` (an IP literal) must not be connected to: loopback or link-local, nothing more (private LAN
+ * addresses are allowed). Anything that is not a parseable IP literal is blocked. `allowLoopback` (a test seam of
+ * `createSafeFetch`, never a setting) admits 127/8 and `::1`, but not an IPv4-mapped form.
  */
 export function isBlockedAddress(address: string, allowLoopback = false): boolean {
   if (isIPv4(address)) return blockedV4(v4Number(address), allowLoopback);

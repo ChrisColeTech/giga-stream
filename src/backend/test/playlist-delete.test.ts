@@ -74,7 +74,7 @@ test("a failure inside the delete rolls everything back", async () => {
     store.channels.insert(stream("a", id), 1);
     const failing: AuditService = { ...createAuditService(store, () => 1), record: () => { throw new Error("audit down"); } };
     const runner = { stop: async () => false };
-    const service = createPlaylistService({ store, audit: failing, runner, allowLoopback: false, onChange: () => undefined });
+    const service = createPlaylistService({ store, audit: failing, runner, onChange: () => undefined });
     await assert.rejects(service.remove(id, {}), /audit down/);
     assert.deepEqual([store.playlists.find(id)?.name, store.channels.list().length, store.jobs.countOfPlaylist(id)], ["one", 1, 1]);
     assert.equal(store.revisions.current(), 0, "the revision bump rolled back too");

@@ -23,10 +23,9 @@ export function createPlaylistService(deps: {
   store: Store;
   audit: AuditService;
   runner: Pick<JobRunner, "stop">;
-  allowLoopback: boolean;
   onChange: () => void;
 }) {
-  const { store, audit, runner, allowLoopback, onChange } = deps;
+  const { store, audit, runner, onChange } = deps;
 
   function existing(id: number): PlaylistRecord {
     const found = store.playlists.find(id);
@@ -38,8 +37,8 @@ export function createPlaylistService(deps: {
   function checkedUrl(current: PlaylistRecord, raw: string): { url: string; host: string } {
     if (current.kind !== "url") throw invalid("url", "A file playlist has no web address. Import the file again.");
     const url = raw.trim();
-    if (url.length > ADDRESS_MAX || !isAcceptedAddress(url, allowLoopback)) {
-      throw invalid("url", addressRefusal("playlist address", allowLoopback));
+    if (url.length > ADDRESS_MAX || !isAcceptedAddress(url)) {
+      throw invalid("url", addressRefusal("playlist address"));
     }
     const holder = store.playlists.idOfUrl(url);
     if (holder !== undefined && holder !== current.id) throw new AppError(ERRORS.playlistTaken, { field: "url" });

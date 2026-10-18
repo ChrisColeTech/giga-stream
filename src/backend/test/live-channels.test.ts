@@ -83,7 +83,13 @@ test("a body without a kind is a stream row; the kind discriminates, and a field
   assert.deepEqual(await refusal(liveBody({ streamUrl: "https://x.example/a.m3u8" })), [422, "channel.invalid", "streamUrl"]);
   assert.deepEqual(await refusal(liveBody({ logoUrl: "https://x.example/a.png" })), [422, "channel.invalid", "logoUrl"]);
   // The address rule of docs/03 7.3 applies to stream rows only.
-  assert.deepEqual(await refusal(streamBody({ streamUrl: "http://live.example/news.m3u8" })), [422, "channel.invalid", "streamUrl"]);
+  assert.deepEqual(await refusal(streamBody({ streamUrl: "ftp://live.example/news.m3u8" })), [422, "channel.invalid", "streamUrl"]);
+  assert.deepEqual(await refusal(streamBody({ streamUrl: "http://u:p@live.example/news.m3u8" })), [422, "channel.invalid", "streamUrl"]);
+  assert.deepEqual(await refusal(streamBody({ logoUrl: "ftp://live.example/n.png" })), [422, "channel.invalid", "logoUrl"]);
+  for (const streamUrl of ["http://live.example/news.m3u8", "http://192.168.1.4:8080/n.m3u8", "http://127.0.0.1:9/n.m3u8"]) {
+    const accepted = await send(t.app, "POST", "/api/channels", streamBody({ streamUrl, logoUrl: "http://10.0.0.2/n.png" }), token);
+    assert.equal(accepted.status, 201, streamUrl);
+  }
 });
 
 test("a bad live channel is refused naming the field; its paths must exist", async () => {

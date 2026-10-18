@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { firstRefusal, httpsAddress, rating, required, schedule, wholeNumber, year } from "@/lib/field-checks";
+import { firstRefusal, rating, required, schedule, webAddress, wholeNumber, year } from "@/lib/field-checks";
 
 describe("required", () => {
   it("refuses an empty or blank value with `<Label> is required.`", () => {
@@ -30,17 +30,22 @@ describe("a whole number from 1 to 9999", () => {
   });
 });
 
-describe("an https address", () => {
-  it("accepts a parsable https address", () => {
-    assert.equal(httpsAddress("Stream address", "https://streams.example.test/a.m3u8"), null);
-    assert.equal(httpsAddress("Origin", "HTTPS://example.test"), null);
+describe("a web address", () => {
+  it("accepts a parsable http or https address, a private one included", () => {
+    assert.equal(webAddress("Stream address", "https://streams.example.test/a.m3u8"), null);
+    assert.equal(webAddress("Origin", "HTTPS://example.test"), null);
+    assert.equal(webAddress("Stream address", "http://example.test"), null);
+    assert.equal(webAddress("Stream address", "http://192.168.1.4:8080/a.m3u8"), null);
   });
 
-  it("refuses http, other schemes and text that is no address", () => {
-    for (const value of ["http://example.test", "ftp://example.test", "example.test", "not a url", "javascript:alert(1)"]) {
-      assert.equal(httpsAddress("Stream address", value), "Stream address must be an https address.", value);
+  it("refuses other schemes, text that is no address and credentials", () => {
+    for (const value of ["ftp://example.test", "example.test", "not a url", "javascript:alert(1)"]) {
+      assert.equal(webAddress("Stream address", value), "Stream address must be an http or https address.", value);
     }
-    assert.equal(httpsAddress("Stream address", ""), null);
+    for (const value of ["http://u:p@example.test", "https://user@example.test"]) {
+      assert.equal(webAddress("Stream address", value), "Stream address must not contain a user name or password.", value);
+    }
+    assert.equal(webAddress("Stream address", ""), null);
   });
 });
 

@@ -38,32 +38,30 @@ async function codeOf(promise: Promise<unknown>): Promise<string> {
   return "no error";
 }
 
-test("every refused range is blocked and a public address is not", () => {
+test("only loopback, unspecified and link-local are blocked; private LAN and public addresses are not", () => {
   const blocked = [
-    "0.1.2.3", "10.1.2.3", "100.64.0.1", "100.127.255.254", "127.0.0.1", "127.9.9.9", "169.254.169.254",
-    "172.16.0.1", "172.31.255.255", "192.0.0.8", "192.0.2.5", "192.168.1.1", "198.18.0.1", "198.19.255.255",
-    "198.51.100.7", "203.0.113.9", "224.0.0.1", "239.255.255.255", "240.0.0.1", "255.255.255.255",
-    "::", "::1", "::ffff:10.0.0.1", "::ffff:7f00:1", "64:ff9b::a00:1", "64:ff9b::192.168.0.1", "2002:a00:1::1",
-    "2002:7f00:1::", "2001:0:4136:e378:8000:63bf:3fff:fdd2", "2001:db8::1", "fc00::1", "fd12:3456::1",
-    "fe80::1", "febf::1", "fec0::1", "ff02::1", "not-an-ip",
+    "0.0.0.0", "127.0.0.1", "127.9.9.9", "169.254.169.254", "169.254.0.1", "::", "::1", "::ffff:127.0.0.1",
+    "::ffff:7f00:1", "::ffff:169.254.169.254", "::ffff:0.0.0.0", "fe80::1", "febf::1", "not-an-ip",
   ];
   for (const address of blocked) assert.equal(isBlockedAddress(address), true, address);
-  const allowed = ["93.184.216.34", "8.8.8.8", "100.63.255.255", "172.32.0.1", "198.20.0.1", "1.1.1.1"];
-  for (const address of [...allowed, "2606:4700:4700::1111", "::ffff:8.8.8.8", "64:ff9b::808:808", "2002:808:808::1"]) {
-    assert.equal(isBlockedAddress(address), false, address);
-  }
+  const allowed = [
+    "10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.1.1", "100.64.0.1", "192.0.2.5", "198.18.0.1", "224.0.0.1",
+    "240.0.0.1", "93.184.216.34", "8.8.8.8", "169.253.255.255", "169.255.0.1", "2606:4700:4700::1111", "fc00::1",
+    "fd12:3456::1", "fec0::1", "ff02::1", "2001:db8::1", "::ffff:8.8.8.8", "::ffff:192.168.0.1", "::ffff:10.0.0.1",
+  ];
+  for (const address of allowed) assert.equal(isBlockedAddress(address), false, address);
 });
 
 test("allowLoopback permits only 127/8 and ::1", () => {
   assert.equal(isBlockedAddress("127.0.0.1", true), false);
   assert.equal(isBlockedAddress("127.5.5.5", true), false);
   assert.equal(isBlockedAddress("::1", true), false);
-  for (const address of ["10.0.0.1", "169.254.169.254", "::", "fe80::1", "::ffff:127.0.0.1", "0.0.0.0"]) {
+  for (const address of ["169.254.169.254", "::", "fe80::1", "::ffff:127.0.0.1", "0.0.0.0"]) {
     assert.equal(isBlockedAddress(address, true), true, address);
   }
 });
 
-test("the lookup hook serves both callback forms and refuses a private or mixed answer", async () => {
+test("the lookup hook serves both callback forms and refuses a loopback, link-local or mixed answer", async () => {
   const guard = (answer: Array<{ address: string; family: 4 | 6 }>) => createGuardedLookup(async () => answer, false);
   const call = (lookup: ReturnType<typeof guard>, all: boolean) =>
     new Promise<{ error: Error | null; address: unknown; family: unknown }>((resolve) => {
@@ -73,7 +71,14 @@ test("the lookup hook serves both callback forms and refuses a private or mixed 
   assert.deepEqual([ok.error, ok.address, ok.family], [null, "93.184.216.34", 4]);
   const all = await call(guard(PUBLIC), true);
   assert.deepEqual([all.error, all.address], [null, PUBLIC]);
-  const bads = [[{ address: "10.0.0.5", family: 4 as const }], [...PUBLIC, { address: "127.0.0.1", family: 4 as const }], []];
+  const lan = await call(guard([{ address: "10.0.0.5", family: 4 as const }]), false);
+  assert.deepEqual([lan.error, lan.address], [null, "10.0.0.5"], "a private LAN address is allowed");
+  const bads = [
+    [{ address: "169.254.169.254", family: 4 as const }],
+    [...PUBLIC, { address: "127.0.0.1", family: 4 as const }],
+    [{ address: "::ffff:127.0.0.1", family: 6 as const }],
+    [],
+  ];
   for (const answer of bads) {
     for (const wantAll of [false, true]) {
       const refused = await call(guard(answer), wantAll);
@@ -89,47 +94,61 @@ test("the lookup hook serves both callback forms and refuses a private or mixed 
   assert.ok(!failed.error.message.includes("secret"));
 });
 
-test("URLs: only https, no userinfo, IP literals checked directly without a lookup", async () => {
+test("URLs: http or https, no userinfo, loopback and link-local literals refused without a lookup", async () => {
   const { transport, seen } = fakeTransport({});
   let lookups = 0;
   const safe = createSafeFetch({ transport, lookup: async () => (lookups++, PUBLIC) });
   const cases: Array<[string, string]> = [
     ["not a url", "safe_fetch.bad_url"],
-    ["http://cdn.example/a", "safe_fetch.bad_url"],
     ["ftp://cdn.example/a", "safe_fetch.bad_url"],
     ["https://user:pw@cdn.example/a", "safe_fetch.bad_url"],
-    ["https://user@cdn.example/a", "safe_fetch.bad_url"],
-    ["https://10.0.0.1/a", "safe_fetch.blocked_address"],
-    ["https://[::1]/a", "safe_fetch.blocked_address"],
-    ["https://[::ffff:192.168.1.1]/a", "safe_fetch.blocked_address"],
+    ["http://user@cdn.example/a", "safe_fetch.bad_url"],
+    ["https://127.0.0.1/a", "safe_fetch.blocked_address"],
+    ["http://[::1]/a", "safe_fetch.blocked_address"],
+    ["http://[::ffff:127.0.0.1]/a", "safe_fetch.blocked_address"],
     ["https://169.254.169.254/latest/meta-data", "safe_fetch.blocked_address"],
+    ["http://[fe80::1]/a", "safe_fetch.blocked_address"],
   ];
   for (const [url, code] of cases) assert.equal(await codeOf(safe(url, run(url).options)), code, url);
   assert.equal(seen.length, 0);
   assert.equal(lookups, 0);
 });
 
+test("a private LAN literal and a plain http address are fetched", async () => {
+  const { transport, seen } = fakeTransport({
+    "http://192.168.1.20:8080/list.m3u": () => reply(200, "lan"),
+    "http://cdn.example/a": () => reply(200, "plain"),
+  });
+  const safe = createSafeFetch({ transport, lookup: async () => PUBLIC });
+  for (const [url, body] of [["http://192.168.1.20:8080/list.m3u", "lan"], ["http://cdn.example/a", "plain"]] as const) {
+    assert.equal((await safe(url, run(url).options)).body.toString(), body, url);
+  }
+  assert.equal(seen.length, 2);
+});
+
 test("errors carry the host only, never the URL or query", async () => {
   const safe = createSafeFetch({ transport: fakeTransport({}).transport });
   try {
-    await safe("https://10.0.0.1/path?token=SECRET", run("x").options);
+    await safe("https://127.0.0.1/path?token=SECRET", run("x").options);
     assert.fail("should refuse");
   } catch (error) {
     assert.ok(error instanceof SafeFetchError);
-    assert.equal(error.host, "10.0.0.1");
+    assert.equal(error.host, "127.0.0.1");
     assert.ok(!JSON.stringify([error.message, error.host]).includes("SECRET"));
   }
 });
 
-test("redirects: relative Location, hop cap, private target, https to http, userinfo", async () => {
+test("redirects: relative Location, hop cap, loopback target, a private or http hop is fine, userinfo", async () => {
   const hop = (to: string) => () => reply(302, "", { location: to });
   const { transport, seen } = fakeTransport({
     "https://a.example/start": hop("/next?x=1"),
     "https://a.example/next?x=1": hop("https://b.example/end"),
     "https://b.example/end": () => reply(200, "done", { "Content-Type": "text/plain" }),
     "https://a.example/loop": hop("/loop"),
-    "https://a.example/priv": hop("https://192.168.0.9/x"),
+    "https://a.example/priv": hop("https://127.0.0.9/x"),
     "https://a.example/down": hop("http://b.example/x"),
+    "http://b.example/x": hop("http://192.168.0.9/y"),
+    "http://192.168.0.9/y": () => reply(200, "lan"),
     "https://a.example/cred": hop("https://u:p@b.example/x"),
   });
   const safe = createSafeFetch({ transport, lookup: async () => PUBLIC });
@@ -143,7 +162,8 @@ test("redirects: relative Location, hop cap, private target, https to http, user
   assert.equal(await codes("loop"), "safe_fetch.too_many_redirects");
   assert.equal(await codes("loop", { maxRedirects: 0 }), "safe_fetch.too_many_redirects");
   assert.equal(await codes("priv"), "safe_fetch.blocked_address");
-  assert.equal(await codes("down"), "safe_fetch.redirect_refused");
+  const downgraded = await safe("https://a.example/down", run("x").options);
+  assert.deepEqual([downgraded.status, downgraded.url, downgraded.body.toString()], [200, "http://192.168.0.9/y", "lan"]);
   assert.equal(await codes("cred"), "safe_fetch.redirect_refused");
 });
 

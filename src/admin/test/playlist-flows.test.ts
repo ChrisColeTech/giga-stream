@@ -84,13 +84,13 @@ describe("the playlist flows", () => {
     assert.equal(notice(), "Imported us.m3u again: 0 created, 0 updated.");
   });
 
-  it("refuses with no file chosen under File, and a non-https address under Address, before sending", async () => {
+  it("refuses with no file chosen under File, and a non-http(s) address under Address, before sending", async () => {
     const { flows, calls } = rig();
     assert.deepEqual(await flows.importPlaylist({ ...FILE, file: null }), {
       ok: false, field: "file", sentence: "Choose a file first.",
     });
-    assert.deepEqual(await flows.importPlaylist({ ...WEB, address: "http://x.test/a" }), {
-      ok: false, field: "address", sentence: "Address must be an https address.",
+    assert.deepEqual(await flows.importPlaylist({ ...WEB, address: "ftp://x.test/a" }), {
+      ok: false, field: "address", sentence: "Address must be an http or https address.",
     });
     assert.deepEqual(calls, []);
   });
@@ -117,7 +117,7 @@ describe("the playlist flows", () => {
     await flows.load();
     const unchanged = await flows.save(1, draftOf(row(1)));
     assert.deepEqual([unchanged.ok, unchanged.ok && unchanged.value], [true, null]);
-    const bad = await flows.save(1, { ...draftOf(row(1)), address: "http://iptv.example.test/a.m3u" });
+    const bad = await flows.save(1, { ...draftOf(row(1)), address: "ftp://iptv.example.test/a.m3u" });
     assert.deepEqual([bad.ok, !bad.ok && bad.field], [false, "address"], "the address rule refuses it before any call");
     assert.deepEqual(calls.filter((call) => call.startsWith("update")), []);
     const saved = await flows.save(1, { ...draftOf(row(1)), address: SECRET });

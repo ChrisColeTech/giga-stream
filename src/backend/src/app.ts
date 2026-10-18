@@ -63,7 +63,6 @@ export async function buildApp(
     });
     services = createServices(store, {
       jwtSecret: settings.JWT_SECRET,
-      allowLoopback: settings.ALLOW_LOOPBACK_STREAMS,
       tmdbToken: settings.TMDB_READ_TOKEN,
       tmdbBase: settings.TMDB_BASE,
       omdbKey: settings.OMDB_API_KEY,

@@ -1,7 +1,7 @@
 import { SAVING_REASON, UNREACHABLE_REASON, WORKING_REASON } from "@/constants/channel-copy";
 import type { NewChannelDraft } from "./channel-body";
 import type { ChannelDraft } from "./channel-draft";
-import { firstRefusal, httpsAddress, required, type Refusal } from "./field-checks";
+import { firstRefusal, webAddress, required, type Refusal } from "./field-checks";
 
 /** The rows a refusal can sit under, the page's or the backend's (`details.field`). */
 export type ChannelField = "name" | "category" | "folder" | "videos" | "streamUrl" | "logoUrl" | "enabled";
@@ -51,8 +51,8 @@ export function checkChannel(draft: ChannelDraft): ChannelCheck {
   const errors: ChannelErrors = {
     name: null,
     folder: null,
-    streamUrl: draft.kind === "stream" ? httpsAddress("Stream address", draft.streamUrl) : null,
-    logoUrl: draft.kind === "stream" ? httpsAddress("Logo address", draft.logoUrl) : null,
+    streamUrl: draft.kind === "stream" ? webAddress("Stream address", draft.streamUrl) : null,
+    logoUrl: draft.kind === "stream" ? webAddress("Logo address", draft.logoUrl) : null,
   };
   return { reason: missing ?? undefined, errors, refusal: firstOf(errors) };
 }
@@ -84,7 +84,7 @@ export function createReason(draft: NewChannelDraft, state: WriteState): string 
 
 /** The New form's value refusals after the press, with the row each goes under, or null. */
 export function newChannelRefusal(draft: NewChannelDraft): { field: ChannelField; sentence: string } | null {
-  const address = draft.kind === "stream" ? httpsAddress("Stream address", draft.streamUrl) : null;
+  const address = draft.kind === "stream" ? webAddress("Stream address", draft.streamUrl) : null;
   return address === null ? null : { field: "streamUrl", sentence: address };
 }
 

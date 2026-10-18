@@ -67,7 +67,7 @@ describe("the channel flows", () => {
       ...EMPTY_NEW_CHANNEL,
       kind: "stream",
       name: "N",
-      streamUrl: "http://a.b/c",
+      streamUrl: "ftp://a.b/c",
     });
     assert.deepEqual([result.ok, !result.ok && result.field, calls], [false, "streamUrl", []]);
   });
@@ -109,8 +109,8 @@ describe("the channel flows", () => {
     const s = stream("s");
     hold(s, live("v", { folder: undefined, videos: ["D:\\a.mp4"] }));
     const flows = flowsOf(fake({ update: async () => Promise.reject(refuse("channel.invalid", "videos.0")) }).service);
-    const local = await flows.save("s", { ...streamDraft(s), streamUrl: "http://plain" });
-    assert.deepEqual([!local.ok && local.field, !local.ok && local.sentence], ["streamUrl", "Stream address must be an https address."]);
+    const local = await flows.save("s", { ...streamDraft(s), streamUrl: "ftp://plain" });
+    assert.deepEqual([!local.ok && local.field, !local.ok && local.sentence], ["streamUrl", "Stream address must be an http or https address."]);
     const draft = { ...liveDraft(live("v", { folder: undefined, videos: ["D:\\a.mp4"] })), videos: ["D:\\gone.mp4"] };
     const remote = await flows.save("v", draft);
     assert.equal(!remote.ok && remote.field, "videos");

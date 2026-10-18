@@ -38,7 +38,6 @@ export function createTitleService(deps: {
   omdb: OmdbClient;
   streams: StreamTemplates;
   now: () => number;
-  allowLoopback: boolean;
   /** The schedule shown in the sync status: the first enabled catalog job's. */
   scheduleLabel?: () => string;
 }) {

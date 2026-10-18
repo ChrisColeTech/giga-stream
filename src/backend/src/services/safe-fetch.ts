@@ -16,9 +16,10 @@ export { SafeFetchError, type SafeFetchCode } from "./safe-fetch-error.js";
 export type { SafeTransport, TransportRequest, TransportResponse } from "./safe-fetch-transport.js";
 
 /**
- * The one guarded outbound function (docs/43 section 3.8; docs/03 section 7.3): https only, no userinfo, every
- * address checked at connect time by the lookup hook, redirects followed by hand and re-checked, bytes counted
- * while streaming. Errors carry the host only.
+ * The one guarded outbound function (docs/43 section 3.8; docs/03 section 7.3): http or https on every hop, no
+ * userinfo, a host resolving to loopback or link-local refused (private LAN allowed), checked at connect time by the
+ * lookup hook, redirects followed by hand and re-checked, bytes counted while streaming. Errors carry the host only.
+ * `allowLoopback` is a test seam for socket tests on 127.0.0.1, not a setting.
  */
 export interface SafeFetchOptions {
   method?: "GET" | "HEAD";
@@ -44,14 +45,12 @@ export interface SafeFetchDeps {
 }
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const FORCED_HEADERS = new Set(["host", "accept-encoding", "user-agent", "connection", "cookie", "cookie2"]);
 const CROSS_HOST_DROPPED = new Set(["authorization", "proxy-authorization"]);
 
 function checkUrl(url: URL, allowLoopback: boolean, refusal: SafeFetchCode): void {
   const host = url.host;
-  const loopbackOk = allowLoopback && LOOPBACK_HOSTS.has(url.hostname);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopbackOk)) throw new SafeFetchError(refusal, host);
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new SafeFetchError(refusal, host);
   if (url.username !== "" || url.password !== "" || url.hostname === "") throw new SafeFetchError(refusal, host);
   const literal = url.hostname.replace(/^\[|\]$/g, "");
   if (isIP(literal) !== 0 && isBlockedAddress(literal, allowLoopback)) {

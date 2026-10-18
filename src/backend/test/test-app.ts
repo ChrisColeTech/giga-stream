@@ -34,7 +34,6 @@ export interface TestApp {
 
 export interface MakeAppOptions {
   seed?: boolean;
-  loopback?: boolean;
   dataDir?: string;
   config?: Partial<Config>;
   /** The guarded outbound fetch for playlist addresses (docs/43 section 3.8): tests inject a fake, never the network. */
@@ -90,7 +89,6 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       CORS_ORIGINS: "",
       TMDB_READ_TOKEN: "",
       SEED_TEST_CHANNELS: options.seed ?? false,
-      ALLOW_LOOPBACK_STREAMS: options.loopback ?? false,
       ...options.config,
     },
     now,
