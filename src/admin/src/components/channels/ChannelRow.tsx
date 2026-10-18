@@ -41,6 +41,7 @@ export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
       <span className="truncate text-muted">{row.kind}</span>
       <StateWord state={row.state} />
       <span className="truncate text-muted">{row.mode}</span>
-      <span className="truncate text-muted">{row.nowPlaying}</span>    </RecordGridRow>
+      <span className="truncate text-muted">{row.nowPlaying}</span>
+    </RecordGridRow>
   );
 }

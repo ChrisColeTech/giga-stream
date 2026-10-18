@@ -11,9 +11,10 @@ export const CHANNEL_GRID: GridLayout = {
 };
 
 export const CHANNEL_HEADINGS: readonly GridHeading[] = [
-  { key: "name", label: "name" },
-  { key: "category", label: "category" },
-  { key: "kind", label: "kind" },
+  { key: "name", label: "name", sortable: true },
+  { key: "category", label: "category", sortable: true },
+  { key: "kind", label: "kind", sortable: true },
   { key: "state", label: "state" },
   { key: "mode", label: "mode" },
-  { key: "now-playing", label: "now playing" },];
+  { key: "now-playing", label: "now playing" },
+];

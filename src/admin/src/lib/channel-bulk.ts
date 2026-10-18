@@ -3,6 +3,7 @@ import {
   ALL_ENABLED,
   ALREADY_DISABLED,
   ALREADY_ENABLED,
+  NOT_LOADED,
   REBUILD_DISABLED,
   STREAM_NO_REBUILD,
   UNREACHABLE_REASON,
@@ -11,7 +12,7 @@ import {
 import { TICK_FIRST } from "@/constants/record-copy";
 import type { AdminChannel } from "@/types/admin-channel";
 import { planBulk, type BulkPlan, type BulkWords } from "./bulk-plan";
-import { findChannel, tickedChannels } from "./channel-list";
+import { tickedChannels } from "./channel-list";
 
 /* The Channels toolbar's bulk verbs on the ticked rows (`36` section 5.3), pure: which ticked channels each verb runs on,
  * which it skips and why, and why the verb itself is disabled. The run is the shared runner's (`39` section 6). */
@@ -52,16 +53,21 @@ export function skipReason(verb: ChannelBulkVerb, channel: AdminChannel): string
   }
 }
 
-/** The plan of a verb over the ticked rows, in list order. */
+/** The plan of a verb over the ticked ids. `items` are the rows the tab holds whole (the ticked ones, kept across
+ *  pages: `heldTicked`); a ticked id with no row held is skipped with `Not loaded.` and stays ticked, so the summary
+ *  says how many were skipped. The rows run in `items` order. */
 export function planChannelBulk(
   verb: ChannelBulkVerb,
   items: readonly AdminChannel[],
   ticked: readonly string[],
 ): BulkPlan<string> {
-  const rows = tickedChannels(items, ticked).map((channel) => ({ id: channel.id, label: channel.name }));
-  return planBulk(rows, (row) => {
-    const channel = findChannel(items, row.id);
-    return channel === undefined ? null : skipReason(verb, channel);
+  const rows = tickedChannels(items, ticked);
+  const have = new Set(rows.map((channel) => channel.id));
+  const byId = new Map(rows.map((channel) => [channel.id, channel]));
+  const unheld = ticked.filter((id) => !have.has(id)).map((id) => ({ id, label: id }));
+  return planBulk([...rows.map((channel) => ({ id: channel.id, label: channel.name })), ...unheld], (row) => {
+    const channel = byId.get(row.id);
+    return channel === undefined ? NOT_LOADED : skipReason(verb, channel);
   });
 }
 
