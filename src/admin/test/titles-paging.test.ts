@@ -6,6 +6,7 @@ import { createTitleFlows } from "@/services/title-flows";
 import type { TitlesService } from "@/services/titles";
 import { useAppStore } from "@/store/app-store";
 import { resetStore, signInForTest } from "./support/store";
+import { EMPTY_STORED } from "./support/titles-stored-kit";
 
 const state = () => useAppStore.getState();
 const NEVER = async (): Promise<never> => Promise.reject(new Error("not used"));
@@ -27,6 +28,7 @@ function rig(totalPages: number) {
     revert: NEVER,
     listDeleted: async () => [],
     restore: NEVER,
+    listStored: EMPTY_STORED,
   };
   const audit = { reload: async () => undefined };
   return { flows: createTitleFlows({ service, store: () => useAppStore.getState(), audit }), pages };
