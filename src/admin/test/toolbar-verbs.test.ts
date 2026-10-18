@@ -3,33 +3,11 @@ import { describe, it } from "node:test";
 import { INDEX_FRAMES } from "@/constants/index-frames";
 import { NOTHING_CHANGED, TICK_FIRST } from "@/constants/record-copy";
 import { TAB_ORDER } from "@/constants/tabs";
-import { indexVerbs } from "@/lib/index-verbs";
-import { changeReason, forwardVerbs } from "@/lib/workspace-verbs";
+import { indexForward } from "@/lib/index-verbs";
+import { changeReason } from "@/lib/workspace-verbs";
 import type { Tab } from "@/types/shell";
 
 const NOTHING = (): void => undefined;
-
-describe("a workspace's toolbar", () => {
-  it("is the forward arrow alone: an icon verb whose label is the tooltip, with no arrow in the words", () => {
-    const [verb, ...rest] = forwardVerbs({ label: "Titles", onPress: NOTHING });
-    assert.equal(rest.length, 0);
-    assert.equal(verb?.label, "Go to Titles");
-    assert.equal(typeof verb?.icon, "object", "a lucide icon component");
-    assert.ok(!(verb?.label ?? "").includes("→"));
-  });
-
-  it("is empty on a page that has no forward verb", () => {
-    assert.deepEqual(forwardVerbs(undefined), []);
-  });
-
-  it("carries the forward verb's own reason and calls its handler", () => {
-    const calls: string[] = [];
-    const [verb] = forwardVerbs({ label: "Preview", onPress: () => calls.push("go"), reason: "Save the channel first" });
-    assert.equal(verb?.reason, "Save the channel first");
-    verb?.onPress();
-    assert.deepEqual(calls, ["go"]);
-  });
-});
 
 describe("Save details and Discard changes", () => {
   it("wait with `Nothing has changed.` while the draft equals its baseline, whatever else is true", () => {
@@ -45,27 +23,26 @@ describe("Save details and Discard changes", () => {
   });
 });
 
-describe("an index's toolbar", () => {
-  it("has the forward arrow only", () => {
-    const strip = indexVerbs(INDEX_FRAMES.providers.forward, NOTHING);
-    assert.deepEqual(strip.map((verb) => [verb.label, verb.reason]), [["Go to Titles", undefined]]);
+describe("an index's forward verb", () => {
+  it("is the destination's word with its tooltip, the arrow drawn by the strip", () => {
+    const verb = indexForward(INDEX_FRAMES.providers.forward, NOTHING);
+    assert.deepEqual([verb?.word, verb?.tip, verb?.reason], ["Titles", "Go to Titles", undefined]);
   });
 
-  it("switches to the named tab when its verb is pressed", () => {
+  it("switches to the named tab when it is pressed", () => {
     const asked: Tab[] = [];
-    const [verb] = indexVerbs(INDEX_FRAMES.titles.forward, (tab) => asked.push(tab));
-    verb?.onPress();
+    indexForward(INDEX_FRAMES.titles.forward, (tab) => asked.push(tab))?.onPress();
     assert.deepEqual(asked, ["jobs"]);
   });
 
   it("is disabled with its reason when the verb acts on a ticked row and none can be ticked yet", () => {
-    assert.equal(indexVerbs(INDEX_FRAMES.channels.forward, NOTHING)[0]?.reason, TICK_FIRST);
+    assert.equal(indexForward(INDEX_FRAMES.channels.forward, NOTHING)?.reason, TICK_FIRST);
     assert.equal(TICK_FIRST, "Tick a row first");
   });
 
-  it("is empty for Accounts and for Jobs, whose Run job is the table strip's", () => {
-    assert.deepEqual(indexVerbs(INDEX_FRAMES.accounts.forward, NOTHING), []);
-    assert.deepEqual(indexVerbs(INDEX_FRAMES.jobs.forward, NOTHING), []);
+  it("is absent for Accounts and for Jobs, whose Run job is a selection verb", () => {
+    assert.equal(indexForward(INDEX_FRAMES.accounts.forward, NOTHING), undefined);
+    assert.equal(indexForward(INDEX_FRAMES.jobs.forward, NOTHING), undefined);
   });
 
   it("names no table verb: a forward label is a tab or Preview", () => {

@@ -68,14 +68,14 @@ describe("the playlists list", () => {
 });
 
 describe("the Playlists table strip", () => {
-  it("holds the Jobs arrow and Refresh, no bar above the form; the bulk verbs wait for a tick", () => {
+  it("holds Refresh and Jobs → rightmost, no bar above the form; the bulk verbs are drawn and wait for a tick", () => {
     state().playlistsLoaded([row(1)], {});
     const html = page();
     assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New playlist"));
     const table = html.slice(html.indexOf('aria-label="Playlists table"'));
-    assert.ok(/<button[^>]*aria-label="Go to Jobs"/.test(table));
-    assert.ok(table.includes('aria-label="Refresh playlists"'));
-    for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
+    assert.ok(/<button[^>]*aria-label="Go to Jobs"[^>]*>Jobs →<\/button>/.test(table));
+    assert.ok(table.includes('title="Refresh playlists"'));
+    for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
   it("gives Sync now its reason for a ticked playlist that no job syncs, and arms the others", () => {
@@ -84,7 +84,7 @@ describe("the Playlists table strip", () => {
     const html = page();
     assert.ok(html.includes('aria-label="Sync now. No job syncs this playlist; create one on the Jobs tab."'));
     assert.ok(html.includes('aria-label="Enable. Every ticked playlist is already enabled."'));
-    assert.ok(/<button[^>]*aria-label="Disable"/.test(html) && html.includes(">Delete</button>"));
+    assert.ok(html.includes("Disable</button>") && html.includes(">Delete</button>"));
   });
 });
 

@@ -6,7 +6,7 @@ import { StateWord } from "@/components/records/StateWord";
 import { DELETE_PROVIDER_TITLE, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/provider-copy";
 import { PROVIDER_GRID, PROVIDER_HEADINGS } from "@/constants/provider-grid";
 import { useProviderActions } from "@/hooks/useProviderActions";
-import { providerRow, providerSelectAll } from "@/lib/provider-rows";
+import { providerRow } from "@/lib/provider-rows";
 import { useAppStore } from "@/store/app-store";
 
 /** The providers grid (`37` section 3.2): the header with its select-all tick, then a row per provider in `order`, then
@@ -17,7 +17,6 @@ export function ProviderRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.providers);
   const serial = useAppStore((state) => state.serial);
   const tick = useAppStore((state) => state.providerTick);
-  const tickAll = useAppStore((state) => state.providersTickAll);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useProviderActions();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
@@ -27,7 +26,7 @@ export function ProviderRows() {
       ariaLabel="Providers"
       layout={PROVIDER_GRID}
       headings={PROVIDER_HEADINGS}
-      selection={{ label: "Select all providers", checked: providerSelectAll(items, ticked), onToggle: tickAll }}
+      ticks
     >
       {waiting ? (
         <SkeletonGrid />

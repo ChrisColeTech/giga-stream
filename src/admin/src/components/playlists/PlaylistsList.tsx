@@ -5,26 +5,29 @@ import { LOADING_REASON } from "@/constants/account-copy";
 import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import { usePlaylistBulk } from "@/hooks/usePlaylistBulk";
+import { selectAll } from "@/lib/playlist-rows";
 import { useAppStore } from "@/store/app-store";
 import { PlaylistRows } from "./PlaylistRows";
 
-/** `Playlists`: the list group. Its table strip holds `Refresh` (it reads the playlists, the jobs behind `Sync now` and
- *  the audit tail, disabled with `Loading.` while a read runs) and, once rows are ticked, the count, `Sync now`, `Enable`,
- *  `Disable`, the armed `Delete` and `Clear selection`. The heading carries nothing. */
+/** `Playlists`: the list group. Its selection toolbar (`01` section 9) holds `Refresh` (it reads the playlists, the jobs
+ *  behind `Sync now` and the audit tail, disabled with `Loading.` while a read runs), then `Sync now`, `Enable`, `Disable`
+ *  and the armed `Delete`, always drawn and disabled with their reason until a row is ticked; on the right the
+ *  three-state `All` and the forward verb. The heading carries nothing. */
 export function PlaylistsList() {
-  const loading = useAppStore((state) => state.playlists.status === "loading");
-  const ticked = useAppStore((state) => state.playlists.ticked);
-  const setTicked = useAppStore((state) => state.playlistsSetTicked);
+  const { status, items, ticked } = useAppStore((state) => state.playlists);
+  const tickAll = useAppStore((state) => state.playlistsTickAll);
   const { flows, track } = usePlaylistActions();
   const { verbs } = usePlaylistBulk();
   const forward = useForwardVerbs("playlists");
+  const reason = status === "loading" ? LOADING_REASON : undefined;
+  const all = { label: "Select all playlists", checked: selectAll(items, ticked), onToggle: tickAll };
   const strip = (
     <TableStrip
       label="Playlists table"
       noun="playlists"
       forward={forward}
-      refresh={{ onPress: () => void track("refresh", flows.refresh), reason: loading ? LOADING_REASON : undefined }}
-      selection={{ count: ticked.length, verbs, onClear: () => setTicked([]) }}
+      refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
+      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
     />
   );
   return (

@@ -3,7 +3,7 @@ import { SkeletonGrid } from "@giga/ui/lists/SkeletonGrid";
 import { ACCOUNT_GRID, ACCOUNT_HEADINGS } from "@/constants/account-grid";
 import { useAccountActions } from "@/hooks/useAccountActions";
 import { deleteReason } from "@/lib/account-guard";
-import { accountRow, isTicked, selectAllState } from "@/lib/account-rows";
+import { accountRow, isTicked } from "@/lib/account-rows";
 import { useAppStore } from "@/store/app-store";
 import type { AccountId } from "@/types/admin-account";
 import { AccountRow } from "./AccountRow";
@@ -14,7 +14,6 @@ import { AccountRow } from "./AccountRow";
 export function AccountRows() {
   const { status, items, ticked, unreachable } = useAppStore((state) => state.accounts);
   const tick = useAppStore((state) => state.accountTick);
-  const tickAll = useAppStore((state) => state.accountsTickAll);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useAccountActions();
   const waiting = items.length === 0 || status === "idle";
@@ -24,7 +23,7 @@ export function AccountRows() {
       ariaLabel="Accounts"
       layout={ACCOUNT_GRID}
       headings={ACCOUNT_HEADINGS}
-      selection={{ label: "Select all accounts", checked: selectAllState(items, ticked), onToggle: tickAll }}
+      ticks
     >
       {waiting ? (
         <SkeletonGrid />

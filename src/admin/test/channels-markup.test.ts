@@ -72,21 +72,22 @@ describe("the channels table strip", () => {
     return html.slice(html.indexOf('aria-label="Channels table"'));
   };
 
-  it("holds Preview beside Refresh, waiting for a ticked row; no bulk verb shows until a row is ticked", () => {
+  it("draws Refresh first and Preview → rightmost, waiting for a ticked row; every bulk verb waits with its reason", () => {
     const html = table();
-    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"'));
-    assert.ok(html.indexOf("Preview channel") < html.indexOf("Refresh channels"));
-    for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(!html.includes(verb), verb);
+    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"') && html.includes("Preview →"));
+    assert.ok(html.indexOf("Refresh channels") < html.indexOf("Select all channels"));
+    assert.ok(html.indexOf("Select all channels") < html.indexOf("Preview channel"));
+    for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
   });
 
-  it("draws Refresh in the table strip and the bulk verbs only once a row is ticked", () => {
-    assert.ok(table().includes('aria-label="Refresh channels"'));
-    assert.ok(!table().includes('aria-label="Rebuild'));
+  it("enables the bulk verbs once a row is ticked, with no count text and no Clear selection", () => {
+    assert.ok(table().includes('title="Refresh channels"'));
     state().channelsLoaded([live("a")], 1);
     state().channelTick("a", true);
     const html = table();
-    for (const verb of ["Enable", "Rebuild"]) assert.ok(html.includes(`aria-label="${verb}`), verb);
-    assert.ok(html.includes(">Delete</button>") && html.includes("selected"));
+    for (const verb of ["Enable", "Rebuild"]) assert.ok(html.includes(`${verb}</button>`), verb);
+    assert.ok(!html.includes("Rebuild. ") && html.includes(">Delete</button>"));
+    assert.ok(!html.includes("selected<") && !html.includes("Clear selection") && html.includes('aria-checked="true"'));
   });
 
   it("gates Preview on exactly one ticked row, live or stream", () => {
@@ -104,7 +105,7 @@ describe("the channels table strip", () => {
     const html = table();
     assert.ok(html.includes('aria-label="Enable. Every ticked channel is already enabled."'));
     assert.ok(html.includes('aria-label="Rebuild. A stream channel has nothing to rebuild."'));
-    assert.ok(/<button[^>]*aria-label="Disable"[^>]*>/.test(html) && !html.includes("Disable. "));
+    assert.ok(html.includes("Disable</button>") && !html.includes("Disable. "));
   });
 });
 
@@ -112,7 +113,7 @@ describe("the channels grid", () => {
   it("draws shimmer rows, never a sentence, before a read and while empty", () => {
     const html = renderLive(createElement(ChannelRows));
     assert.ok(html.includes('aria-hidden="true"') && !html.includes("Select Channel"));
-    assert.ok(html.includes('aria-label="Select all channels"'));
+    assert.ok(!html.includes("Select all"), "select-all is the toolbar's All, not a header tick");
   });
 
   it("draws the headings, the ticks, the state words, the dimmed disabled row and the synced Delete tip", () => {
@@ -136,7 +137,7 @@ describe("the channels grid", () => {
     assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));
     assert.ok(!html.includes(">fault</span>"));
     assert.ok(html.includes('title="The next sync adds it again. Disable it to keep it off."'));
-    assert.ok(html.includes('aria-label="Select all channels"') && html.includes('aria-checked="mixed"'));
+    assert.ok(!html.includes("Select all") && html.includes('aria-checked="true"'));
   });
 
   it("disables every Delete with the unreachable sentence while the backend cannot be reached", () => {

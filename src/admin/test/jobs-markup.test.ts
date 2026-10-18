@@ -140,18 +140,17 @@ describe("the jobs list", () => {
     assert.ok(html.includes(">Every day<") && html.includes(">Off<"), "the schedule column words");
   });
 
-  it("draws Refresh in the table strip and, once a job is ticked, Enable, Disable, the armed Delete and Run job", () => {
+  it("draws Refresh, then Run job, Enable, Disable and the armed Delete last, waiting for a tick, then enabled", () => {
     state().jobsLoaded([job(1)]);
     let html = page();
     const table = (): string => html.slice(html.indexOf('aria-label="Jobs table"'));
-    assert.ok(table().includes('aria-label="Refresh jobs"') && !table().includes('aria-label="Run job'));
-    assert.ok(!html.slice(0, html.indexOf("New job")).includes("Run job"), "no table verb in the page toolbar");
+    assert.ok(table().includes('title="Refresh jobs"') && table().includes('aria-label="Run job. Tick a job first"'));
+    assert.ok(!html.slice(0, html.indexOf("New job")).includes("Run job"), "no table verb above the New form");
     state().jobTick(1, true);
     html = page();
-    for (const verb of ["Enable", "Run job"]) assert.ok(table().includes(`aria-label="${verb}`), verb);
-    assert.ok(table().includes(">Delete</button>"));
-    assert.ok(at(table(), "Enable") < at(table(), "Run job"));
-    assert.ok(/<button[^>]*aria-label="Run job"[^>]*size-ctl-md|<button[^>]*size-ctl-md[^>]*aria-label="Run job"/.test(table()), "Run job is an icon");
+    for (const verb of ["Run job", "Enable"]) assert.ok(table().includes(`${verb}</button>`), verb);
+    assert.ok(at(table(), "Run job") < at(table(), "Enable") && at(table(), "Disable") < at(table(), ">Delete</button>"));
+    assert.ok(/lucide-play[^>]*>.*?<\/svg>Run job<\/button>/.test(table()), "Run job is the Play icon and its word");
   });
 
   it("disables Run job with the gate's reason for a ticked job whose playlist is disabled", () => {

@@ -81,21 +81,21 @@ describe("the providers list", () => {
 });
 
 describe("the table strip", () => {
-  it("draws an enabled Titles arrow in the strip; Refresh is there too and the bulk verbs wait for a tick", () => {
+  it("draws an enabled Titles → rightmost; Refresh is first and the bulk verbs are drawn, waiting for a tick", () => {
     const html = page();
     const table = html.slice(html.indexOf('aria-label="Providers table"'));
-    const forward = table.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
+    const forward = table.match(/<button[^>]*aria-label="Go to Titles"[^>]*>Titles →<\/button>/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
-    assert.ok(table.includes('aria-label="Refresh providers"'));
-    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
+    assert.ok(table.includes('title="Refresh providers"') && table.indexOf("Refresh providers") < table.indexOf("Titles →"));
+    for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
-  it("names every ticked provider already enabled, with a Delete that is the armed two-step", () => {
+  it("names every ticked provider already enabled, with a Delete that is the armed two-step and no Clear selection", () => {
     loaded([provider(1)]);
     state().providerTick(1, true);
     const html = page();
     assert.ok(html.includes('aria-label="Enable. Every ticked provider is already enabled."'));
-    assert.ok(html.includes(">Delete</button>") && html.includes('aria-label="Clear selection"'));
+    assert.ok(html.includes(">Delete</button>") && !html.includes("Clear selection"));
   });
 });
 

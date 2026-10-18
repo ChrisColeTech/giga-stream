@@ -55,7 +55,8 @@ describe("the list group", () => {
     assert.ok(html.includes('aria-label="Newer. This is the first page."'));
     assert.ok(html.includes('aria-label="Older. This is the last page."'));
     assert.ok(at(html, 'aria-label="Sort"') < at(html, 'aria-label="Titles table"'));
-    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, 'aria-label="Older. ') < at(html, 'aria-label="Refresh titles"'));
+    assert.ok(at(html, 'title="Refresh titles"') < at(html, 'aria-label="Newer. '), "Refresh first, the paging on the right");
+    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, 'aria-label="Older. ') < at(html, "Jobs →"));
     const heading = html.slice(at(html, 'id="ti-list"'), at(html, 'aria-label="Search titles"'));
     assert.ok(!heading.includes("Older") && !heading.includes("Refresh"), "no verb in the heading");
   });
@@ -104,21 +105,21 @@ describe("the titles grid", () => {
 });
 
 describe("the table strip", () => {
-  it("keeps the enabled Jobs arrow in the strip; the bulk verbs wait for a ticked row", () => {
+  it("keeps the enabled Jobs → rightmost; the bulk verbs are drawn and wait for a ticked row", () => {
     const html = page();
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
-    const forward = table.match(/<button[^>]*aria-label="Go to Jobs"[^>]*>/)?.[0] ?? "";
+    const forward = table.match(/<button[^>]*aria-label="Go to Jobs"[^>]*>Jobs →<\/button>/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
-    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
+    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
-  it("draws Enable, Disable, Revert to TMDB and the armed Delete for a ticked row", () => {
+  it("enables Enable, Disable, Revert to TMDB and the armed Delete for a ticked row, with no count text", () => {
     loaded([row("movie-1", { state: "edited", editedFields: ["plot"] })]);
     state().titleTick("movie-1", true);
     const html = page();
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
-    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`aria-label="${verb}`), verb);
-    assert.ok(table.includes("selected") && table.includes('aria-label="Clear selection"'));
+    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`${verb}</button>`), verb);
+    assert.ok(table.includes(">Delete</button>") && !table.includes("selected<") && !table.includes("Clear selection"));
   });
 
   it("refuses Revert to TMDB on a ticked manual title with its reason", () => {

@@ -146,8 +146,8 @@ describe("a tab's page", () => {
     const accounts = renderToStaticMarkup(createElement(AccountsPage, { active: true }));
     assert.ok(!accounts.includes("Go to"), "Accounts has no forward verb");
     const table = accounts.slice(accounts.indexOf('aria-label="Accounts table"'));
-    assert.ok(table.includes('aria-label="Refresh accounts"'), "Refresh is the strip's, always there");
-    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), `${verb} waits for a ticked row`);
+    assert.ok(table.includes('title="Refresh accounts"'), "Refresh is the strip's, always there");
+    for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), `${verb} waits, drawn`);
   });
 });
 

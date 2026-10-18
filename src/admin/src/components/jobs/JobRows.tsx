@@ -5,7 +5,6 @@ import { DELETE_RUNNING } from "@/constants/job-copy";
 import { JOB_GRID, JOB_HEADINGS } from "@/constants/job-grid";
 import { useJobActions } from "@/hooks/useJobActions";
 import { jobRow } from "@/lib/job-rows";
-import { selectAll } from "@/lib/playlist-rows";
 import { useAppStore } from "@/store/app-store";
 import { JobRow } from "./JobRow";
 
@@ -15,7 +14,6 @@ import { JobRow } from "./JobRow";
 export function JobRows() {
   const { status, items, ticked, unreachable } = useAppStore((state) => state.jobs);
   const tick = useAppStore((state) => state.jobTick);
-  const tickAll = useAppStore((state) => state.jobsTickAll);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useJobActions();
   const waiting = items.length === 0 || status === "idle";
@@ -30,7 +28,7 @@ export function JobRows() {
       ariaLabel="Jobs"
       layout={JOB_GRID}
       headings={JOB_HEADINGS}
-      selection={{ label: "Select all jobs", checked: selectAll(items, ticked), onToggle: tickAll }}
+      ticks
     >
       {waiting ? (
         <SkeletonGrid />

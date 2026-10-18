@@ -3,8 +3,8 @@ import { TICK_FIRST } from "@/constants/record-copy";
 import type { ForwardDestination } from "@/constants/toolbar-icons";
 import type { Tab } from "@/types/shell";
 
-/** An index's forward verb (`28` section 7.2): an arrow icon in the toolbar strip, its label the tooltip. `to` switches to that tab; `reason` is why it
- *  cannot be used yet (a verb on the ticked rows, with no row to tick). */
+/** An index's forward verb (`28` section 7.2): its word and `→`, rightmost in the selection toolbar (`01` section 9). `to`
+ *  switches to that tab; `reason` is why it cannot be used yet (a verb on the ticked rows, with no row to tick). */
 export interface ForwardVerb {
   readonly label: ForwardDestination;
   readonly to?: Tab;
