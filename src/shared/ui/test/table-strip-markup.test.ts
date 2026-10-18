@@ -87,3 +87,11 @@ test('a group heading carries the tile, the title and the fold, and no verb', ()
   assert.ok(names.every((name) => name === '' || /^(Collapse|Expand) /.test(name)), names.join())
   assert.equal(names.length, 2, 'the title fold and the chevron fold, nothing else')
 })
+
+test('list verbs sit right after Refresh, before the hairline and the selection verbs, each with its reason', () => {
+  const sync: StripVerb = { id: 'sync-now', label: 'Sync now', onPress: NOTHING, reason: 'A sync is already running.' }
+  const names = buttons(strip({ ...withVerbs(), listVerbs: [sync] })).map(text)
+  assert.deepEqual(names.slice(0, 3), ['Refresh', 'Sync now', 'Enable'])
+  assert.ok(strip({ listVerbs: [sync] }).includes('A sync is already running.'))
+  assert.deepEqual(buttons(strip(withVerbs())).map(text).slice(0, 2), ['Refresh', 'Enable'], 'absent: unchanged')
+})

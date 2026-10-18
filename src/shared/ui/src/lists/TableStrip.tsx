@@ -30,6 +30,9 @@ export interface TableStripProps {
   /** What the list is called in the Refresh tooltip (`Refresh accounts`). */
   readonly noun: string;
   readonly refresh: StripPress;
+  /** Verbs of the list itself that need no ticked row (the admin's `Sync now`): words right after `Refresh`, each
+   *  disabled with its reason, before the hairline and the selection verbs. */
+  readonly listVerbs?: readonly StripVerb[];
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
   /** A list whose rows are ticked: the verbs on the ticked rows, always drawn (each disabled with its reason while none
@@ -83,7 +86,7 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
  *  `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
  *  last; right, the `All` checkbox and the `‹ ›` paging of a list that pages. The page's forward verb is the page
  *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
-export function TableStrip({ label, noun, refresh, paging, selection }: TableStripProps) {
+export function TableStrip({ label, noun, refresh, listVerbs = [], paging, selection }: TableStripProps) {
   const verbs = selection?.verbs ?? [];
   return (
     <div role="toolbar" aria-label={label} className={STRIP}>
@@ -91,6 +94,9 @@ export function TableStrip({ label, noun, refresh, paging, selection }: TableStr
         <RefreshCw aria-hidden />
         {REFRESH_WORD}
       </Button>
+      {listVerbs.map((verb) => (
+        <Verb key={verb.id} verb={verb} />
+      ))}
       {verbs.length > 0 && <Sep />}
       {verbs.map((verb) => (
         <Verb key={verb.id} verb={verb} />
