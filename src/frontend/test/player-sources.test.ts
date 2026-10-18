@@ -60,6 +60,29 @@ describe("sameSources (the identity-only recompute guard)", () => {
     assert.equal(sameSources(first, playableSources([provider(1, 1), provider(2, 2)], undefined)), false,
       "losing the app stream changes the media");
   });
+
+  it("answers true when the play address only re-minted its query (a per-request token or signature)", () => {
+    const minted = playableSources([provider(1, 1)], "https://stream.example/a.m3u8?token=aaa");
+    const reminted = playableSources([provider(1, 1)], "https://stream.example/a.m3u8?token=bbb&sig=c");
+    assert.equal(sameSources(minted, reminted), true, "the same media with a refreshed query");
+    assert.equal(sameSources(minted, playableSources([provider(1, 1)], "https://stream.example/a.m3u8")), true,
+      "query against no query: the address minus its query is the same media");
+    assert.equal(sameSources(minted, playableSources([provider(1, 1)], "https://stream.example/a/1.m3u8?token=aaa")),
+      false, "a different path is a genuine change");
+    assert.equal(sameSources(minted, playableSources([provider(1, 1)], "https://mirror.example/a.m3u8?token=aaa")),
+      false, "a different host is a genuine change");
+  });
+
+  it("compares an embed address's stable part too", () => {
+    const session = (url: string) => [{
+      id: "provider:1", kind: "embed" as const, name: "Provider 1",
+      embed: { ...provider(1, 1), url },
+    }];
+    assert.equal(sameSources(session("https://provider1.example/embed?session=1"),
+      session("https://provider1.example/embed?session=2")), true);
+    assert.equal(sameSources(session("https://provider1.example/embed?session=1"),
+      session("https://provider1.example/watch?session=1")), false);
+  });
 });
 
 describe("Player stage rendering", () => {

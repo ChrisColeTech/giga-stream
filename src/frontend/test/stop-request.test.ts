@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { blankForStop } from "@/components/player/EmbedHost";
-import { pauseForStop } from "@/components/player/NativePlayer";
+import { nativeAttachmentKey, pauseForStop } from "@/components/player/NativePlayer";
 import { videoPlayingOf } from "@/components/chrome/RunningWork";
 import { detachForStop } from "@/hooks/useStreamPlayer";
 import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
@@ -33,6 +33,20 @@ describe("stop's playback pause", () => {
     pauseForStop(null);
     pauseForStop(undefined);
     assert.equal(pauses, 1, "nothing else pressed");
+  });
+
+  it("a post-stop re-answer of the same media re-keys nothing: the teardown never strips the element", () => {
+    const playing = "https://media.test/movie.mp4?token=aaa";
+    const reAnswered = "https://media.test/movie.mp4?token=bbb";
+    assert.equal(nativeAttachmentKey(reAnswered, 0), nativeAttachmentKey(playing, 0),
+      "the attachment effect does not re-run on a refreshed query, so its teardown"
+      + " (pause + removeAttribute src + load) cannot drop the position to 0");
+    assert.equal(nativeAttachmentKey("https://media.test/movie.mp4", 0), nativeAttachmentKey(playing, 0),
+      "query against no query is the same media");
+    assert.notEqual(nativeAttachmentKey("https://media.test/other.mp4", 0), nativeAttachmentKey(playing, 0),
+      "a genuinely different address still re-attaches");
+    assert.notEqual(nativeAttachmentKey(playing, 1), nativeAttachmentKey(playing, 0),
+      "a Retry still re-attaches");
   });
 
   it("the stop's pause lands in the store and disarms the playing gate; a play re-arms it", () => {
