@@ -114,14 +114,14 @@ hour, and a row whose `logo_file` is missing on disk is re-downloaded regardless
 
 **Secrets in URLs.** The web address lives only in `playlists.url`. Reads show `host` and `masked`; audit, error details and
 logs carry the **host only**; the fetch is the only reader; never a logo address in a log; never `error.message` of a fetch
-in an outcome, audit entry or log (map to a fixed code). Refusal examples carry the entry **name and host only**, never the
+in an outcome, audit entry or log (map to a fixed code). Refusal examples carry the entry **name only**, never the
 full stream URL. A stream URL from a credentialed playlist is itself a credential: it is published by the public channel
 read, so such a playlist should not be imported into a published channel list (documented in `03`).
 
 ### 3.2 Import and playlist routes
 
-Signed in, audited, dotted codes. A duplicate (same `url`, same `file_name` or same name, case-insensitive) is
-`409 playlist.taken`; `playlist.invalid` is for content only; `playlist.*` always means an M3U record, never a live
+Signed in, audited, dotted codes. A duplicate `url`, `file_name` or typed name (case-insensitive) is `409 playlist.taken`; a
+derived name that clashes is suffixed instead (3.1); `playlist.invalid` is for content only; `playlist.*` always means an M3U record, never a live
 channel's video list.
 
 | Route | Request | Answer |
@@ -158,8 +158,8 @@ reads `Delete <name> and its N channels?` (and says how many carry admin edits).
 
 | Route | Change |
 |---|---|
-| `PATCH /api/channels` | **New** bulk: `{ enabled, ids[] }`, 1-5,000 ids (about 210 KB, under `CHANNEL_BODY_LIMIT_BYTES`); **no client chunking**. Stream rows only; live-kind ids counted in `skipped`. One transaction, one revision, one audit entry `channel.enabled_bulk`. Answers `{ changed, skipped }`. Invalid body `422 channel.invalid` (field `ids`). |
-| `GET /api/admin-channels` | Adds `status` (`live|dead|unchecked`) and `playlist` (id) filters in `store/channel-page.ts`; `source` filter now joins the playlist. Search `q` also matches the playlist name. |
+| `PATCH /api/channels` | **New** bulk: `{ enabled, ids[] }`, 1-5,000 ids (about 210 KB; the route sets `bodyLimit` to `CHANNEL_BODY_LIMIT_BYTES`); no client chunking. Stream rows only. One transaction, one revision, one audit entry `channel.enabled_bulk`. Answers `{ changed, unchanged, skipped }` (flipped / already in that state / live-kind or unknown ids). Invalid body `422 channel.invalid` (field `ids`). |
+| `GET /api/admin-channels` | Adds `status` (`live|dead|unchecked`) and `playlist` (id) filters in `store/channel-page.ts`; the `source` filter is removed; `sort=playlist`; `q` matches name, number, tvg id and the playlist's name and host. |
 | `GET /logos/c/<file>` | Serves a cached image; name must match `^[0-9a-f]{32}\.(png|jpg|gif|webp)$`; public, `immutable`, `nosniff`; no traversal possible. Live PNG ids at `/logos/<id>.png` are unchanged. |
 | `GET|POST /api/playlist-sync` | **Removed.** |
 
@@ -191,8 +191,8 @@ request. The playlist fetch and the logo-index download are outside them. A web 
 
 **Single flight is per playlist** (`409 sync.busy`). **The scheduler never awaits a run:** it starts a playlist run and
 re-arms at once, and a running job is not due, so one long sync cannot starve the catalog job or freeze re-arming. Existing
-playlist-job schedules under 15 minutes are set to `15m` by the migration. "After the server is listening" is a
-`setImmediate` after `listen()` resolves in `app.ts`, which arms the scheduler (never inside boot).
+playlist-job schedules under 15 minutes are set to `15m` by the migration. The scheduler never returns a due time earlier
+than process start plus `FIRST_RUN_GRACE_MS` (30 s, an injected-clock constant), so a due-at-once job never runs during boot.
 
 1. **Claim** the playlist's flight. Refuse a disabled playlist (`422 job.disabled`). A disabled job refuses only the
    schedule.
@@ -202,10 +202,11 @@ playlist-job schedules under 15 minutes are set to `15m` by the migration. "Afte
 3. **Resolve missing logo addresses** for this playlist's rows with no `logo_url` and no edited `logoUrl`: load the iptv-org
    index once per run through `safe-fetch` (`safeParse`, a bad row is skipped, a failed load is stamped on disk and retried
    after one hour), look up by `tvgId` then by name (accents folded before stripping, so `Télé` is `tele`), set `logo_url`
-   with a compare-and-set.
+   with `UPDATE channels SET logo_url = ? WHERE playlist_id = ? AND sync_name = ? AND logo_url IS NULL`.
 4. **Cache logos:** distinct `logo_url`s whose `logo_checked_at` is NULL or older than 7 days, or whose `logo_file` is
    missing on disk. Download through `safe-fetch`, validate (3.1), hash, write `<hash>.<ext>` atomically (temp + rename) if
-   absent, then `UPDATE ... WHERE id = ? AND logo_url = ?` to set `logo_file`/`logo_checked_at`. A failure sets
+   absent, then `UPDATE channels SET logo_file = ?, logo_checked_at = ? WHERE playlist_id = ? AND logo_url = ?` (one
+   statement per distinct URL, no revision). A failure sets
    `logo_checked_at` only. Then garbage-collect (3.1).
 5. **Check streams** of this playlist, enabled or not, ordered `checked_at IS NOT NULL, checked_at, id` (a total order, so the
    same subset is never starved). Each distinct stream URL is requested through `safe-fetch`: `live` if 2xx and the body,
@@ -365,30 +366,38 @@ machinery, `StateWord`, `RecordGrid`, `Segmented`, `ArmedButton`, `NewRecordGrou
 
 **New backend files** (each at most 200 lines): `services/safe-fetch.ts`, `services/playlist-import.ts`,
 `services/logo-cache.ts`, `services/stream-check.ts`, `store/channel-health.ts` (the sync's targeted compare-and-set
-writes), migration `022-playlist-model.sql`, one shared zod union for run counts.
+writes), migration `022-playlist-model.sql`, a counts schema in the backend and one in the admin, both following the table
+in `03` 7.2c. Also deleted: `sync_jobs.last_outcome` and `types/playlist-sync.ts`.
 
 ## 6. Migration and the owner's data (no destruction)
 
-`022` carries the directive line `-- migrate: backup rebuild`. **Before the migration loop, outside any transaction**
-(`VACUUM INTO` cannot run in one, and `migrate.ts:44-47` wraps every migration in `runInTransaction`), `migrate.ts` writes
-`VACUUM INTO '<db>.pre-<version>'` (skipped when that file already exists, because `VACUUM INTO` fails on an existing
-file). **Inside** the migration's transaction, after the SQL, it runs `PRAGMA foreign_key_check` and **throws on any row**
-(after the commit `user_version` would already be 22). Order matters, because adding a cascading reference and then dropping
-the parent table cascades:
-1. **`playlists`** (nothing references it yet): save `id, last_synced_at, last_outcome` to a temp table; create
-   `playlists_next` (3.1: the `kind` CHECK, `name TEXT NOT NULL COLLATE NOCASE UNIQUE`); copy with **explicit ids**
-   (`stored:<n>` -> `kind='file', file_name=<n>, host NULL`; else `kind='url', url=address, host`; clashing names get
-   ` (2)` by `ROW_NUMBER`); keep `sqlite_sequence` at the old maximum (so a deleted playlist's id is never reused and old
-   audit subjects do not collide); drop `playlists`; rename.
+`022` begins with the line `-- migrate: backup`. When a pending migration carries it **and** the database's `user_version`
+is above 0 (so never on a fresh database), `migrate.ts` writes `VACUUM INTO '<db>.pre-<version>'` before the migration loop
+and **outside any transaction** (`VACUUM INTO` cannot run in one, and `migrate.ts:44-47` wraps every migration in
+`runInTransaction`; skipped when that file already exists, because `VACUUM INTO` fails on an existing file). After **every**
+migration's SQL, inside its transaction, `migrate.ts` runs `PRAGMA foreign_key_check` and **throws on any row** (after the
+commit `user_version` would already be 22). Order matters, because adding a cascading reference and then dropping the
+parent table cascades:
+1. **`playlists`** (nothing references it yet): create `playlists_next` (3.1: the `kind` CHECK, `name TEXT NOT NULL COLLATE
+   NOCASE UNIQUE`); copy with **explicit ids** (`stored:<n>` -> `kind='file', file_name=<n>, host NULL`; else `kind='url',
+   url=address, host`; clashing names get ` (2)` by `ROW_NUMBER`); `UPDATE sqlite_sequence SET seq = (SELECT seq FROM
+   sqlite_sequence WHERE name='playlists') WHERE name='playlists_next'` (so a deleted playlist's id is never reused and old
+   audit subjects do not collide); drop `playlists`; rename. The playlist's old `last_synced_at` and `last_outcome` are
+   **not** carried over.
 2. **`sync_jobs`** (no children): create `sync_jobs_next` (3.1) and copy: for `json_valid(config)` playlist rows,
    `playlist_id = (SELECT id FROM playlists WHERE id = json_extract(config,'$.playlistId'))` (NULL when the playlist is
-   gone; then drop those rows); keep the lowest `id` per playlist; `last_run_at` as is; `last_result`: playlist job with
-   counts -> `ok`, a run but no counts -> `failed`, none -> NULL; catalog `last_outcome='ok'` -> `ok`, any other outcome ->
-   `failed`; `last_counts` kept; `config='{}'` for playlist jobs; a playlist schedule under 15 minutes becomes `15m`; take
-   `last_run_at`/`last_result` from the step-1 temp table when the job has none; then insert a job (`WHERE NOT EXISTS`, not
-   `NOT IN`, `24h`, enabled) for every playlist without one; create the partial `UNIQUE`; drop the old table; rename.
+   gone; then drop those rows); keep the lowest `id` per playlist. `last_run_at` is **NULL** for every playlist job (so the
+   first pass runs after the grace); `last_result` and `last_counts` are NULL for playlist jobs (the old shape - `removed`,
+   `kept`, `createdIds` - is obsolete; validation on read treats an invalid value as absent, never as an error); catalog jobs
+   keep `last_run_at` and `last_counts`, and `last_result` = `ok` when `last_outcome='ok'` else `failed`. `config='{}'` for
+   playlist jobs. The playlist-job schedule: `CASE WHEN schedule='off' THEN 'off' WHEN schedule GLOB '*ms' OR schedule GLOB
+   '*[0-9]s' THEN '15m' WHEN schedule GLOB '*[0-9]m' AND CAST(schedule AS INTEGER) < 15 THEN '15m' ELSE schedule END`. Then
+   insert a job (`WHERE NOT EXISTS`, not `NOT IN`) for every playlist without one: `name NULL, type 'playlist', enabled 1,
+   schedule '24h', config '{}', last_run_at NULL, created_at = CAST(strftime('%s','now') AS INTEGER) * 1000`; create the
+   partial `UNIQUE`; `UPDATE sqlite_sequence` for `sync_jobs` to the old maximum as in step 1; drop the old table; rename.
 3. **`channels`:** `CREATE TEMP TABLE channel_videos_keep AS SELECT * FROM channel_videos` (the cascade on drop would
-   empty it, `008-live-channels.sql:43`). Set `playlist_id = NULL` where that playlist does not exist. For rows with
+   empty it, `008-live-channels.sql:43`). `UPDATE channels SET playlist_id = NULL WHERE kind = 'live'` (the new CHECK would
+   abort the copy otherwise). Set `playlist_id = NULL` where that playlist does not exist. For rows with
    `playlist_id IS NULL AND source IS NOT NULL`: set `playlist_id` to the playlist whose `host = source` or
    `'stored:' || file_name = source` when **exactly one** matches; otherwise leave it NULL and clear `sync_name` and
    `edited_fields` (hand-made; the migration test lists them). Create `channels_next` with **every column of 008, 010, 013
@@ -400,7 +409,8 @@ the parent table cascades:
    `channels_next` (renaming the new table in does not repoint `channel_videos`: its reference resolves by name again);
    **recreate `channels_live_number` (008:39) and create `channels_playlist`**; restore `channel_videos` from the temp
    table; drop the temp tables.
-The migration test **builds a version-21 database at test time** (running 001-021, then inserting live channels with
+The migration test **builds a version-21 database at test time** (reading the 001-021 files in order, setting `PRAGMA
+user_version = 21`, then inserting live channels with
 videos, a synced playlist with channels, a job with `dryRun`/`prune`, a channel with a dangling `playlist_id`, two
 playlists on one host; no binary fixture is committed) and asserts: equal `channels` and `channel_videos` counts, the
 live-number index, every backfill and the ambiguous-source report, the schedule clamp, the backup file, and a clean
@@ -408,8 +418,10 @@ live-number index, every backfill and the ambiguous-source report, the schedule 
 
 The owner's 1 playlist and 2,598 channels (`source = stored:us.m3u`, disabled, no `tvg_id`) survive: the playlist becomes
 `kind='file', file_name='us.m3u'`, the channels get their `playlist_id` (so deleting that playlist later removes them), new
-columns are NULL (not checked), and `data/playlists/us.m3u`, if present, is left on disk, inert. The new job is due at once;
-the first pass (logos, then 2,598 stream checks within the 10-minute budget) starts after the server is listening and is
+columns are NULL (not checked), and `data/playlists/us.m3u`, if present, is left on disk, inert. The new job is due after
+the 30 s grace; W1a's first pass is step 2 only (a file playlist reads nothing), so it is quiet. The logo and status pass
+arrives with W2: its migration **`023`** is one statement, `UPDATE sync_jobs SET last_run_at = NULL WHERE type='playlist'`,
+so the first pass (logos, then 2,598 stream checks within the 10-minute budget) runs at the first start after W2 and is
 visible on the Jobs tab - tell the owner.
 
 ## 7. Tests
@@ -429,7 +441,7 @@ foreign-key test (deleting a playlist outside the service still cascades; `forei
 never read; a URL playlist is re-fetched and writes nothing when unchanged; unreachable still runs steps 3-5; logo cache write,
 dedupe, 7-day skip, a missing file re-downloads, GC skips young files, magic-byte and size and 4096 px refusals; the stream
 check live, non-M3U body, BOM, timeout; per-URL verdicts with no host shortcut; compare-and-set skips a channel whose
-`stream_url` changed mid-run and bumps nothing; each batch takes its own revision; ordering is total; per-playlist flight;
+`stream_url` changed mid-run; sync writes take no revision; ordering is total; per-playlist flight;
 schedule floor 15 min; run not awaited by the route). Stop and resume (stop mid-check with a gated `fetch` ends `stopped` with
 earlier verdicts kept; resume checks the remaining first and re-downloads no cached logo; idle `409`; catalog `422`; the
 scheduler does not restart a stopped job; shutdown aborts). `logo-resolver` (a malformed row does not throw; a failure
@@ -469,9 +481,9 @@ Each wave is one worker in its own worktree. The coordinator lands each, runs th
 |---|---|---|
 | **W0 docs** (coordinator) | Section 8. | The planning agent says "ready". |
 | **W1a backend schema and import** | `migrate.ts` backup (outside the transaction) and in-transaction `foreign_key_check`; migration `022`; `safe-fetch.ts` (built on `node:https`, 3.8) used by every playlist-content fetch; repositories (playlists, jobs, channels with the joined `source`/`published`/`playlistName`; the public read joins the playlist's `enabled`); the planner (3.6, reading only that playlist's rows); `playlist-import.ts`; routes (`import`, `POST /api/playlists`, `PATCH`, `DELETE` with cascade); `@fastify/multipart`; address-rule public check; stricter M3U detection; **a minimal playlist-job body = step 2 only** (started not awaited, typed result, scheduler non-blocking, 15-minute floor, catalog-only `POST /api/jobs`); removal of the old sync, `sync-seed` playlist half, `PLAYLIST_URLS`, the aggregate route, `playlists.address`, `channels.source` and every use in the inventory below; tests. | Backend suite green; migration test on the test-built v21 database; live: upload and URL import answer in seconds, re-upload of `us.m3u` is `0 created, 0 updated` with no revision bump, and a playlist job run re-reads and records a typed result. No logos or statuses yet (they are NULL; the system is consistent). |
-| **W1b admin wire and import UI** (released together with W1a, no release between) | `url`/view shapes, `playlist-schema`, `FileRow`, the `Source` choice, the import flow, `shared/http` `form`, `NewJobForm` catalog-only, the delete question, playlist-job rows (no delete), `Channels →`, derived `source`/`published`. | The admin matches the backend; section 4.3 rows for Playlists. |
-| **W2 backend sync steps 3-5, stop, bulk** | `logo-cache.ts`, `stream-check.ts`, `channel-health.ts` (per-URL targeted writes, no revision), `logo-resolver` fixes, the two global semaphores with the per-host cap, abort plumbing and `POST /api/jobs/:id/stop`, `PATCH /api/channels`, the `status`/`playlist` filters, `/logos/c/`; tests. | Sync tests green; live: after a run logos are on disk, statuses set, `/logos/c/<hash>.png` returns the image; stop and resume work. |
-| **W3 admin Jobs, Channels** (after W2) | Section 4.1 Jobs (`Stop`, `Resume`, last-run words from typed counts) and Channels (stream column, selects, one-call bulk, workspace logo and status) parts. | Section 4.3 rows for Jobs and Channels. |
+| **W1b admin wire and import UI** (released together with W1a, no release between) | `url`/view shapes, `playlist-schema`, `FileRow`, the `Source` choice, the import flow, `shared/http` `form`, `NewJobForm` catalog-only, the delete question, playlist-job rows (no delete), `Channels →`, derived `source`/`published`, **and the Jobs `Run` group (no flags, the "Started" notice) and `Last run` words from typed counts** (the Jobs wire files listed below). | The admin matches the backend; section 4.3 rows for Playlists and the Jobs `Run`/`Last run`. |
+| **W2 backend sync steps 3-5, stop, bulk** | `logo-cache.ts`, `stream-check.ts`, `channel-health.ts` (per-URL targeted writes, no revision), `logo-resolver` fixes, the two global semaphores with the per-host cap, abort plumbing and `POST /api/jobs/:id/stop`, `PATCH /api/channels`, the `status`/`playlist` filters, `/logos/c/`, migration `023` (section 6); tests. | Sync tests green; live: after a run logos are on disk, statuses set, `/logos/c/<hash>.png` returns the image; stop and resume work. |
+| **W3 admin Jobs, Channels** (after W2) | `Stop`, `Resume` and the Channels tab parts of section 4.1 (stream column, selects, one-call bulk, workspace logo and status). | Section 4.3 rows for Jobs `Stop`/`Resume` and Channels. |
 
 W1a and W1b land and are released together. Between waves the system is consistent (before W2, statuses are NULL).
 
@@ -485,7 +497,16 @@ tests; admin `schemas/playlist-schema.ts`, `services/playlists.ts`, `playlist-bo
 `field-checks.httpsAddress`, the `ADDRESS_*` copy, `NewPlaylistForm`, `PlaylistDetailsGroup`, `StreamStatusGroup`,
 `channel-query-copy.ts`, `usePlaylistChannels.ts` (deleted), `channel-guard.ts`, `channel-query.ts`, `channel-rows.ts`,
 `channel-schema.ts`, `types/admin-channel.ts`, and their tests. `jobs.test.ts` creates playlist jobs through
-`POST /api/jobs` and is rewritten. No fileserver or interface wave.
+`POST /api/jobs` and is rewritten. Also (W1a): `app.ts` (multipart registration, the `outbound` seam), `config.ts`,
+`service-registry.ts`, `constants/errors.ts` (remove `playlistBusy`, add `playlistTaken` and `jobNotRunning`), `api/jobs.ts`,
+`types/job.ts`, `job-service.ts`, `job-repository.ts` (`recordRun`, `removeOfPlaylist`, `PlaylistJobConfig`), `job-runner.ts`
+(catalog recording moves to `last_result`/typed counts), `sync-scheduler.ts` (non-blocking, `FIRST_RUN_GRACE_MS`),
+`types/playlist-sync.ts` (deleted), `api/admin-channels.ts`, and the tests `test/test-app.ts`, `no-store.test.ts`,
+`audit.test.ts`, `seed-repair.test.ts`, `job-scheduler.test.ts`, `paging-kit.ts`. W1b's Jobs wire: `job-schema.ts`,
+`job-flows.ts` (`answer.lastOutcome`), `job-rows.ts` (`lastRunFailed`), `JobLastRunGroup.tsx`, `playlist-bulk.ts`
+(`jobForPlaylists`), `NewJobForm.tsx`, `JobPlaylistSelect.tsx`, `JobDetailsGroup.tsx`, `job-draft.ts`, `job-body.ts`,
+`job-checks.ts`, `job-copy.ts`, `PlaylistStatusGroup.tsx`; `DELETE /api/playlists/:id` answers `{ id, deletedChannels,
+deletedJobs }` (admin `PlaylistDeletedSchema` is `{ id, released }` today). No fileserver or interface wave.
 
 ## 11. What is not built, and why
 
@@ -506,7 +527,7 @@ tests; admin `schemas/playlist-schema.ts`, `services/playlists.ts`, `playlist-bo
 
 None blocking. Decisions recorded 2026-10-18: delete cascades; the four rule exceptions approved; ping is a per-URL manifest
 request with no host shortcut; the first pass runs at the next start; stop and resume in scope; the fileserver and interface
-are out of scope. Open for review: re-approval of this v2 after the planning agent's re-check.
+are out of scope. No question is open.
 
 ## 13. Risks
 

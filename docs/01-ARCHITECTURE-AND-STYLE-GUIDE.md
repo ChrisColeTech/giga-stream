@@ -396,7 +396,8 @@ where `STRIP` is `flex flex-none flex-wrap items-center gap-2 border-b border-ha
   section 7.2): Channels index `Preview →` (exactly one ticked row: `Tick a row first`, `Tick only one row`); Providers
   `Titles →`; Titles and Playlists `Jobs →`; the Jobs and Accounts indexes none; a channel workspace `Preview →` (`Save
   the channel first` while the draft differs); a job workspace `Channels →` (a playlist job) or `Titles →` (a catalog
-  job); an account workspace none.
+  job); a playlist workspace `Channels →` (the channels of that playlist; disabled `This playlist has no channels.`; plan `43`);
+  an account workspace none.
 - Every button in it has a tooltip (`title`), as LoRA's do.
 
 ### Selection toolbar

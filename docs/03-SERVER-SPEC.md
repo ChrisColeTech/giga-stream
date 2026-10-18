@@ -812,7 +812,7 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
 | `POST /api/playlists` | signed in | the web-address import above |
 | `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id` | signed in | the record; `PATCH` renames, enables, or replaces a `url` playlist's address; `DELETE` removes the playlist **and its channels and sync job in one transaction** (see below; one revision bump, one `playlist.deleted` audit entry with the counts and host) |
 | `POST /api/jobs/:id/run`, `POST /api/jobs/:id/stop` | signed in | run (start, resume) and stop a job |
-| `PATCH /api/channels` | signed in | bulk `{ enabled, ids[] }` (1-5,000, one request, no client chunking) on stream channels; one transaction, one revision, one audit entry `channel.enabled_bulk`; answers `{ changed, skipped }` (live-kind ids are skipped) |
+| `PATCH /api/channels` | signed in | bulk `{ enabled, ids[] }` (1-5,000, one request, no client chunking) on stream channels; one transaction, one revision, one audit entry `channel.enabled_bulk`; answers `{ changed, unchanged, skipped }` (flipped / already in that state / live-kind or unknown ids) |
 | `GET /logos/c/<file>` | public | a cached image by its hash name (`^[0-9a-f]{32}\.(png\|jpg\|gif\|webp)$`; `immutable`, `nosniff`) |
 
 `GET /api/playlist-sync` and `POST /api/playlist-sync` no longer exist: the jobs are the sync. The playlist view is

@@ -214,7 +214,7 @@ is imported from `@giga/ui` and is not written under `src/admin` at all.
 | `constants/settings-sections.ts` | the three sections and `SETTINGS_LABELS` | 40 |
 | `constants/fixture-switches.ts` | reads `?signedin=0`, `?load=0` (mockup parity); deleted by `29` | 20 |
 | `lib/field-checks.ts` | pure: required, 1 to 9999, https address, schedule (a number and `m` or `h`, or `off`), year, rating | 80 |
-| `lib/row-state.ts` | pure: a record to its state word and row `data-st` (channel, title, job, playlist, provider, account); plan `43` adds the channel words `dead` (failed tone), `unchecked` (faint) for the stream verdict and the job word `stopped` (faint) | 90 |
+| `lib/row-state.ts` | pure: a record to its state word and row `data-st` (channel, title, job, playlist, provider, account); plan `43` adds the channel words `dead` (failed tone) and `not checked` (faint) for the stream verdict and the job word `stopped` (faint) | 90 |
 | `lib/event-sentence.ts` | pure: an audit-shaped fixture entry to its tone, area and one sentence (`ada@example.test updated channel Fixture News`); reused unchanged by `29` | 100 |
 | `lib/preview-state.ts` | pure: a channel's state, problem and the player's error to the one status line, `Retry`'s visibility and whether the stage wears its skeleton | 50 |
 | `lib/live-time.ts` | pure: `00:42` style duration, clock | 25 |
