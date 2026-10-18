@@ -11,9 +11,10 @@ const schedule = z.string().trim().max(SCHEDULE_MAX);
 
 const CatalogConfigSchema = z
   .object({
-    scope: z.enum(["trending", "popular", "discover"]),
-    /** Not asked for a discover job: the walk covers both kinds (`03` section 7.6b). */
+    scope: z.enum(["trending", "popular", "discover", "recent"]),
+    /** Not asked for a discover or recent job: both walk both kinds (`03` section 7.6b, `49`). */
     kind: z.enum(["movie", "tv"]).optional(),
+    /** Ignored by a recent job, which stores `1` (`49` section 2.1). */
     pages: z.number().int().min(1).max(500).optional(),
   })
   .strict();

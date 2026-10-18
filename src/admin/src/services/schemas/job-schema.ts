@@ -3,12 +3,13 @@ import { JobProgressSchema } from "./job-event-schema";
 import { lastCounts, lastResult } from "./run-counts-schema";
 
 /* `JobView` (`03` section 7.2c, `43` section 3.1): a playlist job is part of its playlist - it names the playlist and its
- * config is `{ playlistId }`; a catalog job carries its scope, kind (not on a discover job) and pages. A playlist job's
+ * config is `{ playlistId }`; a catalog job carries its scope, kind (not on a discover or recent job) and pages (a recent
+ * job, the Library update, stores `1` and ignores it, `49` section 2.1). A playlist job's
  * name is `Sync <playlist name>`, built by the backend at read time. The last run is typed: `lastResult` and
  * `lastCounts`, never a sentence. */
 const PlaylistConfig = z.object({ playlistId: z.number() });
 const CatalogConfig = z.object({
-  scope: z.enum(["trending", "popular", "discover"]),
+  scope: z.enum(["trending", "popular", "discover", "recent"]),
   kind: z.enum(["movie", "tv"]).optional(),
   pages: z.number(),
 });

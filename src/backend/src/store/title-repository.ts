@@ -6,6 +6,7 @@ import { createTitleCatalog } from "./title-catalog.js";
 import { createTitleDetails } from "./title-details.js";
 import { createTitlePage } from "./title-page.js";
 import { createTitleRelated } from "./title-related.js";
+import { createTitleUpdateQueue } from "./title-update-queue.js";
 
 /** A stored title: the `7.4` answer plus its freshness facts (docs/03 section 7.6b) and its record facts (docs/26 D20). */
 export interface StoredTitle {
@@ -113,6 +114,8 @@ export function createTitleRepository(db: DatabaseSync) {
   return {
     /** The Library fill's work queues (docs/47 section 3.1). */
     queue: createTitleDetails(db),
+    /** The Library update's stored-id query and refresh queue (docs/49). */
+    update: createTitleUpdateQueue(db),
     /** The stored genre dictionary and the recommendations computed from the store (docs/47 section 3.2). */
     genres: related.genres,
     replaceGenres: related.replaceGenres,

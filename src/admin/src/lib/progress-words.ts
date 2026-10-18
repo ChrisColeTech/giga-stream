@@ -1,8 +1,9 @@
 import type { JobProgress } from "@/services/schemas/job-event-schema";
 
 /* A running job's phase and counts in words, for the statusbar's tooltip (`44` section 4): `Checking streams 1,204 of
- * 2,598`, `Walking movies 12 of 100 pages`, `Caching logos 40 of 312`. A phase whose total is not known yet says only the
- * phase. Pure. */
+ * 2,598`, `Walking movies 12 of 100 pages`, `Caching logos 40 of 312`, and the Library update's `Reading recent titles 3 of
+ * 5 pages`, `Reading changes 40 of 133 pages`, `Refreshing 12 of 40` (`49`). A phase whose total is not known yet says
+ * only the phase. Pure. */
 const PHASE_WORDS: Readonly<Record<string, string>> = {
   reading: "Reading the playlist",
   logos: "Caching logos",
@@ -10,8 +11,11 @@ const PHASE_WORDS: Readonly<Record<string, string>> = {
   movies: "Walking movies",
   tv: "Walking series",
   details: "Fetching details",
+  recent: "Reading recent titles",
+  changes: "Reading changes",
+  refresh: "Refreshing",
 };
-const PAGE_PHASES: ReadonlySet<string> = new Set(["list"]);
+const PAGE_PHASES: ReadonlySet<string> = new Set(["list", "recent", "changes"]);
 /** The Library fill's walk counts slices (a year each, `48`), not pages. */
 const SLICE_PHASES: ReadonlySet<string> = new Set(["movies", "tv"]);
 const FALLBACK_WORD = "Walking titles";

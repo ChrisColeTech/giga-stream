@@ -83,7 +83,7 @@ test("a fetch that fails, a body that is no playlist, or an address the guard re
   assert.deepEqual([(await importUrl(ONE)).status, (await importUrl(ONE)).status], [422, 422]);
   assert.equal(pick((await importUrl("https://gone.example/none.m3u")).body, "error.code"), "playlist.unreachable", "a 404");
   assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 0);
-  assert.equal(pick((await api("GET", "/api/jobs")).body, "data.items.length"), 1, "only the seeded catalog job");
+  assert.equal(pick((await api("GET", "/api/jobs")).body, "data.items.length"), 2, "only the seeded catalog jobs (fill, update)");
   assert.equal(await revision(), before);
 });
 

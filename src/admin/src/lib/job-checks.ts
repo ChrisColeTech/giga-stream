@@ -1,6 +1,6 @@
 import { NAME_LENGTH, NAME_MAX, PAGES_MAX, PAGES_MIN } from "@/constants/job-copy";
 import { required, schedule, wholeNumber, type Refusal } from "./field-checks";
-import type { JobDraft, NewJobDraft } from "./job-draft";
+import { type JobDraft, type NewJobDraft, hasPages } from "./job-draft";
 
 /* The Jobs rules (`38` sections 4.2 and 4.3), mirroring the backend's so a form refuses before it sends. They use the
  * frozen primitives of `field-checks.ts`. */
@@ -36,11 +36,11 @@ export function firstCreateRefusal(draft: NewJobDraft): JobRefusal | null {
 }
 
 /** The first value a workspace save refuses, in the page's order, or null. Pages is checked for a catalog job only, and
- *  so is the name (a playlist's job is named after its playlist, `Sync <name>`). */
+ *  so is the name (a playlist's job is named after its playlist, `Sync <name>`); a Library update has no Pages row. */
 export function firstSaveRefusal(draft: JobDraft, catalog: boolean): JobRefusal | null {
   const checks: Array<[JobField, Refusal]> = [
     ["name", catalog ? nameRefusal(draft.name) : null],
-    ["pages", catalog ? pagesRefusal(draft.pages) : null],
+    ["pages", catalog && hasPages(draft.scope) ? pagesRefusal(draft.pages) : null],
     ["schedule", scheduleRefusal(draft.schedule)],
   ];
   const found = checks.find(([, sentence]) => sentence !== null);

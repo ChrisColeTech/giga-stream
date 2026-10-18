@@ -60,11 +60,21 @@ describe("a run worded in the admin from its typed result", () => {
     assert.equal(runWords("stopped", { titles: 4, detailed: 1, stale: 0, stopped: true }), "Stopped: 4 titles, 1 details.");
   });
 
+  it("words the Library update's changed titles between the titles and the details, and leaves out zero", () => {
+    assert.equal(
+      runWords("ok", { titles: 4, changed: 11, detailed: 15, seasons: 0, stale: 0 }),
+      "Synced: 4 titles, 11 changed, 15 details.",
+    );
+    assert.equal(runWords("ok", { titles: 4, changed: 0, detailed: 0, stale: 0 }), "Synced: 4 titles.");
+    assert.equal(runWords("ok", { titles: 4, stale: 0 }), "Synced: 4 titles.", "a result stored before the update has no changed");
+  });
+
   it("reads a catalog result with the new counts, an unknown extra field, or none of them", () => {
     const read = (lastCounts: unknown) => JobSchema.parse({ ...job(1, 1), type: "catalog", lastResult: "ok", lastCounts }).lastCounts;
     const full = catalogCountsOf(read({ titles: 3, detailed: 2, seasons: 9, stale: 0, later: 1 }));
     assert.deepEqual([full?.detailed, full?.seasons, full?.enriched], [2, 9, undefined]);
     assert.equal(catalogCountsOf(read({ titles: 3, stale: 1 }))?.detailed, undefined);
+    assert.equal(catalogCountsOf(read({ titles: 3, changed: 2, stale: 1 }))?.changed, 2);
     assert.equal(catalogCountsOf(read({ titles: 3, detailed: "many", stale: 1 })), undefined);
   });
 

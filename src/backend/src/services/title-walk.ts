@@ -19,8 +19,14 @@ import {
 
 export type WalkRun = PhaseRun;
 
-/** The phase a request starts in (docs/44 section 3.1): the Library fill walks `movies` then `tv`; other scopes one. */
-export const firstPhase = (request: SyncRequest): string => (request.scope === "discover" ? "movies" : "list");
+/**
+ * The phase a request starts in (docs/44 section 3.1, docs/49): the Library fill walks `movies` then `tv`, the Library
+ * update starts with `recent`; other scopes one `list`.
+ */
+export function firstPhase(request: SyncRequest): string {
+  if (request.scope === "recent") return "recent";
+  return request.scope === "discover" ? "movies" : "list";
+}
 
 /**
  * The catalog walk (docs/03 section 7.6b, docs/48): the Library fill walks TMDB's discover list by popularity, both

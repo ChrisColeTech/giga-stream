@@ -77,7 +77,7 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
     try {
       // The schema is at the newest migration (025, the Library fill), not at 008.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 27 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 28 });
     } finally {
       db.close();
     }

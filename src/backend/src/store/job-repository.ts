@@ -16,12 +16,14 @@ const Row = z.object({
   last_result: z.enum(RUN_RESULTS).nullable(),
   last_counts: z.string().nullable(),
   created_at: z.number().int(),
+  cursor_at: z.number().int().nullable(),
 });
 
 export interface CatalogJobConfig {
-  scope: "trending" | "popular" | "discover";
-  /** Not set on a discover job: the walk covers both kinds (`03` section 7.6b). */
+  scope: "trending" | "popular" | "discover" | "recent";
+  /** Not set on a discover or recent job: both walk both kinds (`03` section 7.6b, `49`). */
   kind?: "movie" | "tv";
+  /** A recent job stores `1`, which it ignores (`49` section 2.1). */
   pages: number;
 }
 
@@ -35,6 +37,8 @@ interface JobBase {
   lastResult?: RunResult;
   lastCounts?: RunCounts;
   createdAt: number;
+  /** Where a Library update's next `/changes` window starts (`49` section 2.4); absent until a run ended `ok`. */
+  cursorAt?: number;
 }
 /** A playlist's one job: part of the playlist, with no name of its own (the view says `Sync <playlist name>`). */
 export interface PlaylistJob extends JobBase {
@@ -49,7 +53,7 @@ export interface CatalogJob extends JobBase {
 export type JobRecord = PlaylistJob | CatalogJob;
 
 const CatalogConfig = z.object({
-  scope: z.enum(["trending", "popular", "discover"]),
+  scope: z.enum(["trending", "popular", "discover", "recent"]),
   kind: z.enum(["movie", "tv"]).optional(),
   pages: z.number().int(),
 });
@@ -76,6 +80,7 @@ function toJob(row: unknown): JobRecord {
     ...(r.last_result !== null && { lastResult: r.last_result }),
     ...(counts !== undefined && { lastCounts: counts }),
     createdAt: r.created_at,
+    ...(r.cursor_at !== null && { cursorAt: r.cursor_at }),
   };
   if (r.type === "playlist") {
     if (r.playlist_id === null) throw new Error(`job ${r.id} is a playlist job without a playlist`);
@@ -84,7 +89,7 @@ function toJob(row: unknown): JobRecord {
   return { ...base, type: "catalog", name: r.name ?? "", config: CatalogConfig.parse(JSON.parse(r.config)) };
 }
 
-const COLUMNS = "id, name, type, enabled, schedule, config, playlist_id, last_run_at, last_result, last_counts, created_at";
+const COLUMNS = "id, name, type, enabled, schedule, config, playlist_id, last_run_at, last_result, last_counts, created_at, cursor_at";
 
 /** The sync jobs (docs/43 section 3.1), in the order they were made. */
 export function createJobRepository(db: DatabaseSync) {
@@ -99,6 +104,8 @@ export function createJobRepository(db: DatabaseSync) {
   );
   const update = db.prepare("UPDATE sync_jobs SET name = ?, enabled = ?, schedule = ?, config = ? WHERE id = ?");
   const record = db.prepare("UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ? WHERE id = ?");
+  const recordWithCursor = db.prepare(
+    "UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ?, cursor_at = ? WHERE id = ?");
   const remove = db.prepare("DELETE FROM sync_jobs WHERE id = ?");
   const countOfPlaylist = db.prepare("SELECT COUNT(*) AS n FROM sync_jobs WHERE playlist_id = ?");
   const count = db.prepare("SELECT COUNT(*) AS n FROM sync_jobs");
@@ -131,9 +138,14 @@ export function createJobRepository(db: DatabaseSync) {
       const [name, config] = job.type === "catalog" ? [job.name, JSON.stringify(job.config)] : [null, "{}"];
       update.run(name, job.enabled ? 1 : 0, job.schedule, config, job.id);
     },
-    /** Keeps a run: when it ended, how it went, and its typed counts (validated here, so no sentence is ever stored). */
-    recordRun(id: number, at: number, result: RunResult, counts: RunCounts): void {
-      record.run(at, result, JSON.stringify(RunCountsSchema.parse(counts)), id);
+    /**
+     * Keeps a run: when it ended, how it went, and its typed counts (validated here, so no sentence is ever stored).
+     * `cursorAt` is written only when given (a Library update that ended `ok`, `49` section 2.4); otherwise it stays.
+     */
+    recordRun(id: number, at: number, result: RunResult, counts: RunCounts, cursorAt?: number): void {
+      const text = JSON.stringify(RunCountsSchema.parse(counts));
+      if (cursorAt === undefined) record.run(at, result, text, id);
+      else recordWithCursor.run(at, result, text, cursorAt, id);
     },
     remove(id: number): boolean {
       return Number(remove.run(id).changes) > 0;

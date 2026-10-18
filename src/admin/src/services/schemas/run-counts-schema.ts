@@ -21,12 +21,14 @@ export const PlaylistCountsSchema = z.object({
 });
 
 /** The Library fill (`docs/47` section 3.1): `detailed` and `seasons` arrive with the details phase, `enriched` may land
- *  later; a result stored before them lacks them, so each is optional and any other field is ignored. */
+ *  later, `changed` (the Library update's stored titles that TMDB edited, `49`) later still; a result stored before them
+ *  lacks them, so each is optional and any other field is ignored. */
 export const CatalogCountsSchema = z.object({
   titles: count,
   detailed: count.optional(),
   seasons: count.optional(),
   enriched: count.optional(),
+  changed: count.optional(),
   stale: count,
   stopped: z.boolean().optional(),
 });

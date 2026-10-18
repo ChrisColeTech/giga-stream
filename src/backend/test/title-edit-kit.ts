@@ -69,6 +69,8 @@ export async function titleApp(options: { tmdb?: boolean } = {}) {
   const tmdb = await mutableTmdb();
   const t = await makeApp({ config: options.tmdb === false ? {} : { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
+  // The seeded Library update (job 2) must not start by itself when a test moves the clock past its grace (docs/49).
+  await send(t.app, "PATCH", "/api/jobs/2", { schedule: "off" }, token);
   return { t, tmdb, token };
 }
 

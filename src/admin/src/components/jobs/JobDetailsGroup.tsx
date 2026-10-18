@@ -5,7 +5,7 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { ENABLED_TIP, NAME_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
-import type { JobDraft } from "@/lib/job-draft";
+import { type JobDraft, hasPages } from "@/lib/job-draft";
 import { targetOf, typeWord } from "@/lib/job-rows";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminJob } from "@/services/schemas/job-schema";
@@ -20,7 +20,7 @@ export interface JobDetailsGroupProps {
 
 /** `Details` (`38` section 4.3, `43` section 3.1): Name first (a playlist job's is `Sync <playlist>`, built by the backend,
  *  so read-only), Type (read-only: it never changes), then the type's rows (the Playlist it belongs to, read-only, or
- *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 500). */
+ *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 500; a Library update has none). */
 export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGroupProps) {
   const catalog = job.type === "catalog";
   return (
@@ -51,7 +51,7 @@ export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGrou
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
         <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
       </Row>
-      {catalog && (
+      {catalog && hasPages(draft.scope) && (
         <Row label="Pages" tip={PAGES_TIP} error={errors["pages"]}>
           <Input
             type="text"
