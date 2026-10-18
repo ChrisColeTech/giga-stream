@@ -2,12 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeEach, describe, it } from "node:test";
+import { describe, it } from "node:test";
 import { ApiError } from "@giga/http/api-error";
 import { NOT_CONNECTED_CODE } from "@/constants/api-sentences";
 import { accountState } from "@/services/account-state";
 import { accounts } from "@/services/accounts";
-import { audit } from "@/services/audit";
 import { channels } from "@/services/channels";
 import { health } from "@/services/health";
 import { isNotConnected } from "@/services/not-connected";
@@ -15,8 +14,6 @@ import { jobs } from "@/services/jobs";
 import { playlists } from "@/services/playlists";
 import { providers } from "@/services/providers";
 import { titles } from "@/services/titles";
-import { useAppStore } from "@/store/app-store";
-import { resetStore } from "./support/store";
 
 const SRC = fileURLToPath(new URL("../src", import.meta.url));
 const RECORD_SERVICES = { channels, providers, titles, playlists, jobs, accounts };
@@ -54,31 +51,9 @@ describe("the service modules", () => {
         });
       }
     }
-    for (const call of [() => audit.list(), () => accountState.read(), () => accountState.write({}), () => health.read(), () => channels.rebuild("x"), () => jobs.run(1)]) {
+    for (const call of [() => accountState.read(), () => accountState.write({}), () => health.read(), () => channels.rebuild("x"), () => jobs.run(1)]) {
       await assert.rejects(call(), isNotConnected);
     }
-  });
-});
-
-describe("the Events drawer reads the audit service", () => {
-  const state = () => useAppStore.getState();
-  beforeEach(() => resetStore());
-
-  it("shows the refusal as one warn row and keeps Load older disabled when the audit is not connected", async () => {
-    await state().loadAudit();
-    assert.equal(state().events.length, 1);
-    assert.equal(state().events[0]?.tone, "warn");
-    assert.equal(state().notice?.sentence, state().events[0]?.sentence);
-    assert.equal(state().olderCursor, null);
-    await state().loadOlder();
-    assert.equal(state().events.length, 1, "no cursor, no request, no row");
-  });
-
-  it("asks for the page before its cursor, and a refusal adds a row and leaves the cursor", async () => {
-    useAppStore.setState({ olderCursor: 40 });
-    await state().loadOlder();
-    assert.equal(state().events.length, 1);
-    assert.equal(state().olderCursor, 40);
   });
 });
 

@@ -13,6 +13,13 @@ export const AuditEntrySchema: z.ZodType<AuditEntry> = z.object({
   address: z.string().optional(),
 });
 
-export const AuditListSchema = z.object({ items: z.array(AuditEntrySchema), nextBefore: z.number().optional() });
+/** The page as the service reads it: entries stay `unknown` so one unreadable entry costs that entry, not the page. */
+export const AuditPageLenientSchema = z.object({ items: z.array(z.unknown()), nextBefore: z.number().optional() });
 
-export type AuditList = z.infer<typeof AuditListSchema>;
+/** The readable entries of a page (newest first), the cursor for the page before them, and how many entries could not
+ *  be read. */
+export interface AuditPage {
+  readonly items: AuditEntry[];
+  readonly nextBefore?: number;
+  readonly unreadable: number;
+}

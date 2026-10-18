@@ -58,6 +58,18 @@ describe("the record actions", () => {
     assert.equal(eventFromAudit(named, { "ch-9": "Held" }).sentence, `${ADA} updated channel Own`);
   });
 
+  it("names an account by its email: created and deleted carry it, updated gets the held email, then the name", () => {
+    const created = entry("account.created", { actorEmail: ADA, subject: "a1", detail: { email: "ed@example.test" } });
+    assert.equal(eventFromAudit(created).sentence, `${ADA} created account ed@example.test`);
+    const deleted = entry("account.deleted", { actorEmail: ADA, subject: "a1", detail: { email: "ed@example.test" } });
+    assert.equal(eventFromAudit(deleted, { a1: "other@example.test" }).sentence, `${ADA} deleted account ed@example.test`);
+    const updated = entry("account.updated", { actorEmail: ADA, subject: "a1", detail: { name: "Ed", fields: ["name"] } });
+    assert.equal(eventFromAudit(updated, { a1: "ed@example.test" }).sentence, `${ADA} updated account ed@example.test`);
+    assert.equal(eventFromAudit(updated).sentence, `${ADA} updated account Ed`);
+    const bare = entry("account.updated", { actorEmail: ADA, subject: "a1" });
+    assert.equal(eventFromAudit(bare).sentence, `${ADA} updated account a1`);
+  });
+
   it("calls the actor `system` when the entry has none", () => {
     assert.equal(eventFromAudit(entry("channel.created", { detail: { name: "X" } })).sentence, "system created channel X");
     const sync = eventFromAudit(entry("sync.started"));

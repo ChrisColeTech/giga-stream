@@ -1,12 +1,32 @@
-import { notConnected } from "./not-connected";
-import type { AuditList } from "./schemas/audit-schema";
+import { request } from "./api";
+import { AuditEntrySchema, AuditPageLenientSchema, type AuditPage } from "./schemas/audit-schema";
+import type { AuditEntry } from "@/types/admin-audit";
 
-/** `GET /api/audit` (`29` section 11): the Events drawer's history, newest first, paged by `before`. NOT CONNECTED: refuses
- *  until the audit is wired; the drawer then shows the refusal as a row and keeps `Load older` disabled. */
+/** `GET /api/audit?limit=&before=` (`29` section 11), REAL: the Events drawer's history, newest first, paged by `before`
+ *  (the entries with an id below it). Entries are read one by one; an unreadable entry is dropped and counted. */
 export interface AuditService {
-  list: (query?: { readonly before?: number }) => Promise<AuditList>;
+  list: (query?: { readonly limit?: number; readonly before?: number }) => Promise<AuditPage>;
+}
+
+function queryOf(query: { readonly limit?: number; readonly before?: number }): string {
+  const parts = Object.entries(query)
+    .filter((entry): entry is [string, number] => entry[1] !== undefined)
+    .map(([name, value]) => `${name}=${value}`);
+  return parts.length === 0 ? "" : `?${parts.join("&")}`;
 }
 
 export const audit: AuditService = {
-  list: () => notConnected("audit.list"),
+  list: async (query = {}) => {
+    const page = await request(`/api/audit${queryOf(query)}`, AuditPageLenientSchema);
+    const items: AuditEntry[] = [];
+    for (const raw of page.items) {
+      const parsed = AuditEntrySchema.safeParse(raw);
+      if (parsed.success) items.push(parsed.data);
+    }
+    return {
+      items,
+      unreadable: page.items.length - items.length,
+      ...(page.nextBefore !== undefined && { nextBefore: page.nextBefore }),
+    };
+  },
 };

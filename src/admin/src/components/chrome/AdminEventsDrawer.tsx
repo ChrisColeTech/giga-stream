@@ -1,4 +1,5 @@
 import { EventsDrawer } from "@giga/ui/shell/EventsDrawer";
+import { useAuditTail } from "@/hooks/useAuditTail";
 import { useAppStore } from "@/store/app-store";
 import { useOlderAvailable } from "@/store/selectors";
 
@@ -8,7 +9,7 @@ export function AdminEventsDrawer() {
   const open = useAppStore((state) => state.eventsOpen);
   const events = useAppStore((state) => state.events);
   const clearEvents = useAppStore((state) => state.clearEvents);
-  const loadOlder = useAppStore((state) => state.loadOlder);
+  const { loadOlder } = useAuditTail();
   const available = useOlderAvailable();
 
   return <EventsDrawer open={open} rows={events} onClear={clearEvents} older={{ available, onLoad: () => void loadOlder() }} />;
