@@ -1,7 +1,6 @@
 import { Clapperboard } from "lucide-react";
 import { Segmented } from "@giga/ui/controls/Segmented";
 import { Group } from "@giga/ui/form/Group";
-import { Row } from "@giga/ui/form/Row";
 import { Wide } from "@giga/ui/form/Wide";
 import { VIEW_LABEL, VIEW_OPTIONS, VIEW_TIP } from "@/constants/title-stored-copy";
 import { storedBadge } from "@/lib/title-stored-badge";
@@ -10,7 +9,8 @@ import { TitleBrowseList } from "./TitleBrowseList";
 import { TitleStoredList } from "./TitleStoredList";
 
 /** `Titles` (`37` section 4.2, `docs/41` section 5.2): the list group. A labelled `View` row (`Stored` | `Browse TMDB`,
- *  `Stored` first, the page's main list) sits above the list, which is one of two lists, each with its own state: the
+ *  `Stored` first, the page's main list), a compact mode switch under the heading with no row of its own, sits above the
+ *  list, which is one of two lists, each with its own state: the
  *  stored titles (paged by offset, windowed above 100 rows) or the TMDB browse page. The heading carries the count of
  *  stored titles as its badge and nothing else; `Jobs →` is the page toolbar's. */
 export function TitleListGroup() {
@@ -20,11 +20,13 @@ export function TitleListGroup() {
   const badge = mode === "stored" ? storedBadge(inventory) : undefined;
   return (
     <Group id="ti-list" icon={Clapperboard} title="Titles" badge={badge} last={false}>
-      <Row label={VIEW_LABEL} tip={VIEW_TIP}>
-        <Segmented aria-label={VIEW_LABEL} options={VIEW_OPTIONS} value={mode} onChange={setMode} />
-      </Row>
       <Wide>
-        <div className="flex flex-col gap-3">{mode === "stored" ? <TitleStoredList /> : <TitleBrowseList />}</div>
+        <div className="flex flex-col gap-2">
+          <span title={VIEW_TIP} className="self-start px-3">
+            <Segmented dense aria-label={VIEW_LABEL} options={VIEW_OPTIONS} value={mode} onChange={setMode} />
+          </span>
+          {mode === "stored" ? <TitleStoredList /> : <TitleBrowseList />}
+        </div>
       </Wide>
     </Group>
   );

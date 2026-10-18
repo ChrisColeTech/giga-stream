@@ -31,25 +31,26 @@ beforeEach(() => {
 });
 
 describe("the Stored | Browse TMDB mode", () => {
-  it("is a Segmented in a labelled row `View`, Stored lit by default, above the list's first row", () => {
+  it("is a compact Segmented named `View` with no row of its own, Stored lit by default, above the list's query row", () => {
     const html = list(pageWith(5));
-    assert.match(html, /<span class="[^"]*"><span class="truncate">View<\/span>/);
+    assert.ok(!html.includes('<span class="truncate">View</span>'), "no label column row");
     assert.match(html, /aria-label="View"[^>]*>(?:(?!<\/div>).)*aria-pressed="true"[^>]*>Stored</s);
     assert.match(html, /aria-pressed="false"[^>]*>Browse TMDB</);
-    assert.ok(at(html, ">View<") < at(html, 'aria-label="Search stored titles"'));
+    assert.match(html, /h-6 px-2\.5 text-xs">Stored</, "dense chips");
+    assert.ok(at(html, 'aria-label="View"') < at(html, 'aria-label="Search stored titles"'));
   });
 
   it("shows the TMDB browse list, with Newer and Older in the strip, once Browse TMDB is chosen", () => {
     state().storedSetMode("browse");
     const html = list(renderLive(createElement(TitlesPage, { active: true })));
-    assert.ok(at(html, ">View<") < at(html, 'aria-label="Search titles"'));
+    assert.ok(at(html, 'aria-label="View"') < at(html, 'aria-label="Search titles"'));
     assert.ok(html.includes('aria-label="Newer. This is the first page."') && html.includes('aria-label="Older. This is the last page."'));
     assert.ok(!html.includes('aria-label="Search stored titles"'));
   });
 });
 
 describe("the Stored list's first row", () => {
-  it("is a search field with its icon, a Sort select and a select each for Kind, Origin, Edited and Enabled, in one wrapping row", () => {
+  it("is a search field with its icon, a Sort select with its direction toggle and a self-labelling select each for Kind, Origin, Edited and Enabled, in one compact row", () => {
     const html = list(pageWith(5));
     const order = ['aria-label="Search stored titles"', 'aria-label="Sort"', 'aria-label="Kind"', 'aria-label="Origin"', 'aria-label="Edited"', 'aria-label="Enabled"', 'aria-label="Titles table"'];
     order.reduce((previous, needle) => {
@@ -58,17 +59,31 @@ describe("the Stored list's first row", () => {
       return index;
     }, -1);
     assert.match(html, /<input[^>]*type="search"[^>]*aria-label="Search stored titles"[^>]*data-search=""/);
-    assert.match(html, /flex flex-wrap items-center gap-2/);
+    assert.match(html, /@container/);
+    assert.match(html, /@\[900px\]:flex-nowrap/);
     assert.ok(/<select[^>]*aria-label="Sort"/.test(html) && count(html, "<select") === 5);
-    for (const label of ["Title, A to Z", "Year, newest", "Rating, highest", "Fetched, newest"]) assert.ok(html.includes(`>${label}<`), label);
-    assert.match(html, /<option value="title:asc" selected="">/);
+    for (const label of ["Title", "Year", "Rating", "Fetched"]) assert.ok(html.includes(`>${label}</option>`), label);
+    assert.match(html, /<option value="title" selected="">/);
+    assert.ok(html.includes('aria-label="Sort direction, ascending"'), "the direction toggle, with a tooltip");
+  });
+
+  it("shows each filter's NAME at rest, never `All kinds` or `Edited or not`, and the value in the accent once set", () => {
+    const html = list(pageWith(5));
+    for (const noise of ["All kinds", "All origins", "Edited or not", "Enabled or not"]) assert.ok(!html.includes(noise), noise);
+    for (const name of ["Kind", "Origin", "Edited", "Enabled"]) assert.ok(html.includes(`whitespace-nowrap">${name}</span></span>`), name);
+    assert.ok(html.includes(">Any kind</option>"), "the default is worded for the open list");
+    assert.ok(!html.includes("text-accent-text hover:border-accent"), "no filter wears the accent at rest");
+    state().storedSetQuery({ ...START_STORED, kind: "movie" });
+    const set = list(renderLive(createElement(TitlesPage, { active: true })));
+    assert.ok(set.includes('whitespace-nowrap">Movies</span></span>') && set.includes('title="Kind: Movies"'));
+    assert.ok(set.includes("text-accent-text hover:border-accent"), "the active filter wears the accent");
   });
 
   it("has no chips, no Sort pills and no labelled filter rows", () => {
     const html = list(pageWith(5));
-    for (const gone of ['aria-label="Kind filter"', ">Newest<", ">Oldest<", ">Trending<", 'aria-label="Run the search"']) assert.ok(!html.includes(gone), gone);
+    for (const gone of ['aria-label="Kind filter"', ">Newest<", ">Oldest<", ">Trending<", 'aria-label="Run the search"', "placeholder=\""]) assert.ok(!html.includes(gone), gone);
     assert.equal(count(html, "aria-pressed"), 2, "only the View choice is a pill row");
-    for (const label of [">Search<", ">Sort<", ">Kind<", ">Origin<"]) assert.ok(!html.includes(label), `no row labelled ${label}`);
+    assert.ok(!html.includes("<label"), "no labelled rows");
   });
 
   it("holds no Newer or Older and no sentence: the heading carries the stored count as its badge only", () => {

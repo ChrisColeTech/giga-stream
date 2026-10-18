@@ -1,5 +1,7 @@
+import { QueryBar } from "@giga/ui/lists/QueryBar";
 import { QuerySearch } from "@giga/ui/lists/QuerySearch";
 import { QuerySelect } from "@giga/ui/lists/QuerySelect";
+import { SortControl } from "@giga/ui/lists/SortControl";
 import {
   EDITED_SELECT,
   ENABLED_SELECT,
@@ -10,8 +12,9 @@ import {
   STORED_SORT_OPTIONS,
 } from "@/constants/title-stored-copy";
 import {
-  sortValueOf,
-  withSortValue,
+  flipDir,
+  isStoredSort,
+  withSortField,
   type StoredFlag,
   type StoredKind,
   type StoredOrigin,
@@ -26,21 +29,21 @@ export interface TitleStoredToolbarProps {
   readonly onChange: (change: (query: StoredQuery) => StoredQuery) => void;
 }
 
-/** THE STORED LIST'S FIRST ROW (`01` section 9; `docs/41` section 6), the controls handed to the table strip's query row
- *  and drawn in the shared `QuerySearch` and `QuerySelect` as LoRA Studio's `LibraryToolbar` draws its own: the search
- *  field taking the row's width (it runs on Enter, never as you type), then the Sort select (the column and its
- *  direction) and a select each for Kind, Origin, Edited and Enabled. A change is a new query: the list returns to the
- *  top. */
+/** THE STORED LIST'S QUERY ROW (`01` section 9; `docs/41` section 6), one compact line in the shared `QueryBar`: the
+ *  search taking the row's width (it runs as you type), then the sort (its column and a direction toggle) and a
+ *  self-labelling select each for Kind, Origin, Edited and Enabled: the name at rest, the value in the accent when set. A
+ *  change is a new query: the list returns to the top. */
 export function TitleStoredToolbar({ query, typed, onType, onSearch, onChange }: TitleStoredToolbarProps) {
   return (
-    <>
-      <QuerySearch label={STORED_SEARCH_LABEL} value={typed} onChange={onType} onEnter={onSearch} />
-      <QuerySelect
+    <QueryBar search={<QuerySearch label={STORED_SEARCH_LABEL} value={typed} onChange={onType} onSearch={onSearch} />}>
+      <SortControl
         label={STORED_SORT_LABEL}
-        value={sortValueOf(query)}
+        value={query.sort}
         options={STORED_SORT_OPTIONS}
-        width="w-[190px]"
-        onChange={(sort) => onChange((now) => withSortValue(now, sort))}
+        onChange={(sort) => {
+          if (isStoredSort(sort)) onChange((now) => withSortField(now, sort));
+        }}
+        direction={{ value: query.dir, onToggle: () => onChange(flipDir) }}
       />
       <QuerySelect
         label={KIND_SELECT.label}
@@ -66,6 +69,6 @@ export function TitleStoredToolbar({ query, typed, onType, onSearch, onChange }:
         options={ENABLED_SELECT.options}
         onChange={(enabled: StoredFlag) => onChange((now) => ({ ...now, enabled }))}
       />
-    </>
+    </QueryBar>
   );
 }

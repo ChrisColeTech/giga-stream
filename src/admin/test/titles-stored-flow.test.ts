@@ -69,7 +69,7 @@ describe("the stored list's paged slice", () => {
     assert.equal(calls.length, before, "the same query reads nothing");
   });
 
-  it("runs the search on Enter only: typing reads nothing, the run search is trimmed", async () => {
+  it("typing keeps the text and reads nothing (the field's debounce runs the search), the run search is trimmed", async () => {
     const { flows, calls } = rig(10);
     await flows.loadStored();
     flows.typeStored("  dune ");

@@ -41,7 +41,7 @@ export const KIND_OPTIONS = [
   { value: "tv", label: "Series" },
 ] as const;
 export const BROWSE_KIND_OPTIONS = [
-  { value: "all", label: "All kinds" },
+  { value: "all", label: "Any kind" },
   { value: "movie", label: "Movies" },
   { value: "tv", label: "Series" },
 ] as const;
