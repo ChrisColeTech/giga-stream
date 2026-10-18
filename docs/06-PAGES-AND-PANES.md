@@ -299,7 +299,8 @@ The groups do not fold (§2.8's exception).
 
 LoRA Studio's top strip over a gallery grid, holding `All · Movies · TV · Local` as the family's equal-width
 pill choice (`Segmented`). No changing count text. At its right end, two icon buttons: **Refresh**
-(`RefreshCw`, `Refresh Library`) and, right beside it, **Search titles** (`Search`, aria-label and tooltip `Search
+(`RefreshCw`, `Refresh Library`: `POST /api/library/refresh` makes the fileserver sync its titles from the admin backend now, then the
+grid re-reads; a refusal is said once on the notice line and the cache keeps serving, `46`) and, right beside it, **Search titles** (`Search`, aria-label and tooltip `Search
 titles`), which opens the spotlight (§4.6). The strip is one row and holds no filter field, Sort, View, selection
 count or batch verb; those belong to the filters. It is drawn over the grid, the list and Rows alike. Existing cards
 stay while a scope change resolves.
