@@ -49,6 +49,7 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
       libraryGenres: [],
       libraryYear: "",
       libraryWatched: "all",
+      libraryFilter: "",
     },
   });
   await t.dispose();

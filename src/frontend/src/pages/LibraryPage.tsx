@@ -6,6 +6,8 @@ import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
 import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
+import { TitleSpotlight } from "@/components/library/TitleSpotlight";
+import { useTitleSpotlight } from "@/hooks/useTitleSpotlight";
 import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
 import { useLibraryData } from "@/hooks/useLibraryData";
 import { useRowsShelves } from "@/hooks/useRowsShelves";
@@ -47,6 +49,7 @@ export function LibraryPage({ active }: { active: boolean }) {
   /* Rows has no windowed list to take the request, and a stale one must not scroll a grid shown later. */
   useEffect(() => { if (view === "rows") setReveal(null); }, [view, reveal]);
   useLibraryRequest({ patch, setView, setSelected, setReveal });
+  const spotlight = useTitleSpotlight(active);
   const onSource = (source: SourceId): void => patch({ source });
   const onScope = (scope: Scope): void => patch({ scope });
   const onSeeAll = useCallback((group: ShelfGroup): void => {
@@ -81,7 +84,7 @@ export function LibraryPage({ active }: { active: boolean }) {
     <LibraryRows
       scope={query.scope} shelves={rowsShelves.shelves} positions={rowsShelves.positions} collections={collections}
       selected={selected} onScope={onScope} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
-      onLoadMore={rowsShelves.loadMore} onRefresh={data.refresh} loading={data.loading}
+      onLoadMore={rowsShelves.loadMore} onRefresh={data.refresh} onSearch={spotlight.open} loading={data.loading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
   ) : (
@@ -89,21 +92,29 @@ export function LibraryPage({ active }: { active: boolean }) {
       scope={query.scope} source={query.source} showContinue={prefs.showContinue} view={view} items={items}
       shown={shown} continuing={continuing} collections={collections} selected={selected} onScope={onScope}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
-      onRefresh={data.refresh} loading={data.loading}
+      onRefresh={data.refresh} onSearch={spotlight.open} loading={data.loading}
       paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
       titleRegionsLoading={render.titleRegionsLoading} reveal={reveal} onRevealed={onRevealed}
     />
   );
 
   return (
-    <WorkspaceSplit
-      surface="library" active={active}
-      left={<LibraryRail source={query.source} counts={counts} collections={collections} onSource={onSource} />}
-      center={center}
-      right={<LibraryFilters query={query} view={view}
-        genres={[...new Set([...(data.page?.facets.genres ?? []), ...query.genres])]} years={[
-          ...new Set([...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)])]),
-        ].sort((a, b) => b - a)} trending={data.page?.trending ?? false} onQuery={patch} onView={changeView} />}
-    />
+    <>
+      <WorkspaceSplit
+        surface="library" active={active}
+        left={<LibraryRail source={query.source} counts={counts} collections={collections} onSource={onSource} />}
+        center={center}
+        right={<LibraryFilters query={query} view={view}
+          genres={[...new Set([...(data.page?.facets.genres ?? []), ...query.genres])]} years={[
+            ...new Set([...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)])]),
+          ].sort((a, b) => b - a)} trending={data.page?.trending ?? false} onQuery={patch} onView={changeView} />}
+      />
+      {spotlight.state.open && (
+        <TitleSpotlight
+          state={spotlight.state} dispatch={spotlight.dispatch} paused={spotlight.paused} onClose={spotlight.close}
+          onType={spotlight.type} onSubmit={spotlight.submit} onPlay={spotlight.play} onInfo={spotlight.info}
+        />
+      )}
+    </>
   );
 }

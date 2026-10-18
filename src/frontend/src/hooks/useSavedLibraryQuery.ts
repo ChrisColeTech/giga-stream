@@ -13,7 +13,7 @@ export interface SavedLibraryQuery {
   readonly view: ListView;
   /** The saved state has been applied (or the shell gave up waiting for it): the first read may go. */
   readonly ready: boolean;
-  /** Changes the query; whatever of it is kept (Type, source, genres, year, watched, sort) is saved as well. */
+  /** Changes the query; whatever of it is kept (Type, source, Filter text, genres, year, watched, sort) is saved too. */
   readonly patch: (change: Partial<LibraryQuery>) => void;
   /** Changes the view without saving it (a jump from a shelf's See all). */
   readonly setView: (view: ListView) => void;
@@ -23,18 +23,19 @@ export interface SavedLibraryQuery {
 
 /** The Library's query and view, restored from the saved settings. The shell holds the first read until the snapshot has
  *  been applied (`ready`), so the list opens already filtered; a change made in the window is saved through the settings
- *  write-back. The search is not saved. */
+ *  write-back, the Filter text as well (owner, 2026-10-18). */
 export function useSavedLibraryQuery(): SavedLibraryQuery {
   const hydrated = useAppStore((state) => state.hydrationApplied);
   const ready = useAppStore((state) => state.shellVisible);
   const [query, setQuery] = useState<LibraryQuery>(savedQuery);
   const [view, setView] = useState<ListView>(() => useAppStore.getState().library.libraryView);
 
-  /* The snapshot lands after this mounts: take the saved filters then, keeping what the person has typed. */
+  /* The snapshot lands after this mounts: take the saved filters then, the saved Filter text included, unless the person
+     has already typed one. */
   useEffect(() => {
     if (!hydrated) return;
     const saved = savedQuery();
-    setQuery((current) => ({ ...saved, search: current.search }));
+    setQuery((current) => ({ ...saved, search: current.search !== "" ? current.search : saved.search }));
   }, [hydrated]);
 
   const patch = useCallback((change: Partial<LibraryQuery>) => {

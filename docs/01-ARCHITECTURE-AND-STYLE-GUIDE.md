@@ -488,6 +488,13 @@ nonmodal and anchored to its opener; a modal work window for a substantial task;
 operational utility. Only one popup or work window is open at a time. A popup is not a focus trap;
 focus returns to its opener only if it still exists.
 
+Exception (owner, 2026-10-18): Library's **Search titles** spotlight (`06` section 4.6) is a wide popup that a work
+window may stack over. A result row's **Info** opens Title information above the spotlight without closing it: the
+window's scrim washes over the spotlight, and while the window is open the spotlight ignores outside presses, focus
+leaving it and Escape. Closing Title information (its `X`, `Escape`) returns to the spotlight with its query, results
+and focused row intact, and focus goes back to the row's Info. This is the only stack: the spotlight never opens over a
+window, and nothing opens over Title information while it stands on the spotlight.
+
 The context menu runs a chosen row's action after the menu has closed and given focus back to the row's
 opener (`components/ui/ContextMenu.tsx`). A row that opens a work window (a collection's `Rename…`) therefore
 hands focus to that window's frame, and the menu's own close never takes it back; run inside the menu's select,

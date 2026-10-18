@@ -26,6 +26,7 @@ export const SettingsSchema = z.object({
   libraryGenres: z.array(z.string().min(1).max(80)).max(40),
   libraryYear: z.string().regex(/^(1[89]\d\d|2[01]\d\d)?$/),
   libraryWatched: z.enum(["all", "unwatched", "watching", "watched"]),
+  libraryFilter: z.string().max(200),
 });
 
 export const SettingsPatchSchema = SettingsSchema.partial();

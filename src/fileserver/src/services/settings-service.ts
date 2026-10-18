@@ -64,6 +64,7 @@ export function createSettingsService(deps: {
       libraryGenres: pick("libraryGenres"),
       libraryYear: pick("libraryYear"),
       libraryWatched: pick("libraryWatched"),
+      libraryFilter: pick("libraryFilter"),
     };
   }
 

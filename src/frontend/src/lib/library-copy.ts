@@ -10,8 +10,10 @@ export const LIBRARY_COPY = {
   clearArmed: "Clear all history?",
   clearTip: "Clear every watch entry; your files and collections are untouched",
   clearEmpty: "The history is already empty.",
-  searchClear: "Clear the search",
-  searchEmpty: "There is no search to clear.",
+  filter: "Filter",
+  filterPlaceholder: "Filter by title",
+  filterClear: "Clear the filter",
+  filterEmpty: "There is no filter to clear.",
   anyGenre: "Any genre",
   anyYear: "Any year",
   collectionsWindow: "Manage collections",
@@ -31,6 +33,14 @@ export const LIBRARY_COPY = {
   seasons: "Seasons",
   continueHeading: "Continue watching",
   listLabel: "Titles",
+  /** The spotlight (`06` section 4.6): its button, header and field. */
+  searchTitles: "Search titles",
+  searchResults: "Search results",
+  movie: "Movie",
+  series: "Series",
+  playTitle: (title: string): string => `Play ${title}`,
+  infoTitle: (title: string): string => `Info ${title}`,
+  searchFailed: "Titles could not be searched.",
 } as const;
 
 export interface LibraryOption<T extends string> {

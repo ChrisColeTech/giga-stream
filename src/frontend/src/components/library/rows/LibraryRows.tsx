@@ -27,6 +27,8 @@ export interface LibraryRowsProps {
   readonly onSeeAll: (group: ShelfGroup) => void;
   readonly onLoadMore: (id: string) => boolean;
   readonly onRefresh: () => void;
+  /** Opens the Search titles spotlight. */
+  readonly onSearch: () => void;
   readonly loading: boolean;
   /** Drawn under the type strip: the History strip while History is open, as the grid draws it. */
   readonly strip?: ReactNode;
@@ -37,13 +39,13 @@ export interface LibraryRowsProps {
  *  after that. Until then, and when no shelf has anything, it draws skeletons. Up and Down move between shelves. */
 export function LibraryRows({
   scope, shelves, positions, collections, selected, onScope, onSelect, onRemoveWatch, onSeeAll, onLoadMore, onRefresh,
-  loading, strip,
+  onSearch, loading, strip,
 }: LibraryRowsProps) {
   const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading, "rows");
   const settled = shelves !== null && shelves.length > 0;
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
+      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} onSearch={onSearch} />
       {strip}
       <div
         ref={scroller}

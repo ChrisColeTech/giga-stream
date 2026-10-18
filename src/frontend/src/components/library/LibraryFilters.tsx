@@ -15,7 +15,7 @@ import {
 import { useAppStore } from "@/store/app-store";
 import { FilterSetting } from "./FilterSetting";
 import { GenrePopover } from "./GenrePopover";
-import { SearchField } from "./SearchField";
+import { FilterField } from "./FilterField";
 
 const SORT_KEYS: readonly SortKey[] = ["newest", "oldest", "az", "year", "trending"];
 const WATCHED_KEYS: readonly WatchedFilter[] = ["all", "unwatched", "watching", "watched"];
@@ -36,8 +36,8 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView, tr
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
-      <FilterSetting label="Search">
-        <SearchField value={query.search} onChange={(search) => onQuery({ search })} />
+      <FilterSetting label={LIBRARY_COPY.filter}>
+        <FilterField value={query.search} onChange={(search) => onQuery({ search })} />
       </FilterSetting>
       <FilterSetting label="View">
         <Segmented<ListView>
@@ -99,7 +99,7 @@ export function LibraryFilters({ query, view, genres, years, onQuery, onView, tr
         <Button
           variant="ghost"
           full
-          title="Clear every filter and return the sort to your default; the search stays"
+          title="Clear every filter and return the sort to your default; the Filter text stays"
           onClick={() => onQuery({ ...FILTER_DEFAULTS, sort: useAppStore.getState().library.librarySort })}
         >
           Clear filters
