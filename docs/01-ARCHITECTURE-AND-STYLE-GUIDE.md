@@ -216,6 +216,15 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 - One exported React component per file; the filename matches the export; named exports.
 - Components are `PascalCase.tsx`, hooks `useThing.ts`, everything else kebab-case. Types live under
   `types/`, one domain per file. No arbitrary barrels.
+- **Naming is decided by where a file lives** (`scripts/check-rules/rules/size-and-naming.mjs`
+  enforces the same rule):
+  - Components in a `components/` or `pages/` tree, or any `.tsx` in the shared UI library:
+    `PascalCase.tsx`, matching the file's one exported component.
+  - Hooks in a hooks tree (`src/*/src/hooks/`, `src/shared/ui/src/hooks/`): `useThing.ts`, camelCase.
+  - Everywhere else — services, stores, `lib`, `types/`, `api/`, tests: kebab-case. A hook-shaped
+    file outside a hooks directory (`src/shared/ui/src/lists/useSelectAll.ts`) is therefore
+    kebab-case (`use-select-all.ts`); to keep a hook's camelCase name, move the file into a hooks
+    directory.
 - No configuration literals in components: ports, timings, limits and copy live in named constants.
   Constants are `SCREAMING_SNAKE_CASE` in kebab-case files.
 - Comments explain non-obvious decisions, not syntax.
