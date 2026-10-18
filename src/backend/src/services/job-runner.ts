@@ -97,11 +97,18 @@ export function createJobRunner(deps: {
     flights.set(job.id, { abort, settled });
   }
 
+  /** Aborts a job's run without waiting for it (the admin's `Stop`); true when a run was in flight. */
+  function abort(id: number): boolean {
+    const flight = flights.get(id);
+    flight?.abort.abort();
+    return flight !== undefined;
+  }
+
   /** Aborts a job's run and waits for it to settle, at most `limitMs`; true when a run was in flight. */
   async function stop(id: number, limitMs = PLAYLIST_DELETE_SETTLE_MS): Promise<boolean> {
     const flight = flights.get(id);
     if (!flight) return false;
-    flight.abort.abort();
+    abort(id);
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([flight.settled, new Promise<void>((resolve) => (timer = setTimeout(resolve, limitMs)))]);
     clearTimeout(timer);
@@ -113,6 +120,7 @@ export function createJobRunner(deps: {
     scheduledRefusal,
     isRunning: (id: number): boolean => flights.has(id),
     stop,
+    abort,
 
     /** An admin's run: refused when the job cannot run (`422 job.disabled`), `409 sync.busy` while it does. */
     run(job: JobRecord, actor: Actor): void {

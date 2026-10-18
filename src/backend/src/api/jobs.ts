@@ -52,4 +52,10 @@ export function registerJobs(app: FastifyInstance, services: Services): void {
     const { jobId } = parseInput(JobParams, request.params);
     return ok(reply, services.jobs.run(Number(jobId), actorOf(request, principal)), 202);
   });
+
+  app.post("/api/jobs/:jobId/stop", async (request, reply) => {
+    const principal = signedIn(services, request);
+    const { jobId } = parseInput(JobParams, request.params);
+    return ok(reply, services.jobs.stop(Number(jobId), actorOf(request, principal)), 202);
+  });
 }
