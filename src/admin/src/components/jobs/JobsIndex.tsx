@@ -10,7 +10,7 @@ export function JobsIndex() {
   return (
     <>
       <IndexToolbar tab="jobs" />
-      <Workspace labels={NEW_JOB_LABELS}>
+      <Workspace labels={NEW_JOB_LABELS} fill>
         <NewJobForm />
         <JobsList />
       </Workspace>

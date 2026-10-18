@@ -33,7 +33,7 @@ export function AccountsList() {
   );
 
   return (
-    <ListGroup id="accounts-list" icon={Users} title="Accounts" strip={strip} all={all}>
+    <ListGroup id="accounts-list" icon={Users} title="Accounts" strip={strip} all={all} fill>
       <AccountRows />
     </ListGroup>
   );

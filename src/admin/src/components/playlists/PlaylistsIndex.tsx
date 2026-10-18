@@ -10,7 +10,7 @@ export function PlaylistsIndex() {
   return (
     <>
       <IndexToolbar tab="playlists" />
-      <Workspace labels={NEW_PLAYLIST_LABELS}>
+      <Workspace labels={NEW_PLAYLIST_LABELS} fill>
         <NewPlaylistForm />
         <PlaylistsList />
       </Workspace>

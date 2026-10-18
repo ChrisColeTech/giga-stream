@@ -18,20 +18,23 @@ export interface ListGroupProps {
   readonly children: ReactNode;
   /** False when another group follows (the Titles page's `Deleted titles`); the splitter then follows this one. */
   readonly last?: boolean;
+  /** The list takes the pane's remaining height (the page's `Workspace fill`): a `RecordTable` of size `fill` scrolls
+   *  inside it. The heading still folds. */
+  readonly fill?: boolean;
 }
 
 /** The list frame every index closes with: the tile, the mono title and the fold (a heading carries no button), then the
  *  table strip and the list across the full width of the page. It is the page's last group unless told otherwise, so no
  *  splitter follows it. */
-export function ListGroup({ id, icon, title, strip, all, children, last = true }: ListGroupProps) {
+export function ListGroup({ id, icon, title, strip, all, children, last = true, fill = false }: ListGroupProps) {
   const body = (
-    <Wide>
+    <Wide fill={fill}>
       {strip}
       {children}
     </Wide>
   );
   return (
-    <Group id={id} icon={icon} title={title} last={last}>
+    <Group id={id} icon={icon} title={title} last={last} fill={fill} collapsible>
       {all === undefined ? body : <SelectAllScope all={all}>{body}</SelectAllScope>}
     </Group>
   );

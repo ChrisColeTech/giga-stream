@@ -33,7 +33,7 @@ export function JobsList() {
     />
   );
   return (
-    <ListGroup id="jb-list" icon={Timer} title="Jobs" strip={strip} all={all}>
+    <ListGroup id="jb-list" icon={Timer} title="Jobs" strip={strip} all={all} fill>
       <JobRows />
     </ListGroup>
   );

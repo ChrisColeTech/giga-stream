@@ -1,19 +1,19 @@
+import { useMemo } from "react";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
-import { RecordGrid } from "@giga/ui/lists/RecordGrid";
-import { CELL_MONO, CELL_NAME, CELL_NUMBER, CELL_TEXT } from "@giga/ui/lists/record-grid-classes";
-import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
-import { SkeletonGrid } from "@giga/ui/lists/SkeletonGrid";
-import { StateWord } from "@/components/records/StateWord";
+import { RecordTable } from "@giga/ui/lists/RecordTable";
+import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { DELETE_PROVIDER_TITLE, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/provider-copy";
-import { PROVIDER_GRID, PROVIDER_HEADINGS } from "@/constants/provider-grid";
 import { useProviderActions } from "@/hooks/useProviderActions";
-import { providerRow } from "@/lib/provider-rows";
+import { providerRow, type ProviderRowView } from "@/lib/provider-rows";
 import { useAppStore } from "@/store/app-store";
+import { providerColumns } from "./provider-columns";
 
-/** The providers grid (`37` section 3.2): the header with its select-all tick, then a row per provider in `order`, then
- *  name: the order in mono, the name, the source, the family, the state word (`enabled` or `disabled`, a disabled
- *  provider dimmed) and the end `Delete`, an armed two-step naming the provider. Shimmer rows in the header's own
- *  columns draw while nothing has been read and when there is nothing to list (never a sentence). */
+const idOf = (row: ProviderRowView): string => String(row.id);
+
+/** The providers table (`37` section 3.2, `45`): a row per provider in `order`, then name (the headings re-sort them): the
+ *  order in mono, the name, the source, the family, the state word (`enabled` or `disabled`, a disabled provider dimmed)
+ *  and the end `Delete`, an armed two-step naming the provider. Skeleton rows draw while nothing has been read and when
+ *  there is nothing to list (never a sentence). */
 export function ProviderRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.providers);
   const serial = useAppStore((state) => state.serial);
@@ -21,49 +21,29 @@ export function ProviderRows() {
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useProviderActions();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
+  const rows = useMemo(() => items.map(providerRow), [items]);
 
-  return (
-    <RecordGrid
-      ariaLabel="Providers"
-      layout={PROVIDER_GRID}
-      headings={PROVIDER_HEADINGS}
-      ticks
-    >
-      {waiting ? (
-        <SkeletonGrid />
-      ) : (
-        items.map((provider) => {
-          const row = providerRow(provider);
-          const busy = saving || isBusy(`delete:${row.id}`);
-          const reason = unreachable ? UNREACHABLE_REASON : busy ? SAVING_REASON : undefined;
-          return (
-            <RecordGridRow
-              key={row.id}
-              state={row.state.word}
-              dimmed={row.state.dimmed}
-              ticked={ticked.includes(row.id)}
-              tick={{ label: `Select ${row.name}`, onToggle: (on) => tick(row.id, on) }}
-              onOpen={() => openWorkspace("providers", String(row.id))}
-              end={
-                <ArmedButton
-                  question={`Delete ${row.name}?`}
-                  disabled={reason !== undefined}
-                  title={reason ?? DELETE_PROVIDER_TITLE}
-                  onConfirm={() => void track(`delete:${row.id}`, () => flows.remove(row.id))}
-                >
-                  Delete
-                </ArmedButton>
-              }
-            >
-              <span className={CELL_NUMBER}>{row.order}</span>
-              <span className={CELL_NAME}>{row.name}</span>
-              <span className={CELL_MONO}>{row.source}</span>
-              <span className={CELL_TEXT}>{row.family}</span>
-              <StateWord state={row.state} />
-            </RecordGridRow>
-          );
-        })
-      )}
-    </RecordGrid>
-  );
+  const rowView = (row: ProviderRowView): RecordRowView => {
+    const busy = saving || isBusy(`delete:${row.id}`);
+    const reason = unreachable ? UNREACHABLE_REASON : busy ? SAVING_REASON : undefined;
+    return {
+      state: row.state.word,
+      dimmed: row.state.dimmed,
+      ticked: ticked.includes(row.id),
+      tick: { label: `Select ${row.name}`, onToggle: (on) => tick(row.id, on) },
+      onOpen: () => openWorkspace("providers", String(row.id)),
+      end: (
+        <ArmedButton
+          question={`Delete ${row.name}?`}
+          disabled={reason !== undefined}
+          title={reason ?? DELETE_PROVIDER_TITLE}
+          onConfirm={() => void track(`delete:${row.id}`, () => flows.remove(row.id))}
+        >
+          Delete
+        </ArmedButton>
+      ),
+    };
+  };
+
+  return <RecordTable ariaLabel="Providers" columns={providerColumns} rows={rows} idOf={idOf} rowView={rowView} waiting={waiting} />;
 }

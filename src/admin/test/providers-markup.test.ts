@@ -70,6 +70,8 @@ describe("the providers list", () => {
     assert.ok(at(html, ">Prov1<") < at(html, ">Prov2<"), "sorted by order");
     assert.ok(html.includes('aria-label="Select Prov1"') && html.includes('data-st="disabled"'));
     assert.ok(html.includes("opacity-45"));
+    assert.ok(html.includes("--cols:1.25rem 3.5rem minmax(10rem,1.4fr)") && html.includes('data-col="family"'));
+    assert.ok(html.includes('title="Sort by order"') && html.includes('aria-sort="none"'));
     assert.ok(html.includes('title="Deletes the provider; titles stop getting sources from it."'));
   });
 

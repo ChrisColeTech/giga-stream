@@ -33,7 +33,7 @@ export function PlaylistsList() {
     />
   );
   return (
-    <ListGroup id="pl-list" icon={List} title="Playlists" strip={strip} all={all}>
+    <ListGroup id="pl-list" icon={List} title="Playlists" strip={strip} all={all} fill>
       <PlaylistRows />
     </ListGroup>
   );

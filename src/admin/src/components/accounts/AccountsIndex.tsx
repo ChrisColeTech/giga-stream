@@ -10,7 +10,7 @@ export function AccountsIndex() {
   return (
     <>
       <IndexToolbar tab="accounts" />
-      <Workspace labels={NEW_ACCOUNT_LABELS}>
+      <Workspace labels={NEW_ACCOUNT_LABELS} fill>
         <NewAccountForm />
         <AccountsList />
       </Workspace>

@@ -34,7 +34,7 @@ export function ProvidersList() {
   );
 
   return (
-    <ListGroup id="pv-list" icon={Plug} title="Providers" strip={strip} all={all}>
+    <ListGroup id="pv-list" icon={Plug} title="Providers" strip={strip} all={all} fill>
       <ProviderRows />
     </ListGroup>
   );

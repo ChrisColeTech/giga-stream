@@ -10,7 +10,7 @@ export function ProvidersIndex() {
   return (
     <>
       <IndexToolbar tab="providers" />
-      <Workspace labels={NEW_PROVIDER_LABELS}>
+      <Workspace labels={NEW_PROVIDER_LABELS} fill>
         <NewProviderForm />
         <ProvidersList />
       </Workspace>

@@ -11,6 +11,9 @@ const LIBRARY = "src/shared/ui";
 const CONSUMERS = ["src/frontend", "src/admin"];
 const ALIASES = ["@giga/ui", "@giga/http"];
 const DEDUPE = ["react", "react-dom", "framer-motion", "zustand", "lucide-react"];
+/* Packages only some consumers import (`docs/45` section 7): the admin renders the record tables, the frontend does not. They
+   are deduped and pinned to the library's version where the consumer is listed, and nowhere else. */
+const CONSUMER_ONLY = { "src/admin": ["@tanstack/react-table", "@tanstack/react-virtual"] };
 const SHARED_PINS = ["react", "react-dom", "framer-motion", "lucide-react", "zustand", "zod", "@radix-ui/react-dropdown-menu"];
 
 function readText(root, rel) {
@@ -32,7 +35,7 @@ function readJson(root, rel) {
 }
 
 /** The consumer's Vite config: each alias, the dedupe list and fs.allow. */
-function viteProblems(vite) {
+function viteProblems(vite, extra) {
   const problems = [];
   for (const alias of ALIASES) {
     if (!new RegExp(`['"]${alias}['"]\\s*:`).test(vite)) problems.push(`no resolve.alias for ${alias}`);
@@ -41,7 +44,7 @@ function viteProblems(vite) {
   if (dedupe === null) {
     problems.push("no resolve.dedupe");
   } else {
-    for (const name of DEDUPE) {
+    for (const name of [...DEDUPE, ...extra]) {
       if (!new RegExp(`['"]${name}['"]`).test(dedupe[1])) problems.push(`resolve.dedupe lacks ${name}`);
     }
   }
@@ -60,14 +63,18 @@ function sourceAndPathProblems(css, tsconfig) {
 }
 
 /** One version for each package both sides declare, and the library declares the runtime. */
-function pinProblems(consumerPkg, libraryPkg) {
+function pinProblems(consumerPkg, libraryPkg, extra) {
   const problems = [];
   const mine = consumerPkg.dependencies ?? {};
   const theirs = libraryPkg.dependencies ?? {};
   for (const name of ["react", "react-dom"]) {
     if (theirs[name] === undefined) problems.push(`the library does not declare ${name}`);
   }
-  for (const name of SHARED_PINS) {
+  for (const name of extra) {
+    if (mine[name] === undefined) problems.push(`${name} is not declared here`);
+    if (theirs[name] === undefined) problems.push(`the library does not declare ${name}`);
+  }
+  for (const name of [...SHARED_PINS, ...extra]) {
     if (mine[name] !== undefined && theirs[name] !== undefined && mine[name] !== theirs[name]) {
       problems.push(`${name} is ${mine[name]} here but ${theirs[name]} in the library`);
     }
@@ -83,15 +90,16 @@ export const sharedUiConsumption = {
     const findings = [];
     for (const dir of CONSUMERS) {
       const add = (message) => findings.push({ file: dir, message });
+      const only = CONSUMER_ONLY[dir] ?? [];
       const vite = readText(root, `${dir}/vite.config.mts`);
       const css = readText(root, `${dir}/src/index.css`) ?? "";
       const tsconfig = readText(root, `${dir}/tsconfig.app.json`) ?? "";
       const pkg = readJson(root, `${dir}/package.json`);
       if (vite === null) add("no vite.config.mts");
-      else for (const problem of viteProblems(vite)) add(problem);
+      else for (const problem of viteProblems(vite, only)) add(problem);
       for (const problem of sourceAndPathProblems(css, tsconfig)) add(problem);
       if (pkg === null) add("no package.json");
-      else for (const problem of pinProblems(pkg, libraryPkg)) add(problem);
+      else for (const problem of pinProblems(pkg, libraryPkg, only)) add(problem);
     }
     return findings;
   },
