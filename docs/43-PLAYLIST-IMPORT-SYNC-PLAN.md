@@ -4,6 +4,8 @@
 
 ## 0. Verdict
 
+**Scope (owner, 2026-10-18): the admin backend and the admin app only.** The desktop interface (`src/frontend`) and the fileserver (`src/fileserver`) are not touched by any of this.
+
 - **Import is one request that reads a playlist and creates the parent record and every channel, disabled.** A file arrives as multipart. A URL arrives as a JSON body (`POST /api/playlists`), fetched once. Neither does per-channel network work.
 - **Sync is one job per playlist, four steps:** (1) re-read the source, but only if it can have changed; (2) fill missing logo addresses from the iptv-org index; (3) cache the logo bytes on the backend; (4) check every stream and record `live` or `dead`.
 - **The owner's hypothesis is right, and stronger for uploaded files.** An uploaded file has no external mtime: the backend's copy changes only when the file is uploaded again, which is an import. So the sync never reads a file source and needs no mtime or hash check. A URL source has no cheap "did it change" signal that works everywhere: hash the body (at most 8 MiB, typically 280 KB) and skip parse and plan when the hash is unchanged. ETag and Last-Modified are not built.
@@ -60,7 +62,7 @@ Admin:
 Bulk:
 16. `useChannelBulk` runs one `PATCH` per channel through the sequential runner. Correct across pages; at 2,598 rows it makes 2,598 audit rows and revisions.
 
-Fileserver:
+Fileserver (observed only; out of scope, this plan does not change it):
 17. `live-channels-service.ts:103-104` awaits `probe.checkAll` over every enabled channel inside the channel read; at hundreds of enabled channels the Live list hangs on a read.
 
 ### 1.3 Over-engineering to remove
@@ -183,7 +185,7 @@ Own-playlist pool (`playlist_id = id`, or `playlist_id IS NULL AND source = host
 ### 3.7 How logos reach the screens
 
 - **Admin:** the Channels workspace `Logo` row and playlist counts render `<img src={cachedLogoUrl}>`; same-origin with the backend in production; in development the Vite proxy already forwards `/logos` (`vite.config.mts:35`).
-- **Desktop interface:** the backend publishes `cachedLogoUrl`; the fileserver rewrites `cachedLogoUrl ?? logoUrl` to `/api/images/<id>` through its image cache, which fetches the backend's loopback address on first request. The renderer's `ChannelRow` and `LogoImage` need no change.
+- **Desktop interface and fileserver: out of scope** (owner, 2026-10-18). The backend publishes `cachedLogoUrl` and `status` on its channel answers and nothing in this plan changes how the fileserver or the interface consume them.
 
 ## 4. UI wiring (every surface)
 
@@ -218,11 +220,9 @@ Files changed: `NewPlaylistForm.tsx`, `lib/playlist-draft.ts` (source, `File`), 
 | Workspace | `StreamStatusGroup.tsx` adds `Stream` (the word), `Checked` (time) and `Logo` (a 56px box with the cached image, glyph fallback). |
 | Types | `types/admin-channel.ts`, `schemas/channel-schema.ts` (`status`, `checkedAt`, `cachedLogoUrl`), `services/channels.ts` (`setEnabled(ids, enabled)`). |
 
-### 4.2 Desktop interface and fileserver
+### 4.2 Desktop interface and fileserver: not touched
 
-Fileserver: `services/admin-client.ts` adds `status`, `checkedAt`, `cachedLogoUrl` to its zod schema (non-strict, so they are silently dropped without this); `services/live-view.ts` `summaryOf` maps `live` -> `live`, `dead` -> `offline`, absent -> `unknown`, carries `checkedAt`; `services/live-channels-service.ts` `fill()` rewrites `cachedLogoUrl ?? logoUrl`, and runs `probe.checkAll` only on channels with no backend status (live-kind and never-checked).
-
-Interface (`src/frontend`): no component change; the channel row already draws the strip, word and 56px logo (`06` 3.2). Docs: `03` 3.4 and 5.2 (a backend verdict is not re-probed).
+Owner, 2026-10-18: none of these features touch the frontend or the fileserver. This plan changes the admin backend and the admin app only. `src/frontend` and `src/fileserver` are not edited; the fileserver keeps probing and caching exactly as it does today.
 
 ### 4.3 Per-surface acceptance
 
@@ -237,7 +237,6 @@ Real stack (`npm run dev`), Chrome at 1600x1000 and 900x640, dark and light. Use
 | Playlists list and workspace | Counts columns. `Show channels` opens Channels filtered to that playlist. The Status group has no per-channel link list. |
 | Jobs -> Run job | `running` and `1 syncing`. After `Refresh`, the outcome sentence and counts. No Dry run or Prune. |
 | Channels | `stream` column words. `Stream status` and `Playlist` selects work with paging. Filter Live -> `Select all M matching` -> `Enable` completes in a few chunk calls (one `PATCH /api/channels` per 500), one notice, one audit entry per chunk. Workspace shows logo, `live`/`dead` and checked time. |
-| Desktop Live -> Channels pane | Enabled imported channels appear with real logos (`/api/images/...`) and `Live`/`Offline` words matching the admin. The list answers fast, no multi-minute probe. |
 | Console and network | No failures. |
 
 ## 5. Remove / keep
@@ -260,7 +259,7 @@ Written by workers, run by the coordinator (`07` 6.3).
 
 Backend (injected `fetch`, temporary `DATA_DIR`, no sleeping): `playlist-import.test.ts` rewritten (import creates the channels in the same request, all disabled, right audit entries; filename sanitizing; non-`.m3u` is `422`; re-import idempotent - same ids, one revision, a manual enable survives; oversize `400`; no session `401`; non-M3U `422` writes nothing; URL import success, unreachable creates no row, duplicate refused; the auto job exists; another playlist's channel is not taken). `playlist-sync.test.ts` rewritten (a file playlist never re-read; URL unchanged hash does not plan, changed hash updates and deletes nothing; an unreachable source still runs logos and status; logo cache write, dedupe by content, skip within 7 days, failure keeps the old file, GC; content-type and magic-byte refusal, size cap; status: live manifest, non-M3U body, timeout, a DNS or refused failure marks only that channel dead (no host shortcut), budget and ordering; column-targeted writes do not clobber a concurrent admin edit; the route does not await the run, single flight). A `logo-resolver` test (malformed row does not throw, failure persists a retry stamp). `channels-paging.test.ts` (`status`, `playlist` filters). `channel-enabled.test.ts` extended (`PATCH /api/channels`: stream rows, live ids skipped, one revision, 500 cap, `422`). A `/logos/<hash>` serving test (headers, traversal refusal). A migration test (old job config cleaned, jobs backfilled, existing channel rows untouched). `jobs.test.ts` and `job-scheduler.test.ts` updated (`202` with `running`, no override body).
 
-Admin: file-control markup and the `File` draft, import flows, the `form` option in `shared/http`, `channel-query` (`status`, `playlist`), `channel-enable` (chunking, partial failure, one summary), channel row and `stream` markup, job counts and the Run group, playlists list and status markup. Fileserver: `live-view.test.ts` (status mapping) and `channels.test.ts` (backend-status channels not probed; logo rewrite prefers `cachedLogoUrl`). Gate: `node scripts/check/gate.mjs` (`live-smoke.mjs` unaffected: live-kind and loopback streams only).
+Admin: file-control markup and the `File` draft, import flows, the `form` option in `shared/http`, `channel-query` (`status`, `playlist`), `channel-enable` (chunking, partial failure, one summary), channel row and `stream` markup, job counts and the Run group, playlists list and status markup. No fileserver or interface tests change. Gate: `node scripts/check/gate.mjs` (`live-smoke.mjs` unaffected: live-kind and loopback streams only).
 
 ## 8. Docs first (W0, coordinator)
 
@@ -270,7 +269,6 @@ Rewrite before any code. Do not edit `docs/03` or `docs/26` until the other sess
 |---|---|
 | `03` 7.2c | Rewrite wholesale: import (file, URL), the job and the sync steps, the logo cache, status, the secrecy rule, caps. |
 | `03` 7.2 | `status`, `checkedAt`, `cachedLogoUrl`; `PATCH /api/channels`; the `admin-channels` params; `/logos/<hash>`. |
-| `03` 3.4, 5.2 | A backend verdict is not re-probed. |
 | `03` 7.9 | The `logo-cache` folder. |
 | `03` 7.13, 8 | Audit actions (`playlist.imported`, `playlist.synced`, `channel.enabled_bulk`) and the codes table. |
 | `26` 3.11 | Playlist and job definitions (no flags, auto-created job). |
@@ -300,9 +298,8 @@ Each wave is one worker in its own worktree. The coordinator lands each, runs th
 | **W2 backend sync, status, logos** | `playlist-sync-service.ts` rewritten; `logo-cache.ts`; `stream-check.ts`; `channel-health.ts`; `logo-resolver.ts` fixes; `job-runner.ts` (started, no flags); `job-service.ts`; `types/job.ts`; `api/live-streams.ts` (`/logos`); `channel-views.ts`; `channel-page.ts`; `PATCH /api/channels`; remove `api/playlist-sync.ts`; tests. | Sync tests pass. Live: a job run answers `202`; after `Refresh`: logos on disk, statuses set, `/logos/<hash>.png` returns the image. |
 | **W3 admin Playlists and Jobs** (after W2) | `shared/http` `form`; the `session-api` option; the Playlists and Jobs files in 4.1; tests. | Section 4.3 rows for Playlists and Jobs. |
 | **W4 admin Channels** (parallel with W3) | The Channels files in 4.1. | Section 4.3 Channels row, including `Select all M matching` -> `Enable` through chunks. |
-| **W5 fileserver** | `admin-client.ts`, `live-view.ts`, `live-channels-service.ts`, tests. | Section 4.3 desktop row. |
 
-W1 and W2 are sequential (same services). W3, W4 and W5 can run in parallel once W2 lands.
+W1 and W2 are sequential (same services). W3 and W4 can run in parallel once W2 lands. There is no fileserver or interface wave.
 
 ## 11. What is not built, and why
 
@@ -323,11 +320,11 @@ W1 and W2 are sequential (same services). W3, W4 and W5 can run in parallel once
 
 1. **Delete a playlist.** Today `DELETE` keeps its channels as hand-made rows. After importing 2,598 disabled channels the leftover is large. Should delete offer "also delete its channels"?
 2. **Confirm the rule exceptions** (written into `01`): (a) the backend stores and serves logo bytes; (b) the backend accepts an M3U upload and keeps no copy; (c) the new `@fastify/multipart` dependency; (d) the `Upload` icon added to the icon table (source: LoRA Studio `ImagesGroup.tsx`).
-3. **The backend verdict is the Live status; the fileserver stops re-probing those channels.** Upside: no multi-minute Live read. Risk: a cloud-hosted backend may see a geo-blocked stream differently from the viewer. Fallback: keep the fileserver probe and use the backend verdict only in the admin.
+3. *(Withdrawn 2026-10-18: the fileserver and the interface are out of scope, so the stored verdict is shown in the admin only.)*
 4. **Confirm "ping" means a manifest GET per stream URL**, not a bare host reachability check.
 5. **Confirm the first-run behaviour.** The backfilled job is enabled and runs at the next start.
 
-**Decision (owner, 2026-10-18, "ok lets execute" - approval of the plan with its defaults; revisable):** Q1 `DELETE` keeps the channels as today (the `Dead` filter plus bulk `Delete` removes them); Q2 all four exceptions approved; Q3 the backend verdict is the Live status and the fileserver stops re-probing those channels; Q4 "ping" is a manifest GET per stream URL; Q5 the backfilled job is enabled and runs at the next start. Stop and resume (3.4a) is in scope.
+**Decision (owner, 2026-10-18, "ok lets execute" - approval of the plan with its defaults; revisable):** Q1 `DELETE` keeps the channels as today (the `Dead` filter plus bulk `Delete` removes them); Q2 all four exceptions approved; Q3 withdrawn (no fileserver or interface work: the plan is the backend and the admin app only); Q4 "ping" is a manifest GET per stream URL; Q5 the backfilled job is enabled and runs at the next start. Stop and resume (3.4a) is in scope.
 
 ## 13. Risks
 
