@@ -22,6 +22,11 @@ export function openDatabase(file: string): DatabaseSync {
   }
 }
 
+/** Whether SQLite refused a write for a UNIQUE or primary-key constraint (the caller says which request lost). */
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Error && /UNIQUE constraint failed/i.test(error.message);
+}
+
 /** Runs `work` in one write transaction; any throw rolls everything back. */
 export function runInTransaction<T>(db: DatabaseSync, work: () => T): T {
   db.exec("BEGIN IMMEDIATE");

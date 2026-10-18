@@ -1,4 +1,4 @@
-import { CHANNEL_NUMBER_MAX, TVG_ID_MAX } from "../constants/limits.js";
+import { CHANNEL_NUMBER_MAX, M3U_DETECT_LINES, TVG_ID_MAX } from "../constants/limits.js";
 import { AppError, ERRORS } from "../constants/errors.js";
 
 /** One `#EXTINF` entry, parsed the way StepDaddy's `supplements/m3u_parse.py` does (docs/20 section 9.1). */
@@ -12,7 +12,7 @@ export interface M3uEntry {
 }
 
 const ATTRIBUTE = /([A-Za-z0-9-]+)="([^"]*)"/g;
-const LOOKS_LIKE_M3U = /#EXTM3U|#EXTINF/;
+const BYTE_ORDER_MARK = /^﻿/;
 
 function attributesOf(line: string): Record<string, string> {
   const attrs: Record<string, string> = {};
@@ -21,16 +21,27 @@ function attributesOf(line: string): Record<string, string> {
 }
 
 /**
+ * M3U detection (docs/43 section 3.2): `#EXTM3U` as the first non-empty line (after a byte-order mark), or an
+ * `#EXTINF` within the first `M3U_DETECT_LINES` lines. An HTML page that merely mentions the word fails.
+ */
+export function looksLikeM3U(text: string): boolean {
+  const lines = text.replace(BYTE_ORDER_MARK, "").split(/\r?\n/);
+  const first = lines.find((line) => line.trim() !== "");
+  if (first !== undefined && first.trim().toUpperCase().startsWith("#EXTM3U")) return true;
+  return lines.slice(0, M3U_DETECT_LINES).some((line) => line.trim().startsWith("#EXTINF"));
+}
+
+/**
  * The M3U parser (docs/03 section 7.2c): each `#EXTINF` line carries the attributes and the name after
  * its last comma, and the next non-comment line is the stream address. A body that is not an M3U
- * playlist is `422 playlist.invalid`.
+ * playlist is `422 playlist.invalid`. Names are NFC-normalised here, once.
  */
 export function parseM3U(text: string): M3uEntry[] {
-  if (!LOOKS_LIKE_M3U.test(text)) throw new AppError(ERRORS.playlistInvalid, {});
+  if (!looksLikeM3U(text)) throw new AppError(ERRORS.playlistInvalid, {});
   const entries: M3uEntry[] = [];
   let pending: Record<string, string> | null = null;
   let pendingName = "";
-  for (const raw of text.split(/\r?\n/)) {
+  for (const raw of text.replace(BYTE_ORDER_MARK, "").split(/\r?\n/)) {
     const line = raw.trim();
     if (line === "") continue;
     if (line.startsWith("#EXTINF:")) {
@@ -45,7 +56,7 @@ export function parseM3U(text: string): M3uEntry[] {
     const group = pending["group-title"]?.trim();
     const number = pending["tvg-chno"]?.trim();
     entries.push({
-      name: pendingName || (pending["tvg-name"] ?? "").trim() || "Channel",
+      name: (pendingName || (pending["tvg-name"] ?? "").trim() || "Channel").normalize("NFC"),
       streamUrl: line,
       ...(tvgId !== undefined && tvgId !== "" && tvgId.length <= TVG_ID_MAX && { tvgId }),
       ...(logo !== undefined && logo !== "" && { logoUrl: logo }),

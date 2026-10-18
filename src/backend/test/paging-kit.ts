@@ -6,7 +6,7 @@ import { after } from "node:test";
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
 import { createStore } from "../src/store/store.js";
-import type { StreamRecord } from "../src/types/channel.js";
+import { NOT_SYNCED, type StreamRecord } from "../src/types/channel.js";
 import { pick } from "./test-app.js";
 
 const dirs: string[] = [];
@@ -27,14 +27,22 @@ export function seededDataDir(seed: (store: ReturnType<typeof createStore>) => v
   return dir;
 }
 
+/** The two web playlists the stream rows belong to (ids 1 and 2): a name that is not the host, so a search tells them apart. */
+export const PLAYLISTS = [
+  { id: 1, name: "Alpha list", host: "a.example" },
+  { id: 2, name: "Beta list", host: "b.example" },
+] as const;
+
 /**
- * 250 stream rows: 100 from `a.example`, 100 from `b.example`, 50 hand-made; every tenth has no number; every seventh
- * synced row is edited; every fifth is disabled; row 3's name holds a literal `%`.
+ * 250 stream rows: 100 in the playlist on `a.example`, 100 in the one on `b.example`, 50 hand-made; every tenth has no
+ * number; every seventh playlist row is edited; every fifth is disabled; row 3's name holds a literal `%`. `source` and
+ * `playlistName` are what a read derives from the playlist; the store ignores them on a write.
  */
 export function streamRows(): StreamRecord[] {
   return Array.from({ length: 250 }, (_, i): StreamRecord => {
-    const source = i < 100 ? "a.example" : i < 200 ? "b.example" : null;
+    const owner = i < 100 ? PLAYLISTS[0] : i < 200 ? PLAYLISTS[1] : undefined;
     return {
+      ...NOT_SYNCED,
       kind: "stream",
       id: `ch_${String(i).padStart(3, "0")}`,
       name: i === 3 ? "Channel 3 100% Live" : `Channel ${i}`,
@@ -43,14 +51,22 @@ export function streamRows(): StreamRecord[] {
       logoUrl: null,
       revision: 1,
       enabled: i % 5 !== 0,
+      published: i % 5 !== 0,
       streamUrl: `https://s.example/${i}.m3u8`,
       tvgId: `tvg.${i}`,
-      source,
-      syncName: source === null ? null : `Channel ${i}`,
-      playlistId: null,
-      editedFields: source !== null && i % 7 === 0 ? ["name"] : [],
+      source: owner?.host ?? null,
+      playlistName: owner?.name ?? null,
+      syncName: owner === undefined ? null : `Channel ${i}`,
+      playlistId: owner?.id ?? null,
+      editedFields: owner !== undefined && i % 7 === 0 ? ["name"] : [],
     };
   });
+}
+
+/** Writes the two playlists, then the stream rows that belong to them. */
+export function seedStreams(store: ReturnType<typeof createStore>): void {
+  for (const p of PLAYLISTS) store.playlists.insert({ kind: "url", name: p.name, url: `https://${p.host}/list.m3u`, host: p.host, enabled: true }, 1);
+  for (const row of streamRows()) store.channels.insert(row, 1);
 }
 
 export interface SeedTitle {

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { FIRST_RUN_GRACE_MS } from "../src/constants/limits.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { omdbOn, settled, stubOmdb, stubTmdb, tmdbOn } from "./title-stubs.js";
 
@@ -44,6 +45,10 @@ test("TMDB_SYNC_SCHEDULE arms the warm-up, audited as system, without touching t
   const access = (await signIn(t.app)).access;
   const healthBefore = await send(t.app, "GET", "/healthz");
   const revisionBefore = pick(healthBefore.body, "data.revision");
+
+  // A job that never ran is due once the start grace has passed (docs/43 section 3.4); a change re-arms the timer.
+  t.clock.advance(FIRST_RUN_GRACE_MS + 1);
+  await send(t.app, "PATCH", "/api/jobs/1", { schedule: "150ms" }, access);
 
   // Wait until the scheduled warm-up has pulled at least one title into the store.
   for (let i = 0; i < 400; i++) {

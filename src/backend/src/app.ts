@@ -16,7 +16,6 @@ import { registerLiveFaults } from "./api/live-faults.js";
 import { registerLiveStreams } from "./api/live-streams.js";
 import { registerJobs } from "./api/jobs.js";
 import { registerPlaylists } from "./api/playlists.js";
-import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
 import { registerTitles } from "./api/titles.js";
 import { bootstrapUsername } from "./bootstrap-username.js";
@@ -26,6 +25,7 @@ import { REQUEST_BODY_LIMIT_BYTES } from "./constants/limits.js";
 import type { LiveSeams } from "./live/engine/live-engine.js";
 import { corsOrigins, isPrivateRoute, startRefusal, tlsOptions } from "./network-policy.js";
 import { bootstrapAdmin } from "./services/bootstrap-admin.js";
+import { createSafeFetch, type SafeFetch } from "./services/safe-fetch.js";
 import { createServices, type Services } from "./services/service-registry.js";
 import { seedTestChannels } from "./services/test-channels.js";
 import { createStore } from "./store/store.js";
@@ -34,15 +34,16 @@ import { createStore } from "./store/store.js";
  * The admin backend's composition root: one Fastify instance per process (`01` section 4.1), one store, one
  * live engine, and no socket: readers learn of changes from the revision in each answer (`01` section 4.4).
  * `overrides` replace config values without touching `process.env`, which is how tests pass a temporary
- * `DATA_DIR`, a secret and the flags; `now` is the one clock, `fetchImpl` the one fetch (the test seam for the
- * playlist sync's playlists and logo index) and `live` the engine's seams (a fake build, a fake sleep).
- * Every route begins `/api`; the exceptions are `/healthz`, the live stream addresses (`/live`, `/logos`, the
- * test page) and the admin app at `/admin/` (`01` section 4.3).
+ * `DATA_DIR`, a secret and the flags; `now` is the one clock, `live` the engine's seams (a fake build, a fake sleep)
+ * and `safeFetchImpl` the one guarded outbound fetch for every address that comes from playlist content (the test
+ * seam for the playlists; `docs/43` section 3.8). Fixed provider hosts (TMDB, OMDb) use `fetch` directly and are
+ * stubbed through their base addresses. Every route begins `/api`; the exceptions are `/healthz`, the live stream
+ * addresses (`/live`, `/logos`, the test page) and the admin app at `/admin/` (`01` section 4.3).
  */
 export async function buildApp(
   overrides: Partial<Config> = {},
   now: () => number = Date.now,
-  fetchImpl: typeof fetch = fetch,
+  safeFetchImpl: SafeFetch = createSafeFetch(),
   live: LiveSeams = {},
 ): Promise<FastifyInstance> {
   const settings: Config = { ...config, ...overrides };
@@ -77,12 +78,9 @@ export async function buildApp(
       log: (line) => app.log.warn(line),
       live,
       titleSchedule: settings.TMDB_SYNC_SCHEDULE,
-      playlistSchedule: settings.PLAYLIST_SYNC_SCHEDULE,
-      playlistUrls: settings.PLAYLIST_URLS,
       playlistSyncMaxBytes: settings.PLAYLIST_SYNC_MAX_BYTES,
       playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
-      logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
-      fetchImpl,
+      safeFetch: safeFetchImpl,
     });
     const ready = services;
     const bootstrap = await bootstrapAdmin(
@@ -109,6 +107,8 @@ export async function buildApp(
     app.addHook("onClose", async () => {
       ready.scheduler.stop();
       ready.titles.close();
+      // Every playlist run is aborted and has settled before the store closes.
+      await ready.runner.shutdown();
       // Every ffmpeg tree is killed and every encode-mode output removed before the store closes.
       await ready.live.stop();
       store.close();
@@ -136,7 +136,6 @@ export async function buildApp(
     registerLiveFaults(app, ready);
     registerProviders(app, ready);
     registerTitles(app, ready);
-    registerPlaylistSync(app, ready);
     registerPlaylists(app, ready);
     registerJobs(app, ready);
     registerAdminStatic(app, ready);

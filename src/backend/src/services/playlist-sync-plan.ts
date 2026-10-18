@@ -1,97 +1,101 @@
-import type { StreamRecord } from "../types/channel.js";
+import { NOT_SYNCED, type StreamRecord } from "../types/channel.js";
 import type { M3uEntry } from "./m3u-parser.js";
 
-export interface SyncPlan {
-  creates: Array<{ host: string; record: Omit<StreamRecord, "revision"> }>;
+/** What a playlist's entries change in that playlist's own rows: new rows, and rows that take new values. */
+export interface EntryPlan {
+  creates: StreamRecord[];
   updates: StreamRecord[];
-  /** Sync-owned rows whose entry has gone and that no admin edited: what `prune` may delete. */
-  vanished: StreamRecord[];
-  /** Sync-owned rows whose entry has gone but that an admin edited: `prune` never deletes them (rule 3). */
-  kept: StreamRecord[];
-}
-
-/** One playlist entry with the playlist record it came from. */
-export interface PlannedEntry {
-  host: string;
-  playlistId: number;
-  entry: M3uEntry;
 }
 
 /**
- * A matched row takes the entry's values except the fields an admin edited (rule 1); the display name is never
- * overwritten, and neither is `enabled`: a disabled row stays disabled and is still updated otherwise. Without an
- * edit the entry wins, as it always did: its address always, its category, number and logo whenever it has one.
+ * A matched row takes the entry's values except the fields an admin edited (docs/26 section 3.10); the display name
+ * is never overwritten, neither is `enabled`, and the playlist's own name for the entry (`syncName`) follows the
+ * entry. Without an edit the entry wins: its address always, its category and logo whenever it has them.
  */
-export function mergeEntry(match: StreamRecord, entry: M3uEntry, playlistId: number): StreamRecord {
+export function mergeEntry(match: StreamRecord, entry: M3uEntry): StreamRecord {
   const edited = new Set(match.editedFields);
   return {
     ...match,
+    syncName: entry.name,
     streamUrl: edited.has("streamUrl") ? match.streamUrl : entry.streamUrl,
     category: edited.has("category") ? match.category : (entry.groupTitle ?? match.category),
-    number: edited.has("number") ? match.number : (entry.number ?? match.number),
     logoUrl: edited.has("logoUrl") ? match.logoUrl : (entry.logoUrl ?? match.logoUrl),
-    playlistId,
-    revision: 0,
   };
 }
 
 const sameValues = (a: StreamRecord, b: StreamRecord): boolean =>
-  a.streamUrl === b.streamUrl && a.logoUrl === b.logoUrl && a.category === b.category && a.number === b.number
-  && a.playlistId === b.playlistId;
+  a.streamUrl === b.streamUrl && a.logoUrl === b.logoUrl && a.category === b.category && a.syncName === b.syncName;
+
+type KeyOf<T> = (value: T) => string;
 
 /**
- * Decides one run, with no side effect: which entries create a row, which update one, and which sync-owned rows
- * have no entry any more. Entries match the rows of their own host first and then every sync-owned row, by tvg-id
- * and then by the playlist's own name (`syncName`, rule 2), never by the display name. Only the hosts of the
- * playlists in this run can lose a row to `prune`.
+ * One matching pass over the entries and rows nobody has taken yet. A candidate is a row with the same key; with
+ * `exact` the first one is taken (identical rows are interchangeable), otherwise only an unambiguous pair matches:
+ * one row and one entry for that key, or - when the key is shared - the one row whose `tvgId` equals the entry's.
  */
-export function planSync(input: {
-  owned: StreamRecord[];
-  usable: PlannedEntry[];
-  hosts: string[];
-  newId: () => string;
-}): SyncPlan {
-  const { owned, usable, hosts, newId } = input;
-  const byHost = new Map<string, StreamRecord[]>();
-  for (const channel of owned) {
-    const rows = byHost.get(channel.source ?? "");
-    if (rows === undefined) byHost.set(channel.source ?? "", [channel]);
-    else rows.push(channel);
+function pass(
+  pending: M3uEntry[],
+  rows: StreamRecord[],
+  taken: Set<string>,
+  matches: Map<M3uEntry, StreamRecord>,
+  keys: { entry: KeyOf<M3uEntry>; row: KeyOf<StreamRecord> },
+  exact: boolean,
+): void {
+  const entriesPerKey = new Map<string, number>();
+  const left = pending.filter((entry) => !matches.has(entry));
+  for (const entry of left) entriesPerKey.set(keys.entry(entry), (entriesPerKey.get(keys.entry(entry)) ?? 0) + 1);
+  const byKey = new Map<string, StreamRecord[]>();
+  for (const row of rows) {
+    if (!taken.has(row.id)) byKey.set(keys.row(row), [...(byKey.get(keys.row(row)) ?? []), row]);
   }
-  const used = new Set<string>();
-  const findMatch = (entry: M3uEntry, host: string): StreamRecord | undefined => {
-    for (const pool of [byHost.get(host) ?? [], owned]) {
-      if (entry.tvgId !== undefined) {
-        const byId = pool.find((c) => !used.has(c.id) && c.tvgId === entry.tvgId);
-        if (byId !== undefined) return byId;
-      }
-      const byName = pool.find((c) => !used.has(c.id) && (c.syncName ?? c.name) === entry.name);
-      if (byName !== undefined) return byName;
+  for (const entry of left) {
+    const candidates = (byKey.get(keys.entry(entry)) ?? []).filter((row) => !taken.has(row.id));
+    let chosen: StreamRecord | undefined = candidates[0];
+    if (!exact) {
+      const alone = candidates.length === 1 && entriesPerKey.get(keys.entry(entry)) === 1;
+      const byTvg = entry.tvgId === undefined ? [] : candidates.filter((row) => row.tvgId === entry.tvgId);
+      chosen = alone ? candidates[0] : byTvg.length === 1 ? byTvg[0] : undefined;
     }
-    return undefined;
-  };
+    if (chosen === undefined) continue;
+    taken.add(chosen.id);
+    matches.set(entry, chosen);
+  }
+}
 
-  const plan: SyncPlan = { creates: [], updates: [], vanished: [], kept: [] };
-  for (const { host, entry, playlistId } of usable) {
-    const match = findMatch(entry, host);
+/**
+ * Decides what a playlist's entries do to that playlist's own rows (docs/43 section 3.6), with no side effect. Three
+ * passes over the rows not yet used: the exact `(syncName, streamUrl)`, then the name alone when it is unambiguous (a
+ * moved address), then the address alone (a renamed entry). Nothing in another playlist, and nothing hand-made, is
+ * ever a candidate; no row is ever deleted. A new entry becomes a disabled row.
+ */
+export function planEntries(input: {
+  rows: StreamRecord[];
+  entries: M3uEntry[];
+  playlistId: number;
+  newId: () => string;
+}): EntryPlan {
+  const { rows, entries, playlistId, newId } = input;
+  const taken = new Set<string>();
+  const matches = new Map<M3uEntry, StreamRecord>();
+  const nameOf: KeyOf<StreamRecord> = (row) => row.syncName ?? row.name;
+  pass(entries, rows, taken, matches, { entry: (e) => `${e.name}\n${e.streamUrl}`, row: (r) => `${nameOf(r)}\n${r.streamUrl}` }, true);
+  pass(entries, rows, taken, matches, { entry: (e) => e.name, row: nameOf }, false);
+  pass(entries, rows, taken, matches, { entry: (e) => e.streamUrl, row: (r) => r.streamUrl }, false);
+
+  const plan: EntryPlan = { creates: [], updates: [] };
+  for (const entry of entries) {
+    const match = matches.get(entry);
     if (match === undefined) {
       plan.creates.push({
-        host,
-        record: {
-          kind: "stream", id: newId(), name: entry.name, category: entry.groupTitle ?? "", number: entry.number ?? null,
-          logoUrl: entry.logoUrl ?? null, tvgId: entry.tvgId ?? null, source: host, streamUrl: entry.streamUrl,
-          syncName: entry.name, playlistId, editedFields: [], enabled: true,
-        },
+        ...NOT_SYNCED,
+        kind: "stream", id: newId(), name: entry.name, category: entry.groupTitle ?? "", number: entry.number ?? null,
+        logoUrl: entry.logoUrl ?? null, tvgId: entry.tvgId ?? null, streamUrl: entry.streamUrl, syncName: entry.name,
+        playlistId, editedFields: [], enabled: false, published: false, revision: 0,
       });
       continue;
     }
-    used.add(match.id);
-    const merged = mergeEntry(match, entry, playlistId);
+    const merged = mergeEntry(match, entry);
     if (!sameValues(merged, match)) plan.updates.push(merged);
-  }
-  for (const channel of owned) {
-    if (channel.source === null || !hosts.includes(channel.source) || used.has(channel.id)) continue;
-    (channel.editedFields.length > 0 ? plan.kept : plan.vanished).push(channel);
   }
   return plan;
 }

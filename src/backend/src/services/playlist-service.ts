@@ -1,40 +1,32 @@
 import { AppError, ERRORS } from "../constants/errors.js";
-import { ADDRESS_MAX, PLAYLISTS_MAX } from "../constants/limits.js";
+import { ADDRESS_MAX } from "../constants/limits.js";
+import { isUniqueViolation } from "../store/database.js";
 import type { PlaylistRecord } from "../store/playlist-repository.js";
 import type { Store } from "../store/store.js";
-import type { PlaylistInput, PlaylistPatch, PlaylistView } from "../types/playlist.js";
+import type { PlaylistDeleted, PlaylistPatch, PlaylistView } from "../types/playlist.js";
 import { addressRefusal, isAcceptedAddress } from "./address-rule.js";
 import type { Actor, AuditService } from "./audit-service.js";
-import { maskedHost } from "./playlist-ref.js";
+import type { JobRunner } from "./job-runner.js";
+import { playlistView } from "./playlist-view.js";
 
 const invalid = (field: string, message: string): AppError => new AppError(ERRORS.playlistInvalid, { field }, message);
 
 /**
- * The playlists (docs/26 section 3.11): records with a name, an address and `Enabled`. The address is a secret - it
- * can carry credentials in its query - so no answer shows it (only `host` and `masked`), an audit entry holds the
- * host alone, and `https` only is accepted (docs/03 section 7.3). Deleting a playlist keeps the channels it created
- * and releases them: they lose their `source` and become hand-made rows no sync touches again; the jobs that
- * synced the playlist go with it. `onChange` re-arms the scheduler when `enabled` changes.
+ * The playlists after they exist (docs/43 sections 3.1 and 3.2): read, rename, enable, rotate a web playlist's address,
+ * delete. The address is a secret - it can carry credentials in its query - so no answer shows it (only `host` and
+ * `masked`) and an audit entry holds the host alone. A playlist's `enabled` is part of what a public reader sees, so
+ * changing it takes a revision. Deleting a playlist aborts its running sync, waits for it, and removes the playlist
+ * together with its channels and sync job through the foreign keys, in one transaction. `onChange` re-arms the
+ * scheduler.
  */
 export function createPlaylistService(deps: {
   store: Store;
   audit: AuditService;
-  now: () => number;
+  runner: Pick<JobRunner, "stop">;
   allowLoopback: boolean;
   onChange: () => void;
 }) {
-  const { store, audit, now, allowLoopback, onChange } = deps;
-
-  const viewOf = (p: PlaylistRecord): PlaylistView => ({
-    id: p.id,
-    name: p.name,
-    host: p.host,
-    masked: maskedHost(p.host),
-    enabled: p.enabled,
-    channels: store.channels.countOfPlaylist(p.id),
-    ...(p.lastSyncedAt !== undefined && { lastSyncedAt: p.lastSyncedAt }),
-    ...(p.lastOutcome !== undefined && { lastOutcome: p.lastOutcome }),
-  });
+  const { store, audit, runner, allowLoopback, onChange } = deps;
 
   function existing(id: number): PlaylistRecord {
     const found = store.playlists.find(id);
@@ -42,59 +34,72 @@ export function createPlaylistService(deps: {
     return found;
   }
 
-  /** The address rule, and that it is not listed already; answers its host. */
-  function checkAddress(address: string, ownId?: number): string {
-    const trimmed = address.trim();
-    if (trimmed.length > ADDRESS_MAX || !isAcceptedAddress(trimmed, allowLoopback)) {
-      throw invalid("address", addressRefusal("playlist address", allowLoopback));
+  /** The new address of a web playlist: the rule, and not held by another playlist. */
+  function checkedUrl(current: PlaylistRecord, raw: string): { url: string; host: string } {
+    if (current.kind !== "url") throw invalid("url", "A file playlist has no web address. Import the file again.");
+    const url = raw.trim();
+    if (url.length > ADDRESS_MAX || !isAcceptedAddress(url, allowLoopback)) {
+      throw invalid("url", addressRefusal("playlist address", allowLoopback));
     }
-    const holder = store.playlists.idOfAddress(trimmed);
-    if (holder !== undefined && holder !== ownId) throw invalid("address", "That playlist is already listed.");
-    return new URL(trimmed).host;
+    const holder = store.playlists.idOfUrl(url);
+    if (holder !== undefined && holder !== current.id) throw new AppError(ERRORS.playlistTaken, { field: "url" });
+    return { url, host: new URL(url).host };
   }
 
   return {
-    list: (): { items: PlaylistView[] } => ({ items: store.playlists.list().map(viewOf) }),
-
-    get: (id: number): PlaylistView => viewOf(existing(id)),
-
-    create(input: PlaylistInput, actor: Actor): PlaylistView {
-      if (store.playlists.list().length >= PLAYLISTS_MAX) throw invalid("address", `At most ${PLAYLISTS_MAX} playlists can be listed.`);
-      const host = checkAddress(input.address);
-      const id = store.playlists.insert(
-        { name: input.name ?? host, address: input.address.trim(), host, enabled: input.enabled ?? true },
-        now(),
-      );
-      audit.record(actor, { action: "playlist.created", subject: String(id), detail: { host } });
-      return viewOf(existing(id));
+    list(): { items: PlaylistView[] } {
+      const counts = store.channels.countsByPlaylist();
+      return { items: store.playlists.list().map((playlist) => playlistView(store, playlist, counts)) };
     },
+
+    get: (id: number): PlaylistView => playlistView(store, existing(id)),
 
     update(id: number, patch: PlaylistPatch, actor: Actor): PlaylistView {
       const current = existing(id);
-      const address = patch.address === undefined ? current.address : patch.address.trim();
-      const host = patch.address === undefined ? current.host : checkAddress(address, id);
-      const next = { id, name: patch.name ?? current.name, address, host, enabled: patch.enabled ?? current.enabled };
-      store.playlists.update(next);
+      const name = patch.name ?? current.name;
+      const holder = store.playlists.idOfName(name);
+      if (holder !== undefined && holder !== id) throw new AppError(ERRORS.playlistTaken, { field: "name" });
+      const address = patch.url === undefined ? undefined : checkedUrl(current, patch.url);
+      const enabled = patch.enabled ?? current.enabled;
+      try {
+        store.transaction(() => {
+          store.playlists.update({
+            id, name, enabled,
+            ...(current.kind === "url" && { url: address?.url ?? current.url ?? "", host: address?.host ?? current.host ?? "" }),
+          });
+          if (enabled !== current.enabled) store.revisions.next();
+        });
+      } catch (error) {
+        if (isUniqueViolation(error)) throw new AppError(ERRORS.playlistTaken);
+        throw error;
+      }
       audit.record(actor, {
         action: "playlist.updated",
         subject: String(id),
-        detail: { name: next.name, fields: Object.keys(patch), host },
+        detail: { name, fields: Object.keys(patch), host: address?.host ?? current.host ?? current.fileName },
       });
-      if (next.enabled !== current.enabled) onChange();
-      return viewOf(existing(id));
+      if (enabled !== current.enabled) onChange();
+      return playlistView(store, existing(id));
     },
 
-    remove(id: number, actor: Actor): { id: number; released: number } {
+    async remove(id: number, actor: Actor): Promise<PlaylistDeleted> {
       const current = existing(id);
-      const released = store.channels.countOfPlaylist(id);
-      store.transaction(() => {
-        if (released > 0) store.channels.detachPlaylist(id, store.revisions.next());
-        store.jobs.removeOfPlaylist(id);
+      const job = store.jobs.findOfPlaylist(id);
+      if (job) await runner.stop(job.id);
+      const answer = store.transaction(() => {
+        const deletedChannels = store.channels.countsByPlaylist().get(id)?.channels ?? 0;
+        const deletedJobs = store.jobs.countOfPlaylist(id);
         store.playlists.remove(id);
+        store.revisions.next();
+        audit.record(actor, {
+          action: "playlist.deleted",
+          subject: String(id),
+          detail: { channels: deletedChannels, jobs: deletedJobs, host: current.host ?? current.fileName },
+        });
+        return { id, deletedChannels, deletedJobs };
       });
-      audit.record(actor, { action: "playlist.deleted", subject: String(id), detail: { host: current.host, released } });
       onChange();
-      return { id, released };
+      return answer;
     },
   };
 }

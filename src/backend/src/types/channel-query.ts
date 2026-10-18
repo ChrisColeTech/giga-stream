@@ -1,15 +1,11 @@
 import { z } from "zod";
 
-import {
-  CHANNEL_SEARCH_MAX,
-  LIST_OFFSET_MAX,
-  LIST_PAGE_MAX,
-  SOURCE_HOST_MAX,
-} from "../constants/limits.js";
+import { CHANNEL_SEARCH_MAX, LIST_OFFSET_MAX, LIST_PAGE_MAX } from "../constants/limits.js";
 import type { AdminChannel } from "./channel.js";
 import type { ChannelState } from "./live-stream.js";
 
-export const CHANNEL_SORTS = ["number", "name", "category", "kind", "source"] as const;
+export const CHANNEL_SORTS = ["number", "name", "category", "kind", "playlist"] as const;
+export const CHANNEL_STATUSES = ["live", "dead", "unchecked"] as const;
 export type ChannelSort = (typeof CHANNEL_SORTS)[number];
 export const SORT_DIRS = ["asc", "desc"] as const;
 export type SortDir = (typeof SORT_DIRS)[number];
@@ -34,7 +30,8 @@ export const AdminChannelQuerySchema = z
     origin: z.enum(["synced", "edited", "manual"]).optional(),
     enabled: flag,
     state: z.enum(CHANNEL_STATES).optional(),
-    source: optionalText(SOURCE_HOST_MAX),
+    status: z.enum(CHANNEL_STATUSES).optional(),
+    playlist: z.coerce.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
     sort: z.enum(CHANNEL_SORTS).optional(),
     dir: z.enum(SORT_DIRS).optional(),
   })
@@ -50,7 +47,8 @@ export interface ChannelFilter {
   kind?: "live" | "stream";
   origin?: "synced" | "edited" | "manual";
   enabled?: boolean;
-  source?: string;
+  status?: (typeof CHANNEL_STATUSES)[number];
+  playlist?: number;
   ids?: readonly string[];
 }
 

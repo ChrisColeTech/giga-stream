@@ -3,12 +3,10 @@ import type { z } from "zod";
 import { AppError, ERRORS } from "../constants/errors.js";
 import type { JobRecord } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
-import {
-  type JobInput, type JobPatch, type JobRun, type JobView, CatalogConfigSchema, PlaylistConfigSchema,
-} from "../types/job.js";
+import { type JobInput, type JobPatch, type JobView, CatalogConfigSchema } from "../types/job.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import type { JobRunner } from "./job-runner.js";
-import { normaliseSchedule } from "./job-schedule.js";
+import { normalisePlaylistSchedule, normaliseSchedule } from "./job-schedule.js";
 import { DEFAULT_DISCOVER_PAGES, DEFAULT_SYNC_PAGES } from "./title-shapes.js";
 
 const invalid = (field: string, message: string): AppError => new AppError(ERRORS.jobInvalid, { field }, message);
@@ -19,10 +17,14 @@ const configField = (issue: z.ZodIssue | undefined): string => {
   return `config.${issue?.path.join(".") ?? ""}`;
 };
 
+const pagesOf = (scope: string, pages: number | undefined): number =>
+  pages ?? (scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES);
+
 /**
- * The sync jobs (docs/26 section 3.11): records with a type, `Enabled`, a schedule and a config. A playlist job
- * names one playlist and syncs only that playlist's address; a catalog job names a scope, a kind and a page count.
- * `onChange` re-arms the backend's one scheduler when a job is made, changed or deleted.
+ * The sync jobs (docs/26 section 3.11, docs/43 section 3.1). A playlist job is part of its playlist: made and
+ * deleted with it, never by `POST /api/jobs`, never deleted here (`422 job.invalid`), and changed only in `enabled`
+ * and `schedule` (at least 15 minutes). A catalog job names a scope, a kind and a page count. `onChange` re-arms the
+ * backend's one scheduler when a job is made, changed or deleted.
  */
 export function createJobService(deps: {
   store: Store;
@@ -32,23 +34,23 @@ export function createJobService(deps: {
   onChange: () => void;
 }) {
   const { store, audit, now, runner, onChange } = deps;
-  const isRunning = runner.isRunning;
 
   function view(job: JobRecord): JobView {
-    const playlist = job.type === "playlist" ? store.playlists.find(job.config.playlistId) : undefined;
-    return {
+    const common = {
       id: job.id,
-      name: job.name,
-      type: job.type,
       enabled: job.enabled,
       schedule: job.schedule,
-      config: job.config,
-      ...(playlist && { playlistName: playlist.name }),
-      running: isRunning(job.id),
+      running: runner.isRunning(job.id),
       ...(job.lastRunAt !== undefined && { lastRunAt: job.lastRunAt }),
-      ...(job.lastOutcome !== undefined && { lastOutcome: job.lastOutcome }),
+      ...(job.lastResult !== undefined && { lastResult: job.lastResult }),
       ...(job.lastCounts !== undefined && { lastCounts: job.lastCounts }),
       createdAt: job.createdAt,
+    };
+    if (job.type === "catalog") return { ...common, name: job.name, type: "catalog", config: job.config };
+    const playlistName = store.playlists.find(job.playlistId)?.name;
+    return {
+      ...common, name: `Sync ${playlistName ?? "playlist"}`, type: "playlist", config: { playlistId: job.playlistId },
+      playlistId: job.playlistId, ...(playlistName !== undefined && { playlistName }),
     };
   }
 
@@ -58,27 +60,17 @@ export function createJobService(deps: {
     return found;
   }
 
-  function checkPlaylist(playlistId: number): void {
-    if (!store.playlists.find(playlistId)) throw invalid("config.playlistId", "That playlist does not exist.");
-  }
-
   return {
     view,
     list: (): { items: JobView[] } => ({ items: store.jobs.list().map(view) }),
     get: (id: number): JobView => view(existing(id)),
 
     create(input: JobInput, actor: Actor): JobView {
-      const schedule = normaliseSchedule(input.schedule ?? "off");
-      const base = { name: input.name, enabled: input.enabled ?? true, schedule };
-      let id: number;
-      if (input.type === "playlist") {
-        checkPlaylist(input.config.playlistId);
-        const config = { playlistId: input.config.playlistId, dryRun: input.config.dryRun ?? false, prune: input.config.prune ?? false };
-        id = store.jobs.insert({ ...base, type: "playlist", config }, now());
-      } else {
-        const config = { scope: input.config.scope, kind: input.config.kind, pages: input.config.pages ?? (input.config.scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES) };
-        id = store.jobs.insert({ ...base, type: "catalog", config }, now());
-      }
+      const config = { scope: input.config.scope, kind: input.config.kind, pages: pagesOf(input.config.scope, input.config.pages) };
+      const id = store.jobs.insertCatalog(
+        { name: input.name, enabled: input.enabled ?? true, schedule: normaliseSchedule(input.schedule ?? "off"), config },
+        now(),
+      );
       audit.record(actor, { action: "job.created", subject: String(id), detail: { name: input.name, type: input.type } });
       onChange();
       return view(existing(id));
@@ -86,40 +78,34 @@ export function createJobService(deps: {
 
     update(id: number, patch: JobPatch, actor: Actor): JobView {
       const current = existing(id);
-      const change = {
-        name: patch.name ?? current.name,
-        enabled: patch.enabled ?? current.enabled,
-        schedule: patch.schedule === undefined ? current.schedule : normaliseSchedule(patch.schedule),
-      };
+      const enabled = patch.enabled ?? current.enabled;
       if (current.type === "playlist") {
-        const parsed = PlaylistConfigSchema.safeParse({ ...current.config, ...patch.config });
-        if (!parsed.success) throw invalid(configField(parsed.error.issues[0]), "That config is not valid.");
-        checkPlaylist(parsed.data.playlistId);
-        const config = { playlistId: parsed.data.playlistId, dryRun: parsed.data.dryRun ?? false, prune: parsed.data.prune ?? false };
-        store.jobs.update({ ...current, ...change, config });
+        if (patch.name !== undefined) throw invalid("name", "A playlist's job is named after its playlist.");
+        if (patch.config !== undefined) throw invalid("config", "A playlist's job has no settings.");
+        const schedule = patch.schedule === undefined ? current.schedule : normalisePlaylistSchedule(patch.schedule);
+        store.jobs.update({ ...current, enabled, schedule });
       } else {
         const parsed = CatalogConfigSchema.safeParse({ ...current.config, ...patch.config });
         if (!parsed.success) throw invalid(configField(parsed.error.issues[0]), "That config is not valid.");
-        const config = { scope: parsed.data.scope, kind: parsed.data.kind, pages: parsed.data.pages ?? (parsed.data.scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES) };
-        store.jobs.update({ ...current, ...change, config });
+        const schedule = patch.schedule === undefined ? current.schedule : normaliseSchedule(patch.schedule);
+        const config = { scope: parsed.data.scope, kind: parsed.data.kind, pages: pagesOf(parsed.data.scope, parsed.data.pages) };
+        store.jobs.update({ ...current, name: patch.name ?? current.name, enabled, schedule, config });
       }
-      audit.record(actor, {
-        action: "job.updated",
-        subject: String(id),
-        detail: { name: change.name, fields: Object.keys(patch) },
-      });
+      const name = current.type === "catalog" ? (patch.name ?? current.name) : view(current).name;
+      audit.record(actor, { action: "job.updated", subject: String(id), detail: { name, fields: Object.keys(patch) } });
       onChange();
       return view(existing(id));
     },
 
-    /** An admin's run (docs/26 section 3.11): refused when the job cannot run, `409 sync.busy` while it does. */
-    async run(id: number, override: JobRun, actor: Actor): Promise<JobView> {
-      await runner.run(existing(id), actor, override);
+    /** An admin's run: STARTED and answered at once (`202`, `running`); the result is read on a refresh. */
+    run(id: number, actor: Actor): JobView {
+      runner.run(existing(id), actor);
       return view(existing(id));
     },
 
     remove(id: number, actor: Actor): { id: number } {
       const current = existing(id);
+      if (current.type === "playlist") throw invalid("id", "A playlist's job goes with the playlist.");
       store.jobs.remove(id);
       audit.record(actor, { action: "job.deleted", subject: String(id), detail: { name: current.name, type: current.type } });
       onChange();

@@ -9,7 +9,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 import { createStore } from "../src/store/store.js";
-import type { LiveRecord, StreamRecord } from "../src/types/channel.js";
+import { NOT_SYNCED, type LiveRecord, type StreamRecord } from "../src/types/channel.js";
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "store", "migrations");
 
@@ -38,6 +38,7 @@ const live = (id: string, number: string, videos: string[], folder: string | nul
   logoUrl: null,
   revision: 0,
   enabled: true,
+  published: true,
   live: { mode: "loop", captions: false, variants: ["360p", "720p"], folder, videos },
 });
 
@@ -53,7 +54,9 @@ function inFolder(work: (dataDir: string) => void): void {
 test("migration 008 keeps every existing stream row, its sync keys and the revision", () => {
   inFolder((dataDir) => {
     const store = createStore(databaseBefore(dataDir));
+    // Migration 022 finds no playlist for the old `source`, so the row is hand-made: no sync name, no parent.
     const expected: StreamRecord = {
+      ...NOT_SYNCED,
       kind: "stream",
       id: "ch_old",
       name: "Old News",
@@ -63,20 +66,18 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
       revision: 3,
       streamUrl: "https://s.example/o.m3u8",
       tvgId: "tv-1",
-      source: "cdn.example",
-      syncName: "Old News", // migration 010 gives a synced row the playlist's name it already had
-      playlistId: null,
       editedFields: [],
       enabled: true, // migration 013: every existing row is enabled
+      published: true,
     };
     assert.deepEqual(store.channels.find("ch_old"), expected);
-    assert.deepEqual(store.channels.listSynced(), [expected]);
+    assert.deepEqual(store.channels.list(), [expected]);
     assert.equal(store.channels.countLive(), 0);
     store.close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
     try {
-      // The schema is at the newest migration (020, deleted titles), not at 008.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 21 });
+      // The schema is at the newest migration (022, the playlist model), not at 008.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 22 });
     } finally {
       db.close();
     }
@@ -105,7 +106,7 @@ test("a live number is unique among live rows only, and deleting a row takes its
     const store = createStore(file);
     store.channels.insert(live("one", "1", ["/v/a.mp4"]), 1);
     assert.throws(() => store.channels.insert(live("two", "1", ["/v/b.mp4"]), 1), /UNIQUE/);
-    store.channels.insert({ ...(store.channels.listSynced()[0] as StreamRecord), id: "ch_two", number: "1", tvgId: null, source: null }, 1);
+    store.channels.insert({ ...(store.channels.find("ch_old") as StreamRecord), id: "ch_two", number: "1", tvgId: null }, 1);
     assert.equal(store.channels.list().length, 3);
     assert.equal(store.channels.remove("one"), true);
     store.close();

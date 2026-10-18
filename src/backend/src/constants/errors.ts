@@ -32,7 +32,12 @@ export const ERRORS = {
   syncBusy: { code: "sync.busy", status: 409, message: "A catalog sync is already running." },
   syncInvalid: { code: "sync.invalid", status: 422, message: "That sync request is not valid." },
   playlistInvalid: { code: "playlist.invalid", status: 422, message: "That playlist is not an M3U playlist." },
-  playlistBusy: { code: "playlist.busy", status: 409, message: "A playlist sync is already running." },
+  playlistTaken: {
+    code: "playlist.taken",
+    status: 409,
+    message: "Another playlist already has that name, web address or file name.",
+  },
+  jobNotRunning: { code: "job.not_running", status: 409, message: "That job is not running." },
   playlistUnreachable: { code: "playlist.unreachable", status: 503, message: "A playlist cannot be reached right now." },
   accountNotFound: { code: "account.not_found", status: 404, message: "That account does not exist." },
   accountInvalid: { code: "account.invalid", status: 422, message: "That account is not valid." },

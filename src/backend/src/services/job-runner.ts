@@ -1,129 +1,137 @@
 import { AppError, ERRORS } from "../constants/errors.js";
-import type { JobRecord } from "../store/job-repository.js";
+import { PLAYLIST_DELETE_SETTLE_MS } from "../constants/limits.js";
+import type { CatalogJob, JobRecord, PlaylistJob } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
-import type { JobRun } from "../types/job.js";
-import type { PlaylistSyncAnswer } from "../types/playlist-sync.js";
-import type { Actor } from "./audit-service.js";
-import type { PlaylistSyncService } from "./playlist-sync-service.js";
+import type { RunCounts, RunResult } from "../types/job-counts.js";
+import type { Actor, AuditService } from "./audit-service.js";
+import type { PlaylistJobBody, RunOutcome } from "./playlist-job.js";
 import type { TitleService } from "./title-service.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
 
-/**
- * The sentence a playlist job keeps as its outcome: what the run did, or what a dry run would have done (docs/29 B4).
- */
-const outcomeOf = (answer: PlaylistSyncAnswer, dryRun: boolean): string =>
-  dryRun
-    ? `Dry run. ${answer.created} to create, ${answer.updated} to update.`
-    : `Synced: ${answer.created} created, ${answer.updated} updated.`;
+/** The code a failed run keeps: an `AppError`'s own, else `internal.failure`. An exception's message is never stored. */
+const codeOf = (error: unknown): string => (error instanceof AppError ? error.code : ERRORS.internalFailure.code);
 
-/** The counts a playlist job keeps: the run's, with the refusal examples and the created ids (docs/29 B4). */
-function countsOf(answer: PlaylistSyncAnswer): Record<string, unknown> {
-  const { created, updated, skipped, refused, removed, kept, refusalExamples, createdIds } = answer;
-  return { created, updated, skipped, refused, removed, kept, refusalExamples, createdIds };
+interface Flight {
+  abort: AbortController;
+  settled: Promise<void>;
 }
 
 /**
- * Runs sync jobs (docs/26 section 3.11). A playlist job syncs only its playlist, under the rules of 3.10; a catalog
- * job syncs its scope, kind and pages. A job is single-flight (`409 sync.busy`), and a disabled job - or one whose
- * playlist is missing or disabled - is refused with `422 job.disabled` and its reason. How each run went is kept on
- * the job (and on the playlist), whoever started it: an admin through the route, or the scheduler.
+ * Runs sync jobs (docs/43 section 3.4, docs/26 section 3.11). A run is STARTED, never awaited by its caller: the
+ * route answers `202` and the result is read on a refresh. One run per job - and a playlist has one job - so the
+ * single flight is per playlist (`409 sync.busy`). Each run owns an `AbortController`: deleting a playlist (or
+ * shutting down) aborts it and waits for it to settle. A run keeps its result on the job, typed: `ok`, `failed` (with
+ * the error's code) or `stopped`.
  */
 export function createJobRunner(deps: {
   store: Store;
+  audit: AuditService;
   now: () => number;
-  playlistSync: PlaylistSyncService;
+  playlistJob: PlaylistJobBody;
   titles: TitleService;
+  /** Called when a run settles, so the scheduler can arm for the next due job. */
+  onSettled: () => void;
 }) {
-  const { store, now, playlistSync, titles } = deps;
-  const running = new Set<number>();
+  const { store, audit, now, playlistJob, titles, onSettled } = deps;
+  const flights = new Map<number, Flight>();
 
-  /** Why this job cannot run now, or undefined when it can. */
+  /** Why this job cannot be run by hand, or undefined when it can: its playlist must be enabled (docs/26 3.11). */
   function refusal(job: JobRecord): string | undefined {
-    if (!job.enabled) return "The job is disabled; enable it to run it.";
-    if (job.type === "playlist") {
-      const playlist = store.playlists.find(job.config.playlistId);
-      if (!playlist) return "The job's playlist no longer exists.";
-      if (!playlist.enabled) return "The job's playlist is disabled; enable it to run this job.";
+    if (job.type === "catalog") return job.enabled ? undefined : "The job is disabled; enable it to run it.";
+    const playlist = store.playlists.find(job.playlistId);
+    if (!playlist) return "The job's playlist no longer exists.";
+    return playlist.enabled ? undefined : "The job's playlist is disabled; enable it to run this job.";
+  }
+
+  /** The schedule also needs the job itself enabled; a manual run does not. */
+  const scheduledRefusal = (job: JobRecord): string | undefined =>
+    !job.enabled ? "The job is disabled; enable it to run it." : refusal(job);
+
+  function keep(job: JobRecord, result: RunResult, counts: RunCounts): void {
+    if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), result, counts);
+  }
+
+  async function runPlaylist(job: PlaylistJob, actor: Actor, signal: AbortSignal): Promise<void> {
+    const host = store.playlists.find(job.playlistId)?.host;
+    let outcome: RunOutcome;
+    try {
+      outcome = await playlistJob(job, signal);
+    } catch (error) {
+      outcome = { result: "failed", counts: { code: codeOf(error) } };
     }
-    return undefined;
-  }
-
-  function record(job: JobRecord, outcome: string, counts: Record<string, unknown> | null): void {
-    if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), outcome, counts);
-  }
-
-  async function execute(job: JobRecord, actor: Actor, triggered: "admin" | "system", override: JobRun): Promise<void> {
-    if (job.type === "playlist") {
-      const playlist = store.playlists.find(job.config.playlistId);
-      if (!playlist) return;
-      const dryRun = override.dryRun ?? job.config.dryRun;
-      try {
-        const answer = await playlistSync.run(
-          { dryRun, prune: override.prune ?? job.config.prune },
-          actor,
-          [playlist],
-        );
-        record(job, outcomeOf(answer, dryRun), countsOf(answer));
-      } catch (error) {
-        // Being turned away because another playlist sync runs is not an outcome of this job.
-        if (!(error instanceof AppError && error.code === ERRORS.playlistBusy.code)) {
-          record(job, error instanceof Error ? error.message : "failed", null);
-        }
-        throw error;
+    keep(job, outcome.result, outcome.counts);
+    try {
+      if (store.playlists.find(job.playlistId)) {
+        audit.record(actor, {
+          action: "playlist.synced",
+          subject: String(job.playlistId),
+          detail: { result: outcome.result, ...outcome.counts, ...(host !== undefined && { host }) },
+        });
       }
-      return;
+    } catch {
+      // a shutdown between the run and the write; the entry is lost, not the process
     }
-    const result = await titles.runNow({ scope: job.config.scope, kind: job.config.kind, pages: job.config.pages }, actor, triggered);
-    record(job, result.outcome, { titles: result.titles });
   }
 
-  /** Claims the job's single flight, or says it is busy. */
-  function claim(job: JobRecord): void {
-    if (running.has(job.id)) throw new AppError(ERRORS.syncBusy, { id: job.id }, "That job is already running.");
-    running.add(job.id);
+  async function runCatalog(job: CatalogJob, actor: Actor, triggered: "admin" | "system"): Promise<void> {
+    try {
+      const result = await titles.runNow({ scope: job.config.scope, kind: job.config.kind, pages: job.config.pages }, actor, triggered);
+      if (result.outcome === "ok") keep(job, "ok", { titles: result.titles, stale: titles.status().stale });
+      else keep(job, "failed", { code: ERRORS.internalFailure.code });
+    } catch (error) {
+      keep(job, "failed", { code: codeOf(error) });
+    }
+  }
+
+  /** Claims the job's flight and starts the run without awaiting it. */
+  function start(job: JobRecord, actor: Actor, triggered: "admin" | "system"): void {
+    if (flights.has(job.id)) throw new AppError(ERRORS.syncBusy, { id: job.id }, "That job is already running.");
+    if (job.type === "catalog" && titles.isSyncRunning()) throw new AppError(ERRORS.syncBusy, { id: job.id });
+    const abort = new AbortController();
+    const body = job.type === "playlist" ? runPlaylist(job, actor, abort.signal) : runCatalog(job, actor, triggered);
+    const settled = body.catch(() => undefined).finally(() => {
+      flights.delete(job.id);
+      onSettled();
+    });
+    flights.set(job.id, { abort, settled });
+  }
+
+  /** Aborts a job's run and waits for it to settle, at most `limitMs`; true when a run was in flight. */
+  async function stop(id: number, limitMs = PLAYLIST_DELETE_SETTLE_MS): Promise<boolean> {
+    const flight = flights.get(id);
+    if (!flight) return false;
+    flight.abort.abort();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([flight.settled, new Promise<void>((resolve) => (timer = setTimeout(resolve, limitMs)))]);
+    clearTimeout(timer);
+    return true;
   }
 
   return {
     refusal,
-    isRunning: (id: number): boolean => running.has(id),
+    scheduledRefusal,
+    isRunning: (id: number): boolean => flights.has(id),
+    stop,
 
-    /**
-     * An admin's run. A playlist job is awaited and answers with its counts (a failure is raised after it is kept);
-     * a catalog job takes a while, so it is started and the answer says it is running.
-     */
-    async run(job: JobRecord, actor: Actor, override: JobRun): Promise<void> {
+    /** An admin's run: refused when the job cannot run (`422 job.disabled`), `409 sync.busy` while it does. */
+    run(job: JobRecord, actor: Actor): void {
       const reason = refusal(job);
       if (reason !== undefined) throw disabled(reason);
-      claim(job);
-      if (job.type === "catalog") {
-        if (titles.isSyncRunning()) {
-          running.delete(job.id);
-          throw new AppError(ERRORS.syncBusy, { id: job.id });
-        }
-        void execute(job, actor, "admin", override).catch(() => undefined).finally(() => running.delete(job.id));
-        return;
-      }
-      try {
-        await execute(job, actor, "admin", override);
-      } finally {
-        running.delete(job.id);
-      }
+      start(job, actor, "admin");
     },
 
-    /** The scheduler's run: waited for, never raising; `busy` when the engine is taken and the job should wait. */
-    async runScheduled(job: JobRecord): Promise<"done" | "busy"> {
-      if (refusal(job) !== undefined) return "done";
-      if (running.has(job.id) || (job.type === "catalog" && titles.isSyncRunning())) return "busy";
-      claim(job);
-      try {
-        await execute(job, {}, "system", {});
-      } catch (error) {
-        if (error instanceof AppError && (error.code === ERRORS.playlistBusy.code || error.code === ERRORS.syncBusy.code)) return "busy";
-      } finally {
-        running.delete(job.id);
-      }
-      return "done";
+    /** The scheduler's run: started, never awaited; `busy` when the catalog engine is taken and the job should wait. */
+    runScheduled(job: JobRecord): "started" | "busy" | "skipped" {
+      if (scheduledRefusal(job) !== undefined || flights.has(job.id)) return "skipped";
+      if (job.type === "catalog" && titles.isSyncRunning()) return "busy";
+      start(job, {}, "system");
+      return "started";
+    },
+
+    /** Shutdown: every run is aborted and has settled before the store closes. */
+    async shutdown(): Promise<void> {
+      await Promise.all([...flights.keys()].map((id) => stop(id)));
     },
   };
 }

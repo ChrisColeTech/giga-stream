@@ -3,26 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+import { PLAYLIST_IMPORT_MAX_BYTES } from "./constants/limits.js";
+
 /** Env parsing (docs/03 section 1) — the only place `process.env` is read. */
 const BooleanFlag = z
   .enum(["true", "false"])
   .default("false")
   .transform((value) => value === "true");
-
-/** `PLAYLIST_URLS`: a comma-separated list of https playlist addresses (docs/03 section 7.2c). */
-const PlaylistUrls = z.string().default("").transform((value, ctx): string[] => {
-  const urls = value.split(",").map((item) => item.trim()).filter((item) => item !== "");
-  for (const url of urls) {
-    let https = false;
-    try {
-      https = new URL(url).protocol === "https:";
-    } catch {
-      https = false;
-    }
-    if (!https) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `PLAYLIST_URLS must be comma-separated https addresses: ${url}` });
-  }
-  return urls;
-});
 
 /** Development and production never share a port (docs/03 section 1); `npm start` is production. */
 const PORTS = { development: 8091, production: 8191 } as const;
@@ -78,12 +65,9 @@ const EnvSchema = z.object({
   TEST_PAGE: BooleanFlag,
   // The built admin app, served at /admin/ (docs/26 section 4.1); with no index.html there, nothing is.
   ADMIN_DIST: z.string().default(""),
-  // The playlist sync (docs/03 section 7.2c). With PLAYLIST_URLS unset the sync has nothing to do
-  // and the schedule stays unarmed.
-  PLAYLIST_URLS: PlaylistUrls,
-  // The playlist-sync interval, e.g. "6h" or "24h"; empty or "off" disables it.
-  PLAYLIST_SYNC_SCHEDULE: z.string().default(""),
-  PLAYLIST_SYNC_MAX_BYTES: z.coerce.number().int().min(1).default(8 * 1024 * 1024),
+  // The playlist import and sync (docs/03 section 7.2c). A playlist and its job come from an import; no
+  // environment seeds them (PLAYLIST_URLS and PLAYLIST_SYNC_SCHEDULE are retired, docs/43).
+  PLAYLIST_SYNC_MAX_BYTES: z.coerce.number().int().min(1).default(PLAYLIST_IMPORT_MAX_BYTES),
   PLAYLIST_SYNC_MAX: z.coerce.number().int().min(1).default(5_000),
   LOGO_INDEX_TTL_HOURS: z.coerce.number().positive().default(24),
 });
