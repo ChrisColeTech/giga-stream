@@ -71,7 +71,8 @@ The window has three tabs.
 - Accounts, sign-in, billing or ads.
 - Provider code in the fileserver or the interface.
 - A step that resolves a channel or title into a stream, and any relay or proxy of video.
-- Saving a copy of the backend's channels, titles or providers.
+- Saving the backend's **providers**, credentials or provider sources. (Channels and titles ARE cached locally for display, as a
+  snapshot synced in the background and refreshed at most every 6 hours; owner, 2026-10-18, `46`.)
 - Any playback window outside the app.
 
 ## 6. The documents

@@ -15,9 +15,9 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
  Fileserver (src/fileserver)  :8090 loopback
    owns YOUR data: settings, layout, collections, favorites,
    watch history, local files, jobs (its own SQLite, ~/.giga-stream)
-   image cache: the only backend-derived bytes on its disk
-   passes the backend's channels, titles and providers through
-   in memory, never to its database
+   cache: a snapshot of the backend's channels and titles (display data
+   only, synced in the background, at most every 6 hours; `46`) and the
+   image cache; providers and their sources are never stored
         |
         | live reads on demand: /api/library, /api/titles*,
         | /api/channels, /api/providers (never stored; the revision
@@ -69,10 +69,10 @@ The application server for the interface, and the Electron host in desktop mode.
 - delivery of the built interface;
 - everything local: `node:sqlite` with settings, shell state (layout), collections, favorites,
   watch history, local files and jobs; folder scans and Range media routes for local files;
-- one in-memory live view of the backend's channels, titles and providers, read from the backend
-  on demand, never written to disk;
-- the image cache: images from the backend, on disk under the data folder, fetched lazily on first
-  request, the only thing kept from the backend;
+- a local cache of the backend's channels and titles (display data only), written to the same database and synced in the
+  background at launch and when a page reads it after 6 hours (`46`); the backend's providers and their sources are never
+  stored;
+- the image cache: images from the backend, on disk under the data folder, fetched lazily on first request;
 - one transport: REST answers. A long-running operation (a folder scan) answers as one streamed
   NDJSON body that reports progress as it happens; there is no WebSocket and no push channel;
 - Electron lifecycle, preload, safe navigation and native folder selection.
@@ -255,9 +255,10 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 
 - Repositories own SQL, services compose repositories, routes call services.
 - Migrations are forward-only, numbered and transactional; a newer schema is refused.
-- Backend data is read live on demand, held in memory, and never written to the database. A failed
-  read clears the in-memory view and sets the backend error; local data stays usable, and the next
-  successful read refills the view.
+- Backend channels and titles are cached in the fileserver's database as a snapshot (`46`): synced in the background at launch
+  and when a page reads them after 6 hours, served from the cache at once (a cache that was never filled is awaited). A failed
+  sync keeps the cache and sets the backend error; local data stays usable. **No timer drives it** - staleness is checked at
+  launch and on reads only - and nothing from the backend's providers, credentials or provider sources is stored.
 - Local paths never enter a URL or a DTO. Local files always play through Range routes; `file:` is
   forbidden.
 - Jobs that outlive a request are persisted, cancellable and marked `interrupted` after a restart.

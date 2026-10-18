@@ -80,7 +80,9 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   per file.
 - Components `PascalCase.tsx`, hooks `useThing.ts`, everything else kebab-case. No
   `utils`/`util`/`helpers`/`misc`/`common`.
-- One Zustand store and one request layer (`services/api.ts`). No application socket, browser storage or polling.
+- One Zustand store and one request layer (`services/api.ts`). No application socket, browser storage or polling. The fileserver's
+  backend cache (`docs/46`) has no timer: staleness (6 hours) is checked at launch and when a page reads, and it stores no
+  providers, tokens or secrets.
 - Routes: parse, one service call, the standard envelope. SQL only under `store/`. Electron only in the
   fileserver's `src/app`. Providers only in the admin backend.
 - Every route begins `/api`; the root-level routes are `/healthz` and the backend's live stream addresses (`/live`,

@@ -270,8 +270,8 @@ watched first (`06` section 4.2, Continue Watching).
 
 ### 3.6 Titles
 
-TMDB's titles, passed through from the backend. Nothing is stored; an answer is kept in memory for the
-session. A title id is the kind and TMDB id, for example `movie-603` or `tv-1399`.
+The backend's titles as the fileserver caches them (section 5, plan `46`): the Library and the search read the cache; a title's
+detail is read live (it carries the Player's sources, never cached) and written through. A title id is the kind and TMDB id, for example `movie-603` or `tv-1399`.
 
 ```ts
 interface TitleDetail {
@@ -523,35 +523,38 @@ interface BackendState {
 - The parts of the answer are validated separately by the interface (`02` section 2.3): a channel
   list that cannot be read becomes "no list" and one notice, and never costs the saved shell.
 
-## 5. The live view
+## 5. The backend cache (owner, 2026-10-18; plan `46`)
 
-### 5.1 Reading the backend
+### 5.1 Freshness: launch and page reads, no timers
 
-The fileserver keeps the backend's channels in memory, the **live view**. It is never written to disk.
-Titles are not listed in advance; they are asked for page by page (sections 3.5 and 3.6). The fileserver
-holds no connection open to the backend — it reads on demand:
+The fileserver keeps a **snapshot of the backend's channels and titles in its own database** (section 6), written by a
+background sync. A dataset (`channels`, `titles`) is **due** when it was never synced, its `source_key` (a hash of the current
+`adminUrl`) differs, `now - synced_at >= CACHE_WINDOW_MS` (6 hours), or the clock moved back; a dataset whose last attempt failed
+is not due again for `CACHE_RETRY_GAP_MS` (5 minutes) unless the user asks. The check runs **only** at launch (the app starts
+the sync detached) and when a page reads the dataset (`GET /api/channels`, `GET /api/state`, every `/api/library*` and title
+route): **no timer drives it.** A warm, due dataset is served from the cache at once and refreshed in the background
+(stale-while-revalidate, one run at a time per dataset); a cold one (never synced) is awaited once, then served. The page that
+triggered a refresh is not updated mid-view; the next read sees the new data. `POST /api/channels/refresh` and
+`POST /api/library/refresh` force a sync, join a run in flight and answer `503 backend.unreachable` / `502
+backend.bad_response` on failure with the cache still serving. An `adminUrl` that points at a different backend purges the cache.
 
-- On a channels or state read: if the view is empty, or older than `LIVE_VIEW_TTL_MS` *(default 30 s)*,
-  it reads `GET {adminUrl}/api/channels` and replaces the view. The revision in the backend's answer
-  says whether the list moved; a read can also compare it and skip the fetch when the view already holds
-  that revision.
-- `POST /api/channels/refresh` reads the channels again regardless of the TTL.
-- **Loss.** A read that fails clears the live view, sets `backend.error` and answers as section 3.4 says
-  (`503 backend.unreachable`, `502 backend.bad_response`). While the backend is unreachable the channel
-  list is empty, the library query reports `titlesAvailable: false` and the title routes answer `503`.
-  The next successful read refills the view. Nothing watches for the backend's return; the next request
-  is what finds it.
-- An answer the fileserver cannot read sets `backend.error` (`backend.bad_response`) and leaves the view
-  as it was.
+### 5.2 What is synced
 
-### 5.2 The probe
+Public reads only (no `Authorization`, no cookie). **Channels:** one `GET {adminUrl}/api/channels`, replaced whole in one
+transaction (id, position, name, number, category, logo address, stream address, revision). **Titles:** the genre dictionary,
+then `GET {adminUrl}/api/titles/catalog?after=<id>&limit=500` pages (store-only, never TMDB; section 7.4) upserted page by page,
+then a sweep of titles the catalog no longer lists. A failed or cut-off sync keeps the cache and stamps only an error code. What is
+never stored: providers, a title's `streamUrl` and `sources`, episodes. The fileserver **no longer probes streams** and keeps no
+live/dead status: the admin curated the list. The previous live view, its 30 second TTL (`LIVE_VIEW_TTL_MS`) and the probe are removed.
 
-After every channel read, each channel's `streamUrl` is probed, and the read's answer carries the
-round's statuses. One probe is one `GET` of the address: 4 second timeout, redirects followed, at most 64 KiB
-of the body read. A `2xx` answer whose body begins `#EXTM3U` is `live`; anything else (another status, a
-timeout, a network error, another body) is `offline`; never probed is `unknown`. At most 6 probes run at
-once, and an address shared by several channels is probed once. A re-read keeps a channel's last status
-until its new probe finishes, unless its `streamUrl` changed.
+### 5.3 Reads
+
+Channels (list, categories, search, last channel) and **every Library read** (`view=all` pages, sorts, filters, facets, totals,
+trending by the stored popularity, history, favorites, collections, Continue, and **search, which only queries the cache**) are
+answered from the cache; with the backend unreachable they keep working from it. A title's detail (`GET /api/titles/:id`) is read
+live first, because it carries the Player's `sources` and `streamUrl`, which are never cached; on success its display fields are
+written through to the cache, and when the backend is unreachable it is answered from the cache without sources (`fromCache:
+true`). Seasons, episodes and related stay live.
 
 ## 6. Storage
 
@@ -581,8 +584,12 @@ so nothing the user saved resets. After it, the database holds:
 | `watch_entries` | an item kind and id, season and episode, position, duration, state, updated |
 | `jobs` | kind, label, state, percent, error, times; the request holds ids, never a path |
 
-The image cache is files under `DATA_DIR/images`, not rows. Nothing from the backend is stored: there is
-no table of channels, titles or providers.
+The image cache is files under `DATA_DIR/images`, not rows. **Migration `006` (owner, 2026-10-18, `46`) adds the backend cache:**
+`cache_state` (per dataset: `source_key`, `synced_at`, `attempted_at`, `error_code`, `revision`, `run`), `cached_channels` (id,
+position, name, number, category, logo address, stream address, revision), `cached_titles` (id, kind, title, year, rating,
+popularity, poster and backdrop addresses, and the nullable detail columns plot, cast, runtime, seasons, detail time, plus the
+sweep bookkeeping `in_catalog` and `seen_run`), `cached_title_genres` and `cached_genres`. There is no table of providers, and no
+column for a title's `streamUrl` or `sources`, a token or a secret.
 
 ---
 
@@ -845,6 +852,13 @@ bytes while streaming, applies a timeout, and sends no cookies and a fixed User-
 OMDb) and the backend's own calls are not covered.
 
 ### 7.4 Titles
+
+**`GET /api/titles/catalog?after=<id>&limit=<1..500>`** (public, `Cache-Control` as the other public reads; owner 2026-10-18, plan
+`46`): the fileserver's sync read. Store-only, it **never asks TMDB**. Enabled titles (synced and manual, edited values already in
+the payload) in `id` order after `after`; answer `{ items: [{ id, kind, title, year?, rating?, popularity?, posterUrl?,
+backdropUrl?, genres }], next? }`, where `next` is the last id when more follow; it never carries `streamUrl`, `sources` or
+`enabled`; registered before `/api/titles/:titleId`; a stored row that fails the stored-title schema is skipped. The **public channel
+answer** (7.2) also carries `cachedLogoUrl` (the backend's hash-named cached logo) for stream rows.
 
 The backend browses, searches and describes TMDB's titles on demand (`11` section 5). Titles are also ordinary records
 an admin can create, edit and delete (`POST`, `PATCH`, `DELETE /api/titles`, `26` section 3.11; a sync never overwrites
