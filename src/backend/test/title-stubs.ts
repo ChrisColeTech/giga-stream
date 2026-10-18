@@ -107,6 +107,8 @@ interface TmdbStubOptions {
   movieRows?: unknown[];
   tvRows?: unknown[];
   recommendationRows?: unknown[];
+  /** Fields of The Matrix's detail answer to leave out (`overview`): the gap OMDb is asked to fill. */
+  matrixWithout?: string[];
 }
 
 /** A stub TMDB: records request keys, answers the paths the service calls. */
@@ -123,7 +125,9 @@ export async function stubTmdb(options: TmdbStubOptions = {}) {
   const base = await serve((url, json) => {
     calls.push(url.pathname + url.search);
     const p = url.pathname;
-    if (p === "/movie/603") return json(MATRIX);
+    if (p === "/movie/603") {
+      return json(Object.fromEntries(Object.entries(MATRIX).filter(([name]) => !(options.matrixWithout ?? []).includes(name))));
+    }
     if (p === "/tv/1399") {
       // TMDB's append_to_response=season/N answers each appended season under its `season/N` key.
       const appended = (url.searchParams.get("append_to_response") ?? "").split(",");
