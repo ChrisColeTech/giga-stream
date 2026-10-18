@@ -7,7 +7,7 @@ import { json, success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
 import { resetStore, signInForTest } from "./support/store";
 
-const row = (id: string, username: string) => ({ id, username, name: id, disabled: false, createdAt: 1, updatedAt: 2 });
+const row = (id: string, username: string) => ({ id, username, disabled: false, createdAt: 1, updatedAt: 2 });
 const refusal = (status: number, code: string, field?: string) =>
   json({ ok: false, error: { code, message: "Server sentence.", ...(field && { details: { field } }) } }, status);
 
@@ -28,13 +28,13 @@ describe("the accounts service", () => {
     );
   });
 
-  it("posts the trimmed username and name and the password untouched", async () => {
+  it("posts the trimmed username and the password untouched", async () => {
     await withBackend(
       () => success(row("n", "new@x.test"), 201),
       async (calls) => {
-        await accounts.create(createBody({ name: "  Ann  ", username: " new@x.test ", password: "  pass word 12  " }));
+        await accounts.create(createBody({ username: " new@x.test ", password: "  pass word 12  " }));
         assert.equal(calls[0]?.method, "POST");
-        assert.deepEqual(calls[0]?.body, { username: "new@x.test", name: "Ann", password: "  pass word 12  " });
+        assert.deepEqual(calls[0]?.body, { username: "new@x.test", password: "  pass word 12  " });
       },
     );
   });
@@ -55,7 +55,7 @@ describe("the accounts service", () => {
     await withBackend(
       () => success({ nope: 1 }),
       async () => {
-        await assert.rejects(accounts.create({ username: "a@x.test", name: "A", password: "x".repeat(12) }), { code: "backend.bad_response" });
+        await assert.rejects(accounts.create({ username: "a@x.test", password: "x".repeat(12) }), { code: "backend.bad_response" });
       },
     );
   });

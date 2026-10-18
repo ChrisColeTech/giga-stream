@@ -111,6 +111,8 @@ One small backend change (3.2): `src/backend/src/types/channel-input.ts` (`id` o
 
 ### 5.1 New channel (`NewRecordGroup`, icon `plus`, id prefix `ch-`)
 
+> **Channel number removed (owner, 2026-10-17).** There is no guide, so the admin has no Number: not in New channel, the list (no `number` column, sorted by name), either Details group, the drafts, the bodies or the checks; `channel.taken` no longer goes under a Number row. The backend takes a live `number` as optional (stream already did); the admin never sends or shows one, and a number an old channel has is kept. Every Number mention below is superseded by this note.
+
 Rows in this order (`28` 7.3): **Name**, **Kind** (`Segmented` Live / Stream, equal segments, a row switcher), **Number**, **Category**,
 then by kind: **Folder** (`FolderRow`, live) or **Stream address** (stream). The rows a kind does not use are not rendered and
 leave the required list. An info glyph on every row except Name (`channel-tips.ts`). No placeholders. Category is a

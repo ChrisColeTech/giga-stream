@@ -35,20 +35,19 @@ export interface LiveDetailsGroupProps {
   readonly onChoose: () => void;
 }
 
-/** A live channel's `Details` (`36` section 6): Name, Kind (read-only), Number, Category (one of six), Plays (Folder or
+/** A live channel's `Details` (`36` section 6): Name, Kind (read-only), Category (one of six), Plays (Folder or
  *  Videos) and the folder or the ordered videos, Enabled, the logo the backend draws and the Id, both read-only. The
  *  heading's action slot is `Rebuild`. */
 export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
   const { channel, draft, errors, onChange, rebuildReason, onRebuild, chooseReason, onChoose } = props;
-  const field = (key: "name" | "number", label: string) => (
+  const field = (key: "name", label: string) => (
     <Input
       value={draft[key]}
-      className={cn(FIELD_CONTROL, key === "number" && "font-mono")}
+      className={FIELD_CONTROL}
       aria-label={label}
       aria-invalid={errors[key] !== undefined}
       autoComplete="off"
       spellCheck={false}
-      inputMode={key === "number" ? "numeric" : undefined}
       onChange={(event) => onChange({ [key]: event.target.value })}
     />
   );
@@ -65,9 +64,6 @@ export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kindFixed}>
         <Input value="Live" readOnly className={cn(FIELD_CONTROL, "text-faint")} aria-label="Kind" />
-      </Row>
-      <Row label="Number" tip={CHANNEL_TIPS.number} error={errors["number"]}>
-        {field("number", "Number")}
       </Row>
       <Row label="Category" tip={CHANNEL_TIPS.categoryLive} error={errors["category"]}>
         <Select value={draft.category} className={FIELD_CONTROL} aria-label="Category" onChange={(event) => onChange({ category: event.target.value })}>

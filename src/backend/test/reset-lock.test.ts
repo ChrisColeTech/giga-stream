@@ -66,7 +66,7 @@ test("five wrong answers on an unknown username lock it the same way, with the s
 test("every failure is byte-identical: wrong, locked, unknown, no question, disabled", async () => {
   const { t, access } = await withQuestion();
   const made = async (username: string) =>
-    String(pick((await send(t.app, "POST", "/api/admin-accounts", { username, name: "N", password: ADMIN_PASSWORD }, access)).body, "data.id"));
+    String(pick((await send(t.app, "POST", "/api/admin-accounts", { username, password: ADMIN_PASSWORD }, access)).body, "data.id"));
   await made("plain@example.test");
   const offId = await made("off@example.test");
   const off = await signIn(t.app, "off@example.test", ADMIN_PASSWORD);

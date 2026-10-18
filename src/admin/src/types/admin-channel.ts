@@ -14,8 +14,6 @@ export interface BackendChannel {
   readonly id: string;
   readonly name: string;
   readonly category: string;
-  /** A whole number, 1 to 9999, sent as text. */
-  readonly number?: string;
   readonly logoUrl?: string;
   /** A live row's is `<caller origin>/live/<id>/master.m3u8`; a stream row's is the address its players load. */
   readonly streamUrl: string;

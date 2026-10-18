@@ -94,7 +94,7 @@ Paths under `src/admin/src/` unless marked. A worker edits only its row; anythin
 ### 5.0 Program rules (owner, 2026-10-17; they bind every tab doc, and amend `28` 7.3 without rewriting it)
 
 1. **Name first.** On every New form and every Details group the order is: the record's **Name** first; then the kind / type / family switch where there is one; then the record's own fields; then the optional ones; then the read-only facts.
-   New account is `Name`, `Email`, `Password`; New channel `Name`, `Kind`, `Number`, `Category`, `Folder` or `Stream address`; New provider `Name`, `Family`, `Source`, `Movie template`; New title `Title` (its name), `Kind`, `Year`; New playlist `Name` (optional, still first), `Address`;
+   New account is `Username`, `Password` (an account has no name: removed, owner, 2026-10-17; the username is the identity and comes first); New channel `Name`, `Kind`, `Category` (no `Number`: removed, owner, 2026-10-17, there is no guide), `Folder` or `Stream address`; New provider `Name`, `Family`, `Source`, `Movie template`; New title `Title` (its name), `Kind`, `Year`; New playlist `Name` (optional, still first), `Address`;
    New job `Name`, `Type`, then its target. `28` 7.3's table lists Email before Name for an account; that line is superseded.
 2. **Ids do not change** (section 7.1). The admin never derives an id; a new live channel's id is assigned by the backend (`36` 3.2).
 3. **Ticks arm bulk verbs.** Every list's toolbar carries bulk verbs on the ticked rows, through the one shared piece of section 6; a verb that cannot run is disabled with its reason as a tooltip (`Button reason`), never `aria-disabled`.

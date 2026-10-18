@@ -7,17 +7,18 @@ import { live, stream } from "./support/channels-kit";
 
 describe("a channel's request bodies", () => {
   it("never carry an id on a create: the backend assigns it", () => {
-    const body = createBody({ ...EMPTY_NEW_CHANNEL, name: "Drive News", number: "7", folder: "D:\\v" });
-    assert.ok(!("id" in body));
-    assert.deepEqual(body, { kind: "live", name: "Drive News", category: "News", number: "7", folder: "D:\\v" });
-    const streamBody = createBody({ ...EMPTY_NEW_CHANNEL, kind: "stream", name: "S", number: "3", streamUrl: "https://a.b/c" });
+    const body = createBody({ ...EMPTY_NEW_CHANNEL, name: "Drive News", folder: "D:\\v" });
+    assert.ok(!("id" in body) && !("number" in body));
+    assert.deepEqual(body, { kind: "live", name: "Drive News", category: "News", folder: "D:\\v" });
+    const streamBody = createBody({ ...EMPTY_NEW_CHANNEL, kind: "stream", name: "S", streamUrl: "https://a.b/c" });
     assert.ok(!("id" in streamBody) && !("folder" in streamBody));
   });
 
-  it("send only the changed fields, the number as text, the qualities in the order chosen", () => {
+  it("send only the changed fields, never a number, the qualities in the order chosen", () => {
     const saved = live("a");
     assert.ok(isEmptyBody(patchBody(saved, liveDraft(saved))));
-    assert.deepEqual(patchBody(saved, { ...liveDraft(saved), number: " 12 " }), { number: "12" });
+    assert.deepEqual(patchBody(saved, { ...liveDraft(saved), name: " Renamed " }), { name: "Renamed" });
+    assert.ok(!("number" in liveDraft(saved)) && !("number" in streamDraft(stream("s"))));
     assert.deepEqual(patchBody(saved, { ...liveDraft(saved), variants: ["720p", "360p", "1080p"] }), {
       variants: ["720p", "360p", "1080p"],
     });
@@ -56,22 +57,20 @@ describe("a channel's checks", () => {
     const empty = { ...EMPTY_NEW_CHANNEL };
     assert.equal(createReason(empty, { saving: false, unreachable: false }), "Name is required.");
     const named = { ...empty, name: "N" };
-    assert.equal(createReason(named, { saving: false, unreachable: false }), "Number is required.");
-    assert.equal(createReason({ ...named, number: "1" }, { saving: false, unreachable: false }), "Folder is required.");
-    const stream = { ...named, number: "1", kind: "stream" as const, category: "" };
+    assert.equal(createReason(named, { saving: false, unreachable: false }), "Folder is required.");
+    const stream = { ...named, kind: "stream" as const, category: "" };
     assert.equal(createReason(stream, { saving: false, unreachable: false }), "Category is required.");
     assert.equal(createReason({ ...stream, category: "T" }, { saving: false, unreachable: false }), "Stream address is required.");
-    const full = { ...named, number: "1", folder: "D:\\v" };
+    const full = { ...named, folder: "D:\\v" };
     assert.equal(createReason(full, { saving: true, unreachable: false }), "Saving.");
     assert.equal(createReason(full, { saving: false, unreachable: true }), "The admin backend cannot be reached.");
     assert.equal(createReason(full, { saving: false, unreachable: false }), undefined);
   });
 
-  it("refuse a number outside 1 to 9999 and a stream address that is not https, with their rows", () => {
+  it("refuse a stream address that is not https, with its row", () => {
     const base = { ...EMPTY_NEW_CHANNEL, name: "N", folder: "D:\\v" };
-    assert.equal(newChannelRefusal({ ...base, number: "10000" })?.field, "number");
-    assert.equal(newChannelRefusal({ ...base, number: "5" }), null);
-    const refused = newChannelRefusal({ ...base, number: "5", kind: "stream", streamUrl: "http://a.b/c" });
+    assert.equal(newChannelRefusal(base), null);
+    const refused = newChannelRefusal({ ...base, kind: "stream", streamUrl: "http://a.b/c" });
     assert.deepEqual(refused, { field: "streamUrl", sentence: "Stream address must be an https address." });
     assert.deepEqual(checkChannel({ ...streamDraft(stream("s")), logoUrl: "ftp://x" }).refusal?.field, "logoUrl");
   });

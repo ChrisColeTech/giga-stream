@@ -62,8 +62,8 @@ test("an update of a sync job or of an admin account names it", async () => {
   assert.equal(pick(await latest(t.app, token, "job.updated"), "detail.name"), "Series 2");
 
   const made = await send(t.app, "POST", "/api/admin-accounts", {
-    username: "ed@example.test", name: "Ed", password: "ed-password-12345",
+    username: "ed@example.test", password: "ed-password-12345",
   }, token);
-  await send(t.app, "PATCH", `/api/admin-accounts/${pick(made.body, "data.id")}`, { name: "Edward" }, token);
-  assert.equal(pick(await latest(t.app, token, "account.updated"), "detail.name"), "Edward");
+  await send(t.app, "PATCH", `/api/admin-accounts/${pick(made.body, "data.id")}`, { username: "edward" }, token);
+  assert.equal(pick(await latest(t.app, token, "account.updated"), "detail.username"), "edward");
 });

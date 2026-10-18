@@ -5,7 +5,6 @@ import { channelState, type RowState } from "./row-state";
 /** One channel as the list draws it (`28` section 7.2, Channels index): every cell a string or the state word. Pure. */
 export interface ChannelRowView {
   readonly id: string;
-  readonly number: string;
   readonly name: string;
   readonly category: string;
   /** `Live` or `Stream`. */
@@ -25,7 +24,6 @@ export const isSynced = (channel: AdminChannel): boolean => channel.kind === "st
 export function channelRow(channel: AdminChannel): ChannelRowView {
   const base = {
     id: channel.id,
-    number: channel.number ?? "",
     name: channel.name,
     category: channel.category,
     deleteTip: isSynced(channel) ? DELETE_SYNCED_TIP : undefined,
@@ -44,10 +42,7 @@ export function channelRow(channel: AdminChannel): ChannelRowView {
   return { ...base, kind: "Stream", state: channelState({ enabled: channel.enabled, origin }), mode: "", nowPlaying: "" };
 }
 
-/** The rows in the order the list shows them: by number, then name. A channel with no number sorts last. */
+/** The rows in the order the list shows them: by name (there is no guide, so no number: owner, 2026-10-17). */
 export function channelRows(channels: readonly AdminChannel[]): readonly ChannelRowView[] {
-  const order = (channel: AdminChannel): number => (channel.number === undefined ? Infinity : Number(channel.number));
-  return [...channels]
-    .sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name))
-    .map(channelRow);
+  return [...channels].sort((a, b) => a.name.localeCompare(b.name)).map(channelRow);
 }

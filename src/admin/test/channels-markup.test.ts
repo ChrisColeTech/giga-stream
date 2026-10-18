@@ -31,9 +31,10 @@ beforeEach(() => {
 });
 
 describe("the New channel form", () => {
-  it("draws Name, Kind, Number, Category, Folder in that order for a live channel, with no placeholder", () => {
+  it("draws Name, Kind, Category, Folder in that order for a live channel, with no Number and no placeholder", () => {
     const html = rows();
-    const order = ["Name", "Kind", "Number", "Category", "Folder"].map((text) => label(html, text));
+    assert.ok(label(html, "Number") === -1);
+    const order = ["Name", "Kind", "Category", "Folder"].map((text) => label(html, text));
     assert.ok(order.every((at, index) => at >= 0 && (index === 0 || at > (order[index - 1] ?? 0))), String(order));
     assert.ok(!html.includes("placeholder=") && label(html, "Stream address") === -1);
     assert.ok(html.includes('aria-label="Kind"') && html.includes(">Live</button>") && html.includes(">Stream</button>"));
@@ -48,7 +49,7 @@ describe("the New channel form", () => {
 
   it("puts an info glyph on every row but Name", () => {
     const html = rows();
-    for (const text of ["Kind", "Number", "Category", "Folder"]) assert.ok(html.includes(`About ${text}`), text);
+    for (const text of ["Kind", "Category", "Folder"]) assert.ok(html.includes(`About ${text}`), text);
     assert.ok(!html.includes("About Name"));
   });
 
@@ -107,18 +108,19 @@ describe("the channels grid", () => {
   it("draws the headings, the ticks, the state words, the dimmed disabled row and the synced Delete tip", () => {
     state().channelsLoaded(
       [
-        live("a", { number: "2", state: "preparing" }),
-        live("b", { number: "1", enabled: false }),
-        stream("c", { number: "3", source: "lists.example" }),
+        live("b", { enabled: false }),
+        live("a", { state: "preparing" }),
+        stream("c", { source: "lists.example" }),
       ],
       1,
     );
     state().channelTick("a", true);
     const html = renderLive(createElement(ChannelRows));
-    for (const heading of ["number", "name", "category", "kind", "state", "mode", "now playing"]) {
+    for (const heading of ["name", "category", "kind", "state", "mode", "now playing"]) {
       assert.ok(html.includes(`>${heading}</span>`), heading);
     }
-    assert.ok(html.indexOf("Select Channel b") < html.indexOf("Select Channel a"), "by number");
+    assert.ok(!html.includes(">number</span>"));
+    assert.ok(html.indexOf("Select Channel a") < html.indexOf("Select Channel b"), "by name");
     assert.ok(html.includes('data-st="preparing"') && html.includes('data-st="disabled"') && html.includes('data-st="synced"'));
     assert.ok(/<li data-st="disabled"[^>]*opacity-45/.test(html));
     assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));

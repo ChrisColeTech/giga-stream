@@ -1,15 +1,14 @@
 import { SAVING_REASON, UNREACHABLE_REASON, WORKING_REASON } from "@/constants/channel-copy";
 import type { NewChannelDraft } from "./channel-body";
 import type { ChannelDraft } from "./channel-draft";
-import { firstRefusal, httpsAddress, required, wholeNumber, type Refusal } from "./field-checks";
+import { firstRefusal, httpsAddress, required, type Refusal } from "./field-checks";
 
 /** The rows a refusal can sit under, the page's or the backend's (`details.field`). */
-export type ChannelField = "name" | "number" | "category" | "folder" | "videos" | "streamUrl" | "logoUrl" | "enabled";
+export type ChannelField = "name" | "category" | "folder" | "videos" | "streamUrl" | "logoUrl" | "enabled";
 
 /** The refusals a workspace shows under their rows, by field. A field that passes has none. */
 export interface ChannelErrors {
   readonly name: Refusal;
-  readonly number: Refusal;
   readonly folder: Refusal;
   readonly streamUrl: Refusal;
   readonly logoUrl: Refusal;
@@ -28,18 +27,17 @@ export interface ChannelCheck {
 function requiredFields(draft: ChannelDraft): ReadonlyArray<readonly [string, string]> {
   if (draft.kind === "live") {
     const source = draft.plays === "folder" ? (["Folder", draft.folder] as const) : (["Videos", draft.videos.join("")] as const);
-    return [["Name", draft.name], ["Number", draft.number], source];
+    return [["Name", draft.name], source];
   }
   return [
     ["Name", draft.name],
-    ["Number", draft.number],
     ["Category", draft.category],
     ["Stream address", draft.streamUrl],
   ];
 }
 
 const firstOf = (errors: ChannelErrors): ChannelCheck["refusal"] => {
-  for (const field of ["name", "number", "folder", "streamUrl", "logoUrl"] as const) {
+  for (const field of ["name", "folder", "streamUrl", "logoUrl"] as const) {
     const sentence = errors[field];
     if (sentence !== null) return { field, sentence };
   }
@@ -47,12 +45,11 @@ const firstOf = (errors: ChannelErrors): ChannelCheck["refusal"] => {
 };
 
 /** A workspace's checks: required fields disable Save with the first missing one's reason (the template's model), value
- *  rules (a number outside 1 to 9999, an address that is not https) refuse after the press and show under their row. */
+ *  rules (an address that is not https) refuse after the press and show under their row. */
 export function checkChannel(draft: ChannelDraft): ChannelCheck {
   const missing = firstRefusal(requiredFields(draft).map(([label, value]) => required(label, value)));
   const errors: ChannelErrors = {
     name: null,
-    number: wholeNumber("Number", draft.number),
     folder: null,
     streamUrl: draft.kind === "stream" ? httpsAddress("Stream address", draft.streamUrl) : null,
     logoUrl: draft.kind === "stream" ? httpsAddress("Logo address", draft.logoUrl) : null,
@@ -63,7 +60,7 @@ export function checkChannel(draft: ChannelDraft): ChannelCheck {
 /** The New form's required rows, in order: the rows its kind does not use are not rendered and are not required. */
 function newRequired(draft: NewChannelDraft): ReadonlyArray<readonly [string, string]> {
   const source = draft.kind === "live" ? (["Folder", draft.folder] as const) : (["Stream address", draft.streamUrl] as const);
-  return [["Name", draft.name], ["Number", draft.number], ["Category", draft.category], source];
+  return [["Name", draft.name], ["Category", draft.category], source];
 }
 
 export interface WriteState {
@@ -87,15 +84,12 @@ export function createReason(draft: NewChannelDraft, state: WriteState): string 
 
 /** The New form's value refusals after the press, with the row each goes under, or null. */
 export function newChannelRefusal(draft: NewChannelDraft): { field: ChannelField; sentence: string } | null {
-  const number = wholeNumber("Number", draft.number);
-  if (number !== null) return { field: "number", sentence: number };
   const address = draft.kind === "stream" ? httpsAddress("Stream address", draft.streamUrl) : null;
   return address === null ? null : { field: "streamUrl", sentence: address };
 }
 
 const FIELDS: Readonly<Record<string, ChannelField>> = {
   name: "name",
-  number: "number",
   category: "category",
   folder: "folder",
   streamUrl: "streamUrl",

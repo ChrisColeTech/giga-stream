@@ -9,7 +9,6 @@ const state = () => useAppStore.getState();
 const account = (id: string, username: string, disabled = false): AdminAccount => ({
   id,
   username,
-  name: id,
   disabled,
   createdAt: 1,
   updatedAt: 1,
@@ -34,7 +33,7 @@ describe("the accounts slice", () => {
     state().accountUpsert(account("c", "carl@x.test"));
     state().accountUpsert(account("d", "AARON@x.test"));
     assert.deepEqual(usernames(), ["AARON@x.test", "ann@x.test", "Bob@x.test", "carl@x.test"]);
-    state().accountUpsert({ ...account("b", "zed@x.test"), name: "renamed" });
+    state().accountUpsert({ ...account("b", "zed@x.test"), disabled: true });
     assert.deepEqual(usernames(), ["AARON@x.test", "ann@x.test", "carl@x.test", "zed@x.test"]);
     assert.equal(state().accounts.items.length, 4, "replaced, not added");
   });

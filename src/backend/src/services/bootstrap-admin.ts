@@ -16,7 +16,7 @@ export async function bootstrapAdmin(
 ): Promise<BootstrapOutcome> {
   if (hasAccounts) return "existing";
   if (username === "" || password === "") return "none";
-  const input = AccountCreateSchema.safeParse({ username, name: "Admin", password });
+  const input = AccountCreateSchema.safeParse({ username, password });
   if (!input.success) {
     const field = input.error.issues[0]?.path.join(".") ?? "username";
     const name = field === "password" ? "PASSWORD" : "USERNAME";

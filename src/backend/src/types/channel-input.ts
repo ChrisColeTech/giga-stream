@@ -62,7 +62,7 @@ const LiveInputSchema = z
     id: z.string().regex(KEBAB_CASE, "must be kebab-case").max(LIVE_ID_MAX).optional(),
     name: text(CHANNEL_NAME_MAX),
     category: z.enum(LIVE_CATEGORIES),
-    number: LiveNumberSchema,
+    number: LiveNumberSchema.optional(), // optional (owner, 2026-10-17): the admin sends none; old rows keep theirs
     mode: z.enum(LIVE_MODES).optional(),
     captions: z.boolean().optional(),
     variants: variants.optional(),

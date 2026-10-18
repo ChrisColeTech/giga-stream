@@ -119,7 +119,7 @@ interface JobView { id: number; name; type: "playlist" | "catalog"; enabled: boo
   playlistName?: string; running: boolean; lastRunAt?: number; lastOutcome?: string; lastCounts?: Record<string, unknown>; createdAt: number }
 
 // accounts and session (types/account.ts)
-interface AdminAccount { id; username; name; disabled: boolean; createdAt: number; updatedAt: number; lastSignInAt?: number; securityQuestionSet: boolean }
+interface AdminAccount { id; username; disabled: boolean; createdAt: number; updatedAt: number; lastSignInAt?: number; securityQuestionSet: boolean }
 interface Session { accessToken; accessExpiresAt: number; refreshToken; refreshExpiresAt: number; account: AdminAccount }
 
 // audit (store/audit-repository.ts)
@@ -287,7 +287,7 @@ All routes are under `/api`; all except sign-in need `Authorization: Bearer`. "D
 | Action | Route | Body | Answer |
 |---|---|---|---|
 | list, Refresh | `GET /admin-channels` | - | `{ items: AdminChannel[], revision }` |
-| create live | `POST /channels` | `{ kind: "live", id, name, category, number, mode?, captions?, variants?, folder }`, or the same with `videos: string[]` in place of `folder` (exactly one of the two) | `201` `LiveAdminChannel` (`state: "preparing"`) |
+| create live | `POST /channels` | `{ kind: "live", id, name, category, number?, mode?, captions?, variants?, folder }`, or the same with `videos: string[]` in place of `folder` (exactly one of the two) | `201` `LiveAdminChannel` (`state: "preparing"`) |
 | create stream | `POST /channels` | `{ kind: "stream", name, category, number?, logoUrl?, streamUrl }` | `201` `StreamAdminChannel` |
 | save | `PATCH /channels/:id` | changed fields of `name category number logoUrl streamUrl mode captions variants folder videos enabled` (`kind` may be echoed; `folder` and `videos` are exclusive and replace each other) | the `AdminChannel` (a live row `preparing` while it rebuilds) |
 | delete | `DELETE /channels/:id` | - | `{ id }` (a synced row is really deleted; the tooltip says the next sync adds it again) |
@@ -296,7 +296,7 @@ All routes are under `/api`; all except sign-in need `Authorization: Bearer`. "D
 | (fault) | `PUT` and `DELETE /channels/:id/fault` | the backend keeps these routes for the interface's failure tests; **the admin does not call them** (removed, owner 2026-10-17) | - |
 
 - **Required-field and number refusals** are client-side first (`lib/field-checks.ts`), then the backend's `channel.invalid` with
-  `details.field`, shown under the named row. `channel.taken` (409) names no field: shown under Number (and Id for live).
+  `details.field`, shown under the named row. `channel.taken` (409) names no field: it was shown under Number (and Id for live); the Number row is removed (owner, 2026-10-17), so it reads on the notice line only.
 - **Live states.** `preparing` and `starting` and `restarting` draw the Status group's skeleton and count in the statusbar's `N preparing`; `live` enables
   `Apply` and makes `Preview` play; `stopped` and `failed` show their word, and `failed` shows `problem` as the first Status line; a disabled channel is dimmed with `disabled`.
   The page learns of a state change only on `Refresh`, a write of its own, or the workspace's `Refresh` in the Status heading (a `GET /admin-channels` that replaces the list): no polling.
@@ -381,8 +381,8 @@ Status: Host, Channels (the admin channels with `source === host`, each a link),
 | Action | Route | Body | Answer |
 |---|---|---|---|
 | list | `GET /admin-accounts` | - | `{ items: AdminAccount[] }` |
-| create | `POST /admin-accounts` | `{ username, name, password }` (password 1 to 256 characters) | `201` account |
-| save | `PATCH /admin-accounts/:id` | any of `username name password disabled` (`Enabled` is `!disabled`) | account |
+| create | `POST /admin-accounts` | `{ username, password }` (password 1 to 256 characters; `name` removed, owner, 2026-10-17) | `201` account |
+| save | `PATCH /admin-accounts/:id` | any of `username password disabled` (`Enabled` is `!disabled`) | account |
 | delete | `DELETE /admin-accounts/:id` | - | `{ id }` |
 
 `409 account.username_taken` shows under Username; `409 account.last_admin` is the refusal of the last enabled account's Delete or disable, and the page disables those two controls
@@ -473,7 +473,7 @@ design.
 ### 12.1 The three pages
 
 - **Appearance** is the store's (`28`): each choice applies at once and is saved by the write-back of section 12.2.
-- **Session** shows `session.account.username` and `name`, and `Sign out` (6.1).
+- **Session** shows `session.account.username` (no `name`: removed, owner, 2026-10-17), and `Sign out` (6.1).
 - **About** shows the app version (`__ADMIN_VERSION__` defined by Vite from `package.json`), the backend's `version` and `revision` from `GET /healthz`, the backend address (`location.origin`),
   `TMDB: configured / absent`, and the runtime (`Electron` when `window.adminHost` exists, else `Browser`). Facts that failed to load draw the dash and a skeleton, never an error sentence.
 

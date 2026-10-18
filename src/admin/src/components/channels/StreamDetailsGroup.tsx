@@ -24,11 +24,10 @@ export interface StreamDetailsGroupProps {
 
 const FIELDS = [
   { key: "name", label: "Name", tip: undefined },
-  { key: "number", label: "Number", tip: CHANNEL_TIPS.number },
   { key: "category", label: "Category", tip: CHANNEL_TIPS.categoryStream },
 ] as const;
 
-/** A stream channel's `Details` (`36` section 7): Name, Kind (read-only), Number, Category (free text), Enabled. A field an
+/** A stream channel's `Details` (`36` section 7): Name, Kind (read-only), Category (free text), Enabled. A field an
  *  admin changed on a synced row wears `Edited` after it, and its tip says the next sync keeps it. The heading's action
  *  slot is `Revert to playlist`, one press, which drops those edits. */
 export function StreamDetailsGroup({ channel, draft, errors, onChange, revertReason, onRevert }: StreamDetailsGroupProps) {
@@ -53,7 +52,7 @@ export function StreamDetailsGroup({ channel, draft, errors, onChange, revertRea
           >
             <Input
               value={draft[field.key]}
-              className={cn(FIELD_CONTROL, field.key === "number" && "font-mono")}
+              className={FIELD_CONTROL}
               aria-label={field.label}
               aria-invalid={errors[field.key] !== undefined}
               autoComplete="off"

@@ -391,12 +391,12 @@ is now the family's record pattern and nothing else:
 
 | Tab | Record | List columns (after the checkbox) | Workspace rail | Index forward verb | Who |
 |---|---|---|---|---|---|
-| **Channels** | a channel, live or stream | number, name, category, kind, state, mode, now playing | details · source · playback · fault · status (a stream channel: details · stream · status) | `Preview →` | signed in |
+| **Channels** | a channel, live or stream | name, category, kind, state, mode, now playing | details · source · playback · fault · status (a stream channel: details · stream · status) | `Preview →` | signed in |
 | **Providers** | a provider | order, name, source, family, state | details · templates · player | `Titles →` | signed in |
 | **Titles** | a title | title, kind, year, rating, state | details · people and plot · seasons · sources | `Jobs →` | signed in |
 | **Playlists** | a playlist (an M3U address) | name, host, channels, last synced, state | details · status | `Jobs →` | signed in |
 | **Jobs** | a sync job (a playlist sync or a catalog sync) | name, type, target, schedule, last run, outcome, state | details · schedule · run · last run | `Run job` (acts on the ticked jobs) | signed in |
-| **Accounts** | an admin account | username, name, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | signed in |
+| **Accounts** | an admin account | username, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | signed in |
 
 **The tab pill is Channels · Providers · Titles · Playlists · Jobs · Accounts** (owner, 2026-10-17: "we need a jobs
 tab for the sync jobs, the title and playlist should be crud for titles and playlists"). Titles and Playlists are plain
@@ -408,14 +408,14 @@ the Titles or Playlists pages.
 
 | Record | 1. Required | 2. Enabled | 3. Optional, most used first | 4. Read-only |
 |---|---|---|---|---|
-| Live channel | Name*, Kind*, Number*, Category*, Source* (Folder or Videos, then the path or list) | `Enabled` | Mode, Captions, Qualities, Logo | Id, State, Renditions, Playlist, Stream address |
-| Stream channel | Name*, Number*, Category*, Stream address* | `Enabled` | Logo address | Id, Synced from |
+| Live channel | Name*, Kind*, Category*, Source* (Folder or Videos, then the path or list) | `Enabled` | Mode, Captions, Qualities, Logo | Id, State, Renditions, Playlist, Stream address |
+| Stream channel | Name*, Category*, Stream address* (no Number: removed, owner, 2026-10-17, there is no guide) | `Enabled` | Logo address | Id, Synced from |
 | Provider | Name*, Family*, Source*, Movie template* (embed) | `Enabled` | Order, Episode template, Start parameter, Subtitle parameter, Origin, Frame origins, Message shape | Created |
 | Title | Title*, Kind*, Year* | `Enabled` | TMDB id, Rating, Genres, Runtime, Poster, Backdrop, Plot, Cast, Stream address, Seasons | State, Sources |
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
 | Catalog job | Name*, Type*, Scope*, Kind* | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
-| Account | Name*, Username*, Password* (New only) | `Enabled` | none | Last sign-in, Security question (`Set` or `Not set`) |
+| Account | Username*, Password* (New only; no Name: removed, owner, 2026-10-17) | `Enabled` | none | Last sign-in, Security question (`Set` or `Not set`) |
 
 ### 4.5 Channels index (proposed)
 
@@ -733,7 +733,7 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 - **D23.** *(Retired with roles, D22.)* Every signed-in admin reads the audit log in the Events drawer.
 - **D22.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The
   backend's `owner` and `editor` roles came with its first commit, not from the owner; they are removed: every signed-in
-  admin account is equal and may do everything, accounts have a username (the sign-in name, not an email: owner, 2026-10-17), a name, a password and `Enabled`.
+  admin account is equal and may do everything, accounts have a username (the sign-in name, not an email: owner, 2026-10-17), a password and `Enabled` (no separate name: removed, owner, 2026-10-17).
 - **D7.** *(Reversed by the owner, 2026-10-17.)* Providers, Titles and Playlists are tabs in version one: an admin has to
   be able to start a sync from a page.
 - **D8.** The production admin is served by the backend at `/admin/` (recommended).

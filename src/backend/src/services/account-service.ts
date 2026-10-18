@@ -44,7 +44,7 @@ export function createAccountService(deps: {
       assertUsernameFree(input.username);
       const id = `acct_${randomUUID()}`;
       const passwordHash = await hashPassword(input.password);
-      store.accounts.insert({ id, username: input.username, name: input.name, passwordHash, disabled: false }, now());
+      store.accounts.insert({ id, username: input.username, passwordHash, disabled: false }, now());
       audit.record(actor, { action: "account.created", subject: id, detail: { username: input.username } });
       return existing(id).account;
     },
@@ -62,7 +62,6 @@ export function createAccountService(deps: {
           {
             id,
             username: patch.username ?? a.username,
-            name: patch.name ?? a.name,
             disabled: patch.disabled ?? a.disabled,
             passwordHash,
           },
@@ -75,7 +74,7 @@ export function createAccountService(deps: {
       audit.record(actor, {
         action: "account.updated",
         subject: id,
-        detail: { name: saved.name, fields: patch.password === undefined ? changed : [...changed, "password"] },
+        detail: { username: saved.username, fields: patch.password === undefined ? changed : [...changed, "password"] },
       });
       return saved;
     },

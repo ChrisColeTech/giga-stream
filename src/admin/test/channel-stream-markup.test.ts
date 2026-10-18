@@ -41,9 +41,9 @@ describe("a stream channel's workspace", () => {
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));
   });
 
-  it("draws Details in order: Name, Kind, Number, Category, Enabled", () => {
+  it("draws Details in order: Name, Kind, Category, Enabled", () => {
     const html = details(stream("s"));
-    const order = ["Name", "Kind", "Number", "Category", "Enabled"].map((label) => html.indexOf(`<span class="truncate">${label}</span>`));
+    const order = ["Name", "Kind", "Category", "Enabled"].map((label) => html.indexOf(`<span class="truncate">${label}</span>`));
     assert.ok(order.every((value, index) => value >= 0 && (index === 0 || value > (order[index - 1] ?? 0))), String(order));
   });
 

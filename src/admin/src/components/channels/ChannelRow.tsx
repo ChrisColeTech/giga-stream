@@ -13,7 +13,7 @@ export interface ChannelRowProps {
   readonly onDelete: (id: string) => void;
 }
 
-/** One channel of the list (`36` section 5.2): the tick, then number, name, category, kind, the state as a word, mode,
+/** One channel of the list (`36` section 5.2): the tick, then name, category, kind, the state as a word, mode,
  *  what is on air, and the end `Delete`, an armed two-step naming the channel. A
  *  synced row's Delete says at rest that the next sync adds it again. A disabled channel stays, dimmed. A press on the
  *  cells opens the workspace; the tick and Delete sit outside that press. */
@@ -36,7 +36,6 @@ export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
         </ArmedButton>
       }
     >
-      <span className="truncate text-right font-mono text-xs text-muted">{row.number}</span>
       <span className="truncate text-text">{row.name}</span>
       <span className="truncate text-muted">{row.category}</span>
       <span className="truncate text-muted">{row.kind}</span>

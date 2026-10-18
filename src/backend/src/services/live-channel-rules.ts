@@ -18,7 +18,7 @@ export function newLiveRecord(input: LiveChannelInput): LiveRecord {
     id: input.id,
     name: input.name,
     category: input.category,
-    number: input.number,
+    number: input.number ?? null,
     logoUrl: null,
     revision: 0,
     enabled: true,

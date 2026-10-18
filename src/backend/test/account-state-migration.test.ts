@@ -1,4 +1,4 @@
-// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018, 019 and 020 follow, so the version reads 20), a
+// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018 to 021 follow, so the version reads 21), a
 // current database opens, and a database from a newer program is refused by the existing rule.
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -41,6 +41,9 @@ function reshape(file: string, sql: string[], version: number): void {
   }
 }
 
+/** Undoes migration 021 (no account name): the column comes back, empty. */
+const UNDO_021 = ["ALTER TABLE admin_accounts ADD COLUMN name TEXT NOT NULL DEFAULT ''"];
+
 /** Undoes migration 019 (username), so a database can be set back to an older version. */
 const UNDO_019 = [
   "ALTER TABLE admin_accounts RENAME COLUMN username TO email",
@@ -56,18 +59,18 @@ const UNDO_018 = [
   "ALTER TABLE admin_accounts DROP COLUMN security_question",
 ];
 
-test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 20", () => {
+test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 21", () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-ui-state-migration-"));
   const file = path.join(dataDir, DATABASE_FILE_NAME);
   try {
     createStore(file).close();
-    assert.equal(versionOf(file), 20);
-    reshape(file, ["DROP TABLE deleted_titles", ...UNDO_019, ...UNDO_018, "DROP TABLE admin_ui_state"], 16);
+    assert.equal(versionOf(file), 21);
+    reshape(file, ["DROP TABLE deleted_titles", ...UNDO_021, ...UNDO_019, ...UNDO_018, "DROP TABLE admin_ui_state"], 16);
     assert.equal(tableExists(file, "admin_ui_state"), false);
 
     createStore(file).close();
 
-    assert.equal(versionOf(file), 20);
+    assert.equal(versionOf(file), 21);
     assert.equal(tableExists(file, "admin_ui_state"), true);
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
@@ -80,9 +83,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     createStore(file).close();
     createStore(file).close();
-    assert.equal(versionOf(file), 20);
+    assert.equal(versionOf(file), 21);
 
-    reshape(file, [], 21);
+    reshape(file, [], 22);
     assert.throws(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,

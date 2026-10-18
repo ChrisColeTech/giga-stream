@@ -17,7 +17,7 @@ const SHELL = {
   eventsOpen: true,
   windows: { settings: { x: 10, y: 20, width: 640, height: 480 }, preview: { x: 0, y: 0, width: 1, height: 20_000 } },
 };
-const ED = { username: "ed@example.test", name: "Ed", password: "ed-password-12345" };
+const ED = { username: "ed@example.test", password: "ed-password-12345" };
 const STATE = "/api/auth/me/state";
 
 /** A second account, signed in, with its id. */

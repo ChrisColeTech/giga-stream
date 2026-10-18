@@ -65,7 +65,7 @@ test("018 applies on a 017 database: version 19 after 019, the existing account 
     assert.equal(store.resetAttempts.find("boss@example.test"), undefined);
     store.close();
     readOnly(file, (db) => {
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 20 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 21 });
       const columns = db.prepare("PRAGMA table_info(reset_attempts)").all().map((row) => String(row.name));
       assert.deepEqual(columns, ["username_key", "failed", "locked_until"]);
     });
@@ -88,11 +88,11 @@ test("a migrated database opens again, and a newer one than the newest migration
     const file = database017(dataDir);
     createStore(file).close();
     createStore(file).close();
-    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 20);
-    // A 017 program sees an 018 database exactly as this program sees a 021 one: newer than its newest migration.
+    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 21);
+    // A 017 program sees an 018 database exactly as this program sees a 022 one: newer than its newest migration.
     const db = new DatabaseSync(file);
     try {
-      db.exec("PRAGMA user_version = 21");
+      db.exec("PRAGMA user_version = 22");
     } finally {
       db.close();
     }

@@ -12,7 +12,7 @@ import { resetStore, signInForTest } from "./support/store";
 const refusal = (status: number, code: string, field?: string) =>
   json({ ok: false, error: { code, message: "Server sentence.", ...(field && { details: { field } }) } }, status);
 
-const NEW: NewChannelDraft = { name: " Drive ", kind: "live", number: " 7 ", category: "News", folder: " D:\\v ", streamUrl: "" };
+const NEW: NewChannelDraft = { name: " Drive ", kind: "live", category: "News", folder: " D:\\v ", streamUrl: "" };
 
 beforeEach(() => {
   resetStore();
@@ -33,16 +33,16 @@ describe("the channels service", () => {
     );
   });
 
-  it("creates a live channel from a folder, and from videos, with no id and the number as text", async () => {
+  it("creates a live channel from a folder, and from videos, with no id and no number", async () => {
     await withBackend(
       () => success(live("live-1", { state: "preparing" }), 201),
       async (calls) => {
         const created = await channels.create(createBody(NEW));
         assert.equal(created.kind === "live" && created.state, "preparing");
         assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/channels"]);
-        assert.deepEqual(calls[0]?.body, { kind: "live", name: "Drive", category: "News", number: "7", folder: "D:\\v" });
-        await channels.create({ kind: "live", name: "V", category: "News", number: "8", videos: ["D:\\a.mp4"] });
-        assert.deepEqual(calls[1]?.body, { kind: "live", name: "V", category: "News", number: "8", videos: ["D:\\a.mp4"] });
+        assert.deepEqual(calls[0]?.body, { kind: "live", name: "Drive", category: "News", folder: "D:\\v" });
+        await channels.create({ kind: "live", name: "V", category: "News", videos: ["D:\\a.mp4"] });
+        assert.deepEqual(calls[1]?.body, { kind: "live", name: "V", category: "News", videos: ["D:\\a.mp4"] });
         assert.ok(!Object.hasOwn(Object(calls[0]?.body), "id"));
       },
     );
@@ -57,7 +57,6 @@ describe("the channels service", () => {
           kind: "stream",
           name: "Drive",
           category: "Talk",
-          number: "7",
           streamUrl: "https://tv.example/a.m3u8",
         });
       },
@@ -69,9 +68,9 @@ describe("the channels service", () => {
     await withBackend(
       () => success(saved),
       async (calls) => {
-        await channels.update("x y", patchBody(saved, { ...liveDraft(saved), name: "New", number: "9" }));
+        await channels.update("x y", patchBody(saved, { ...liveDraft(saved), name: "New" }));
         assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PATCH", "/api/channels/x%20y"]);
-        assert.deepEqual(calls[0]?.body, { name: "New", number: "9" });
+        assert.deepEqual(calls[0]?.body, { name: "New" });
         await channels.update("x y", patchBody(saved, { ...liveDraft(saved), plays: "videos", videos: ["D:\\a.mp4"] }));
         assert.deepEqual(calls[1]?.body, { videos: ["D:\\a.mp4"] });
         const onVideos = live("v", { folder: undefined, videos: ["D:\\a.mp4"] });

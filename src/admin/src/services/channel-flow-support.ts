@@ -1,5 +1,5 @@
 import { ApiError } from "@giga/http/api-error";
-import { NUMBER_TAKEN, REQUEST_FAILED } from "@/constants/channel-copy";
+import { REQUEST_FAILED } from "@/constants/channel-copy";
 import { FAILURE_CODES } from "@/constants/api-sentences";
 import { channelField, type ChannelField } from "@/lib/channel-check";
 import type { AppState } from "@/store/app-store";
@@ -57,16 +57,15 @@ export const stillSession = (store: () => ChannelStore, serial: number): boolean
 export const codeOf = (error: unknown): string | null => (error instanceof ApiError ? error.code : null);
 
 /** A failure, said once on the notice line (`warn`) and, when the backend named one of the form's rows, returned with
- *  that field. `channel.taken` names the number (`36` section 3.2). A transport failure also marks the backend
- *  unreachable, which disables every write until a read works. */
+ *  that field. There is no number, so no `channel.taken` refusal under one (owner, 2026-10-17). A transport failure also
+ *  marks the backend unreachable, which disables every write until a read works. */
 export function refusal(store: ChannelStore, error: unknown): FlowRefused {
   const api = error instanceof ApiError ? error : null;
-  const taken = api?.code === "channel.taken";
-  const sentence = taken ? NUMBER_TAKEN : (api?.message ?? REQUEST_FAILED);
+  const sentence = api?.message ?? REQUEST_FAILED;
   const unreachable = api?.code === FAILURE_CODES.unreachable;
   if (unreachable) store.channelsMarkUnreachable(true);
   store.say(sentence, "warn", unreachable ? "Connection" : "Channel");
-  const field = taken ? "number" : channelField(api?.field);
+  const field = channelField(api?.field);
   return { ok: false, sentence, ...(field !== undefined && { field }) };
 }
 

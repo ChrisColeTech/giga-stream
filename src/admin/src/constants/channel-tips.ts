@@ -3,7 +3,6 @@
 export const CHANNEL_TIPS = {
   kind: "A live channel plays your videos. A stream channel plays an address.",
   kindFixed: "Fixed once the channel exists.",
-  number: "The channel's number in the guide, 1 to 9999.",
   categoryLive: "Where the channel is listed. Live channels pick from six.",
   categoryStream: "Free text for a stream channel.",
   categoryNew: "Where the channel is listed. Live channels pick from six; stream channels take free text.",

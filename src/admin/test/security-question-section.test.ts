@@ -96,15 +96,15 @@ describe("the Account page", () => {
 
   it("reads Not set, then Set once the signed-in account holds a question", () => {
     assert.ok(page().includes("Not set"));
-    state().updateActor({ id: 7, username: "ada@example.test", name: "Ada", securityQuestionSet: true });
+    state().updateActor({ id: 7, username: "ada@example.test", securityQuestionSet: true });
     const html = page();
     assert.ok(html.includes(">Set<") && !html.includes("Not set"));
   });
 
   it("keeps the held flag when an own-account update does not carry it", () => {
-    state().updateActor({ id: 7, username: "ada@example.test", name: "Ada", securityQuestionSet: true });
-    state().updateActor({ id: 7, username: "ada@new.test", name: "Ada" });
-    assert.deepEqual(state().actor, { id: 7, username: "ada@new.test", name: "Ada", securityQuestionSet: true });
+    state().updateActor({ id: 7, username: "ada@example.test", securityQuestionSet: true });
+    state().updateActor({ id: 7, username: "ada@new.test" });
+    assert.deepEqual(state().actor, { id: 7, username: "ada@new.test", securityQuestionSet: true });
   });
 
   it("disables its controls natively while nobody is signed in, and says so on the verb", () => {

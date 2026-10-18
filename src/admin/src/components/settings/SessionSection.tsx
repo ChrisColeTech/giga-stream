@@ -26,11 +26,6 @@ export function SessionSection() {
             {actor?.username ?? FACT_UNKNOWN}
           </span>
         </Row>
-        <Row label="Name">
-          <span className={FACT} title={unknown}>
-            {actor?.name ?? FACT_UNKNOWN}
-          </span>
-        </Row>
         <Actions>
           <Button
             variant="ghost"

@@ -16,7 +16,6 @@ export function createAuthPort(api: Pick<SessionApi, "login" | "logout" | "reset
             actor: {
               id: session.account.id,
               username: session.account.username,
-              name: session.account.name,
               securityQuestionSet: session.account.securityQuestionSet === true,
             },
             tokens: tokensOf(session),

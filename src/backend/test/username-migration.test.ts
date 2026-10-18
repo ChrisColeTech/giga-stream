@@ -54,10 +54,10 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
     const store = createStore(file);
     try {
       const rows = store.accounts.list();
-      const accounts = rows.map((a) => [a.account.id, a.account.username, a.account.name, a.account.disabled]);
+      const accounts = rows.map((a) => [a.account.id, a.account.username, a.account.disabled]);
       assert.deepEqual(accounts, [
-        ["acct_b", "dev@example.test", "Dev", true],
-        ["acct_a", "Owner@Example.test", "Owner", false],
+        ["acct_b", "dev@example.test", true],
+        ["acct_a", "Owner@Example.test", false],
       ]);
       assert.equal(store.accounts.findByUsername("OWNER@example.test")?.account.id, "acct_a", "found without case");
       assert.equal(store.accounts.find("acct_a")?.passwordHash, "scrypt$hash-a");
@@ -70,7 +70,7 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
     const db = new DatabaseSync(file, { readOnly: true });
     try {
       // 019 is followed by 020 (deleted titles), so the schema ends at 20.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 20 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 21 });
       const columns = (table: string): string[] => db.prepare(`PRAGMA table_info(${table})`).all().map((r) => String(r.name));
       assert.equal(columns("admin_accounts").some((c) => c.startsWith("email")), false);
       assert.equal(columns("audit_log").includes("actor_email"), false);
@@ -89,7 +89,7 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
 test("after 019 the username key stays unique without case", () => {
   inFolder((dataDir) => {
     const store = createStore(database018(dataDir));
-    const write = { id: "acct_c", username: "DEV@example.test", name: "C", passwordHash: "scrypt$c", disabled: false };
+    const write = { id: "acct_c", username: "DEV@example.test", passwordHash: "scrypt$c", disabled: false };
     assert.throws(() => store.accounts.insert(write, 30));
     store.accounts.insert({ ...write, username: "a plain name" }, 30);
     assert.equal(store.accounts.findByUsername("A Plain Name")?.account.id, "acct_c");

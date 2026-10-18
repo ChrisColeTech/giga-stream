@@ -9,16 +9,15 @@ import { EMPTY_NEW_ACCOUNT, sameNewAccount, type NewAccountDraft } from "@/lib/a
 import { createReason } from "@/lib/account-checks";
 import { useAppStore } from "@/store/app-store";
 
-/* The rows, in the owner's order (Name first on every form) and no others: no role (`26` D22), no info glyph, no
- * placeholder. */
+/* The rows, in the owner's order (the username, the identity, first) and no others: no name (owner, 2026-10-17), no
+ * role (`26` D22), no info glyph, no placeholder. */
 const FIELDS = [
-  { key: "name", label: "Name", type: "text", autoComplete: "off" },
   { key: "username", label: "Username", type: "text", autoComplete: "off" },
   { key: "password", label: "Password", type: "password", autoComplete: "new-password" },
 ] as const satisfies ReadonlyArray<{ key: keyof NewAccountDraft; label: string; type: string; autoComplete: string }>;
 
-/** `New account`: Name, Username, Password and one `Create`, disabled with the first missing field's reason (`Name is
- *  required.`, then Username, then Password), `Saving.` while a call runs, or the unreachable sentence. Pressing it (or Enter
+/** `New account`: Username, Password and one `Create`, disabled with the first missing field's reason (`Username is
+ *  required.`, then Password), `Saving.` while a call runs, or the unreachable sentence. Pressing it (or Enter
  *  in a field) checks the values first; a refusal, the page's or the backend's, shows under its row with `aria-invalid`.
  *  On success the form empties; on failure it keeps every value. */
 export function NewAccountForm() {

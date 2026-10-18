@@ -1,10 +1,10 @@
 /* The Accounts tab's words (`35` section 5.8): labels, tips, disabled reasons and notices. Copy lives here, never in a
  * component, so a refusal reads the same wherever it shows. */
 
-/** The rows' labels, so each page fixes its label column once. Name first on every form (owner, 2026-10-17). */
-export const NEW_ACCOUNT_LABELS: readonly string[] = ["Name", "Username", "Password"];
+/** The rows' labels, so each page fixes its label column once. The identity first on every form: the username
+ *  (an account has no name, owner, 2026-10-17). */
+export const NEW_ACCOUNT_LABELS: readonly string[] = ["Username", "Password"];
 export const WORKSPACE_LABELS: readonly string[] = [
-  "Name",
   "Username",
   "Enabled",
   "Last sign-in",
@@ -33,7 +33,6 @@ export const TYPE_PASSWORD = "Type a new password.";
 
 /** Value refusals (`35` section 5.9). */
 export const USERNAME_LENGTH = "Username must be 1 to 254 characters.";
-export const NAME_LENGTH = "Name must be 1 to 80 characters.";
 export const PASSWORD_REQUIRED = "Password is required.";
 export const PASSWORD_LONG = "Password must be at most 256 characters.";
 

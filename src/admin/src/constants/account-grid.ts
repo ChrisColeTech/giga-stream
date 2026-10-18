@@ -18,7 +18,6 @@ export const ACCOUNT_ID_COLUMN: GridHeading | null = null;
 export const ACCOUNT_HEADINGS: readonly GridHeading[] = [
   ...(ACCOUNT_ID_COLUMN === null ? [] : [ACCOUNT_ID_COLUMN]),
   { key: "username", label: "username" },
-  { key: "name", label: "name" },
   { key: "state", label: "state" },
   { key: "last-sign-in", label: "last sign-in" },
 ];

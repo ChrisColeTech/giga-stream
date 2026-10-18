@@ -12,7 +12,6 @@ import { resetStore, signInForTest } from "./support/store";
 const account = (id: string, disabled = false): AdminAccount => ({
   id,
   username: `${id}@x.test`,
-  name: id,
   disabled,
   createdAt: 1,
   updatedAt: 1,
