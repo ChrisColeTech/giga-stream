@@ -12,7 +12,7 @@ import {
   type SafeTransport,
 } from "./safe-fetch-transport.js";
 
-export { SafeFetchError } from "./safe-fetch-error.js";
+export { SafeFetchError, type SafeFetchCode } from "./safe-fetch-error.js";
 export type { SafeTransport, TransportRequest, TransportResponse } from "./safe-fetch-transport.js";
 
 /**
