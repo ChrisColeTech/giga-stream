@@ -51,7 +51,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
     const actor = store().actor;
     return actor !== null && sameId(actor.id, account.id);
   };
-  const rejected = (sentence: string, field?: "name" | "email" | "password"): FlowRefused => {
+  const rejected = (sentence: string, field?: "name" | "username" | "password"): FlowRefused => {
     store().say(sentence, "warn", "Account");
     return { ok: false, sentence, ...(field !== undefined && { field }) };
   };
@@ -74,7 +74,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
   }
 
   /** A write whose answer could not be read may still have happened: read the list again. */
-  const afterFailure = (error: unknown, field?: "name" | "email" | "enabled"): FlowRefused => {
+  const afterFailure = (error: unknown, field?: "name" | "username" | "enabled"): FlowRefused => {
     const result = refusal(store(), error, field);
     if (codeOf(error) === BAD_ANSWER) void load();
     return result;
@@ -88,7 +88,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
       const account = await service.create(createBody(draft));
       if (!stillSession(store, serial)) return DROPPED;
       store().accountUpsert(account);
-      store().say(accountCreated(account.email));
+      store().say(accountCreated(account.username));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
     } catch (error: unknown) {
@@ -114,7 +114,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
       }
       if (isOwn(account)) store().updateActor(account);
       const signedOut = patch.disabled === true;
-      store().say(signedOut ? accountSavedSignedOut(account.email) : accountSaved(account.email));
+      store().say(signedOut ? accountSavedSignedOut(account.username) : accountSaved(account.username));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(account);
     } catch (error: unknown) {
@@ -147,7 +147,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
         return done(undefined);
       }
       if (store().workspaces.accounts === String(id)) store().closeWorkspace("accounts");
-      store().say(accountDeleted(account.email));
+      store().say(accountDeleted(account.username));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
     } catch (error: unknown) {

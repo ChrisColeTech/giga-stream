@@ -6,7 +6,7 @@ export const AuditEntrySchema: z.ZodType<AuditEntry> = z.object({
   id: z.number(),
   at: z.number(),
   actorId: z.string().optional(),
-  actorEmail: z.string().optional(),
+  actorUsername: z.string().optional(),
   action: z.string(),
   subject: z.string().optional(),
   detail: z.record(z.string(), z.unknown()).optional(),

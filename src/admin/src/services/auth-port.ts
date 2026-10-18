@@ -7,13 +7,13 @@ import type { SessionApi } from "./session-api";
  *  store holds the tokens the answer carries. Never rejects. */
 export function createAuthPort(api: Pick<SessionApi, "login" | "logout">): AuthPort {
   return {
-    signIn: async (email, password) => {
+    signIn: async (username, password) => {
       try {
-        const session = await api.login(email, password);
+        const session = await api.login(username, password);
         return {
           ok: true,
           session: {
-            actor: { id: session.account.id, email: session.account.email, name: session.account.name },
+            actor: { id: session.account.id, username: session.account.username, name: session.account.name },
             tokens: tokensOf(session),
           },
         };

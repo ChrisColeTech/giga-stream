@@ -3,7 +3,7 @@ import type { AuditEntry } from "@/types/admin-audit";
 import type { EventArea } from "@/types/events";
 
 /* An audit entry as the Events drawer's row (`29` section 11): the area its action belongs to, a tone, and ONE plain
- * sentence naming the actor and the record. The sentence is built from named fields only (the actor's email, a record's
+ * sentence naming the actor and the record. The sentence is built from named fields only (the actor's username, a record's
  * name, a fault, counts), so nothing else in `detail` (a password, a token, an address) can ever reach the screen. Pure;
  * `29` reuses it unchanged. */
 
@@ -44,12 +44,12 @@ function count(detail: AuditEntry["detail"], key: string): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-/** An account is named by its email: the backend writes it on `account.created` and `deleted`; an `updated` entry holds
- *  only the account's name, so the held email for the subject id comes first. Only the named keys are read, never a
- *  field called `password`. */
+/** An account is named by its username: the backend writes it on `account.created` and `deleted`; an `updated` entry
+ *  holds only the account's name, so the held username for the subject id comes first. Only the named keys are read,
+ *  never a field called `password`. */
 function accountName(entry: AuditEntry, names: SubjectNames): string {
   const held = entry.subject === undefined ? undefined : names[entry.subject];
-  return text(entry.detail, "email") ?? held ?? text(entry.detail, "name") ?? entry.subject ?? "";
+  return text(entry.detail, "username") ?? held ?? text(entry.detail, "name") ?? entry.subject ?? "";
 }
 
 /** The record's name: the entry's own (`name`, `title`, `host`), else the one the admin holds for the subject, else the id. */
@@ -67,7 +67,7 @@ function importedSentence(actor: string, entry: AuditEntry): [EventTone, string]
 }
 
 function describe(entry: AuditEntry, names: SubjectNames, area: EventArea): [EventTone, string] {
-  const actor = entry.actorEmail ?? SYSTEM;
+  const actor = entry.actorUsername ?? SYSTEM;
   const name = nameOf(entry, names);
   switch (entry.action) {
     case "auth.login":
@@ -75,7 +75,7 @@ function describe(entry: AuditEntry, names: SubjectNames, area: EventArea): [Eve
     case "auth.logout":
       return ["info", `${actor} signed out`];
     case "auth.login_failed":
-      return ["warn", `Sign-in failed for ${text(entry.detail, "email") ?? "an unknown address"}`];
+      return ["warn", `Sign-in failed for ${text(entry.detail, "username") ?? "an unknown username"}`];
     case "auth.password_changed":
       return ["info", `${actor} changed a password`];
     case "sync.started":

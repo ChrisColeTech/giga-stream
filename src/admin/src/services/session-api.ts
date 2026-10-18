@@ -30,7 +30,7 @@ export interface SessionApi {
   /** A signed-in call: the bearer, the proactive refresh, one retry after a refresh on a 401. */
   request: <T>(path: string, schema: z.ZodType<T>, options?: CallOptions) => Promise<T>;
   /** `POST /api/auth/login`: no token. */
-  login: (email: string, password: string) => Promise<BackendSession>;
+  login: (username: string, password: string) => Promise<BackendSession>;
   /** `POST /api/auth/logout` with the refresh token. Never rejects: the session is gone whatever the answer is. */
   logout: () => Promise<void>;
 }
@@ -100,7 +100,8 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
 
   return {
     request,
-    login: (email, password) => open.api("/api/auth/login", SessionSchema, { method: "POST", body: { email, password } }),
+    login: (username, password) =>
+      open.api("/api/auth/login", SessionSchema, { method: "POST", body: { username, password } }),
     logout: async () => {
       const tokens = deps.tokens();
       if (tokens === null) return;

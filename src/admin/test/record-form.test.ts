@@ -12,10 +12,10 @@ import {
 
 interface Draft {
   readonly name: string;
-  readonly email: string;
+  readonly username: string;
 }
-const same = (a: Draft, b: Draft): boolean => a.name === b.name && a.email === b.email;
-const start = () => startForm<Draft>({ name: "Ada", email: "ada@x.test" });
+const same = (a: Draft, b: Draft): boolean => a.name === b.name && a.username === b.username;
+const start = () => startForm<Draft>({ name: "Ada", username: "ada@x.test" });
 
 describe("the record form core", () => {
   it("is dirty by value: typing a value back is clean again", () => {
@@ -28,20 +28,20 @@ describe("the record form core", () => {
   });
 
   it("rebases on reset: the saved record is the new baseline", () => {
-    const form = resetForm(setFields(start(), { name: "Eve" }), { name: "Eve", email: "ada@x.test" });
+    const form = resetForm(setFields(start(), { name: "Eve" }), { name: "Eve", username: "ada@x.test" });
     assert.equal(isDirty(form, same), false);
     assert.equal(discardForm(setFields(form, { name: "Zed" })).draft.name, "Eve");
   });
 
   it("discards back to the baseline and clears the refusals", () => {
-    const form = discardForm(refuseField(setFields(start(), { email: "bad" }), "email", "Nope."));
+    const form = discardForm(refuseField(setFields(start(), { username: "bad" }), "username", "Nope."));
     assert.deepEqual([form.draft, form.errors], [start().draft, {}]);
   });
 
   it("sets a refusal under a row, clears it when that field is typed, and clears all", () => {
-    let form = refuseField(refuseField(start(), "email", "E."), "name", "N.");
-    assert.deepEqual(form.errors, { email: "E.", name: "N." });
-    form = setFields(form, { email: "x@y.test" });
+    let form = refuseField(refuseField(start(), "username", "E."), "name", "N.");
+    assert.deepEqual(form.errors, { username: "E.", name: "N." });
+    form = setFields(form, { username: "x@y.test" });
     assert.deepEqual(form.errors, { name: "N." });
     assert.deepEqual(clearRefusals(form).errors, {});
   });

@@ -27,17 +27,17 @@ describe("the gate, idle", () => {
     assert.ok(html.includes("STREAM ADMIN"));
   });
 
-  it("has Email then Password with the autocomplete attributes, and no placeholder", () => {
+  it("has Username then Password with the autocomplete attributes, and no placeholder", () => {
     const html = form();
-    assert.ok(html.indexOf('aria-label="Email"') < html.indexOf('aria-label="Password"'));
-    assert.ok(html.includes('type="email"') && html.includes('autoComplete="username"'));
+    assert.ok(html.indexOf('aria-label="Username"') < html.indexOf('aria-label="Password"'));
+    assert.ok(!html.includes('type="email"') && html.includes('autoComplete="username"'));
     assert.ok(html.includes('type="password"') && html.includes('autoComplete="current-password"'));
     assert.ok(!/\splaceholder=/.test(html));
   });
 
   it("disables `Sign in` with its reason while the fields are empty", () => {
     const html = form();
-    assert.ok(html.includes('aria-label="Sign in. Enter your email and password."'));
+    assert.ok(html.includes('aria-label="Sign in. Enter your username and password."'));
     assert.ok(submitButton(html).includes('disabled=""'));
     assert.ok(!html.includes('role="alert"'));
   });
@@ -54,7 +54,7 @@ describe("the gate, submitting", () => {
   it("disables both fields and the verb, which says it is waiting", () => {
     gateAt({ phase: "submitting" });
     const html = form();
-    assert.equal(html.split("disabled=\"\"").length - 1, 3, "email, password and the verb");
+    assert.equal(html.split("disabled=\"\"").length - 1, 3, "username, password and the verb");
     assert.ok(html.includes("Signing in") && html.includes("animate-pulse-busy"));
     assert.ok(html.includes("Waiting for the answer."));
   });
@@ -62,10 +62,10 @@ describe("the gate, submitting", () => {
 
 describe("the gate, refused", () => {
   it("shows the sentence under the Password row as an alert and marks the field invalid", () => {
-    gateAt({ phase: "refused", sentence: "The email or password is wrong." });
+    gateAt({ phase: "refused", sentence: "The username or password is wrong." });
     const html = form();
-    assert.ok(html.includes('role="alert"') && html.includes("The email or password is wrong."));
-    assert.ok(html.indexOf('aria-label="Password"') < html.indexOf("The email or password is wrong."));
+    assert.ok(html.includes('role="alert"') && html.includes("The username or password is wrong."));
+    assert.ok(html.indexOf('aria-label="Password"') < html.indexOf("The username or password is wrong."));
     assert.ok(html.includes('aria-invalid="true"'));
     assert.ok(!html.includes("Signing in"));
   });

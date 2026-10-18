@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { ADMIN_USERNAME, makeApp, pick, send, signIn } from "./test-app.js";
 
 const code = (answer: { body: unknown }): unknown => pick(answer.body, "error.code");
-const second = { username:"second@example.test", name: "Second", password: "second-password-1" };
+const second = { username: "second@example.test", name: "Second", password: "second-password-1" };
 
 async function adminToken(t: Awaited<ReturnType<typeof makeApp>>): Promise<string> {
   return (await signIn(t.app)).access;

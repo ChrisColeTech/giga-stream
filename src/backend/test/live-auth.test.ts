@@ -18,7 +18,7 @@ const PROTECTED = [
   ["GET", "/api/admin-channels", undefined],
 ] as const;
 
-const second = { username:"second@example.test", name: "Ed", password: "second-password-1" };
+const second = { username: "second@example.test", name: "Ed", password: "second-password-1" };
 
 test("without a token or with a bad one, every write route is auth.unauthorized and changes nothing", async () => {
   const t = await makeApp();

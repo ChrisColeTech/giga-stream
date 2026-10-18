@@ -6,7 +6,7 @@ import type { AuthResult, RefusalKind } from "@/types/auth";
 
 const SUBMITTING: GateState = { phase: "submitting" };
 const TOKENS = { accessToken: "a", accessExpiresAt: 1, refreshToken: "r", refreshExpiresAt: 2 };
-const OK: AuthResult = { ok: true, session: { actor: { id: 7, email: "ada@example.test", name: "Ada" }, tokens: TOKENS } };
+const OK: AuthResult = { ok: true, session: { actor: { id: 7, username: "ada@example.test", name: "Ada" }, tokens: TOKENS } };
 const refusal = (kind: RefusalKind): AuthResult => ({ ok: false, refusal: kind });
 
 describe("the gate's state", () => {
@@ -24,8 +24,8 @@ describe("the gate's state", () => {
 
   it("a refused pair becomes `refused` with the table's sentence", () => {
     const next = nextGate(SUBMITTING, { type: "answer", result: refusal("invalid") });
-    assert.deepEqual(next, { phase: "refused", sentence: "The email or password is wrong." });
-    assert.equal(gateError(next), "The email or password is wrong.");
+    assert.deepEqual(next, { phase: "refused", sentence: "The username or password is wrong." });
+    assert.equal(gateError(next), "The username or password is wrong.");
   });
 
   it("a lock and a rate limit are `locked`, each with its own sentence", () => {

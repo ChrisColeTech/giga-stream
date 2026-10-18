@@ -9,7 +9,7 @@ import { renderLive, resetStore, signInForTest } from "./support/store";
 const state = () => useAppStore.getState();
 const account = (id: string | number, disabled = false, extra: Partial<AdminAccount> = {}): AdminAccount => ({
   id,
-  email: `${id}@x.test`,
+  username: `${id}@x.test`,
   name: `Name ${id}`,
   disabled,
   createdAt: 1,
@@ -29,11 +29,12 @@ beforeEach(() => {
 });
 
 describe("the New account form", () => {
-  it("has Name, Email and Password in that order, as password and new-password, with no placeholder", () => {
+  it("has Name, Username and Password in that order, as text and new-password, with no placeholder", () => {
     const html = page();
-    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Email"'));
-    assert.ok(at(html, 'aria-label="Email"') < at(html, 'aria-label="Password"'));
-    assert.ok(html.includes('type="email"') && html.includes('type="password"') && html.includes('autoComplete="new-password"'));
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Username"'));
+    assert.ok(at(html, 'aria-label="Username"') < at(html, 'aria-label="Password"'));
+    assert.ok(!html.includes('type="email"') && html.includes('type="password"'));
+    assert.ok(html.includes('autoComplete="new-password"'));
     assert.ok(!html.includes('placeholder="') && !html.includes("Role"));
     assert.ok(html.includes("New account"));
   });
@@ -54,7 +55,7 @@ describe("the accounts list", () => {
   it("shows the headings, ticks, state words, a dimmed disabled row and `never`", () => {
     state().accountsLoaded([account("a", false, { lastSignInAt: new Date(2026, 9, 17, 9, 5).getTime() }), account("b"), account("off", true)]);
     const html = page();
-    for (const heading of [">email<", ">name<", ">state<", ">last sign-in<"]) assert.ok(html.includes(heading), heading);
+    for (const heading of [">username<", ">name<", ">state<", ">last sign-in<"]) assert.ok(html.includes(heading), heading);
     for (const label of ["Select all accounts", "Select a@x.test", "Select off@x.test"]) assert.ok(html.includes(`aria-label="${label}"`), label);
     assert.ok(html.includes('data-st="enabled"') && html.includes('data-st="disabled"'));
     assert.equal(html.split("opacity-45").length - 1 >= 1, true, "the disabled row is dimmed");
@@ -107,7 +108,8 @@ describe("an account's workspace", () => {
     const html = page();
     assert.ok(html.includes('aria-label="Account sections"') && html.includes("Accounts"));
     assert.ok(at(html, ">Details<") < at(html, ">Password<"));
-    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Email"'));
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Username"'));
+    assert.ok(html.includes("Security question") && html.includes("Not set"), "the read-only fact");
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(html.includes("Discard changes") && html.includes(">Save<") && !html.includes("Titles →"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));

@@ -3,9 +3,9 @@
 
 /** Who is signed in, as the Session section and the events sentences show them. */
 export interface SessionActor {
-  /** The account id as the backend gives it: an email can change, an id cannot, so own-account rules compare ids. */
+  /** The account id as the backend gives it: a username can change, an id cannot, so own-account rules compare ids. */
   readonly id: string | number;
-  readonly email: string;
+  readonly username: string;
   readonly name: string;
 }
 
@@ -33,7 +33,7 @@ export type AuthResult =
 
 export interface AuthPort {
   /** Never rejects: every failure is a refusal. */
-  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signIn: (username: string, password: string) => Promise<AuthResult>;
   /** Never rejects: the session is cleared whatever the answer is (`29` section 6.1). */
   signOut: () => Promise<void>;
 }

@@ -39,7 +39,7 @@ export function createPasswordFlow(deps: AccountFlowDeps): {
           return done(undefined);
         }
         store().accountUpsert(account);
-        store().say(passwordSet(account.email));
+        store().say(passwordSet(account.username));
         void audit.reload(AUDIT_AFTER_WRITE);
         return done(undefined);
       } catch (error: unknown) {

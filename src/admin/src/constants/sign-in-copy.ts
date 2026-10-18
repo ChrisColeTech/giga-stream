@@ -3,11 +3,11 @@ import type { RefusalKind } from "@/types/auth";
 /* The gate's words (`34` section 3). The refusal sentences are `29` section 7's table, word for word. */
 
 /** The rows' labels, so the page fixes its label column once. */
-export const SIGN_IN_LABELS: readonly string[] = ["Email", "Password"];
+export const SIGN_IN_LABELS: readonly string[] = ["Username", "Password"];
 
 /** Why `Sign in` is disabled, in priority order (`lib/sign-in-verb.ts`). */
-export const SIGN_IN_REASON = "Enter your email and password.";
-export const SIGN_IN_EMAIL_REASON = "Enter your email.";
+export const SIGN_IN_REASON = "Enter your username and password.";
+export const SIGN_IN_USERNAME_REASON = "Enter your username.";
 export const SIGN_IN_PASSWORD_REASON = "Enter your password.";
 export const SIGN_IN_WAITING_REASON = "Waiting for the answer.";
 
@@ -21,7 +21,7 @@ export const SESSION_ENDED_NOTICE = "Your session ended. Sign in again.";
 export const PASSWORD_CHANGED_NOTICE = "Password changed. Sign in again.";
 
 export const REFUSAL_SENTENCES: Readonly<Record<RefusalKind, string>> = {
-  invalid: "The email or password is wrong.",
+  invalid: "The username or password is wrong.",
   locked: "This account is locked for a while after failed sign-ins.",
   rate_limited: "Too many sign-in attempts; wait a minute.",
   unreachable: "The admin backend cannot be reached.",

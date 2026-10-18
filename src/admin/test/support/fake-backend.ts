@@ -22,7 +22,7 @@ export const success = (data: unknown, status = 200): Response => json({ ok: tru
 export const failure = (status: number, code: string, message: string): Response =>
   json({ ok: false, error: { code, message } }, status);
 
-export const ACCOUNT = { id: 7, email: "ada@example.test", name: "Ada", disabled: false, createdAt: 1, updatedAt: 2 };
+export const ACCOUNT = { id: 7, username: "ada@example.test", name: "Ada", disabled: false, createdAt: 1, updatedAt: 2 };
 
 export const sessionBody = (access: string, refresh: string, expiresAt: number) => ({
   accessToken: access,

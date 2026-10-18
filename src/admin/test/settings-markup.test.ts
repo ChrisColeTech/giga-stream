@@ -103,12 +103,12 @@ describe("the Settings window", () => {
 });
 
 describe("the sign-in page", () => {
-  it("is the full-window wall: the brand column and one Sign in form of Email and Password, no placeholder", () => {
+  it("is the full-window wall: the brand column and one Sign in form of Username and Password, no placeholder", () => {
     const html = render(SignInPage);
     assert.ok(html.includes('aria-label="Sign in"') && html.includes('aria-modal="true"'));
     assert.ok(html.includes("GIGA") && html.includes("Run the channels."));
-    assert.ok(html.indexOf('aria-label="Email"') < html.indexOf('aria-label="Password"'));
-    assert.ok(html.includes('type="email"') && html.includes('type="password"'));
+    assert.ok(html.indexOf('aria-label="Username"') < html.indexOf('aria-label="Password"'));
+    assert.ok(!html.includes('type="email"') && html.includes('type="password"'));
     assert.ok(!/\splaceholder=/.test(html), "no placeholder attribute");
     assert.ok(!html.includes("aria-expanded"), "no fold");
     assert.ok(html.includes("--label-col"));
@@ -117,7 +117,7 @@ describe("the sign-in page", () => {
   it("disables `Sign in` with its reason until both fields are filled", () => {
     const html = render(SignInForm);
     assert.ok(html.includes(`aria-label="Sign in. ${SIGN_IN_REASON}"`));
-    assert.equal(SIGN_IN_REASON, "Enter your email and password.");
+    assert.equal(SIGN_IN_REASON, "Enter your username and password.");
     assert.ok((html.match(/<button[^>]*type="submit"[^>]*>/)?.[0] ?? "").includes('disabled=""'));
   });
 });

@@ -6,7 +6,7 @@ import type { AuthSession } from "@/types/auth";
 import { ACCOUNT, TOKENS } from "./support/fake-backend";
 import { resetStore } from "./support/store";
 
-const session: AuthSession = { actor: { id: 7, email: "ada@example.test", name: "Ada" }, tokens: TOKENS };
+const session: AuthSession = { actor: { id: 7, username: "ada@example.test", name: "Ada" }, tokens: TOKENS };
 const state = () => useAppStore.getState();
 const signIn = (): void => {
   state().beginSignIn();
@@ -19,19 +19,19 @@ describe("the session slice, finished", () => {
   it("stores the actor with its id and raises the serial at every sign-in", () => {
     assert.equal(state().serial, 0);
     signIn();
-    assert.deepEqual(state().actor, { id: 7, email: "ada@example.test", name: "Ada" });
+    assert.deepEqual(state().actor, { id: 7, username: "ada@example.test", name: "Ada" });
     assert.equal(state().serial, 1);
     state().signOut();
     signIn();
     assert.equal(state().serial, 2);
   });
 
-  it("follows the account's own email and name through updateActor, keeping the id", () => {
+  it("follows the account's own username and name through updateActor, keeping the id", () => {
     signIn();
-    state().updateActor({ id: 7, email: "ada@new.test", name: "Ada L" });
-    assert.deepEqual(state().actor, { id: 7, email: "ada@new.test", name: "Ada L" });
+    state().updateActor({ id: 7, username: "ada@new.test", name: "Ada L" });
+    assert.deepEqual(state().actor, { id: 7, username: "ada@new.test", name: "Ada L" });
     state().signOut();
-    state().updateActor({ id: 7, email: "x@y.test", name: "X" });
+    state().updateActor({ id: 7, username: "x@y.test", name: "X" });
     assert.equal(state().actor, null, "nothing to update when signed out");
   });
 

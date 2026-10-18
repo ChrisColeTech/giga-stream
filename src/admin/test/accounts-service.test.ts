@@ -7,7 +7,7 @@ import { json, success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
 import { resetStore, signInForTest } from "./support/store";
 
-const row = (id: string, email: string) => ({ id, email, name: id, disabled: false, createdAt: 1, updatedAt: 2 });
+const row = (id: string, username: string) => ({ id, username, name: id, disabled: false, createdAt: 1, updatedAt: 2 });
 const refusal = (status: number, code: string, field?: string) =>
   json({ ok: false, error: { code, message: "Server sentence.", ...(field && { details: { field } }) } }, status);
 
@@ -28,13 +28,13 @@ describe("the accounts service", () => {
     );
   });
 
-  it("posts the trimmed email and name and the password untouched", async () => {
+  it("posts the trimmed username and name and the password untouched", async () => {
     await withBackend(
       () => success(row("n", "new@x.test"), 201),
       async (calls) => {
-        await accounts.create(createBody({ name: "  Ann  ", email: " new@x.test ", password: "  pass word 12  " }));
+        await accounts.create(createBody({ name: "  Ann  ", username: " new@x.test ", password: "  pass word 12  " }));
         assert.equal(calls[0]?.method, "POST");
-        assert.deepEqual(calls[0]?.body, { email: "new@x.test", name: "Ann", password: "  pass word 12  " });
+        assert.deepEqual(calls[0]?.body, { username: "new@x.test", name: "Ann", password: "  pass word 12  " });
       },
     );
   });
@@ -55,18 +55,18 @@ describe("the accounts service", () => {
     await withBackend(
       () => success({ nope: 1 }),
       async () => {
-        await assert.rejects(accounts.create({ email: "a@x.test", name: "A", password: "x".repeat(12) }), { code: "backend.bad_response" });
+        await assert.rejects(accounts.create({ username: "a@x.test", name: "A", password: "x".repeat(12) }), { code: "backend.bad_response" });
       },
     );
   });
 
   it("carries the field of a 409 and a 422 refusal", async () => {
     await withBackend(
-      (call) => (call.method === "POST" ? refusal(409, "account.email_taken", "email") : refusal(422, "account.invalid", "password")),
+      (call) => (call.method === "POST" ? refusal(409, "account.username_taken", "username") : refusal(422, "account.invalid", "password")),
       async () => {
         await assert.rejects(accounts.create({}), (error: unknown) => {
           assert.ok(error instanceof ApiError);
-          assert.deepEqual([error.code, error.status, error.field, error.message], ["account.email_taken", 409, "email", "Server sentence."]);
+          assert.deepEqual([error.code, error.status, error.field, error.message], ["account.username_taken", 409, "username", "Server sentence."]);
           return true;
         });
         await assert.rejects(accounts.update("a", { password: "short" }), { code: "account.invalid", status: 422, field: "password" });

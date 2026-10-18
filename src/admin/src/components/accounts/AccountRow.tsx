@@ -15,7 +15,7 @@ export interface AccountRowProps {
   readonly onDelete: (id: AccountId) => void;
 }
 
-/** One account of the list: the tick, the email, the name, the state as a word, the last sign-in in mono (`never` if it has
+/** One account of the list: the tick, the username, the name, the state as a word, the last sign-in in mono (`never` if it has
  *  not signed in), and the end `Delete`, an armed two-step naming who dies (`Delete ed@example.test?`). A disabled account
  *  stays in the list, dimmed. A press on the cells opens the workspace; the tick and Delete sit outside that press. */
 export function AccountRow({ row, ticked, deleteReason, onTick, onOpen, onDelete }: AccountRowProps) {
@@ -24,11 +24,11 @@ export function AccountRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
       state={row.state.word}
       dimmed={row.state.dimmed}
       ticked={ticked}
-      tick={{ label: `Select ${row.email}`, onToggle: (on) => onTick(row.id, on) }}
+      tick={{ label: `Select ${row.username}`, onToggle: (on) => onTick(row.id, on) }}
       onOpen={() => onOpen(row.id)}
       end={
         <ArmedButton
-          question={`Delete ${row.email}?`}
+          question={`Delete ${row.username}?`}
           disabled={deleteReason !== undefined}
           title={deleteReason ?? DELETE_TITLE}
           onConfirm={() => onDelete(row.id)}
@@ -37,7 +37,7 @@ export function AccountRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.email}</span>
+      <span className="truncate text-text">{row.username}</span>
       <span className="truncate text-muted">{row.name}</span>
       <StateWord state={row.state} />
       <span className="truncate font-mono text-xs text-muted">{row.when}</span>

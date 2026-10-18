@@ -5,7 +5,7 @@ export interface AuditEntry {
   /** Unix milliseconds. */
   readonly at: number;
   readonly actorId?: string;
-  readonly actorEmail?: string;
+  readonly actorUsername?: string;
   /** Dotted and stable: `auth.login`, `channel.created`, `job.updated`. */
   readonly action: string;
   /** The id of the record the action was about. */

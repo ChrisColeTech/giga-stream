@@ -11,13 +11,13 @@ export const NOT_CONNECTED_CODE = "backend.not_connected";
 
 export const ERROR_SENTENCES: SentenceTable = {
   "auth.unauthorized": "Sign in to do that.",
-  "auth.invalid_credentials": "The email or password is wrong.",
+  "auth.invalid_credentials": "The username or password is wrong.",
   "auth.refresh_invalid": "That session has ended; sign in again.",
   "auth.rate_limited": "Too many sign-in attempts; wait a minute.",
   "auth.locked": "This account is locked for a while after failed sign-ins.",
   "account.not_found": "That account does not exist.",
   "account.invalid": "That account is not valid.",
-  "account.email_taken": "Another account already uses that email.",
+  "account.username_taken": "Another account already uses that username.",
   "account.last_admin": "This is the last enabled account; another one is needed first.",
   "account_state.invalid": "Your saved settings are not valid.",
   "channel.not_found": "That channel does not exist.",

@@ -23,7 +23,7 @@ test("username compares without case; a wrong password and an unknown username g
   const t = await makeApp();
   assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME.toUpperCase(), password: ADMIN_PASSWORD })).status, 200);
   const wrong = await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: "not-the-password" });
-  const unknown = await send(t.app, "POST", "/api/auth/login", { username:"nobody@example.test", password: "whatever-password" });
+  const unknown = await send(t.app, "POST", "/api/auth/login", { username: "nobody@example.test", password: "whatever-password" });
   assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"]);
   assert.deepEqual(wrong.body, unknown.body);
 });

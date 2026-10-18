@@ -6,15 +6,15 @@ import type { AdminAccount } from "@/types/admin-account";
 import { resetStore } from "./support/store";
 
 const state = () => useAppStore.getState();
-const account = (id: string, email: string, disabled = false): AdminAccount => ({
+const account = (id: string, username: string, disabled = false): AdminAccount => ({
   id,
-  email,
+  username,
   name: id,
   disabled,
   createdAt: 1,
   updatedAt: 1,
 });
-const emails = (): string[] => state().accounts.items.map((item) => item.email);
+const usernames = (): string[] => state().accounts.items.map((item) => item.username);
 
 beforeEach(() => resetStore());
 
@@ -26,16 +26,16 @@ describe("the accounts slice", () => {
     state().accountsLoaded([account("a", "a@x.test")]);
     assert.equal(state().accounts.status, "ready");
     state().accountsLoadFailed(false);
-    assert.deepEqual([state().accounts.status, emails()], ["failed", ["a@x.test"]], "the last items stay");
+    assert.deepEqual([state().accounts.status, usernames()], ["failed", ["a@x.test"]], "the last items stay");
   });
 
-  it("keeps the list sorted by lower-cased email and replaces by id", () => {
+  it("keeps the list sorted by lower-cased username and replaces by id", () => {
     state().accountsLoaded([account("b", "Bob@x.test"), account("a", "ann@x.test")]);
     state().accountUpsert(account("c", "carl@x.test"));
     state().accountUpsert(account("d", "AARON@x.test"));
-    assert.deepEqual(emails(), ["AARON@x.test", "ann@x.test", "Bob@x.test", "carl@x.test"]);
+    assert.deepEqual(usernames(), ["AARON@x.test", "ann@x.test", "Bob@x.test", "carl@x.test"]);
     state().accountUpsert({ ...account("b", "zed@x.test"), name: "renamed" });
-    assert.deepEqual(emails(), ["AARON@x.test", "ann@x.test", "carl@x.test", "zed@x.test"]);
+    assert.deepEqual(usernames(), ["AARON@x.test", "ann@x.test", "carl@x.test", "zed@x.test"]);
     assert.equal(state().accounts.items.length, 4, "replaced, not added");
   });
 

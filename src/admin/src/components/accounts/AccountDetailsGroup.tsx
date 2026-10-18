@@ -5,7 +5,7 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
-import { ENABLED_TIP, LAST_SIGN_IN_TIP } from "@/constants/account-copy";
+import { ENABLED_TIP, LAST_SIGN_IN_TIP, SECURITY_QUESTION_TIP } from "@/constants/account-copy";
 import type { AccountDraft } from "@/lib/account-draft";
 import { formatWhen } from "@/lib/format-when";
 import type { FormErrors } from "@/lib/record-form";
@@ -20,8 +20,9 @@ export interface AccountDetailsGroupProps {
   readonly lockReason: string | undefined;
 }
 
-/** `Details`: Name, Email, the Enabled switch (the inverse of the stored `disabled`) and the last sign-in, read only. Name
- *  first on every form. The switch is disabled with its reason while this is the last enabled account. */
+/** `Details`: Name, Username, the Enabled switch (the inverse of the stored `disabled`), the last sign-in and whether a
+ *  security question is set (`Set` or `Not set`), both read only. Name first on every form. The switch is disabled with
+ *  its reason while this is the last enabled account. */
 export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason }: AccountDetailsGroupProps) {
   const toggle = (
     <Toggle
@@ -33,13 +34,13 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
   );
   return (
     <Group id="ac-details" icon={User} title="Details">
-      {(["name", "email"] as const).map((key) => (
-        <Row key={key} label={key === "name" ? "Name" : "Email"} error={errors[key]}>
+      {(["name", "username"] as const).map((key) => (
+        <Row key={key} label={key === "name" ? "Name" : "Username"} error={errors[key]}>
           <Input
-            type={key === "email" ? "email" : "text"}
+            type="text"
             value={draft[key]}
             className={FIELD_CONTROL}
-            aria-label={key === "name" ? "Name" : "Email"}
+            aria-label={key === "name" ? "Name" : "Username"}
             aria-invalid={errors[key] !== undefined}
             autoComplete="off"
             spellCheck={false}
@@ -58,6 +59,11 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
       </Row>
       <Row label="Last sign-in" tip={LAST_SIGN_IN_TIP}>
         <span className="flex h-9 items-center font-mono text-sm text-muted">{formatWhen(account.lastSignInAt)}</span>
+      </Row>
+      <Row label="Security question" tip={SECURITY_QUESTION_TIP}>
+        <span className="flex h-9 items-center font-mono text-sm text-muted">
+          {account.securityQuestionSet === true ? "Set" : "Not set"}
+        </span>
       </Row>
     </Group>
   );

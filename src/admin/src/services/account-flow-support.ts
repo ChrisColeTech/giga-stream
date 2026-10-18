@@ -35,7 +35,7 @@ export interface AccountFlowDeps {
 }
 
 /** The rows a refusal can sit under. `enabled` is the Enabled switch (the backend calls the field `disabled`). */
-export type AccountField = "name" | "email" | "password" | "enabled";
+export type AccountField = "name" | "username" | "password" | "enabled";
 
 export interface FlowOk<T> {
   readonly ok: true;
@@ -62,7 +62,7 @@ export const stillSession = (store: () => AccountStore, serial: number): boolean
 
 const FIELDS: Readonly<Record<string, AccountField>> = {
   name: "name",
-  email: "email",
+  username: "username",
   password: "password",
   disabled: "enabled",
 };
