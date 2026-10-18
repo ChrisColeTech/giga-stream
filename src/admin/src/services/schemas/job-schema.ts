@@ -26,5 +26,17 @@ export const JobSchema = z.object({
 
 export const JobListSchema = z.object({ items: z.array(JobSchema) });
 
+/** The list as the service reads it, row by row (`01` section 8): an unreadable row is dropped and counted. */
+export const JobListLenientSchema = z.object({ items: z.array(z.unknown()) });
+
+export const JobDeletedSchema = z.object({ id: z.number() });
+
 export type AdminJob = z.infer<typeof JobSchema>;
-export type JobList = z.infer<typeof JobListSchema>;
+export type PlaylistJobConfig = z.infer<typeof PlaylistConfig>;
+export type CatalogJobConfig = z.infer<typeof CatalogConfig>;
+
+/** The readable jobs and how many rows could not be read. */
+export interface JobList {
+  readonly items: AdminJob[];
+  readonly unreadable: number;
+}

@@ -27,9 +27,11 @@ describe("the per-tab slice registry", () => {
   });
 
   it("adds no key for a placeholder tab", () => {
-    for (const make of [createChannelsSlice, createProvidersSlice, createTitlesSlice, createPlaylistsSlice, createJobsSlice]) {
+    for (const make of [createChannelsSlice, createProvidersSlice, createTitlesSlice]) {
       assert.deepEqual(make(NEVER, NEVER), {});
     }
+    const [playlists, jobs] = [createPlaylistsSlice(NEVER, NEVER), createJobsSlice(NEVER, NEVER)];
+    assert.deepEqual([playlists.playlists.status, jobs.jobs.status], ["idle", "idle"]);
   });
 });
 

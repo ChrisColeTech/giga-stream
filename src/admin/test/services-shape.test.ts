@@ -17,7 +17,7 @@ import { titles } from "@/services/titles";
 
 const SRC = fileURLToPath(new URL("../src", import.meta.url));
 const RECORD_SERVICES = { channels, providers, titles, playlists, jobs, accounts };
-const STUBS = { channels, providers, titles, playlists, jobs };
+const STUBS = { channels, providers, titles };
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((item) =>
@@ -51,7 +51,7 @@ describe("the service modules", () => {
         });
       }
     }
-    for (const call of [() => accountState.read(), () => accountState.write({}), () => health.read(), () => channels.rebuild("x"), () => jobs.run(1)]) {
+    for (const call of [() => accountState.read(), () => accountState.write({}), () => health.read(), () => channels.rebuild("x")]) {
       await assert.rejects(call(), isNotConnected);
     }
   });
