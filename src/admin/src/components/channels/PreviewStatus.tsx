@@ -17,7 +17,7 @@ export function PreviewStatus({ line, retry, onRetry }: PreviewStatusProps) {
         {line}
       </span>
       {retry && (
-        <Button variant="ghost" size="sm" onClick={onRetry}>
+        <Button variant="ghost" size="sm" title="Play the channel again" onClick={onRetry}>
           {RETRY_LABEL}
         </Button>
       )}

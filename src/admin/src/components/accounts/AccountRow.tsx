@@ -1,4 +1,5 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
+import { CELL_MONO, CELL_NAME } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { StateWord } from "@/components/records/StateWord";
 import { DELETE_TITLE } from "@/constants/account-copy";
@@ -37,9 +38,9 @@ export function AccountRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.username}</span>
+      <span className={CELL_NAME}>{row.username}</span>
       <StateWord state={row.state} />
-      <span className="truncate font-mono text-xs text-muted">{row.when}</span>
+      <span className={CELL_MONO}>{row.when}</span>
     </RecordGridRow>
   );
 }

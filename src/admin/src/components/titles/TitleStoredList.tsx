@@ -35,16 +35,18 @@ export function TitleStoredList() {
 
   return (
     <SelectAllScope all={all}>
-      <TitleStoredToolbar
-        query={query}
-        typed={typed}
-        onType={flows.typeStored}
-        onSearch={() => read(flows.searchStored)}
-        onChange={(change) => read(() => flows.changeStored(change))}
-      />
       <TableStrip
         label="Titles table"
         noun="titles"
+        query={
+          <TitleStoredToolbar
+            query={query}
+            typed={typed}
+            onType={flows.typeStored}
+            onSearch={() => read(flows.searchStored)}
+            onChange={(change) => read(() => flows.changeStored(change))}
+          />
+        }
         refresh={{ onPress: () => read(flows.refresh), reason: status === "loading" ? LOADING_REASON : undefined }}
         listVerbs={[sync]}
         selection={{

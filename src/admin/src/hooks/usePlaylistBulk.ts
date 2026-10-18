@@ -1,6 +1,7 @@
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import { SYNC_NOW } from "@/constants/playlist-copy";
 import type { BulkWords } from "@/lib/bulk-plan";
 import {
@@ -64,6 +65,7 @@ export function usePlaylistBulk(): PlaylistBulk {
       id: verb,
       label: LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason: playlistVerbReason(verb, plan, ticked.length, { busy: bulk.running, unreachable }),
       onPress: press,
       ...(verb === "delete" && { question: `Delete ${count} ${count === 1 ? "playlist" : "playlists"}?` }),

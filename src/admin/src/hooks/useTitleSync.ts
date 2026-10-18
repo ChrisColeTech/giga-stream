@@ -35,5 +35,5 @@ export function useTitleSync(): StripVerb {
     });
   };
   const reason = syncReason({ jobs: known, syncing, busy: bulk.running, unreachable });
-  return { id: "sync-now", label: SYNC_NOW, onPress: () => void press(), reason };
+  return { id: "sync-now", label: SYNC_NOW, tip: "Sync the titles from the catalog now", onPress: () => void press(), reason };
 }

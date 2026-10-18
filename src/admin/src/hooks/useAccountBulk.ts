@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import { BULK_WORDS, bulkVerbReason, planAccountBulk, type AccountBulkVerb } from "@/lib/account-bulk";
 import { sameId } from "@/lib/account-rows";
 import type { BulkPlan } from "@/lib/bulk-plan";
@@ -59,6 +60,7 @@ export function useAccountBulk(): AccountBulk {
       id: verb,
       label: LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason: bulkVerbReason(plan, ticked.length, { busy: bulk.running, unreachable }),
       ...(verb === "delete" && { question: `Delete ${count} ${count === 1 ? "account" : "accounts"}?` }),
       onPress: press,

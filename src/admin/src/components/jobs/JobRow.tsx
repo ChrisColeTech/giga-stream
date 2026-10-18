@@ -1,4 +1,5 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
+import { CELL_MONO, CELL_NAME, CELL_TEXT } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { StateWord } from "@/components/records/StateWord";
 import { DELETE_TITLE } from "@/constants/job-copy";
@@ -37,14 +38,14 @@ export function JobRow({ row, ticked, deleteReason, onTick, onOpen, onDelete }: 
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.name}</span>
-      <span className="truncate text-muted">{row.type}</span>
-      <span className="truncate text-muted">{row.target}</span>
-      <span className="truncate text-muted" title={row.schedule}>
+      <span className={CELL_NAME}>{row.name}</span>
+      <span className={CELL_TEXT}>{row.type}</span>
+      <span className={CELL_TEXT}>{row.target}</span>
+      <span className={CELL_TEXT} title={row.schedule}>
         {row.schedule}
       </span>
-      <span className="truncate font-mono text-xs text-muted">{row.lastRun}</span>
-      <span className="truncate font-mono text-xs text-muted" title={row.outcome}>
+      <span className={CELL_MONO}>{row.lastRun}</span>
+      <span className={CELL_MONO} title={row.outcome}>
         {row.outcome}
       </span>
       <span className="flex min-w-0 items-center gap-2">

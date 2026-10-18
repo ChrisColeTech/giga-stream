@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import {
   TITLE_BULK_LABELS,
   TITLE_BULK_ORDER,
@@ -51,6 +52,7 @@ export function useTitleBulk(): TitleBulk {
       id: verb,
       label: TITLE_BULK_LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason: titleBulkReason(plan, ticked.length, { busy: bulk.running, unreachable }),
       ...(verb === "delete" && { question: titleDeleteQuestion(plan.runnable.length) }),
       onPress: press,

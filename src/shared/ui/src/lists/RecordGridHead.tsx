@@ -4,7 +4,7 @@ import { Checkbox } from "../controls/Checkbox";
 import { cn } from "../lib/cn";
 import type { GridShape } from "./record-grid-layout";
 import { ariaSort, type SortState } from "./record-grid-sort";
-import { useSelectAll } from "./useSelectAll";
+import { useSelectAll } from "../hooks/useSelectAll";
 
 export interface GridHeading {
   readonly key: string;
@@ -56,16 +56,16 @@ function Cell({ heading, sort }: { readonly heading: GridHeading; readonly sort?
   );
 }
 
-/** The header row of a record grid (`docs/28` section 4.3): sans 12px semibold, faint, on the panel over a hairline,
- *  one cell per heading in the rows' own column set; the tick cell holds the three-state `All` (from `SelectAllScope`),
+/** The header row of a record grid, LoRA Trainer's `DatasetRows.tsx` header verbatim: `font-mono text-xs text-dim` on the
+ *  page, no fill, no rule, one cell per heading in the rows' own column set; the tick cell holds the three-state `All` (from `SelectAllScope`),
  *  the same box as the row ticks and directly above them, and the end cell is empty. A sortable column's cell is a button carrying `aria-sort` and a direction arrow. */
 export function RecordGridHead({ shape, headings, sort, sticky = false }: RecordGridHeadProps) {
   const all = useSelectAll();
   return (
     <div
       className={cn(
-        "grid items-center gap-3 border-b border-hair bg-panel px-3 py-1.5 font-sans text-xs font-semibold text-faint",
-        sticky && "sticky top-0 z-10",
+        "grid items-center gap-3 px-3 py-1.5 font-mono text-xs text-dim",
+        sticky && "sticky top-0 z-10 bg-surface",
       )}
       style={{ gridTemplateColumns: shape.columns }}
     >

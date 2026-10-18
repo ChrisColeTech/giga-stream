@@ -1,6 +1,6 @@
 /* THE ACCENT BAR (handoff §20.5, owner: "the green dots are lazy and low quality… they should be using the nano style
  * actionlist accent strips"): state on a row is a 4px rounded bar on its LEFT EDGE, never a dot. One ramp for the
- * ActionList's rows and a settings Row alike — the ActionList imports these classes; a Row takes `accent=`. */
+ * settings Row; a Row takes `accent=`. */
 export type Accent = 'none' | 'success' | 'error' | 'warning' | 'inactive'
 export const ACCENT: Record<Accent, string> = {
   none: '',

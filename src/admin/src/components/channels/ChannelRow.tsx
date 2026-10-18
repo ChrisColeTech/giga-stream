@@ -1,6 +1,8 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
+import { CELL_NAME, CELL_TEXT } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { StateWord } from "@/components/records/StateWord";
+import { DELETE_TIP } from "@/constants/channel-copy";
 import type { ChannelRowView } from "@/lib/channel-rows";
 
 export interface ChannelRowProps {
@@ -29,19 +31,19 @@ export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
         <ArmedButton
           question={`Delete ${row.name}?`}
           disabled={deleteReason !== undefined}
-          title={deleteReason ?? row.deleteTip}
+          title={deleteReason ?? row.deleteTip ?? DELETE_TIP}
           onConfirm={() => onDelete(row.id)}
         >
           Delete
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.name}</span>
-      <span className="truncate text-muted">{row.category}</span>
-      <span className="truncate text-muted">{row.kind}</span>
+      <span className={CELL_NAME}>{row.name}</span>
+      <span className={CELL_TEXT}>{row.category}</span>
+      <span className={CELL_TEXT}>{row.kind}</span>
       <StateWord state={row.state} />
-      <span className="truncate text-muted">{row.mode}</span>
-      <span className="truncate text-muted">{row.nowPlaying}</span>
+      <span className={CELL_TEXT}>{row.mode}</span>
+      <span className={CELL_TEXT}>{row.nowPlaying}</span>
     </RecordGridRow>
   );
 }
