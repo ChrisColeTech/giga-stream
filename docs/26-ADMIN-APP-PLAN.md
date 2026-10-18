@@ -251,15 +251,20 @@ The syncs were environment variables read once at start (`TMDB_SYNC_SCHEDULE`, `
 one off. An admin app manages **records**. The owner: *"we need a jobs tab for the sync jobs, the title and playlist
 should be crud for titles and playlists."* So there are two new record types: a **playlist** and a **job**.
 
-- **Playlists** (`playlists` table): `id`, `name`, `address` (a secret: never returned, audited by host only, `https` only
-  by the address rule of `03` 7.3), `enabled`, `created_at`. Routes (signed in, audited): `GET` and `POST
-  /api/playlists`; `GET`, `PATCH`, `DELETE /api/playlists/:id`. An answer is `{ id, name, host, masked, enabled, channels,
-  lastSyncedAt, lastOutcome }`; `PATCH` with `address` replaces it. Deleting a playlist keeps the channels it created and
-  clears their `source`, so they become hand-made rows that no sync touches (the Delete tooltip says so). A disabled
-  playlist is skipped by every job.
+- **Playlists** (`playlists` table): the parent of the channels an import creates (`channels.playlist_id`). `id`, `name`,
+  `address` (a secret: never returned, audited by host only; a web address passing the rule of `03` 7.3, or the label
+  `stored:<file name>` of an uploaded file, which is read and not kept), `enabled`, `content_hash`, `created_at`. Routes
+  (signed in, audited): `POST /api/playlists/import` (a file, multipart), `POST /api/playlists` (a web address: the
+  import), `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id`; the contract is `03` 7.2c and plan `43`.
+  An answer is `{ id, name, kind, host, masked, enabled, channels, enabledChannels, live, dead, lastSyncedAt,
+  lastOutcome }`; `PATCH` with `address` replaces it. **Deleting a playlist deletes its channels and jobs with it**, in
+  one transaction (a child never outlives its parent; hand-made channels are untouched; the armed Delete says how many
+  channels go). A disabled playlist is skipped by every job.
 - **Jobs** (`sync_jobs` table): `id`, `name`, `type` (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`,
   `"24h"` or `"off"`), `config` JSON, `last_run_at`, `last_outcome`, `last_counts` JSON, `created_at`. A playlist job's
-  config is `playlistId`, `dryRun` and `prune`; a catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
+  config is `playlistId` only (no dry run, no prune: plan `43`), created with the playlist, and it caches the channels'
+  images and checks each stream (`03` 7.2c); `POST /api/jobs/:id/stop` stops a playlist job and `run` resumes it; a
+  catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
   (`movie` or `tv`, unused by `discover`) and `pages` (each kind's cap; up to 500 for discover). Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
   /api/jobs/:id`; `POST /api/jobs/:id/run` (single-flight per job, `409 sync.busy`; a disabled job or a job whose
   playlist is disabled is refused with `422 job.disabled` and its reason). A playlist job syncs only its playlist, under
@@ -267,8 +272,8 @@ should be crud for titles and playlists."* So there are two new record types: a 
 - **Seeding** (first start only, from the environment): each `PLAYLIST_URLS` entry becomes a playlist and a playlist job
   for it (schedule `PLAYLIST_SYNC_SCHEDULE`); the catalog job - the library fill, scope `discover` - is created with
   schedule `TMDB_SYNC_SCHEDULE` when that is set, else `off` (runnable on demand). The four per-slice catalog jobs
-  (trending and popular, movies and series) are retired (owner, 2026-10-17): no longer seeded, existing records deleted. The existing `POST/GET /api/titles/sync` and `POST/GET /api/playlist-sync`
-  keep working as thin wrappers over the same services the jobs use; they do not go through the job records.
+  (trending and popular, movies and series) are retired (owner, 2026-10-17): no longer seeded, existing records deleted. `POST/GET /api/titles/sync` keeps working as a thin wrapper over the service the catalog job uses; `POST/GET
+  /api/playlist-sync` is removed (the jobs are the sync, `43`).
 - **Scheduling:** one timer for the whole backend, armed for the earliest due `enabled` job with a schedule; it runs that
   job, then re-arms (`01` section 4.4 still names two env-armed schedulers and must be amended to this one timer). A change to a job's `enabled` or `schedule`, or a
   playlist's `enabled`, re-arms at once, with no restart.
@@ -544,6 +549,11 @@ A title is a record, like a channel. There is no sync panel on this tab; syncing
   synced title says in its tooltip that the next sync adds it again and points to `Enabled`.
 
 ### 4.9c Playlists and Jobs (proposed; `03` sections 7.2c and 7.6b; backend 3.11)
+
+**Amended 2026-10-18 (owner): the Playlists form, list and workspace, the Jobs run and last-run groups, and the Channels
+tab's stream status, filters, logo and bulk `Enable` are specified in `43` section 4.1** (an `Import` form with a
+`File | Web address` choice and a `Choose file` button; counts and live/dead columns; `Stop` and `Resume`; a delete that
+takes the playlist's channels with it). Where the text below and `43` differ, `43` governs.
 
 **Playlists** are a plain CRUD tab, like Providers.
 

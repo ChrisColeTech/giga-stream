@@ -112,6 +112,7 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | UI state | One Zustand store, narrow selectors |
 | Validation | Zod at every HTTP, WebSocket, backend-published and persisted-value boundary |
 | Servers | Fastify 5 |
+| Uploads | `@fastify/multipart`, the admin backend only, for the one playlist-file import (owner, 2026-10-18, plan `43`) |
 | Local data | `node:sqlite` (fileserver and backend), separate databases |
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
@@ -200,8 +201,10 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   `TMDB_SYNC_SCHEDULE` and `PLAYLIST_SYNC_SCHEDULE` settings only seed the first job records. Every run is audited
   with the actor `system`. Images are never part
   of either: image bytes are fetched and served by the fileserver's image cache (`03` section
-  3.11) lazily on first request — the backend never stores or serves a media byte (section 7). No
-  other timer exists anywhere.
+  3.11) lazily on first request — the backend never stores or serves a media byte (section 7). **One dated
+  exception (owner, 2026-10-18, plan `43`):** a playlist sync job caches the channels' logo images on the backend
+  (`DATA_DIR/logo-cache/`, content-hashed, at most 1 MiB each, PNG/JPEG/GIF/WebP only) and the backend serves them at
+  `GET /logos/<file>`; no poster, still, video or user media is ever cached by it. No other timer exists anywhere.
 - No browser storage: nothing the user chose lives in `localStorage`, `sessionStorage` or IndexedDB.
   Saved state is a fileserver row.
 
@@ -268,7 +271,9 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
 - The backend has no socket (its read-only `/ws` was removed on 2026-10-17; nothing connected to it). Each
   change raises its `revision`, which channel and provider answers and `GET /healthz` carry.
-- No route accepts, uploads or serves video, local files or media bytes.
+- No route accepts, uploads or serves video, local files or media bytes. **Two dated exceptions (owner, 2026-10-18, plan
+  `43`):** the backend accepts one uploaded M3U playlist file (`POST /api/playlists/import`, at most 8 MiB, read and
+  discarded, never kept), and it serves its own cached channel logos (`GET /logos/<file>`, section 4.4).
 
 ## 8. Contract grammar
 
@@ -444,6 +449,7 @@ is drawn as its word; a verb is never given an icon to fill a gap.
 | Replace a folder | `FolderSync` | interface `FolderControls.tsx` 46 |
 | Remove a folder | `FolderMinus` | interface `FolderControls.tsx` 60 |
 | Cancel a scan, Stop | `CircleStop`; the statusbar's Stop `Square` | interface `FolderControls.tsx` 58; LoRA `Statusbar.tsx` 71 |
+| Choose a file to upload | `Upload` (the ghost `Choose file` button over a hidden file input) | LoRA Studio `ImagesGroup.tsx` |
 | Add an entry | `Plus` | LoRA `PromptBank.tsx` 72 |
 | Move up, Move down | `ArrowUp`, `ArrowDown` | LoRA `PromptBank.tsx` 56-60 |
 | Previous, Next (Newer, Older) | `ChevronLeft`, `ChevronRight` | LoRA `ViewerToolbar.tsx` 80-84 |

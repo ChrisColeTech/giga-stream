@@ -1,5 +1,12 @@
 # 38 - Admin Playlists and Jobs plan (Wave 3d)
 
+> **SUPERSEDED in part by `43` (owner, 2026-10-18).** The playlist create form (a name and an address), the `Dry run` and
+> `Prune` toggles, the per-channel link list in the playlist workspace, the playlist-sync read and the "a delete keeps the
+> channels" rule are replaced: playlists are now **imported** (a file or a web address, channels land disabled), a delete
+> removes the playlist's channels and jobs with it, a playlist job caches images, checks every stream, and can be stopped
+> and resumed. Read `43` section 4.1 for the Playlists, Jobs and Channels surfaces; where this document and `43` differ, `43`
+> governs. The jobs tab's catalog (title sync) parts of this document stand.
+
 **Status: plan, written before the code (branch `admin/playlists-jobs`, cut from `family-port` after Wave 3a, `35`, has landed; it runs in
 parallel with `36` and `37`, and is accepted after `36` for the one cross-tab read of section 3.4).** Owner, 2026-10-17: no fixture waves; every tab
 is built directly against the real backend routes through the service modules, and a wave exits only when every control is really wired and verified.

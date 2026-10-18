@@ -51,6 +51,8 @@ The interface's Live surface also reads `GET /api/channels` whole; that public r
 
 ### 3.1 Channels: additive paging on `GET /api/admin-channels`
 
+*Amended 2026-10-18 (plan `43`): the route gains two filters, `status` (`live`, `dead`, `unchecked`) and `playlist` (a playlist id), and the Channels first row gains the `Stream status` and `Playlist` selects; bulk `Enable` and `Disable` over ticked stream channels (4.5) go through `PATCH /api/channels` in 500-id chunks, one revision and one audit entry per chunk, instead of one `PATCH` per channel.*
+
 Today: `services.channels.listAdmin(base)` -> every row, decorated (`adminChannel`), `{ items, revision }`. Additive, with the old answer when no paging parameter is given (so nothing that already calls it breaks):
 
 `GET /api/admin-channels?limit=100&offset=0&q=&kind=&origin=&enabled=&state=&source=&sort=&dir=`

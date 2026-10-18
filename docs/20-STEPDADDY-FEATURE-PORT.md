@@ -112,6 +112,12 @@ re-verified where cited. Compact, organized by what could interest Giga Stream:
 
 ### F1. Playlist sync — import plus scheduled refresh (admin backend)
 
+> **AMENDED 2026-10-18 (owner, plan `43`).** F1 conflated two features and F3 rode along. The importer, the sync job and
+> the image cache are re-planned and rebuilt in `43`: import is a one-shot file or web-address action that creates the
+> playlist and its channels disabled; the sync job caches logo images (content-hashed), checks each channel's own stream
+> URL for live/dead, and re-reads a web source only when its body hash changes; prune is gone. "Enrichment happens at write
+> time only" and sections 9.1 and 9.2 below are historical. Where this section and `43` differ, `43` governs.
+
 **Owner decision, 2026-10-16:** the import is not a one-shot loader. The existing catalog-sync
 scheduler precedent (`03` §7.6b) is extended: the sync runs on demand **and** on
 `PLAYLIST_SYNC_SCHEDULE`, matching channels to playlist entries and updating them, so an imported
