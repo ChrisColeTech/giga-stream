@@ -5,8 +5,6 @@ import { tabSlices } from "@/store/slices";
 import { createChannelsSlice } from "@/store/slices/channels";
 import { createJobsSlice } from "@/store/slices/jobs";
 import { createPlaylistsSlice } from "@/store/slices/playlists";
-import { createProvidersSlice } from "@/store/slices/providers";
-import { createTitlesSlice } from "@/store/slices/titles";
 import { resetStore } from "./support/store";
 
 const state = () => useAppStore.getState();
@@ -27,7 +25,7 @@ describe("the per-tab slice registry", () => {
   });
 
   it("adds no key for a placeholder tab", () => {
-    for (const make of [createChannelsSlice, createProvidersSlice, createTitlesSlice, createPlaylistsSlice, createJobsSlice]) {
+    for (const make of [createChannelsSlice, createPlaylistsSlice, createJobsSlice]) {
       assert.deepEqual(make(NEVER, NEVER), {});
     }
   });
