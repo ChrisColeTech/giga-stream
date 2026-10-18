@@ -10,7 +10,7 @@ const FileRow = z.object({ logo_file: z.string() });
 
 export interface Verdict {
   url: string;
-  status: "live" | "dead";
+  status: "online" | "offline";
   at: number;
 }
 export interface LogoTarget {

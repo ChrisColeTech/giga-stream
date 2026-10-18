@@ -29,8 +29,8 @@ test("Stop mid-check ends the run stopped with the earlier verdicts kept; runnin
   await until(async () => (await s.job()).running === false, "the run to end");
   const job = await s.job();
   assert.deepEqual([job.lastResult, pick(job, "lastCounts.stopped"), job.lastRunAt], ["stopped", true, s.t.clock.now()]);
-  assert.deepEqual([pick(job, "lastCounts.live"), pick(job, "lastCounts.unchecked"), pick(job, "lastCounts.logosCached")], [2, 1, 1]);
-  assert.deepEqual(await verdicts(s), { a: "live", b: "live", c: "unchecked" }, "the verdicts written before the stop are kept");
+  assert.deepEqual([pick(job, "lastCounts.online"), pick(job, "lastCounts.unchecked"), pick(job, "lastCounts.logosCached")], [2, 1, 1]);
+  assert.deepEqual(await verdicts(s), { a: "online", b: "online", c: "unchecked" }, "the verdicts written before the stop are kept");
   const entry = (pick((await s.api("GET", "/api/audit?limit=20")).body, "data.items") as Array<Record<string, unknown>>)
     .find((e) => e.action === "job.stopped");
   assert.equal(entry?.subject, String(id));
@@ -40,7 +40,7 @@ test("Stop mid-check ends the run stopped with the earlier verdicts kept; runnin
   const seen = net.log.length;
   const resumed = await s.run();
   assert.deepEqual([resumed.lastResult, pick(resumed, "lastCounts.stopped")], ["ok", undefined]);
-  assert.deepEqual(await verdicts(s), { a: "live", b: "live", c: "live" });
+  assert.deepEqual(await verdicts(s), { a: "online", b: "online", c: "online" });
   const again = net.log.slice(seen);
   assert.equal(again.find((url) => url.endsWith(".m3u8")), STREAM("c.example", "c"), "the unchecked channel goes first");
   assert.equal(again.filter((url) => url.startsWith("https://img.example/")).length, 0, "no cached logo is downloaded again");

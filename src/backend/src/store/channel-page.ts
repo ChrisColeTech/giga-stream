@@ -16,10 +16,10 @@ const ORIGIN_WHERE = {
   manual: "c.kind = 'stream' AND c.playlist_id IS NULL",
 } as const;
 
-/** The sync's verdict (docs/43 section 3.3); `unchecked` is a stream row never checked. */
+/** The sync's verdict (docs/43 section 3.3, the words of docs/51); `unchecked` is a stream row never checked. */
 const STATUS_WHERE = {
-  live: "c.kind = 'stream' AND c.status = 'live'",
-  dead: "c.kind = 'stream' AND c.status = 'dead'",
+  online: "c.kind = 'stream' AND c.status = 'online'",
+  offline: "c.kind = 'stream' AND c.status = 'offline'",
   unchecked: "c.kind = 'stream' AND c.status IS NULL",
 } as const;
 

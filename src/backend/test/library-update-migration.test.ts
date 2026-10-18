@@ -54,7 +54,7 @@ test("028 on a seeded version-27 database adds the cursor column and one enabled
   const file = database027(`${FILL}; ${SEEDED}`);
   createStore(file).close();
   const { rows, version } = jobsOf(file);
-  assert.equal(version, 28);
+  assert.equal(version, 29);
   assert.deepEqual(rows, [
     { name: "Library fill", enabled: 1, schedule: "12h", config: '{"scope":"discover","pages":500}', cursor_at: null, last_run_at: null },
     { name: "Library update", enabled: 1, schedule: "24h", config: '{"scope":"recent","pages":1}', cursor_at: null, last_run_at: null },

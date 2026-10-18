@@ -96,8 +96,8 @@ test("each filter alone and combined keeps exactly the matching rows; total coun
     ["&playlist=2&enabled=false&q=channel%201", (m) => m.playlist === 2 && !m.enabled && m.name.includes("Channel 1")],
     ["&playlist=99", () => false],
     ["&status=unchecked", (m) => m.kind === "stream"],
-    ["&status=live", () => false],
-    ["&status=dead&playlist=1", () => false],
+    ["&status=online", () => false],
+    ["&status=offline&playlist=1", () => false],
     ["&q=%20%20", () => true],
   ];
   for (const [query, keep] of cases) {
@@ -147,6 +147,7 @@ test("invalid values are 400 request.invalid naming the field; a filter without 
     ["?limit=0", "limit"], ["?limit=201", "limit"], ["?limit=x", "limit"], ["?limit=10&offset=-1", "offset"],
     ["?limit=10&kind=radio", "kind"], ["?limit=10&origin=x", "origin"], ["?limit=10&enabled=yes", "enabled"],
     ["?limit=10&state=dead", "state"], ["?limit=10&status=maybe", "status"], ["?limit=10&playlist=x", "playlist"],
+    ["?limit=10&status=live", "status"], ["?limit=10&status=dead", "status"],
     ["?limit=10&sort=source", "sort"], ["?limit=10&sort=id", "sort"], ["?limit=10&dir=up", "dir"],
     [`?limit=10&q=${"x".repeat(121)}`, "q"], ["?kind=live", "limit"], ["?offset=5", "limit"], ["?sort=name", "limit"],
   ];

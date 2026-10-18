@@ -28,7 +28,7 @@ test("a file playlist is never read again: the run records a typed result and fe
   const done = await runJob(s);
   assert.deepEqual([done.lastResult, done.running], ["ok", false]);
   assert.deepEqual(done.lastCounts, {
-    created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, live: 0, dead: 2,
+    created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, online: 0, offline: 2,
     unchecked: 0, refusalExamples: [],
   });
   assert.deepEqual(s.feed.asked, [], "no playlist address is read");

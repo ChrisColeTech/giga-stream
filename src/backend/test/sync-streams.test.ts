@@ -1,5 +1,5 @@
-// Sync step 5 (docs/43 section 3.4): each channel's own exact stream address decides live or dead; no host shortcut;
-// one verdict per distinct address; compare-and-set writes; no revision; the probe budget; admin-only health fields.
+// Sync step 5 (docs/43 section 3.4; the words of docs/51): each channel's own exact stream address decides online or
+// offline; no host shortcut; one verdict per distinct address; compare-and-set writes; no revision; the probe budget.
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -14,7 +14,7 @@ import { MANIFEST, STREAM, fakeNet, m3uEntry, setupSync, type Sync } from "./syn
 const statusOf = async (s: Sync): Promise<Record<string, unknown>> =>
   Object.fromEntries((await s.channels()).map((c) => [String(c.name), c.status ?? "unchecked"]));
 
-test("live iff 2xx and a manifest after a BOM and whitespace; anything else, on that address only, is dead", async () => {
+test("online iff 2xx and a manifest after a BOM and whitespace; anything else, on that address only, is offline", async () => {
   const net = fakeNet();
   const names = ["live", "bom", "html", "teapot", "timeout", "dns", "refused", "empty", "plain"];
   net.set(STREAM("s.example", "live"), MANIFEST);
@@ -29,20 +29,20 @@ test("live iff 2xx and a manifest after a BOM and whitespace; anything else, on 
   const s = await setupSync(net, names.map((n) => m3uEntry(n, STREAM("s.example", n))));
   const done = await s.run();
   assert.deepEqual(await statusOf(s), {
-    live: "live", bom: "live", html: "dead", teapot: "dead", timeout: "dead", dns: "dead", refused: "dead", empty: "dead", plain: "dead",
+    live: "online", bom: "online", html: "offline", teapot: "offline", timeout: "offline", dns: "offline", refused: "offline", empty: "offline", plain: "offline",
   });
-  assert.deepEqual(["live", "dead", "unchecked"].map((f) => pick(done, `lastCounts.${f}`)), [2, 7, 0]);
+  assert.deepEqual(["online", "offline", "unchecked"].map((f) => pick(done, `lastCounts.${f}`)), [2, 7, 0]);
   assert.ok((await s.channels()).every((c) => typeof c.checkedAt === "number"));
 });
 
-test("a host that fails for one address is not a verdict on the others: a DNS failure marks only that channel dead", async () => {
+test("a host that fails for one address is not a verdict on the others: a DNS failure marks only that channel offline", async () => {
   const net = fakeNet();
   net.set(STREAM("same.example", "good"), MANIFEST);
   net.set(STREAM("same.example", "down"), { fail: "safe_fetch.failed" });
   net.set(STREAM("same.example", "also-good"), MANIFEST);
   const s = await setupSync(net, ["good", "down", "also-good"].map((n) => m3uEntry(n, STREAM("same.example", n))));
   await s.run();
-  assert.deepEqual(await statusOf(s), { good: "live", down: "dead", "also-good": "live" });
+  assert.deepEqual(await statusOf(s), { good: "online", down: "offline", "also-good": "online" });
   assert.equal(net.asked("https://same.example/").length, 3, "every address got its own request");
 });
 
@@ -51,7 +51,7 @@ test("a distinct address is requested once and gives one verdict to every channe
   net.set(STREAM("s.example", "shared"), MANIFEST);
   const s = await setupSync(net, [m3uEntry("one", STREAM("s.example", "shared")), m3uEntry("two", STREAM("s.example", "shared")), m3uEntry("three", STREAM("s.example", "other"))]);
   await s.run();
-  assert.deepEqual(await statusOf(s), { one: "live", two: "live", three: "dead" });
+  assert.deepEqual(await statusOf(s), { one: "online", two: "online", three: "offline" });
   assert.equal(net.asked(STREAM("s.example", "shared")).length, 1);
 });
 
@@ -68,7 +68,7 @@ test("a run takes no revision for its verdicts, and the public answer never carr
   assert.equal(publicRows.length, 2);
   assert.ok(publicRows.every((r) => !("status" in r) && !("checkedAt" in r) && !("cachedLogoUrl" in r)));
   const admin = await s.channels();
-  assert.deepEqual(admin.map((c) => [c.name, c.status]), [["a", "live"], ["b", "dead"]]);
+  assert.deepEqual(admin.map((c) => [c.name, c.status]), [["a", "online"], ["b", "offline"]]);
   assert.equal(new Set(admin.map((c) => c.revision)).size, 1, "no row's revision moved either");
 });
 
@@ -101,12 +101,12 @@ test("the probe budget ends the check: the rest stay unchecked and a second run 
   });
   const partial = await s.run();
   assert.equal(partial.lastResult, "ok");
-  const live = Number(pick(partial, "lastCounts.live"));
-  assert.ok(live >= 1 && live < 12, `some checked (${live}), the rest not`);
-  assert.equal(Number(pick(partial, "lastCounts.unchecked")), 12 - live);
+  const online = Number(pick(partial, "lastCounts.online"));
+  assert.ok(online >= 1 && online < 12, `some checked (${online}), the rest not`);
+  assert.equal(Number(pick(partial, "lastCounts.unchecked")), 12 - online);
   const first = net.asked("https://s.example/").length;
   const full = await s.run();
-  assert.deepEqual([pick(full, "lastCounts.live"), pick(full, "lastCounts.unchecked")], [12, 0]);
+  assert.deepEqual([pick(full, "lastCounts.online"), pick(full, "lastCounts.unchecked")], [12, 0]);
   assert.ok(net.asked("https://s.example/").length > first);
 });
 
@@ -121,7 +121,7 @@ test("the check order is total: never-checked first, then the longest unchecked,
       logoFile: null, logoCheckedAt: null, editedFields: [],
     });
     for (const id of ["d", "c", "b", "a"]) store.channels.insert(row(id, `https://x.example/${id}`), 1);
-    store.health.writeVerdicts(playlistId, [{ url: "https://x.example/a", status: "live", at: 500 }, { url: "https://x.example/c", status: "dead", at: 100 }]);
+    store.health.writeVerdicts(playlistId, [{ url: "https://x.example/a", status: "online", at: 500 }, { url: "https://x.example/c", status: "offline", at: 100 }]);
     assert.deepEqual(store.health.streamUrls(playlistId).map((u) => u.slice(-1)), ["b", "d", "c", "a"]);
   } finally {
     store.close();

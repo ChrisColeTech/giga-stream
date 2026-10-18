@@ -35,7 +35,7 @@ test("026 lands on a version-25 database: the titles are kept, the new columns a
 
     const db = new DatabaseSync(file, { readOnly: true });
     try {
-      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 28);
+      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 29);
       const columns = db.prepare("PRAGMA table_info(titles)").all().filter((c) => String(c.name).startsWith("detail_"));
       assert.deepEqual(columns.map((c) => [c.name, c.notnull]), [["detail_failed_at", 0], ["detail_failures", 0]]);
       assert.deepEqual(db.prepare("SELECT detail_failed_at, detail_failures FROM titles").all().map((r) => ({ ...r })),

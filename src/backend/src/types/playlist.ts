@@ -28,8 +28,8 @@ export interface PlaylistView {
   enabled: boolean;
   channels: number;
   enabledChannels: number;
-  live: number;
-  dead: number;
+  online: number;
+  offline: number;
   lastRunAt?: number;
   lastResult?: RunResult;
   lastCounts?: RunCounts;
