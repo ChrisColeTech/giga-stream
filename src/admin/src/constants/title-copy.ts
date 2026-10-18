@@ -40,7 +40,8 @@ export const KIND_OPTIONS = [
   { value: "movie", label: "Movie" },
   { value: "tv", label: "Series" },
 ] as const;
-export const KIND_CHIPS = [
+export const BROWSE_KIND_OPTIONS = [
+  { value: "all", label: "All kinds" },
   { value: "movie", label: "Movies" },
   { value: "tv", label: "Series" },
 ] as const;
@@ -61,9 +62,6 @@ export const SEASON_TIP = "The season's number, used once. Move it with the arro
 export const EPISODE_TIP = "The episode's number and its title.";
 export const SEASON_COUNT_TIP = "How many episodes this season has.";
 export const YEAR_TIP = "The year it was first released.";
-export const SEARCH_TIP = "Searches TMDB and the titles made here. Press Enter or the search button.";
-export const KIND_FILTER_TIP = "Which kinds the list shows; at least one stays on.";
-export const SORT_TIP = "The order of the list. A search keeps the order TMDB answers in.";
 export const ENABLED_TIP = "A disabled title stays in the list but is left out of what the player app reads.";
 export const TMDB_ID_TIP = "With a TMDB id, the providers can produce sources for this title.";
 export const TMDB_ID_FIXED_TIP = "A title from TMDB keeps its TMDB id.";

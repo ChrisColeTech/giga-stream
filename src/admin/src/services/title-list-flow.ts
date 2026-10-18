@@ -6,10 +6,10 @@ import {
   older,
   runSearch,
   titleReads,
-  toggleKind,
   typeSearch,
+  withKind,
   withSort,
-  type TitleKind,
+  type KindChoice,
   type TitleSort,
   type TitleView,
 } from "@/lib/title-query";
@@ -64,7 +64,7 @@ export interface TitleListFlow {
   load: () => Promise<TitleResult>;
   type: (text: string) => void;
   search: () => Promise<TitleResult>;
-  toggleKind: (kind: TitleKind) => Promise<TitleResult>;
+  kind: (choice: KindChoice) => Promise<TitleResult>;
   sort: (sort: TitleSort) => Promise<TitleResult>;
   older: () => Promise<TitleResult>;
   newer: () => Promise<TitleResult>;
@@ -113,8 +113,8 @@ export function createTitleListFlow(deps: {
     load: () => read(view()),
     type: (text) => store().titlesSetView(typeSearch(view(), text)),
     search: () => read(runSearch(view())),
-    toggleKind: (kind) => {
-      const next = toggleKind(view(), kind);
+    kind: (choice) => {
+      const next = withKind(view(), choice);
       return next === view() ? Promise.resolve(done(undefined)) : read(next);
     },
     sort: (sort) => read(withSort(view(), sort)),

@@ -4,8 +4,8 @@ import {
   runSearch,
   START_VIEW,
   titleReads,
-  toggleKind,
   typeSearch,
+  withKind,
   withSort,
   type TitleView,
 } from "@/lib/title-query";
@@ -15,7 +15,7 @@ const at3: TitleView = { ...START_VIEW, page: 3 };
 describe("the reads of a view", () => {
   it("browse kind=all with both chips, the one kind with one", () => {
     assert.deepEqual(titleReads(START_VIEW), [{ route: "browse", query: { kind: "all", sort: "newest", page: 1 } }]);
-    const tv = toggleKind(START_VIEW, "movie");
+    const tv = withKind(START_VIEW, "tv");
     assert.deepEqual(titleReads(tv), [{ route: "browse", query: { kind: "tv", sort: "newest", page: 1 } }]);
   });
 
@@ -44,13 +44,15 @@ describe("the search runs by Enter only", () => {
 
 describe("a change returns to page 1", () => {
   it("a kind change and a sort change", () => {
-    assert.equal(toggleKind(at3, "tv").page, 1);
+    assert.equal(withKind(at3, "tv").page, 1);
     assert.equal(withSort(at3, "trending").page, 1);
   });
 
-  it("the last kind chip cannot switch off", () => {
-    const tvOnly = toggleKind(START_VIEW, "movie");
-    assert.equal(toggleKind(tvOnly, "tv"), tvOnly);
-    assert.deepEqual(toggleKind(tvOnly, "movie").kinds, ["movie", "tv"]);
+  it("the Kind select picks one kind or both; the same pick changes nothing", () => {
+    const tvOnly = withKind(START_VIEW, "tv");
+    assert.deepEqual(tvOnly.kinds, ["tv"]);
+    assert.equal(withKind(tvOnly, "tv"), tvOnly);
+    assert.deepEqual(withKind(tvOnly, "all").kinds, ["movie", "tv"]);
+    assert.equal(withKind(START_VIEW, "all"), START_VIEW);
   });
 });

@@ -93,6 +93,16 @@ describe("the accounts table strip", () => {
     assert.ok(!table.includes("selected<") && !table.includes("Clear selection"));
   });
 
+  it("draws the three-state All in the header's tick cell, above the row ticks, not in the strip", () => {
+    state().accountsLoaded([account("a"), account("b")]);
+    const html = page();
+    const strip = html.slice(html.indexOf('role="toolbar"'), html.indexOf("</div>", html.indexOf('role="toolbar"')));
+    assert.ok(!strip.includes("Select all accounts"));
+    const all = html.indexOf('aria-label="Select all accounts"');
+    assert.ok(all > html.indexOf('aria-label="Accounts table"') && all < html.indexOf('aria-label="Select a@x.test"'));
+    assert.ok(all < html.indexOf(">username<"));
+  });
+
   it("enables the verbs for ticked rows with no count text, and refuses the signed-in account with its reason", () => {
     state().accountsLoaded([account(7), account("b"), account("c")]);
     state().accountTick("b", true);

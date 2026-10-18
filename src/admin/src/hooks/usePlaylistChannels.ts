@@ -2,16 +2,13 @@ import { useEffect, useState } from "react";
 import { channels } from "@/services/channels";
 import { sentenceOf } from "@/lib/playlist-flow-result";
 import { useAppStore } from "@/store/app-store";
+import type { AdminChannel } from "@/types/admin-channel";
 
-export interface PlaylistChannel {
-  readonly id: string;
-  readonly name: string;
-}
-
-/** What the Status group knows of a playlist's channels: still reading, read, or refused (the shimmer stays). */
+/** What the Status group knows of a playlist's channels: still reading, read, or refused (the shimmer stays). The rows
+ *  are whole, so opening one can hand the Channels tab the row (it may be on no loaded page). */
 export type PlaylistChannels =
   | { readonly status: "loading" }
-  | { readonly status: "ready"; readonly items: readonly PlaylistChannel[] }
+  | { readonly status: "ready"; readonly items: readonly AdminChannel[] }
   | { readonly status: "refused" };
 
 /** The one cross-tab read of the Playlists tab (`38` section 3.4): the admin channels whose `source` is this playlist's
@@ -29,8 +26,7 @@ export function usePlaylistChannels(host: string): PlaylistChannels {
     channels.list().then(
       (list) => {
         if (!current) return;
-        const items = list.items.filter((channel) => channel.source === host);
-        setView({ status: "ready", items: items.map((channel) => ({ id: channel.id, name: channel.name })) });
+        setView({ status: "ready", items: list.items.filter((channel) => channel.source === host) });
       },
       (error: unknown) => {
         if (!current) return;

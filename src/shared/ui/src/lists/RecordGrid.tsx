@@ -9,8 +9,8 @@ export interface RecordGridProps {
   readonly ariaLabel: string;
   readonly layout: GridLayout;
   readonly headings: readonly GridHeading[];
-  /** The list has a tick column. Its header cell stays empty: select-all is the selection toolbar's three-state `All`
-   *  (`01` section 9; LoRA Trainer `DatasetRows.tsx` 51 draws the same empty cell). */
+  /** The list has a tick column. Its header cell holds the three-state `All` when a `SelectAllScope` stands above
+   *  the grid, directly above the row ticks (`01` section 9). */
   readonly ticks?: boolean;
   /** Server-side sort: the sortable headings become buttons (`docs/41` section 6). */
   readonly sort?: GridSort;

@@ -1,7 +1,10 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { CLEAR_ALL_TIP, SELECT_ALL_TIP } from "../controls/AllCheckbox";
+import { Checkbox } from "../controls/Checkbox";
 import { cn } from "../lib/cn";
 import type { GridShape } from "./record-grid-layout";
 import { ariaSort, type SortState } from "./record-grid-sort";
+import { useSelectAll } from "./useSelectAll";
 
 export interface GridHeading {
   readonly key: string;
@@ -54,9 +57,10 @@ function Cell({ heading, sort }: { readonly heading: GridHeading; readonly sort?
 }
 
 /** The header row of a record grid (`docs/28` section 4.3): sans 12px semibold, faint, on the panel over a hairline,
- *  one cell per heading in the rows' own column set; the tick cell and the end cell empty (select-all is the selection
- *  toolbar's `All`). A sortable column's cell is a button carrying `aria-sort` and a direction arrow. */
+ *  one cell per heading in the rows' own column set; the tick cell holds the three-state `All` (from `SelectAllScope`),
+ *  the same box as the row ticks and directly above them, and the end cell is empty. A sortable column's cell is a button carrying `aria-sort` and a direction arrow. */
 export function RecordGridHead({ shape, headings, sort, sticky = false }: RecordGridHeadProps) {
+  const all = useSelectAll();
   return (
     <div
       className={cn(
@@ -65,7 +69,14 @@ export function RecordGridHead({ shape, headings, sort, sticky = false }: Record
       )}
       style={{ gridTemplateColumns: shape.columns }}
     >
-      {shape.selectable && <span aria-hidden />}
+      {shape.selectable &&
+        (all === null ? (
+          <span aria-hidden />
+        ) : (
+          <span title={all.checked === true ? CLEAR_ALL_TIP : SELECT_ALL_TIP} className="flex">
+            <Checkbox checked={all.checked} onChange={all.onToggle} aria-label={all.label} disabled={all.disabled} />
+          </span>
+        ))}
       {headings.map((heading) => (
         <Cell key={heading.key} heading={heading} sort={sort} />
       ))}

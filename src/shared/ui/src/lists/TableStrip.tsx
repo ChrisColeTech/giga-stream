@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
-import { AllCheckbox } from "../controls/AllCheckbox";
 import { ArmedButton } from "../controls/ArmedButton";
 import { Button } from "../controls/Button";
 import { IconButton } from "../controls/IconButton";
@@ -40,20 +39,12 @@ export interface TableStripProps {
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
   /** A list whose rows are ticked: the verbs on the ticked rows, always drawn (each disabled with its reason while none
-   *  is ticked), and the three-state `All` over the listed rows. */
+   *  is ticked). The three-state `All` is the grid header's tick (`SelectAllScope`), not the strip's. */
   readonly selection?: {
     readonly verbs: readonly StripVerb[];
-    readonly all: {
-      /** `Select all channels`: the accessible name; the word shown is `All`. */
-      readonly label: string;
-      readonly checked: boolean | "mixed";
-      readonly onToggle: (checked: boolean) => void;
-      /** Nothing is listed yet. */
-      readonly disabled?: boolean;
-    };
-    /** A long, paged list (`docs/41` section 4.4): `All` ticks the LOADED rows; once they are all ticked and the query
-     *  holds more, this separate step offers every matching row (`Select all 5,003 matching`), a ghost word just
-     *  before `All`. Absent while the offer does not stand. */
+    /** A long, paged list (`docs/41` section 4.4): the header `All` ticks the LOADED rows; once they are all ticked and
+     *  the query holds more, this separate step offers every matching row (`Select all 5,003 matching`), a ghost word
+     *  just right of the verbs. Absent while the offer does not stand. */
     readonly matching?: { readonly label: string; readonly onPress: () => void; readonly reason?: string };
   };
 }
@@ -88,7 +79,7 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
 /** THE SELECTION TOOLBAR of a table (`01` section 9): the list's own first row, inside its list group, holding only what
  *  acts on the list (LoRA Studio `components/library/LibraryToolbar.tsx`), drawn with LoRA Trainer's
  *  `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
- *  last; right, the `All` checkbox and the `‹ ›` paging of a list that pages. The page's forward verb is the page
+ *  last; right, the `‹ ›` paging of a list that pages (`All` is the grid header's tick). The page's forward verb is the page
  *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
 export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging, selection }: TableStripProps) {
   const verbs = selection?.verbs ?? [];
@@ -106,20 +97,12 @@ export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging
       {verbs.map((verb) => (
         <Verb key={verb.id} verb={verb} />
       ))}
-      <span className="min-w-0 flex-1" aria-hidden />
       {selection?.matching !== undefined && (
         <Button size="sm" variant="ghost" reason={selection.matching.reason} onClick={selection.matching.onPress}>
           {selection.matching.label}
         </Button>
       )}
-      {selection !== undefined && (
-        <AllCheckbox
-          checked={selection.all.checked}
-          onChange={selection.all.onToggle}
-          aria-label={selection.all.label}
-          disabled={selection.all.disabled}
-        />
-      )}
+      <span className="min-w-0 flex-1" aria-hidden />
       {paging !== undefined && (
         <>
           <Step press={paging.newer} label="Newer" glyph={ChevronLeft} />

@@ -68,14 +68,19 @@ export const typeSearch = (view: TitleView, typed: string): TitleView => ({ ...v
 /** Enter or the search button: the typed text becomes the search, on page 1. */
 export const runSearch = (view: TitleView): TitleView => ({ ...view, search: view.typed.trim(), page: 1 });
 
-/** A kind chip pressed: on or off, but at least one stays on; page 1. */
-export function toggleKind(view: TitleView, kind: TitleKind): TitleView {
-  const on = view.kinds.includes(kind);
-  if (on && view.kinds.length === 1) return view;
-  const kinds = on
-    ? view.kinds.filter((one) => one !== kind)
-    : KIND_ORDER.filter((one) => one === kind || view.kinds.includes(one));
-  return { ...view, kinds, page: 1 };
+/** The Kind select's value: both kinds or one. */
+export type KindChoice = "all" | TitleKind;
+
+export const isKindChoice = (value: string): value is KindChoice =>
+  value === "all" || value === "movie" || value === "tv";
+
+export const kindChoiceOf = (view: TitleView): KindChoice =>
+  view.kinds.length === 1 ? (view.kinds[0] ?? "all") : "all";
+
+/** The Kind select changed: both kinds or one; page 1. The same choice changes nothing. */
+export function withKind(view: TitleView, choice: KindChoice): TitleView {
+  if (kindChoiceOf(view) === choice) return view;
+  return { ...view, kinds: choice === "all" ? KIND_ORDER : [choice], page: 1 };
 }
 
 export const withSort = (view: TitleView, sort: TitleSort): TitleView => ({ ...view, sort, page: 1 });
