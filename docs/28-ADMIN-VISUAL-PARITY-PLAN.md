@@ -681,3 +681,14 @@ groups; `Run job` on a job is ghost (the form has one primary); `BulkNotes` is g
 are warning rows of the Events drawer, then the one summary on the notice line); the Preview window shows a state word,
 its failure sentence goes to the notice line; the gate's brand paragraph and the question-less note (now the Question
 row's tip) are gone. Open: About's backend rows are dashes until `/healthz` is wired through the request layer.
+
+## Family-look pass (2026-10-17, branch `fix/admin-family-look`)
+
+The admin was compared with the interface's Collections window and four regressions fixed. One-of choices are the interface's
+compact left-aligned pills: the `field` size is deleted from `Segmented` and `ChipGroup` (owner: keep the frontend's pills).
+There is no page toolbar: the cross-tab verbs (`Preview channel` on a ticked live or stream channel, `Go to Titles`/`Jobs`)
+are icon buttons in the table strip beside `Refresh`; a workspace shows only its form groups, with `Preview channel` an
+icon on its Status group's first row and the other forward verbs dropped (the tab bar goes there). Every form row has
+its info glyph (Name, Title, Username, Password, Plot, the last-run facts, season rows). The grids have one track for each
+cell (Accounts and Channels had an empty extra track), a last sign-in track wide enough for `formatWhen`, and the Jobs list
+fits a 1264px window. Sign-in and reset rows keep no glyph (not a New form or a workspace).

@@ -6,7 +6,7 @@ import type { GridLayout } from "@giga/ui/lists/record-grid-layout";
 export const PROVIDER_GRID: GridLayout = {
   tracks: ["3.5rem", "minmax(10rem,1.4fr)", "minmax(7rem,1fr)", "6rem", "6rem"],
   end: "13rem",
-  minWidth: "52rem",
+  minWidth: "53rem",
 };
 
 export const PROVIDER_HEADINGS: readonly GridHeading[] = [

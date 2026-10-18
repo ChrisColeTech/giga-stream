@@ -1,12 +1,13 @@
 import type { GridHeading } from "@giga/ui/lists/RecordGrid";
 import type { GridLayout } from "@giga/ui/lists/record-grid-layout";
 
-/** The Accounts list's column set (`35` section 5.8). Tracks are rem so the header and the rows line up. The end track
- *  fits the armed question for a long address (`Delete someone@example.test?`). */
+/** The Accounts list's column set (`35` section 5.8), one track for each cell (username, state, last sign-in). Tracks are
+ *  rem so the header and the rows line up. The last sign-in track holds the 16 mono characters of `formatWhen` whole. The
+ *  end track fits the armed question for a long address (`Delete someone@example.test?`). */
 export const ACCOUNT_GRID: GridLayout = {
-  tracks: ["minmax(12rem,1.6fr)", "minmax(9rem,1fr)", "6rem", "9.5rem"],
+  tracks: ["minmax(12rem,1.6fr)", "7rem", "minmax(9.5rem,1fr)"],
   end: "15rem",
-  minWidth: "56rem",
+  minWidth: "50rem",
 };
 
 /** THE SLOT FOR THE ID COLUMN. Accounts will get a generated integer id from a backend sequence (migration 018); the
