@@ -27,10 +27,37 @@ export function visibleRows(
   overscan: number,
 ): RowRange {
   if (rows <= 0) return { first: 0, last: -1 };
-  /* Clamped before widening, so a viewport past the end (the list just got shorter) still shows the last rows. */
-  const top = Math.min(rows - 1, Math.max(0, Math.floor(view.top / layout.pitch)));
-  const bottom = Math.min(rows - 1, Math.max(top, Math.floor((view.top + Math.max(0, view.height) - 1) / layout.pitch)));
-  return { first: Math.max(0, top - overscan), last: Math.min(rows - 1, bottom + overscan) };
+  /* A non-finite offset (a failed measurement) reads as the top. */
+  const edge = Number.isFinite(view.top) ? view.top : 0;
+  /* Clamped before widening, so a viewport past the end (the list just got shorter, or a scroll offset carried over
+     from a taller list) still shows the last rows. */
+  const top = Math.min(rows - 1, Math.max(0, Math.floor(edge / layout.pitch)));
+  const bottom = Math.min(rows - 1, Math.max(top, Math.floor((edge + Math.max(0, view.height) - 1) / layout.pitch)));
+  return nonEmptyRange({ first: Math.max(0, top - overscan), last: Math.min(rows - 1, bottom + overscan) }, rows);
+}
+
+/** Never a blank viewport: a range that holds no row of a non-empty list is replaced by the nearest rows (the first
+ *  ones when it lies above the list, the last ones when it lies past the end). A sound range is returned as it is. */
+export function nonEmptyRange(range: RowRange, rows: number): RowRange {
+  if (rows <= 0) return { first: 0, last: -1 };
+  const span = Number.isFinite(range.last - range.first) ? Math.max(1, range.last - range.first + 1) : 1;
+  if (range.last >= range.first && range.first >= 0 && range.last < rows) return range;
+  if (range.first >= rows || (range.last >= range.first && range.last >= rows)) {
+    const last = rows - 1;
+    return { first: Math.max(0, last - span + 1), last };
+  }
+  return { first: 0, last: Math.min(rows - 1, span - 1) };
+}
+
+/** Whether a Library list starts again at its top. A view switch (Rows, Grid, List, any direction) is a new list and
+ *  never inherits the old offset; so does a first page read, and a first mount. Returning to the Library tab changes
+ *  neither the view nor the read, so the position is kept (`docs/32` revisit rule). */
+export function resetsToTop(input: {
+  readonly loading: boolean;
+  readonly view: string;
+  readonly previousView: string | null;
+}): boolean {
+  return input.loading || input.previousView !== input.view;
 }
 
 /** The blank heights and mounted rows, top to bottom. A row outside the range (the focused card's) is mounted too,

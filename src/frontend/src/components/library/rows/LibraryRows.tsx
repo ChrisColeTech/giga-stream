@@ -39,7 +39,7 @@ export function LibraryRows({
   scope, shelves, positions, collections, selected, onScope, onSelect, onRemoveWatch, onSeeAll, onLoadMore, onRefresh,
   loading, strip,
 }: LibraryRowsProps) {
-  const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading);
+  const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading, "rows");
   const settled = shelves !== null && shelves.length > 0;
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
