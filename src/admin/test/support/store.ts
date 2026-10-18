@@ -8,7 +8,8 @@ import { useAppStore } from "@/store/app-store";
  * what it was when the test file loaded. */
 
 const INITIAL = useAppStore.getInitialState();
-const PRISTINE = { ...INITIAL };
+/* `restoring: false`: a test draws the app after the on-load probe answered, as the gate and the shell show it. */
+const PRISTINE = { ...INITIAL, restoring: false };
 
 export function resetStore(): void {
   useAppStore.setState(PRISTINE, true);

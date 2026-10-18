@@ -36,7 +36,8 @@ export type AccountPatch = z.infer<typeof AccountPatchSchema>;
 export const LoginSchema = z
   .object({ username: z.string().max(USERNAME_MAX), password: z.string().max(PASSWORD_MAX) })
   .strict();
-export const RefreshSchema = z.object({ refreshToken: z.string().min(1).max(200) }).strict();
+/** The refresh token may be omitted: the cookie carries it (docs/03 section 7.12). */
+export const RefreshSchema = z.object({ refreshToken: z.string().min(1).max(200).optional() }).strict();
 export const PasswordChangeSchema = z.object({ currentPassword: z.string().max(PASSWORD_MAX), newPassword: password }).strict();
 
 /** What sign-in and refresh answer (section 7.12). */

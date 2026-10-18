@@ -7,6 +7,7 @@ import { AccountCreateSchema, AccountPatchSchema } from "../types/account.js";
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
+import { clearRefreshCookie } from "./refresh-cookie.js";
 
 const AccountParams = z.object({ accountId: z.string().min(1).max(200) });
 
@@ -33,7 +34,12 @@ export function registerAccounts(app: FastifyInstance, services: Services): void
     const principal = signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
     const patch = parseInput(AccountPatchSchema, request.body, ERRORS.accountInvalid);
-    return ok(reply, await services.accounts.update(accountId, patch, actorOf(request, principal)));
+    const saved = await services.accounts.update(accountId, patch, actorOf(request, principal));
+    // Changing the caller's own password or disabling it revokes the caller's sessions: the cookie goes with them.
+    if (accountId === principal.accountId && (patch.password !== undefined || patch.disabled !== undefined)) {
+      clearRefreshCookie(request, reply);
+    }
+    return ok(reply, saved);
   });
 
   app.delete("/api/admin-accounts/:accountId", async (request, reply) => {

@@ -1,7 +1,7 @@
 import type { EventRow } from "@giga/ui/lib/event-log";
 import { DEFAULT_TAB } from "@/constants/tabs";
 import { GATE_START, nextGate, type GateState } from "@/lib/gate-state";
-import type { AuthResult, SessionActor, SessionTokens } from "@/types/auth";
+import type { AuthResult, AuthSession, SessionActor, SessionTokens } from "@/types/auth";
 import type { EventArea } from "@/types/events";
 import type { OverlayId } from "@/types/overlays";
 import type { Tab } from "@/types/shell";
@@ -11,7 +11,8 @@ import { NO_WORKSPACES, type WorkspaceMap } from "./workspace-slice";
 
 /* Who is signed in, and what the gate is doing, a slice of the one store (`34` section 5, `29` section 6). The slice holds
  * no promise: `hooks/useSignIn.ts` awaits the auth port and hands the answer to `finishSignIn`. The tokens live here, in
- * memory, and nowhere else: a reload starts at the gate. The request layer reads `tokens` and writes a refresh through
+ * memory, and nowhere else: a reload starts `restoring` while one probe of the httpOnly refresh cookie decides between
+ * the shell and the gate (`useRestoreSession`). The request layer reads `tokens` and writes a refresh through
  * `adoptTokens`. The audit log is read after sign-in, so the Events drawer is empty (five shimmer lines) before it and
  * again after sign-out. Signing out lands on the gate with the chrome in place and every tab back at its index, so
  * nothing of one account is left for the next. */
@@ -24,6 +25,11 @@ export interface SessionSlice {
    *  still on) afterwards, so an answer from an earlier session is dropped (`35` section 5.2). */
   serial: number;
   gate: GateState;
+  /** True from load until the on-load probe answers: the gate shows a skeleton, never the form, so it cannot flash. */
+  restoring: boolean;
+  /** The probe answered: a restored session starts like a sign-in (without the notice); null leaves the gate. Only the
+   *  first answer counts, so a double mount changes nothing. */
+  finishRestore: (session: AuthSession | null) => void;
   /** The Sign in verb was pressed: the gate waits for the port. Ignored while it already waits. */
   beginSignIn: () => void;
   /** The port answered. Accepted, the session starts; refused, the user stays on the gate with the sentence. */
@@ -78,6 +84,12 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
     tokens: null,
     serial: 0,
     gate: GATE_START,
+    restoring: true,
+    finishRestore: (session) => {
+      if (!get().restoring) return;
+      if (session === null || get().signedIn) return set({ restoring: false });
+      set({ restoring: false, signedIn: true, actor: session.actor, tokens: session.tokens, serial: get().serial + 1 });
+    },
     beginSignIn: () => set({ gate: nextGate(get().gate, { type: "submit" }) }),
     finishSignIn: (result) => {
       const gate = nextGate(get().gate, { type: "answer", result });
