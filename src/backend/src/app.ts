@@ -8,6 +8,7 @@ import { registerAdminChannels } from "./api/admin-channels.js";
 import { registerAdminStatic } from "./api/admin-static.js";
 import { registerAudit } from "./api/audit.js";
 import { registerAuth } from "./api/auth.js";
+import { registerAuthSecurity } from "./api/auth-security.js";
 import { registerChannels } from "./api/channels.js";
 import { registerErrorHandling } from "./api/envelope.js";
 import { registerHealth } from "./api/health.js";
@@ -125,6 +126,7 @@ export async function buildApp(
     });
     registerHealth(app, ready);
     registerAuth(app, ready);
+    registerAuthSecurity(app, ready);
     registerAccountState(app, ready);
     registerAccounts(app, ready);
     registerAudit(app, ready);
