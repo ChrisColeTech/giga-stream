@@ -1,7 +1,7 @@
 // A fake TMDB discover for the sliced walk (docs/48): a ground truth of dated titles per kind, served as TMDB serves it -
 // 20 rows a page, a 400 past page 500, `total_results` capped at 20,001, inclusive date bounds, the year filters, and
 // titles with no date left out of any dated query. Used as the walk's client directly, so nothing listens on a port.
-import { datedIn, type DiscoverKind } from "./discover-dates.js";
+import { dateFilter, type DiscoverKind } from "./discover-dates.js";
 
 export interface FakeTitle {
   id: number;
@@ -36,7 +36,8 @@ export function fakeDiscover(data: Record<DiscoverKind, FakeTitle[]>) {
     }
     const url = new URL("http://fake.test/");
     for (const [key, value] of Object.entries(params)) if (value !== undefined) url.searchParams.set(key, String(value));
-    const matching = data[kind].filter((title) => title.date !== "" && datedIn(url, kind, title.date));
+    const inRange = dateFilter(url, kind);
+    const matching = data[kind].filter((title) => title.date !== "" && inRange(title.date));
     const rows = matching.slice((page - 1) * 20, page * 20).map((title) => ({
       id: title.id, [kind === "movie" ? "title" : "name"]: `${kind} ${title.id}`,
       [kind === "movie" ? "release_date" : "first_air_date"]: title.date, popularity: 10, vote_average: 6, genre_ids: [],
