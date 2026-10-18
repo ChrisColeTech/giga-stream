@@ -1,5 +1,8 @@
 # 34 - Admin auth gate plan (Wave 2a)
 
+> **Amended 2026-10-18 (owner):** there is no sign-in rate limit and no lockout. The gate's `locked` and `rate_limited`
+> refusal kinds and their sentences are removed; a wrong pair is always `invalid`, an unreachable backend `unreachable`.
+
 > **Done (`487b934`, `a19845e`).** The seam of section 5 is now real: the foundation (`07b60d7`) replaced the fixture port with `services/auth-port.ts` and `services/auth.ts` over the request
 > layer, put the tokens in the session slice (`adoptTokens`, `endSession`), and deleted `fixtures/auth-port.ts` and the `?signedin=0` switch; the gate maps refusals with `lib/auth-errors.ts`
 > (any other 4xx is `invalid`, a 5xx or unreadable answer `unreachable`). `35` adds the actor's account id. Sections 3, 4 and 6 to 9 describe the gate as built; the demo credentials of 5 are gone.

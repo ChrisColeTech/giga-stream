@@ -1,5 +1,8 @@
 # 40 - Admin password reset by security question (Waves B3 and R)
 
+> **Amended 2026-10-18 (owner):** the reset has no attempt limit and no lock (the five-wrong-answers 15-minute lock, the
+> `reset_attempts` table and `429 auth.rate_limited` are removed).
+
 **Status: built (backend B3, branch `backend/reset`; username rename and admin Wave R, branch `admin/username-reset`).** Owner, 2026-10-17: "add a password reset button to the login form", then "lets do security question instead of email for password reset", then "we don't have emails set up, why would it use email for login." There is no email, no SMTP, no reset code, no console sink, no Electron dialog and no tray action, and **the sign-in name is a plain username**: any text, trimmed, 1 to 254 characters, no format check, unique without case (migration `019`). The reset is answered by a **security question** that each account sets for itself while signed in. The program is `39` (B3 took migration `018`, the rename `019`). Governed by `00`, `01`, `03` 7.11 and 7.12, `07`, `26` (D5, D22), `34`.
 
 ## 1. What exists (verified in source)

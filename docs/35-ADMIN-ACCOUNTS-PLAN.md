@@ -1,5 +1,8 @@
 # 35 - Admin accounts plan (Wave 3a: real sign-in finished and the Accounts tab)
 
+> **Amended 2026-10-18 (owner):** there is no sign-in rate limit and no lockout; the ten-a-minute limit, the
+> five-failure 15-minute lock and every step that exercises them are removed.
+
 **Status: plan, revised 2026-10-17 after the foundation (`admin/channels`: `6fcbeda`, `4386de2`, `07b60d7`) put the request layer, the real auth port and the
 service modules in place; branch `admin/accounts`, cut from `family-port` once the foundation has merged.** Owner, 2026-10-17: "let's do the accounts next wave so I can
 create an account", and no fixture waves (`39`). This wave finishes what the foundation left of the real session, wires the audit log into the Events drawer, builds the

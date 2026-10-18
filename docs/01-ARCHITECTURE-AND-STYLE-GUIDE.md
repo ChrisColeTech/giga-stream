@@ -271,8 +271,8 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
 - The backend has no socket (its read-only `/ws` was removed on 2026-10-17; nothing connected to it). Each
   change raises its `revision`, which channel and provider answers and `GET /healthz` carry.
-- All backend outbound HTTP to a remote address goes through ONE function (`safe-fetch.ts`: https only, public addresses
-  only, bounded redirects and byte caps; `03` 7.3); no service calls `fetch` on a remote address directly. A schema
+- All backend outbound HTTP to a remote address goes through ONE function (`safe-fetch.ts`: http or https, no loopback or
+  link-local targets, bounded redirects and byte caps; `03` 7.3); no service calls `fetch` on a remote address directly. A schema
   enforces its relations with foreign keys, not with service code alone.
 - No route accepts, uploads or serves video, local files or media bytes. **Two dated exceptions (owner, 2026-10-18, plan
   `43`):** the backend accepts one uploaded M3U playlist file (`POST /api/playlists/import`, at most 8 MiB, read and

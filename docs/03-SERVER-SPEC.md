@@ -84,7 +84,7 @@ Electron app, so the development window always loads it.
 playlists are imported, section 7.2c), `OMDB_API_KEY` (detail enrichment, `11`
 section 7; absent means details stay TMDB-shaped), `MOVIE_STREAM_TEMPLATE` and
 `EPISODE_STREAM_TEMPLATE` (the stream address rule, section 7.5), `SEED_TEST_CHANNELS` (seeds the four live test
-channels, section 7.7), `ALLOW_LOOPBACK_STREAMS`, `TEST_PAGE` (serves `/test/player.html`), `FIXTURE_DIR` (the test
+channels, section 7.7), `TEST_PAGE` (serves `/test/player.html`), `FIXTURE_DIR` (the test
 videos, default `<tmp>/giga-stream-fixtures`), `CACHE_DIR` (default `<DATA_DIR>/cache`), `ADMIN_DIST` (the built
 admin app served at `/admin/`, default `src/admin/dist`), `PLAYLIST_SYNC_MAX_BYTES`, `PLAYLIST_SYNC_MAX`,
 `LOGO_INDEX_TTL_HOURS`, and the TMDB/OMDb base and daily-limit settings (`src/backend/src/config.ts` is the list).
@@ -746,7 +746,7 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   disabled playlist stops its sync, manual or scheduled; a disabled job stops only the scheduled run.
 - **Import.** `POST /api/playlists/import` takes `multipart/form-data` with exactly one `file` part (at most 8 MiB; a
   second file part or a truncated one is `400 request.invalid`); the playlist's name and `fileName` come from the
-  sanitized filename (basename, NFKD with diacritics stripped, lowercase, runs of anything but `a-z0-9._-` become `-`,
+  sanitized filename (basename, lowercase, runs of anything but `a-z0-9._-` become `-`,
   must end `.m3u` or `.m3u8`; the same `fileName` updates the same playlist in place). `POST /api/playlists` with
   `{ url, name?, enabled? }` is the **web-address import**: it fetches the address once through the guarded fetch (7.3;
   15 s, 8 MiB hard cap, never a silent truncation). Both **read and parse first and write nothing until they succeed**:
@@ -765,8 +765,8 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   enabled, due at once) is created in the same transaction.
 - **Sync (a `playlist` job; the job's `playlistId` column, one job per playlist).** `POST /api/jobs/:id/run` starts it
   and answers `202` at once; the result is read on a refresh. One run at a time **per playlist** (`409 sync.busy`); two
-  shared limits bound all playlists (16 stream checks and 8 logo downloads at once, and at most 2 at once to one host in
-  each; every URL still gets its own request); a playlist job's schedule is at least 15 minutes (`422 job.invalid`); the
+  one shared limit bounds all playlists (16 stream checks and logo downloads at once, and at most 2 at once to one host;
+  every URL still gets its own request); a playlist job's schedule is at least 15 minutes (`422 job.invalid`); the
   scheduler starts a run and re-arms at once, never awaiting it. A playlist job is part of its playlist: it is created
   and deleted with it, `POST /api/jobs` creates catalog jobs only, `DELETE /api/jobs/:id` on a playlist job is
   `422 job.invalid`, `PATCH` changes `enabled` and `schedule` only, and its name is not stored (it reads `Sync <playlist
@@ -777,9 +777,10 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   (`tvgId` first, then the name with accents folded; an existing `logoUrl` wins; the index is loaded once per run, a bad row
   is skipped, a failed load is retried after one hour); (4) **cache the images**: each distinct `logoUrl` not tried in
   the last 7 days, or whose cached file is missing, is downloaded (10 s, 1 MiB, `image/*` with PNG, JPEG, GIF or WebP magic
-  bytes, at most 4096 px a side, 8 at a time; SVG is never cached) into `DATA_DIR/logo-cache/<first 32 hex of
+  bytes, at most 1 MiB; SVG is never cached) into `DATA_DIR/logo-cache/<first 32 hex of
   sha256(bytes)>.<ext>`; an identical image already on disk is not rewritten, so identical images are stored once; a
-  failure keeps the previous file; at the end of the run, files no channel references and older than an hour are deleted;
+  failure keeps the previous file; at the end of the run, files no channel references are deleted (a row whose file is
+  missing is re-downloaded next run);
   (5) **check every stream**: each of the playlist's channels, enabled or not, ordered by check time (never checked first,
   then oldest, then id), is asked for **its own exact stream URL** (5 s, first 64 KiB, 16 at a time, 10 minutes in all):
   `live` when the answer is 2xx and the body, after a byte-order mark and whitespace, starts `#EXTM3U`, else `dead` (a
@@ -828,21 +829,18 @@ answer is `{ id, deletedChannels, deletedJobs }`).
 
 ### 7.3 Stream and image addresses
 
-Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and image source must be `https`. With
-`ALLOW_LOOPBACK_STREAMS=true` (default `false`; never set in production), `http` on exactly `127.0.0.1` or
-`localhost`, any port, is also accepted. Nothing else is. TMDB's image host is `https` and passes.
+Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and image source must be `http` or `https` and
+carry no credentials (owner, 2026-10-18: many IPTV playlists use `http`; the earlier https-only rule is retired, and with
+it `ALLOW_LOOPBACK_STREAMS`). TMDB's image host is `https` and passes.
 
-Every remote address the **backend itself fetches** (a playlist, the logo index, a logo, a stream check) must also resolve
-to a **public** address: a private, loopback, link-local, carrier-grade (CGNAT) or unique-local address is refused, redirects
-included, because the content of a playlist is untrusted and the backend may be exposed to a network (7.10). This covers
-every address that comes from playlist content or an admin (a playlist, the logo index, a logo, a stream check); the fixed
-provider hosts (TMDB, OMDb) and the backend's own calls are not covered. It is one function built on `node:https` (not on
-`fetch`): a `lookup` hook resolves the name once, refuses a non-public result (IPv4 `0/8, 10/8, 100.64/10, 127/8,
-169.254/16, 172.16/12, 192.0.0/24, 192.0.2/24, 192.168/16, 198.18/15, 198.51.100/24, 203.0.113/24, 224/4, 240/4`; IPv6
-`::`, `::1`, IPv4-mapped, NAT64, 6to4 and Teredo with the embedded address checked, documentation, ULA, link-local,
-site-local, multicast) and connects to the address it validated (TLS still checks the host name), follows at most 3
-redirects (each re-validated, `https` only), refuses a URL with credentials, asks for `identity` encoding, caps the bytes
-while streaming, and sends no cookies and a fixed User-Agent. `ALLOW_LOOPBACK_STREAMS` is the only development exception.
+Every remote address the **backend itself fetches** because it came from playlist content or an admin (a playlist, the
+logo index, a logo, a stream check) goes through one function built on `node:https`: it refuses a host that resolves to
+**loopback** (`127/8`, `::1`, `0.0.0.0`, `::`) or **link-local** (`169.254/16`, `fe80::/10`) addresses (an IPv4-mapped IPv6
+form is judged by the IPv4 inside it), so a playlist cannot aim the backend at itself or at a cloud metadata address;
+private LAN addresses (`10/8`, `172.16/12`, `192.168/16`) are allowed, because a home IPTV box lives there. It follows at
+most 3 redirects (each re-checked the same way), refuses a URL with credentials, asks for `identity` encoding, caps the
+bytes while streaming, applies a timeout, and sends no cookies and a fixed User-Agent. The fixed provider hosts (TMDB,
+OMDb) and the backend's own calls are not covered.
 
 ### 7.4 Titles
 
@@ -1103,8 +1101,8 @@ There are no roles (owner, 2026-10-17): every signed-in account is equal and may
 | `GET /api/auth/me` | signed in | the signed-in `AdminAccount` |
 | `POST /api/auth/password` | signed in | `{ currentPassword, newPassword }`; changes it and revokes all of the account's sessions |
 | `PUT /api/auth/me/security-question` | signed in | `{ currentPassword, question (1 to 8), answer }`; sets the account's own question; `200 { set: true }`; a wrong current password is `401 auth.invalid_credentials` with `details.field: "currentPassword"`; `422 account.invalid` names `answer` or `question` |
-| `POST /api/auth/reset-start` | anyone | `{ username }`; answers `200 { question }` for every username (a stand-in for an unknown name or an account with no question); `429 auth.rate_limited` |
-| `POST /api/auth/reset` | anyone | `{ username, answer, newPassword }`; right answer: sets the password, ends every session, `200 { reset: true }`; every refusal is `401 auth.reset_invalid`; a `newPassword` outside 1 to 256 characters is `422 account.invalid` (field `newPassword`); `429 auth.rate_limited` (docs/40) |
+| `POST /api/auth/reset-start` | anyone | `{ username }`; answers `200 { question }` for every username (a stand-in for an unknown name or an account with no question) |
+| `POST /api/auth/reset` | anyone | `{ username, answer, newPassword }`; right answer: sets the password, ends every session, `200 { reset: true }`; every refusal is `401 auth.reset_invalid`; a `newPassword` outside 1 to 256 characters is `422 account.invalid` (field `newPassword`); no attempt limit and no lock (owner, 2026-10-18) |
 
 ```ts
 interface Session {
@@ -1125,9 +1123,8 @@ interface Session {
 - **The refresh token** is 32 random bytes, stored only as a SHA-256 hash, valid for 30 days and used
   once: refreshing replaces it. Presenting a refresh token that was already used revokes every session of
   that account, since only a copied token is used twice.
-- **Limits.** Ten sign-in attempts a minute from one address (`429 auth.rate_limited`); five wrong
-  passwords in a row lock the account for 15 minutes (`429 auth.locked`). An unknown username and a wrong
-  password give the same answer (`401 auth.invalid_credentials`).
+- **No limits.** There is no sign-in rate limit and no lockout (owner, 2026-10-18: a single-owner tool). An unknown
+  username and a wrong password give the same answer (`401 auth.invalid_credentials`).
 - A missing, malformed, expired or revoked access token is `401 auth.unauthorized`; a refresh token that is unknown, used, expired or revoked
   is `401 auth.refresh_invalid`.
 - Changing `JWT_SECRET` ends every access token; sessions continue through their refresh tokens.
@@ -1160,7 +1157,7 @@ media.not_found        playback.range_invalid image.not_found
 backend.unreachable    backend.bad_response   tmdb.unavailable
 store.open             store.newer_schema     store.migrate          store.failed
 auth.unauthorized      auth.invalid_credentials auth.refresh_invalid
-auth.rate_limited      auth.locked            auth.reset_invalid
+auth.reset_invalid
 account.not_found      account.invalid        account.username_taken account.last_admin
 ```
 
@@ -1178,7 +1175,6 @@ duplicate name, web address or file name); `playlist.busy` is retired (one run a
 | 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid`, `auth.reset_invalid` |
 | 404 | the `*.not_found` codes |
 | 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.username_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.taken` |
-| 429 | `auth.rate_limited`, `auth.locked` |
 | 416 | `playback.range_invalid`, `range.unsatisfiable` |
 | 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection`, `playlist.invalid`, `job.invalid`, `job.disabled`, `title.invalid`, `provider.invalid`, `sync.invalid` |
 | 502 | `backend.bad_response` |

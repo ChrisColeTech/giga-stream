@@ -1,5 +1,8 @@
 # 29 - Admin Backend Wiring Plan (Wave 0 and Waves 7 to 10 of the admin program)
 
+> **Amended 2026-10-18 (owner):** there is no sign-in rate limit and no lockout. `auth.rate_limited` and `auth.locked`
+> no longer exist; every sentence below about them, and the `locked` / `rate_limited` refusal kinds, no longer applies.
+
 > **Superseded by `39-ADMIN-PROGRAM-ROADMAP.md` for the wave order (owner, 2026-10-17: no fixture waves).** Wave 0 is done. The request layer, the real auth port, the tokens, the
 > zod schemas and the typed service stubs landed in the foundation (`07b60d7`); Waves 7 to 10 below are retired and split: Accounts and the audit log are `35`, Channels and Preview `36`,
 > Providers and Titles `37`, Playlists and Jobs `38`, and account-state persistence, health and About, the README and the build/serve sweep are Wave 4 of `39`. The reference content of this

@@ -43,7 +43,7 @@ to `~/.giga-stream-admin`, with `admin.db` inside it.
   (TMDB); `/api/playlist-sync`.
 - **Channels are stored stream-address rows:** `id` (`ch_<uuid>`), `name`, `category` (free text), `number` (TEXT),
   `logo_url`, `stream_url`, `revision`, and for playlist-synced rows `tvg_id` and `source`.
-- **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token, a sign-in rate limit and a lockout. Every change
+- **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token (no sign-in rate limit and no lockout, owner 2026-10-18). Every change
   writes an audit entry. `api/guard.ts` `signedIn(services, request)` gates writes. There are no roles (D22): every signed-in admin is equal.
 - **Network policy** (`network-policy.ts`): refuses to listen off loopback over plain http unless
   `TLS_CERT_FILE`/`TLS_KEY_FILE`, `TRUST_PROXY` or `ALLOW_INSECURE_HTTP` is set. No-store routes: `/api/auth`,

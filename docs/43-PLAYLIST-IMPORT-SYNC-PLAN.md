@@ -107,10 +107,11 @@ enabled job. (`schedule: "off"` and `enabled=false` are the same effect; `enable
 
 **Image cache:** `DATA_DIR/logo-cache/`, files named `<first 32 hex of sha256(bytes)>.<ext>` (extension chosen from the
 magic bytes, never from the upstream header), served at `/logos/c/<file>` (a separate prefix, so a live-channel id can never
-collide with a hash name). Accepted only if `image/*`, PNG/JPEG/GIF/WebP magic bytes, at most 1 MiB, and (PNG header read)
-at most 4096 px a side. SVG is never cached. An identical image is stored once; an existing file is not rewritten.
-**Garbage collection** runs only inside a sync's single flight (never in a delete handler), skips files younger than one
-hour, and a row whose `logo_file` is missing on disk is re-downloaded regardless of `logo_checked_at`.
+collide with a hash name). Accepted only if `image/*`, PNG/JPEG/GIF/WebP magic bytes and at most 1 MiB (no pixel-dimension
+check). SVG is never cached. An identical image is stored once; an existing file is not rewritten. **Garbage collection**
+runs only at the end of a sync run (never in a delete handler) and deletes cache files no channel references; a row whose
+`logo_file` is missing on disk (for example one a concurrent run's collection removed) is re-downloaded regardless of
+`logo_checked_at`, so the cache heals on the next run.
 
 **Secrets in URLs.** The web address lives only in `playlists.url`. **It is returned in full to a signed-in admin and shown
 plainly in the admin (not masked; owner, 2026-10-18)**; audit, error details and
@@ -136,9 +137,9 @@ file whose `file_name` exists updates that playlist), the channel plan and write
 **only if rows changed** (a re-import with nothing new writes nothing and bumps nothing), one audit `playlist.imported`
 (counts and host). A fetch failure or a non-M3U body creates nothing (`503 playlist.unreachable` / `422 playlist.invalid`).
 The `UNIQUE` columns close the concurrent-import case: the loser is `409 playlist.taken`. After the commit the service calls
-`onChange` so the new job arms. The file name rule: basename, NFKD with diacritics stripped, lowercase, runs of anything but
-`a-z0-9._-` become `-`, must end `.m3u` or `.m3u8`, an all-non-ASCII stem is `422 playlist.invalid` (field `file`); the client file name is
-never a path (nothing is stored). M3U detection: `#EXTM3U` as the first non-empty line (after a BOM), or an `#EXTINF` within
+`onChange` so the new job arms. The file name rule: basename, lowercase, runs of anything but
+`a-z0-9._-` become `-`, must end `.m3u` or `.m3u8`, an empty result is `422 playlist.invalid` (field `file`); the client file
+name is never a path (nothing is stored). M3U detection: `#EXTM3U` as the first non-empty line (after a BOM), or an `#EXTINF` within
 the first 20 lines (an HTML page that merely mentions the word fails).
 
 Entry rules: every `streamUrl` **and `logoUrl`** passes the address rule (`03` 7.3, now including the public-address rule)
@@ -184,10 +185,10 @@ Job types stay `playlist` and `catalog`. `POST /api/jobs/:id/run` for a playlist
 The first pass after the migration starts after the server is listening, never during boot.
 
 Limits (named constants): run wall clock 30 min; probe budget 10 min; logo fetch 10 s, 1 MiB; stream check 5 s, first
-64 KiB; playlist fetch 15 s. **Two global semaphores shared by all playlists:** stream checks 16 at a time, logo downloads
-8 at a time, and in each **at most 2 at a time to one host** (a credentialed provider list is mostly one host; sixteen
-parallel connections to one subscription can get it banned). This is not a host shortcut: every URL still gets its own
-request. The playlist fetch and the logo-index download are outside them. A web playlist is re-fetched every run, so the
+64 KiB; playlist fetch 15 s. **One global limit shared by all playlists** for stream checks and logo downloads together (16 at a time), and **at most 2
+at a time to one host** (a credentialed provider list is mostly one host; sixteen parallel connections to one subscription
+can get it banned). This is not a host shortcut: every URL still gets its own request. The playlist fetch and the
+logo-index download are outside it. A web playlist is re-fetched every run, so the
 15-minute floor is also the provider's load.
 
 **Single flight is per playlist** (`409 sync.busy`). **The scheduler never awaits a run:** it starts a playlist run and
@@ -267,23 +268,18 @@ The desktop interface and fileserver are out of scope and unchanged.
 
 Every request to an address that comes from **playlist content or an admin** (a playlist, the logo index, a logo, a stream
 check) goes through it. Fixed provider hosts (TMDB, OMDb) and the backend's own calls (`app-url`, health) do not. It is built
-on **`node:https`** (and `node:http` only on loopback with `ALLOW_LOOPBACK_STREAMS`), **not on `fetch`**: the global `fetch`
-(undici) cannot be told which address to connect to, and the npm `undici` package is outside the locked stack (`01` 2). A
-`lookup` hook resolves the name once, refuses any non-public result, and returns the validated address, which is the one
-connected to (TLS server name and certificate validation still use the host name, because only DNS is overridden); it
-handles both the single-address and the `all: true` callback forms (Node's happy-eyeballs uses the latter). IP-literal hosts
-never call `lookup` and are checked directly with `net.isIP`. **Refused:** IPv4 `0/8, 10/8, 100.64/10, 127/8, 169.254/16,
-172.16/12, 192.0.0/24, 192.0.2/24, 192.168/16, 198.18/15, 198.51.100/24, 203.0.113/24, 224/4, 240/4`; IPv6 `::`, `::1`,
-IPv4-mapped (the embedded address is checked), NAT64 `64:ff9b::/96`, 6to4 `2002::/16` (embedded address checked), Teredo,
-documentation, ULA, link-local, site-local, multicast. It sends `Accept-Encoding: identity` (so no decompression and no
-bomb), `Connection: close`, a fixed User-Agent and no cookies, refuses userinfo, follows at most 3 redirects (each
-re-resolved and re-validated, `https` only, never https to http), counts bytes while streaming and destroys the socket at the
-cap. **Tests** inject `lookup` and a `transport` through `createSafeFetch({ lookup, transport })` (a seam separate from the
-existing `makeApp({ fetch })` one, which TMDB and OMDb keep); one real-socket test on `127.0.0.1` with the dev flag covers
-redirects and caps, since a fake transport cannot test the pinning.
-Reason: the stream and logo URLs are third-party content fetched from the backend's own network position, and the backend may
-be exposed to a LAN or the internet (`03` 7.10); without this a hostile playlist is a port scanner (live/dead is the oracle)
-and a logo URL pointing inward is cached and served publicly.
+on **`node:https`** and `node:http` (http and https are both allowed: owner, 2026-10-18), **not on `fetch`**. A `lookup`
+hook resolves the name once and refuses a result that is **loopback** (`127/8`, `::1`, `0.0.0.0`, `::`) or **link-local**
+(`169.254/16`, `fe80::/10`); an IPv4-mapped IPv6 form is judged by the IPv4 inside it. **Private LAN addresses are
+allowed** (`10/8`, `172.16/12`, `192.168/16`): a home IPTV box lives there. IP-literal hosts are checked directly with
+`net.isIP`. The hook handles both the single-address and the `all: true` callback forms. It sends `Accept-Encoding:
+identity`, `Connection: close`, a fixed User-Agent and no cookies, refuses userinfo, follows at most 3 redirects (each
+re-checked the same way; http and https both allowed), applies a timeout, counts bytes while streaming and destroys the
+socket at the cap. **Tests** inject `lookup` and a `transport` through `createSafeFetch({ lookup, transport })`; one
+real-socket test on `127.0.0.1` (a test-only `allowLoopback` option, not an environment flag) covers redirects and caps.
+Reason for the two refused classes: a playlist must not be able to aim the backend at itself or at a cloud metadata
+address. Nothing heavier is built (owner, 2026-10-18: no range tables for NAT64, 6to4, Teredo, ULA, CGNAT or the
+documentation ranges).
 
 ## 4. UI wiring (admin app only)
 
@@ -421,7 +417,7 @@ The owner's 1 playlist and 2,598 channels (`source = stored:us.m3u`, disabled, n
 `kind='file', file_name='us.m3u'`, the channels get their `playlist_id` (so deleting that playlist later removes them), new
 columns are NULL (not checked), and `data/playlists/us.m3u`, if present, is left on disk, inert. The new job is due after
 the 30 s grace; W1a's first pass is step 2 only (a file playlist reads nothing), so it is quiet. The logo and status pass
-arrives with W2: its migration **`023`** is one statement, `UPDATE sync_jobs SET last_run_at = NULL WHERE type='playlist'`,
+arrives with W2: its migration **`024`** (`023` drops the sign-in lockout columns, 2026-10-18) is one statement, `UPDATE sync_jobs SET last_run_at = NULL WHERE type='playlist'`,
 so the first pass (logos, then 2,598 stream checks within the 10-minute budget) runs at the first start after W2 and is
 visible on the Jobs tab - tell the owner.
 
@@ -440,7 +436,7 @@ tvg-ids; rename; moved URL; another playlist's channel is not taken). A delete t
 leaves hand-made and other playlists' channels, awaits an aborted run, one revision, one audit, rollback on failure). A
 foreign-key test (deleting a playlist outside the service still cascades; `foreign_key_check` clean). Sync (a file playlist is
 never read; a URL playlist is re-fetched and writes nothing when unchanged; unreachable still runs steps 3-5; logo cache write,
-dedupe, 7-day skip, a missing file re-downloads, GC skips young files, magic-byte and size and 4096 px refusals; the stream
+dedupe, 7-day skip, a missing file re-downloads, a missing cached file re-downloads, magic-byte and size refusals; the stream
 check live, non-M3U body, BOM, timeout; per-URL verdicts with no host shortcut; compare-and-set skips a channel whose
 `stream_url` changed mid-run; sync writes take no revision; ordering is total; per-playlist flight;
 schedule floor 15 min; run not awaited by the route). Stop and resume (stop mid-check with a gated `fetch` ends `stopped` with
@@ -483,7 +479,7 @@ Each wave is one worker in its own worktree. The coordinator lands each, runs th
 | **W0 docs** (coordinator) | Section 8. | The planning agent says "ready". |
 | **W1a backend schema and import** | `migrate.ts` backup (outside the transaction) and in-transaction `foreign_key_check`; migration `022`; `safe-fetch.ts` (built on `node:https`, 3.8) used by every playlist-content fetch; repositories (playlists, jobs, channels with the joined `source`/`published`/`playlistName`; the public read joins the playlist's `enabled`); the planner (3.6, reading only that playlist's rows); `playlist-import.ts`; routes (`import`, `POST /api/playlists`, `PATCH`, `DELETE` with cascade); `@fastify/multipart`; address-rule public check; stricter M3U detection; **a minimal playlist-job body = step 2 only** (started not awaited, typed result, scheduler non-blocking, 15-minute floor, catalog-only `POST /api/jobs`); removal of the old sync, `sync-seed` playlist half, `PLAYLIST_URLS`, the aggregate route, `playlists.address`, `channels.source` and every use in the inventory below; tests. | Backend suite green; migration test on the test-built v21 database; live: upload and URL import answer in seconds, re-upload of `us.m3u` is `0 created, 0 updated` with no revision bump, and a playlist job run re-reads and records a typed result. No logos or statuses yet (they are NULL; the system is consistent). |
 | **W1b admin wire and import UI** (released together with W1a, no release between) | `url`/view shapes, `playlist-schema`, `FileRow`, the `Source` choice, the import flow, `shared/http` `form`, `NewJobForm` catalog-only, the delete question, playlist-job rows (no delete), `Channels →`, derived `source`/`published`, **and the Jobs `Run` group (no flags, the "Started" notice) and `Last run` words from typed counts** (the Jobs wire files listed below). | The admin matches the backend; section 4.3 rows for Playlists and the Jobs `Run`/`Last run`. |
-| **W2 backend sync steps 3-5, stop, bulk** | `logo-cache.ts`, `stream-check.ts`, `channel-health.ts` (per-URL targeted writes, no revision), `logo-resolver` fixes, the two global semaphores with the per-host cap, abort plumbing and `POST /api/jobs/:id/stop`, `PATCH /api/channels`, the `status`/`playlist` filters, `/logos/c/`, migration `023` (section 6); tests. | Sync tests green; live: after a run logos are on disk, statuses set, `/logos/c/<hash>.png` returns the image; stop and resume work. |
+| **W2 backend sync steps 3-5, stop, bulk** | `logo-cache.ts`, `stream-check.ts`, `channel-health.ts` (per-URL targeted writes, no revision), `logo-resolver` fixes, the two global semaphores with the per-host cap, abort plumbing and `POST /api/jobs/:id/stop`, `PATCH /api/channels`, the `status`/`playlist` filters, `/logos/c/`, migration `024` (section 6); tests. | Sync tests green; live: after a run logos are on disk, statuses set, `/logos/c/<hash>.png` returns the image; stop and resume work. |
 | **W3 admin Jobs, Channels** (after W2) | `Stop`, `Resume` and the Channels tab parts of section 4.1 (stream column, selects, one-call bulk, workspace logo and status). | Section 4.3 rows for Jobs `Stop`/`Resume` and Channels. |
 
 W1a and W1b land and are released together. Between waves the system is consistent (before W2, statuses are NULL).
