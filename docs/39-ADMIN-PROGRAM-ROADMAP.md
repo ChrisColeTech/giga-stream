@@ -61,6 +61,16 @@ F (landing) --> 3a Accounts (35) --+--> 3b Channels + Preview (36) --+          
 
 Retired by this program: `28` Waves 3 to 6 and `29` Waves 7 to 10 as written (their content is split across `35` to `38` and Wave 4).
 
+**Tables: paging and virtualization (`41`, owner 2026-10-17).** Added waves, after the tabs they change have landed: **B4** (backend: paged `GET /api/admin-channels`, new `GET /api/titles/stored`), **T0** (shared windowed `RecordGrid`, paged-list state, selection across pages; runs beside B4), then **T1** (Channels) and **T2** (Titles `Stored | Browse TMDB`) in parallel, then **T3** (Deleted titles, Playlist Status channels, Channel Status playlist). Statuses and file ownership are in `41` section 7; they join the landing order after 3d and R and before Wave 4's sweep. Lists of tens of rows (Providers, Playlists, Jobs, Accounts, the Events drawer) stay plain.
+
+| Wave | What | Worker | Doc | Depends on | Status |
+|---|---|---|---|---|---|
+| B4 | backend paging and the stored-titles route | B4 | `41` | nothing | Not started |
+| T0 | shared windowed grid, paged-list state, selection | T0 | `41` | nothing | Not started |
+| T1 | Channels paged, windowed, searchable | A | `41` | B4, T0, 3b | Not started |
+| T2 | Titles `Stored | Browse TMDB`, `Sync now` | A | `41` | B4, T0, 3c | Not started |
+| T3 | Deleted titles, Playlist Status, Channel Status | A | `41` | T0 (T1 for `source`) | Not started |
+
 ## 4. File ownership per worker
 
 Paths under `src/admin/src/` unless marked. A worker edits only its row; anything else it needs is reported and the coordinator decides.

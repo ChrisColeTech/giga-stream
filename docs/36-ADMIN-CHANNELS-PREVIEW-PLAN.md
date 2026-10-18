@@ -131,6 +131,8 @@ window; type the path.`, and the field is a typed path. `Choose` exists only on 
 
 ### 5.2 The list (`ListGroup`, icon `radio`, title `Channels`, heading action ghost `Refresh`)
 
+> **Superseded for long lists by `41` (owner, 2026-10-17: "the tables are long, why is there no paging and virtualization").** The paragraph below describes a list read whole and drawn whole. A synced playlist makes the Channels list thousands of rows, so it is **server-paged** (`GET /api/admin-channels` gains `limit` / `offset` / `total`, `q`, `kind`, `origin`, `enabled`, `state`, `source`, `sort`, `dir`) and drawn by the **windowed `RecordGrid`** above 100 rows, with a search box, filters and sortable headers (`41` sections 3.1, 4, 5.1, 6). `Refresh` re-reads the rows in view and keeps the scroll position; the header tick selects the loaded rows and `Select all M matching` is a separate step. At or under 100 rows the list is exactly as described here.
+
 `RecordGrid` over the rows of `channelRows`; headings `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
 (`constants/channel-grid.ts`, tracks in rem, the end track fits `Delete Fixture Entertainment?`, a minimum width inside its own
 scroller). Select-all tick `Select all channels` (`mixed` over a part); row tick `Select <name>`; a press on the data cells opens

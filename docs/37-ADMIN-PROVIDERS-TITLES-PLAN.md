@@ -91,6 +91,8 @@ Strict bodies: a PATCH sends only changed fields; `year` 1800 to 2200, `rating` 
 
 ### 4.2 Index
 
+> **Superseded in part by `41` (owner, 2026-10-17: "the titles aren't loading all titles").** The list below is a TMDB **browse** (20 per kind per page, 500 pages, nothing that is only stored); the backend holds far more (10,921 stored on the owner's backend). The Titles list gains a `Stored | Browse TMDB` segment: **`Stored` is the main list**, a server-paged, windowed grid over the new `GET /api/titles/stored` (search, Kind / Origin / Edited / Disabled filters, sortable headers, an `N stored` readout, `Sync now`); **`Browse TMDB` is this section, unchanged**, for finding titles TMDB has that the store lacks. Delete (soft delete) and `Deleted titles` mean the same in both modes (`41` 5.2). Sections 4.1 to 4.4 below describe Browse mode; `41` 5.2 and 5.3 describe Stored mode and how the store grows.
+
 `NewTitleForm` (`NewRecordGroup`, `plus`, `nt-`): **Title** (the record's name, so first), **Kind** (`Segmented` Movie / Series - an ordinary row 2 that switches nothing), **Year**.
 `Create` posts a manual title. The list group (`ListGroup`, `clapperboard`, title `Titles`) heading area holds, in order: the **search** field (carries
 `data-search` so `Ctrl+F` focuses it; runs on `Enter` and on its own button, never as you type), the **Kind chips** (pill `ChipGroup`, `min` 1: at least
