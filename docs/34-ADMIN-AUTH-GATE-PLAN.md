@@ -1,5 +1,9 @@
 # 34 - Admin auth gate plan (Wave 2a)
 
+> **Done (`487b934`, `a19845e`).** The seam of section 5 is now real: the foundation (`07b60d7`) replaced the fixture port with `services/auth-port.ts` and `services/auth.ts` over the request
+> layer, put the tokens in the session slice (`adoptTokens`, `endSession`), and deleted `fixtures/auth-port.ts` and the `?signedin=0` switch; the gate maps refusals with `lib/auth-errors.ts`
+> (any other 4xx is `invalid`, a 5xx or unreadable answer `unreachable`). `35` adds the actor's account id. Sections 3, 4 and 6 to 9 describe the gate as built; the demo credentials of 5 are gone.
+
 **Status: plan, written before the code (branch `admin/auth-gate`, from `family-port`).** Owner: "we forgot the auth
 gate; roll it into the next wave (2a); use the same style as the Giga Images gate; we don't need the full OAuth, just the
 login gate and the login form." Wave 2 built a sign-in page (`28` section 7.1, Appendix A row 73). This wave replaces its
