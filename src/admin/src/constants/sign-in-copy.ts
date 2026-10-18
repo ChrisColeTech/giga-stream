@@ -31,8 +31,5 @@ export const GATE_HEADING = "Sign in";
 export const GATE_NOTICE_TITLE = "Signed out";
 export const SIGNING_IN_LABEL = "Signing in";
 
-/** The brand column (`34` section 2: the reference's lockup, headline and paragraph). */
+/** The brand column (`34` section 2: the reference's lockup and headline). */
 export const GATE_BRAND_HEADLINE = "Run the channels.";
-export const GATE_BRAND_TEXT =
-  "The control room for Giga Stream: live channels, providers, titles, playlists, sync jobs and the people who run " +
-  "them. Sign in with your admin account.";

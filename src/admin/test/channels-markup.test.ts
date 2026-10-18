@@ -67,34 +67,49 @@ describe("the New channel form", () => {
   });
 });
 
-describe("the channels toolbar", () => {
-  const strip = () => {
+describe("the channels toolbar and table strip", () => {
+  const toolbar = () => {
     const html = renderLive(createElement(ChannelsIndex));
     return html.slice(html.indexOf('role="toolbar"'), html.indexOf("New channel"));
   };
+  const table = () => {
+    const html = renderLive(createElement(ChannelsIndex));
+    return html.slice(html.indexOf('aria-label="Channels table"'));
+  };
 
-  it("draws the bulk verbs and Preview →, all waiting for a ticked row", () => {
-    const html = strip();
-    for (const verb of ["Enable", "Disable", "Rebuild", "Preview →"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
-    assert.ok(html.includes('title="Tick a row first"'), "Delete is an armed two-step with the same reason");
+  it("keeps only the Preview arrow in the page toolbar, waiting for a ticked row; no bulk verb is there", () => {
+    const html = toolbar();
+    assert.ok(html.includes('aria-label="Preview. Tick a row first"'));
+    for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(!html.includes(verb), verb);
+    assert.equal((html.match(/<button/g) ?? []).length, 1);
   });
 
-  it("gates Preview → on exactly one ticked row, live or stream", () => {
+  it("draws Refresh in the table strip and the bulk verbs only once a row is ticked", () => {
+    assert.ok(table().includes('aria-label="Refresh channels"'));
+    assert.ok(!table().includes('aria-label="Rebuild'));
+    state().channelsLoaded([live("a")], 1);
+    state().channelTick("a", true);
+    const html = table();
+    for (const verb of ["Enable", "Rebuild"]) assert.ok(html.includes(`aria-label="${verb}`), verb);
+    assert.ok(html.includes(">Delete</button>") && html.includes("selected"));
+  });
+
+  it("gates Preview on exactly one ticked row, live or stream", () => {
     state().channelsLoaded([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
-    assert.ok(strip().includes('aria-label="Preview →. Tick only one row"'));
+    assert.ok(toolbar().includes('aria-label="Preview. Tick only one row"'));
     state().channelTick("a", false);
-    assert.ok(/<button[^>]*>Preview →<\/button>/.test(strip()) && !strip().includes("Preview →. "));
+    assert.ok(/<button[^>]*aria-label="Preview"[^>]*>/.test(toolbar()) && !toolbar().includes("Preview. "));
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {
     state().channelsLoaded([stream("b")], 1);
     state().channelTick("b", true);
-    const html = strip();
+    const html = table();
     assert.ok(html.includes('aria-label="Enable. Every ticked channel is already enabled."'));
     assert.ok(html.includes('aria-label="Rebuild. A stream channel has nothing to rebuild."'));
-    assert.ok(/<button[^>]*>Disable<\/button>/.test(html) && !html.includes("Disable. "));
+    assert.ok(/<button[^>]*aria-label="Disable"[^>]*>/.test(html) && !html.includes("Disable. "));
   });
 });
 

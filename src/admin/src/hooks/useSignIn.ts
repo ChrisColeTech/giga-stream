@@ -5,7 +5,7 @@ import { useAppStore } from "@/store/app-store";
 import type { AuthResult } from "@/types/auth";
 
 /** The Sign in verb: marks the gate submitting, awaits the port, hands the answer to the store and says it on the notice
- *  line (the audit log is read by `SessionState`, mounted once the session starts). A port that rejects counts as unreachable. A second call while one is waiting sends nothing and answers null. */
+ *  line (the audit log is read by `useSessionState`, called by the shell once the session starts). A port that rejects counts as unreachable. A second call while one is waiting sends nothing and answers null. */
 export function useSignIn(): (username: string, password: string) => Promise<AuthResult | null> {
   const beginSignIn = useAppStore((state) => state.beginSignIn);
   const finishSignIn = useAppStore((state) => state.finishSignIn);

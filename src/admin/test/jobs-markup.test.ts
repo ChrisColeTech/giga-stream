@@ -140,25 +140,31 @@ describe("the jobs list", () => {
     assert.ok(html.includes(">Every day<") && html.includes(">Off<"), "the schedule column words");
   });
 
-  it("draws Enable, Disable, Delete and the filled Run job, each disabled with `Tick a job first`", () => {
+  it("draws Refresh in the table strip and, once a job is ticked, Enable, Disable, the armed Delete and Run job", () => {
     state().jobsLoaded([job(1)]);
-    const html = page();
-    for (const verb of ["Enable", "Disable", "Run job"]) {
-      assert.ok(html.includes(`aria-label="${verb}. Tick a job first"`), verb);
-    }
-    assert.ok(at(html, "Enable") < at(html, "Run job"));
+    let html = page();
+    const table = (): string => html.slice(html.indexOf('aria-label="Jobs table"'));
+    assert.ok(table().includes('aria-label="Refresh jobs"') && !table().includes('aria-label="Run job'));
+    assert.ok(!html.slice(0, html.indexOf("New job")).includes("Run job"), "no table verb in the page toolbar");
+    state().jobTick(1, true);
+    html = page();
+    for (const verb of ["Enable", "Run job"]) assert.ok(table().includes(`aria-label="${verb}`), verb);
+    assert.ok(table().includes(">Delete</button>"));
+    assert.ok(at(table(), "Enable") < at(table(), "Run job"));
+    assert.ok(/<button[^>]*aria-label="Run job"[^>]*size-ctl-md|<button[^>]*size-ctl-md[^>]*aria-label="Run job"/.test(table()), "Run job is an icon");
   });
 
   it("disables Run job with the gate's reason for a ticked job whose playlist is disabled", () => {
     state().jobsPlaylistsLoaded([playlist(1, false)]);
     state().jobsLoaded([job(1)]);
     state().jobTick(1, true);
-    assert.ok(page().includes('aria-label="Run job. A ticked job&#x27;s playlist is disabled."'));
+    const html = page();
+    assert.ok(html.slice(html.indexOf('aria-label="Jobs table"')).includes('aria-label="Run job. A ticked job&#x27;s playlist is disabled."'));
   });
 });
 
 describe("a job's workspace", () => {
-  it("a playlist job: rail, Details in order, Run with Dry run and Prune, Last run counts, Channels →", () => {
+  it("a playlist job: rail, Details in order, Run with Dry run and Prune, Last run counts, the Channels arrow", () => {
     const counts = { created: 2, updated: 1, refusalExamples: ["bad address"], createdIds: ["ch_a", "ch_b"] };
     state().jobsPlaylistsLoaded([playlist(1)]);
     state().jobsLoaded([job(1, { lastRunAt: 5, lastOutcome: "Synced: 2 created, 1 updated.", lastCounts: counts })]);
@@ -171,26 +177,29 @@ describe("a job's workspace", () => {
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
     assert.ok(html.includes('aria-label="Dry run"') && html.includes('aria-label="Prune"'));
     assert.ok(html.includes("2 created · 1 updated") && html.includes(">bad address<"));
-    assert.ok(html.includes(">ch_a</button>") && html.includes("Channels →") && !html.includes("Titles →"));
+    assert.ok(html.includes(">ch_a</button>") && /<button[^>]*aria-label="Channels"/.test(html) && !/aria-label="Titles"/.test(html));
     assert.ok(html.includes('aria-label="Interval"') && html.includes('value="24h"'));
+    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'), "the commit ends Schedule");
+    assert.ok(html.includes('aria-label="Refresh last run"'), "Refresh is an icon on the State row");
   });
 
-  it("a catalog job: Scope, Kind and Pages, no Dry run, Titles and a shimmer Stale, Titles →", () => {
+  it("a catalog job: Scope, Kind and Pages, no Dry run, Titles and a shimmer Stale, the Titles arrow", () => {
     state().jobsLoaded([job(4, { ...CATALOG, lastRunAt: 5, lastOutcome: "ok", lastCounts: { titles: 1240 } })]);
     state().openWorkspace("jobs", "4");
     const html = page();
     assert.ok(html.includes('aria-label="Scope"') && html.includes('aria-label="Pages"'));
     assert.ok(!html.includes('aria-label="Dry run"') && !html.includes('aria-label="Playlist"'));
-    assert.ok(html.includes(">1240<") && html.includes("animate-skel-shimmer") && html.includes("Titles →"));
+    assert.ok(html.includes(">1240<") && html.includes("animate-skel-shimmer") && /<button[^>]*aria-label="Titles"/.test(html));
     assert.ok(html.includes(">Run job</button>"), "an enabled catalog job can run");
+    assert.ok(!html.includes("text-accent-ink") || html.split("text-accent-ink").length <= 2, "Save details is the one primary");
   });
 
-  it("disables the workspace's Run job for a disabled job, and shows a bad interval under its row", () => {
+  it("disables the workspace's Run job for a disabled job, and shows a bad interval under its row (a row error, not a paragraph)", () => {
     state().jobsLoaded([job(1, { enabled: false })]);
     state().openWorkspace("jobs", "1");
     assert.ok(page().includes('aria-label="Run job. Jobs that are disabled cannot run."'));
     const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
-    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined };
+    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined, save: { onPress: () => undefined } };
     const html = renderLive(createElement(JobScheduleGroup, props));
     assert.ok(html.includes('role="alert"') && html.includes(sentence) && html.includes('aria-invalid="true"'));
   });

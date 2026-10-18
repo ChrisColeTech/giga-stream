@@ -1,7 +1,8 @@
-import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
+import { BULK_ICONS } from "@/constants/bulk-icons";
 import { SYNC_NOW } from "@/constants/playlist-copy";
-import type { BulkNote, BulkWords } from "@/lib/bulk-plan";
+import type { BulkWords } from "@/lib/bulk-plan";
 import {
   PLAYLIST_BULK_ORDER,
   PLAYLIST_BULK_WORDS,
@@ -15,10 +16,8 @@ import { useBulkAction } from "./useBulkAction";
 import { usePlaylistActions } from "./usePlaylistActions";
 
 export interface PlaylistBulk {
-  /** The strip's bulk verbs, in order, ghost, always drawn. */
-  readonly verbs: readonly ToolbarVerb[];
-  readonly notes: readonly BulkNote[];
-  readonly dismiss: () => void;
+  /** The table strip's bulk verbs, in order, always drawn; Delete carries its armed question. */
+  readonly verbs: readonly StripVerb[];
 }
 
 const LABELS: Readonly<Record<PlaylistBulkVerb, string>> = {
@@ -28,9 +27,9 @@ const LABELS: Readonly<Record<PlaylistBulkVerb, string>> = {
   delete: BULK_DELETE,
 };
 
-/** The Playlists toolbar's bulk verbs over the ticked rows (`38` section 3.2): Sync now (each playlist's own job, one
+/** The Playlists table strip's bulk verbs over the ticked rows (`38` section 3.2): Sync now (each playlist's own job, one
  *  after another), Enable, Disable and an armed Delete. Each runs through the shared bulk runner; the rows that
- *  finished are unticked, failed and skipped rows stay ticked and are listed under the strip. Delete and Sync now mark the Jobs
+ *  finished are unticked, failed and skipped rows stay ticked and are Events rows. Delete and Sync now mark the Jobs
  *  and Channels tabs stale once at the end; Enable and Disable mark Jobs (its gate reads the playlist's state). */
 export function usePlaylistBulk(): PlaylistBulk {
   const { flows } = usePlaylistActions();
@@ -40,7 +39,7 @@ export function usePlaylistBulk(): PlaylistBulk {
   const jobFor = useAppStore((state) => state.playlists.jobFor);
   const unreachable = useAppStore((state) => state.playlists.unreachable);
 
-  const verbs = PLAYLIST_BULK_ORDER.map((verb): ToolbarVerb => {
+  const verbs = PLAYLIST_BULK_ORDER.map((verb): StripVerb => {
     const plan = planPlaylistBulk(verb, items, ticked, jobFor);
     const count = plan.runnable.length;
     const press = (): void => {
@@ -64,11 +63,11 @@ export function usePlaylistBulk(): PlaylistBulk {
     return {
       id: verb,
       label: LABELS[verb],
-      tone: "ghost",
+      icon: BULK_ICONS[verb],
       reason: playlistVerbReason(verb, plan, ticked.length, { busy: bulk.running, unreachable }),
       onPress: press,
       ...(verb === "delete" && { question: `Delete ${count} ${count === 1 ? "playlist" : "playlists"}?` }),
     };
   });
-  return { verbs, notes: bulk.notes, dismiss: bulk.dismiss };
+  return { verbs };
 }

@@ -667,3 +667,17 @@ guard and the earlier `ReasonButton` are dropped), **41** (the rail is the templ
 sash is not built), **12** (a New form's `Create` is disabled with a reason instead of pressed and refused), **32** (the index
 list takes the template's `CollectionRows` vocabulary, with the mockup's tick column, columns and state word), and **60** (the
 Settings window is the template's window, at its size, resizable and remembered).
+
+## Compliance pass (2026-10-17, branch `fix/admin-guide-compliance`)
+
+The admin was brought to `01` sections 4, 5, 6, 8 and 9 without relaxing a rule. What replaced what: a list group's
+heading carries nothing (`Group` has no `action` slot); `Refresh`, `Newer`/`Older` and the bulk verbs are the one
+`TableStrip` (`src/shared/ui/src/lists/TableStrip.tsx`) directly above each table, the bulk part drawn only while rows
+are ticked (count in the strip heading style, icon verbs, the armed `Delete`, `Clear selection`); the page toolbar is
+icon buttons only and holds just the forward arrow (`Preview`, `Titles`, `Jobs`, `Channels`); a workspace's `Save`
+becomes `Save details`, the one primary, ending its last editable group, and `Discard changes` is a ghost verb in the
+form's pinned `Actions`; `Rebuild`, `Revert to ...` and the Status `Refresh` moved to icon or ghost verbs in their rows or
+groups; `Run job` on a job is ghost (the form has one primary); `BulkNotes` is gone (a run's failed and skipped records
+are warning rows of the Events drawer, then the one summary on the notice line); the Preview window shows a state word,
+its failure sentence goes to the notice line; the gate's brand paragraph and the question-less note (now the Question
+row's tip) are gone. Open: About's backend rows are dashes until `/healthz` is wired through the request layer.

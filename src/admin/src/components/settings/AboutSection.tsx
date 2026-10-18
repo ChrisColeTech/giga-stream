@@ -2,36 +2,35 @@ import { Info } from "lucide-react";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
-import { APP_VERSION, FACT_UNKNOWN, SETTINGS_LABELS } from "@/constants/settings-sections";
-import { hostAvailable } from "@/services/admin-host";
+import { ABOUT_TIPS, APP_VERSION, FACT_UNKNOWN, SETTINGS_LABELS } from "@/constants/settings-sections";
+import { useAboutFacts } from "@/hooks/useAboutFacts";
 
 /* A read-only fact: mono, muted, one control high (the template's About). */
 const FACT = "flex h-9 items-center font-mono text-sm text-muted";
 
-const address = (): string => (typeof window === "undefined" ? FACT_UNKNOWN : window.location.origin);
-
 /** About: the version, the backend's version and revision, the address in use, the runtime and whether TMDB is
  *  configured. The fixture build supplies the backend's facts; `29` reads them from `/healthz`. */
 export function AboutSection() {
+  const facts = useAboutFacts();
   return (
     <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.about" title="About" icon={Info} last>
-        <Row label="Version" tip="The version of this admin app.">
+        <Row label="Version" tip={ABOUT_TIPS.version}>
           <span className={FACT}>{APP_VERSION}</span>
         </Row>
-        <Row label="Backend version" tip="The version of the admin backend this app talks to.">
+        <Row label="Backend version" tip={ABOUT_TIPS.backendVersion}>
           <span className={FACT}>{FACT_UNKNOWN}</span>
         </Row>
-        <Row label="Backend revision" tip="The revision of the backend's source it was built from.">
+        <Row label="Backend revision" tip={ABOUT_TIPS.backendRevision}>
           <span className={FACT}>{FACT_UNKNOWN}</span>
         </Row>
-        <Row label="Address" tip="The address this page was loaded from.">
-          <span className={FACT}>{address()}</span>
+        <Row label="Address" tip={ABOUT_TIPS.address}>
+          <span className={FACT}>{facts.address}</span>
         </Row>
-        <Row label="Runtime" tip="Electron in the backend's own window, or a browser tab.">
-          <span className={FACT}>{hostAvailable() ? "Electron" : "Browser"}</span>
+        <Row label="Runtime" tip={ABOUT_TIPS.runtime}>
+          <span className={FACT}>{facts.runtime}</span>
         </Row>
-        <Row label="TMDB" tip="Whether the backend has a TMDB key to sync the catalog with.">
+        <Row label="TMDB" tip={ABOUT_TIPS.tmdb}>
           <span className={FACT}>{FACT_UNKNOWN}</span>
         </Row>
       </Group>

@@ -18,19 +18,17 @@ export interface JobRunGroupProps {
 }
 
 /** `Run` (`38` section 4.3): a playlist job's `Dry run` and `Prune` switches, starting from the job's own flags and
- *  sent with this run only (never saved), then the one primary `Run job`. A refusal (`sync.busy`, `job.disabled` with
- *  its reason, `tmdb.unavailable`, `playlist.unreachable`, `playlist.invalid`, `playlist.busy`) is the control's error
- *  under it, and the notice. */
+ *  sent with this run only (never saved), then the ghost `Run job` (the form's one primary is `Save details`). A refusal
+ *  (`sync.busy`, `job.disabled` with its reason, `tmdb.unavailable`, `playlist.unreachable`, `playlist.invalid`,
+ *  `playlist.busy`) is said once, on the notice line. */
 export function JobRunGroup({ job, reason, onRun }: JobRunGroupProps) {
   const [toggles, setToggles] = useState<RunToggles>(() => togglesOf(job));
-  const [error, setError] = useState<string | null>(null);
   const playlist = job.type === "playlist";
 
+  /* A refusal is said once, on the notice line, by the flow that ran the job. */
   const run = async (): Promise<void> => {
     if (reason !== undefined) return;
-    setError(null);
-    const result = await onRun(toggles);
-    if (!result.ok && result.dropped !== true) setError(result.sentence);
+    await onRun(toggles);
   };
 
   return (
@@ -54,15 +52,10 @@ export function JobRunGroup({ job, reason, onRun }: JobRunGroupProps) {
         </>
       )}
       <Actions>
-        <Button variant="primary" reason={reason} onClick={() => void run()}>
+        <Button variant="ghost" reason={reason} onClick={() => void run()}>
           {RUN_JOB}
         </Button>
       </Actions>
-      {error !== null && (
-        <p className="m-0 text-right text-sm leading-5 text-st-failed" role="alert">
-          {error}
-        </p>
-      )}
     </Group>
   );
 }

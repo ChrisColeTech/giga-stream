@@ -4,7 +4,7 @@ import { Actions } from "@giga/ui/form/Actions";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
-import { FACT_UNKNOWN, NOT_SIGNED_IN, SETTINGS_LABELS } from "@/constants/settings-sections";
+import { ABOUT_TIPS, FACT_UNKNOWN, NOT_SIGNED_IN, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { useSignOut } from "@/hooks/useSignOut";
 import { useAppStore } from "@/store/app-store";
 
@@ -21,7 +21,7 @@ export function SessionSection() {
   return (
     <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.session" title="Session" icon={User} last>
-        <Row label="Signed in as" tip="The account this window is signed in with.">
+        <Row label="Signed in as" tip={ABOUT_TIPS.signedInAs}>
           <span className={FACT} title={unknown}>
             {actor?.username ?? FACT_UNKNOWN}
           </span>

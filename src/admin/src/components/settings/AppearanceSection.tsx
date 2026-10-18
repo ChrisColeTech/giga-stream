@@ -11,6 +11,7 @@ import type { MotionPreference } from "@giga/ui/hooks/useReduceMotion";
 import type { ThemeChoice } from "@giga/ui/store/chrome-types";
 import {
   APPEARANCE_DEFAULTS,
+  APPEARANCE_TIPS,
   RESTORE_AT_DEFAULTS,
   RESTORE_TITLE,
   SETTINGS_LABELS,
@@ -50,22 +51,16 @@ export function AppearanceSection() {
   return (
     <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.appearance" title="Appearance" icon={Palette} last>
-        <Row
-          label="Theme"
-          tip="Dark or light colors for the whole app, or System to follow the desktop's own light or dark mode, switching when it does."
-        >
+        <Row label="Theme" tip={APPEARANCE_TIPS.theme}>
           <Segmented aria-label="Theme" options={THEMES} value={theme} onChange={setTheme} />
         </Row>
-        <Row
-          label="Reduce motion"
-          tip="Off keeps panels and sections sliding; On skips every animation; Follow system honors the desktop's setting."
-        >
+        <Row label="Reduce motion" tip={APPEARANCE_TIPS.motion}>
           <Segmented aria-label="Reduce motion" options={MOTIONS} value={motion} onChange={setMotion} />
         </Row>
-        <Row label="Accent" tip="The highlight color for selection, focus, progress and the one main button on each screen.">
+        <Row label="Accent" tip={APPEARANCE_TIPS.accent}>
           <Swatches value={accent} onChange={setAccent} options={ACCENT_SWATCHES} label="Accent" />
         </Row>
-        <Row label="UI zoom" tip="Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.">
+        <Row label="UI zoom" tip={APPEARANCE_TIPS.zoom}>
           <ZoomStepper value={uiZoom} onChange={setZoom} />
         </Row>
         <Actions>

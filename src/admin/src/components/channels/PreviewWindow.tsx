@@ -1,6 +1,7 @@
 import { workSpec } from "@giga/ui/lib/child-metrics";
 import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 import { PREVIEW_SIZE, PREVIEW_TITLE } from "@/constants/preview-copy";
+import { usePreviewNotice } from "@/hooks/usePreviewNotice";
 import { usePreviewPlayer } from "@/hooks/usePreviewPlayer";
 import { usePreviewSession } from "@/hooks/usePreviewSession";
 import { previewLine, previewTarget } from "@/lib/preview-state";
@@ -15,6 +16,7 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
   const target = previewTarget(session.channel, session.reading);
   const player = usePreviewPlayer(target.address, session.attempt);
   const status = previewLine(session.channel, session.reading, player.status);
+  usePreviewNotice(status.notice);
   const closeOverlay = useAppStore((state) => state.closeOverlay);
 
   /* The only way the window closes: every request stops first, then the flow ends. The request value stays until the
@@ -35,7 +37,7 @@ function PreviewBody({ channelId }: { readonly channelId: string }) {
 }
 
 /** The Preview window (`36` section 8, `26` 4.5a): a modal work window that plays one saved channel through hls.js, a live
- *  channel on its own `/live/<id>/` path and a stream channel on its address, with one status line and `Retry`. Moved by
+ *  channel on its own `/live/<id>/` path and a stream channel on its address, with one state word under the stage and `Retry`. Moved by
  *  its header, resized by its edges, closed by its X or Escape, its bounds remembered for the run. Each open (a new
  *  serial) reads the channel afresh. */
 export function PreviewWindow() {

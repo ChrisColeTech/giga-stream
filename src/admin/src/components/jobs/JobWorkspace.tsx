@@ -1,16 +1,20 @@
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
+import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import { JOB_GONE, JOB_SECTIONS, JOB_SECTION_KEYS, JOB_WORKSPACE_LABELS } from "@/constants/job-copy";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useJobActions } from "@/hooks/useJobActions";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, sameJobDraft, type RunToggles } from "@/lib/job-draft";
 import { workspaceRunReason } from "@/lib/job-run-gate";
 import { idOf } from "@/lib/playlist-rows";
+import { changeReason } from "@/lib/workspace-verbs";
 import type { JobResult } from "@/services/job-flows";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { useAppStore } from "@/store/app-store";
@@ -32,11 +36,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   const spy = useScrollSpy(JOB_SECTION_KEYS, JOB_SECTION_KEYS[0] ?? "jw-details");
   const runKey = `run:${job.id}`;
 
-  /* The list changed under the workspace (a refresh, a run, a save): a clean form follows the new record. */
-  useEffect(() => {
-    const next = draftOf(job);
-    if (!form.dirty || sameJobDraft(form.draft, next)) form.reset(next);
-  }, [job]);
+  useFollowRecord(form, job, draftOf, sameJobDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();
@@ -49,8 +49,8 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   const runReason = workspaceRunReason(job, { dirty: form.dirty, busy: isBusy(runKey), unreachable, playlists });
   const forward =
     job.type === "playlist"
-      ? { label: "Channels →", onPress: () => requestTab("channels") }
-      : { label: "Titles →", onPress: () => requestTab("titles") };
+      ? { label: "Channels", onPress: () => requestTab("channels") }
+      : { label: "Titles", onPress: () => requestTab("titles") };
 
   return (
     <WorkspaceFrame
@@ -64,20 +64,9 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
           spy={spy}
         />
       }
-      toolbar={
-        <WorkspaceToolbar
-          label="Job toolbar"
-          dirty={form.dirty}
-          discard={{ label: "Discard changes", onPress: form.discard }}
-          save={{
-            label: "Save",
-            onPress: () => void save(),
-            reason: saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined,
-          }}
-          forward={forward}
-        />
-      }
+      toolbar={<WorkspaceToolbar label="Job toolbar" forward={forward} />}
     >
+      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={LABEL_COLUMN}>
           <div ref={spy.bind("jw-details")}>
@@ -95,6 +84,10 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
               job={job}
               error={form.errors["schedule"]}
               onChange={(schedule) => form.set({ schedule })}
+              save={{
+                onPress: () => void save(),
+                reason: changeReason(form.dirty, saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined),
+              }}
             />
           </div>
           <div ref={spy.bind("jw-run")}>
@@ -115,20 +108,12 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
 }
 
 /** One job's workspace (`38` section 4.3), opened from the list already held: the rail (`‹ Jobs`, Details, Schedule,
- *  Run, Last run), a toolbar of `Discard changes`, `Save` and `Channels →` (a playlist job) or `Titles →` (a catalog
- *  job), and one scrolling page. A job gone from a read list (its playlist deleted elsewhere) closes with a notice. */
+ *  Run, Last run), a toolbar with the `Channels` arrow (a playlist job) or the `Titles` arrow (a catalog job),
+ *  the pinned `Discard changes` and one scrolling page whose Schedule group ends with `Save details`. A job gone from a read list (its playlist deleted elsewhere) closes with a notice. */
 export function JobWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const job = useAppStore((state) => state.jobs.items.find((item) => item.id === idOf(id)));
   const status = useAppStore((state) => state.jobs.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
-  const gone = job === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("jobs");
-    say(JOB_GONE, "warn", "Job");
-  }, [gone, closeWorkspace, say]);
+  useWorkspaceGone("jobs", job === undefined && status === "ready", JOB_GONE, "Job");
 
   return job === undefined ? null : <Editor key={job.id} job={job} active={active} />;
 }

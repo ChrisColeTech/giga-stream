@@ -1,4 +1,10 @@
-import { NO_CHANNEL, PLAYER_ERROR_TEXT, READING_WORD } from "@/constants/preview-copy";
+import {
+  MISSING_WORD,
+  NO_CHANNEL,
+  PLAYER_ERROR_TEXT,
+  READING_WORD,
+  UNSUPPORTED_NOTICE,
+} from "@/constants/preview-copy";
 import type { AdminChannel } from "@/types/admin-channel";
 import { previewAddress } from "./preview-address";
 
@@ -32,27 +38,35 @@ export function previewTarget(channel: AdminChannel | undefined, reading: boolea
 }
 
 export interface PreviewLine {
+  /** The window's state word (`live`, `failed`, `missing`, `manifest failed`): never a sentence. */
   readonly line: string;
   readonly retry: boolean;
+  /** The one sentence that explains a failed state, said once on the notice line; absent when the word is enough. */
+  readonly notice?: string;
 }
 
 const errorText = (error: PlayerError): string => PLAYER_ERROR_TEXT[error];
 
-/** The mono line under the stage: a live channel's state word (and a failed one's problem), then the player's error; a
- *  stream channel's player phase or error. `Retry` while `failed`, `stopped`, missing, or the player failed. */
+/** The window's state word under the stage: a live channel's state (and the player's error after it), a stream
+ *  channel's player phase or error. `Retry` while `failed`, `stopped`, missing, or the player failed. A failed channel's
+ *  problem and the refusals that need words are the `notice`, not part of the line. */
 export function previewLine(channel: AdminChannel | undefined, reading: boolean, player: PlayerStatus): PreviewLine {
   if (reading) return { line: READING_WORD, retry: false };
-  if (channel === undefined) return { line: NO_CHANNEL, retry: true };
+  if (channel === undefined) return { line: MISSING_WORD, retry: true, notice: NO_CHANNEL };
   const failed = player.error === null ? null : errorText(player.error);
+  const unsupported = player.error === "unsupported" ? { notice: UNSUPPORTED_NOTICE } : {};
   if (channel.kind === "stream") {
-    return failed === null ? { line: player.phase === "playing" ? "playing" : "loading", retry: false } : { line: failed, retry: true };
+    return failed === null
+      ? { line: player.phase === "playing" ? "playing" : "loading", retry: false }
+      : { line: failed, retry: true, ...unsupported };
   }
   const parts: string[] = [channel.state];
-  if (channel.state === "failed" && channel.problem !== undefined) parts.push(channel.problem);
   const attached = channel.state === "live" || channel.state === "restarting";
   if (attached && failed !== null) parts.push(failed);
+  const problem = channel.state === "failed" && channel.problem !== undefined ? { notice: channel.problem } : unsupported;
   return {
     line: parts.join(" · "),
     retry: channel.state === "failed" || channel.state === "stopped" || (attached && failed !== null),
+    ...problem,
   };
 }

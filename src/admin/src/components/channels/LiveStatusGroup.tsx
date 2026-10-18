@@ -1,5 +1,6 @@
-import { Activity, Copy, RefreshCw } from "lucide-react";
+import { Activity, Copy, Hammer, RefreshCw } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
+import { Actions } from "@giga/ui/form/Actions";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { Input } from "@giga/ui/controls/Input";
 import { cn } from "@giga/ui/lib/cn";
@@ -18,28 +19,36 @@ const FACT = "flex h-9 min-w-0 items-center font-mono text-sm text-muted";
 
 export interface LiveStatusGroupProps {
   readonly channel: LiveAdminChannel;
-  /** The heading's `Refresh` reason (`Loading.`), or undefined. */
+  /** The State row's `Refresh status` reason (`Loading.`), or undefined. */
   readonly refreshReason: string | undefined;
   readonly onRefresh: () => void;
+  /** `Rebuild`'s reason (`Save the channel first`, `Enable the channel to rebuild it.`), or undefined. */
+  readonly rebuildReason: string | undefined;
+  readonly onRebuild: () => void;
   readonly onCopy: (address: string) => void;
 }
 
-/** A live channel's `Status` (`36` section 6), read-only, with a heading `Refresh` that reads the channels again (the only
- *  way a build is seen to finish: nothing polls). While the channel is `preparing`, `starting` or `restarting` its facts
- *  are shimmer lines in their rows; otherwise the state word, a failed channel's problem, the renditions, the playlist
- *  with the video on air lit, and the stream address with a copy button. */
-export function LiveStatusGroup({ channel, refreshReason, onRefresh, onCopy }: LiveStatusGroupProps) {
+/** A live channel's `Status` (`36` section 6), read-only. The State row ends with a `Refresh status` icon that reads the
+ *  channels again (the only way a build is seen to finish: nothing polls); the group ends with the ghost `Rebuild`. While
+ *  the channel is `preparing`, `starting` or `restarting` its facts are shimmer lines in their rows; otherwise the state
+ *  word, a failed channel's problem, the renditions, the playlist with the video on air lit, and the stream address with
+ *  a copy button. */
+export function LiveStatusGroup(props: LiveStatusGroupProps) {
+  const { channel, refreshReason, onRefresh, rebuildReason, onRebuild, onCopy } = props;
   const building = isBuilding(channel);
   const shimmer = (width: string) => <span className={SHIMMER} style={{ width }} aria-hidden />;
-  const refresh = (
-    <Button variant="ghost" size="sm" reason={refreshReason} onClick={onRefresh}>
-      <RefreshCw aria-hidden /> Refresh
-    </Button>
-  );
 
   return (
-    <Group id="lv-status" icon={Activity} title="Status" action={refresh} last>
-      <Row label="State" tip={CHANNEL_TIPS.state}>
+    <Group id="lv-status" icon={Activity} title="Status" last>
+      <Row
+        label="State"
+        tip={CHANNEL_TIPS.state}
+        trailing={
+          <IconButton aria-label="Refresh status" title="Refresh status" reason={refreshReason} onClick={onRefresh}>
+            <RefreshCw className="size-3.5" aria-hidden />
+          </IconButton>
+        }
+      >
         <span className={FACT}>{building ? shimmer("30%") : <StateWord state={channelState(channel)} />}</span>
       </Row>
       {!building && channel.state === "failed" && channel.problem !== undefined && (
@@ -66,6 +75,11 @@ export function LiveStatusGroup({ channel, refreshReason, onRefresh, onCopy }: L
       >
         <Input value={channel.streamUrl} readOnly className={cn(FIELD_CONTROL, "font-mono text-muted")} aria-label="Stream address" />
       </Row>
+      <Actions>
+        <Button variant="ghost" reason={rebuildReason} onClick={onRebuild}>
+          <Hammer aria-hidden /> Rebuild
+        </Button>
+      </Actions>
     </Group>
   );
 }

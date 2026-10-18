@@ -45,6 +45,26 @@ export const ZOOM_AT_MAX = `The largest zoom is ${ZOOM_MAX}.`;
 export const FACT_UNKNOWN = "—";
 export const NOT_SIGNED_IN = "You are not signed in.";
 
+/** The tips on the Appearance rows (`01` section 9: an explanation is a tooltip, never text under a control). */
+export const APPEARANCE_TIPS = {
+  theme:
+    "Dark or light colors for the whole app, or System to follow the desktop's own light or dark mode, switching when it does.",
+  motion: "Off keeps panels and sections sliding; On skips every animation; Follow system honors the desktop's setting.",
+  accent: "The highlight color for selection, focus, progress and the one main button on each screen.",
+  zoom: "Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.",
+} as const;
+
+/** The tips on the About rows and the Session row. */
+export const ABOUT_TIPS = {
+  version: "The version of this admin app.",
+  backendVersion: "The version of the admin backend this app talks to.",
+  backendRevision: "The revision of the backend's source it was built from.",
+  address: "The address this page was loaded from.",
+  runtime: "Electron in the backend's own window, or a browser tab.",
+  tmdb: "Whether the backend has a TMDB key to sync the catalog with.",
+  signedInAs: "The account this window is signed in with.",
+} as const;
+
 export const RESTORE_AT_DEFAULTS = "Appearance is already at its defaults.";
 export const RESTORE_TITLE = "Dark, Follow system, Amber and a zoom of 1";
 

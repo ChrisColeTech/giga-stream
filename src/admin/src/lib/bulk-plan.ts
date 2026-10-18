@@ -81,7 +81,8 @@ export function bulkSummary<Id>(words: BulkWords, outcome: BulkOutcome<Id>): { s
   return { sentence: `${parts.join("; ")}.`, tone: trouble ? "warn" : "info" };
 }
 
-/** What stays listed under the toolbar after a run: every failure and every skip, with its sentence. */
+/** What a run leaves to say per record: every failure and every skip, with its sentence. The runner writes each as a
+ *  warning row of the Events drawer (it is never a list in the page). */
 export interface BulkNote {
   readonly id: string;
   readonly label: string;

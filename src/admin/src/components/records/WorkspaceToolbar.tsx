@@ -1,13 +1,15 @@
 import { ToolbarStrip } from "@giga/ui/shell/ToolbarStrip";
-import { workspaceVerbs, type WorkspaceVerbs } from "@/lib/workspace-verbs";
+import { forwardVerbs, type ToolbarAction } from "@/lib/workspace-verbs";
 
-export interface WorkspaceToolbarProps extends WorkspaceVerbs {
+export interface WorkspaceToolbarProps {
   /** The strip's accessible name, `Channel toolbar`. */
   readonly label: string;
+  /** The page's forward verb (`Titles`), an arrow icon; absent on a page that has none (Accounts). */
+  readonly forward?: ToolbarAction;
 }
 
-/** A workspace's toolbar strip: `Discard changes`, `Save`, and the page's forward verb. ONE Save per page (`28` section
- *  9, item 1). The verbs and their reasons are `workspaceVerbs`; the strip is the library's. */
-export function WorkspaceToolbar({ label, ...verbs }: WorkspaceToolbarProps) {
-  return <ToolbarStrip label={label} verbs={workspaceVerbs(verbs)} />;
+/** A workspace's toolbar strip: the forward arrow and nothing else. Save ends the form's body (`SaveDetails`) and
+ *  Discard is the form's pinned ghost verb (`DiscardBar`), as in the Collections window (`01` section 9). */
+export function WorkspaceToolbar({ label, forward }: WorkspaceToolbarProps) {
+  return <ToolbarStrip label={label} verbs={forwardVerbs(forward)} />;
 }

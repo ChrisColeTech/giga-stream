@@ -4,6 +4,8 @@ import { Segmented } from "@giga/ui/controls/Segmented";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
+import { SaveDetails } from "@/components/records/SaveDetails";
+import type { SaveVerb } from "@/lib/workspace-verbs";
 import { MIN_VARIANTS, MIN_VARIANTS_REASON, VARIANTS } from "@/constants/channel-copy";
 import { CHANNEL_TIPS } from "@/constants/channel-tips";
 import { toggleVariant, type LiveDraft } from "@/lib/channel-draft";
@@ -21,12 +23,14 @@ const isVariant = (value: string): value is Variant => VARIANTS.some((variant) =
 export interface PlaybackGroupProps {
   readonly draft: LiveDraft;
   readonly onChange: (patch: Partial<LiveDraft>) => void;
+  /** The form's one commit, ending this last editable group. */
+  readonly save: SaveVerb;
 }
 
 /** A live channel's `Playback` (`36` section 6): Mode (Loop or Encode, the cost in the tip), Captions, and the Qualities as
  *  any-of pills that keep at least two: the last two lit cannot be switched off, with the reason as their title. A change
  *  here saves and rebuilds the channel. */
-export function PlaybackGroup({ draft, onChange }: PlaybackGroupProps) {
+export function PlaybackGroup({ draft, onChange, save }: PlaybackGroupProps) {
   return (
     <Group id="lv-playback" icon={Play} title="Playback">
       <Row label="Mode" tip={CHANNEL_TIPS.mode}>
@@ -49,6 +53,7 @@ export function PlaybackGroup({ draft, onChange }: PlaybackGroupProps) {
           }}
         />
       </Row>
+      <SaveDetails save={save} />
     </Group>
   );
 }

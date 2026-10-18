@@ -10,13 +10,15 @@ import { cn } from '../lib/cn'
  *  The owner's reason, twice: the subtitles "are not very helpful, they just describe whats on the screen… they
  *  are just filler", and later, "i didnt ask for paragraphs". Explanation belongs in a Row's `tip`; state belongs
  *  in `badge`; a genuine legend the reader cannot infer belongs in the body as a `Wide` sentence. If you are
- *  reaching for a subtitle, you are describing the screen to someone already looking at it. */
+ *  reaching for a subtitle, you are describing the screen to someone already looking at it.
+ *
+ *  THERE IS NO `action` either (removed 2026-10-17, `01` section 9 Headings): a heading is a role and carries no buttons.
+ *  A table's verbs are the table strip's (`lists/TableStrip.tsx`), a form's commit ends its body (`Actions`). */
 export function Group({
   id,
   icon: Icon,
   title,
   badge,
-  action,
   children,
   className,
   last = false,
@@ -27,7 +29,6 @@ export function Group({
   icon?: LucideIcon
   title: string
   badge?: string
-  action?: ReactNode
   children: ReactNode
   className?: string
   last?: boolean
@@ -67,7 +68,6 @@ export function Group({
         ) : (
           heading
         )}
-        {action !== undefined && <div className="flex flex-none items-center gap-2">{action}</div>}
         {collapsible && (
           <button
             type="button"

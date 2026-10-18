@@ -4,7 +4,9 @@ import { Radio } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TabPage } from "@/components/chrome/TabPage";
+import { DiscardBar } from "@/components/records/DiscardBar";
 import { IndexSkeleton } from "@/components/records/IndexSkeleton";
+import { SaveDetails } from "@/components/records/SaveDetails";
 import { ListGroup } from "@/components/records/ListGroup";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { RecordRail } from "@/components/records/RecordRail";
@@ -57,19 +59,34 @@ describe("the New <record> frame", () => {
 });
 
 describe("the list frame", () => {
-  it("draws its title, the action slot and the list, and no splitter after it", () => {
+  it("draws its title, the table strip and the list, and no splitter after it", () => {
     const html = renderToStaticMarkup(
       createElement(ListGroup, {
         id: "ch-list",
         icon: Radio,
         title: "Channels",
-        action: createElement("button", null, "Refresh"),
+        strip: createElement("div", { role: "toolbar" }, "STRIP"),
         children: "LIST",
       }),
     );
-    assert.ok(html.includes(">Channels</h2>") && html.includes(">Refresh</button>") && html.includes("LIST"));
+    assert.ok(html.includes(">Channels</h2>") && html.includes("STRIP") && html.includes("LIST"));
     assert.ok(!html.includes("<hr"));
-    assert.ok(html.indexOf("Refresh") < html.indexOf("LIST"));
+    assert.ok(html.indexOf("STRIP") < html.indexOf("LIST"));
+  });
+
+  it("carries no button in its heading: only the fold, before the strip", () => {
+    const html = renderToStaticMarkup(
+      createElement(ListGroup, {
+        id: "ch-list",
+        icon: Radio,
+        title: "Channels",
+        strip: createElement("button", { type: "button" }, "STRIPVERB"),
+        children: "LIST",
+      }),
+    );
+    const heading = html.slice(0, html.indexOf("STRIPVERB"));
+    const names = (heading.match(/<button[^>]*>/g) ?? []).map((button) => button.match(/aria-label="([^"]*)"/)?.[1] ?? "");
+    assert.ok(names.every((name) => name === "" || name.startsWith("Collapse") || name.startsWith("Expand")), names.join());
   });
 });
 
@@ -110,35 +127,43 @@ describe("a tab's page", () => {
   it("shows the toolbar strip over the skeleton: Channels' forward verb waits for a ticked row", () => {
     const html = renderToStaticMarkup(createElement(ChannelsPage, { active: true }));
     assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New channel"));
-    assert.ok(html.includes('aria-label="Preview →. Tick a row first"'));
+    assert.ok(html.includes('aria-label="Preview. Tick a row first"'));
     assert.ok(html.includes("h-10"));
   });
 
-  it("gives Providers a forward verb that works, and Accounts the bulk verbs, all waiting for a ticked account", () => {
+  it("gives Providers a forward arrow that works; Accounts' toolbar is empty and its table strip holds Refresh only", () => {
     const providers = renderToStaticMarkup(createElement(ProvidersPage, { active: true }));
-    assert.ok((providers.match(/<button[^>]*>Titles →/)?.[0] ?? "").length > 0);
-    assert.ok(!(providers.match(/<button[^>]*>Titles →/)?.[0] ?? "").includes('disabled=""'));
+    const arrow = providers.match(/<button[^>]*aria-label="Titles"[^>]*>/)?.[0] ?? "";
+    assert.ok(arrow.length > 0 && !arrow.includes('disabled=""'));
     const accounts = renderToStaticMarkup(createElement(AccountsPage, { active: true }));
-    const strip = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("New account"));
-    for (const verb of ["Enable", "Disable"]) assert.ok(strip.includes(`aria-label="${verb}. Tick an account first"`), verb);
-    assert.ok(strip.includes('title="Tick an account first"'), "Delete is an armed two-step, disabled with the same reason");
+    const toolbar = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("New account"));
+    assert.ok(!toolbar.includes("<button"), "no table verb in the page toolbar");
+    const table = accounts.slice(accounts.indexOf('aria-label="Accounts table"'));
+    assert.ok(table.includes('aria-label="Refresh accounts"'), "Refresh is the strip's, always there");
+    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), `${verb} waits for a ticked row`);
   });
 });
 
 describe("a workspace's pieces", () => {
-  it("draws the toolbar with Discard and Save disabled while nothing has changed", () => {
+  it("draws the toolbar with the forward arrow alone: no Discard, no Save, no text button", () => {
     const html = renderToStaticMarkup(
-      createElement(WorkspaceToolbar, {
-        label: "Channel toolbar",
-        dirty: false,
-        discard: { label: "Discard changes", onPress: NOTHING },
-        save: { label: "Save", onPress: NOTHING },
-        forward: { label: "Titles →", onPress: NOTHING },
-      }),
+      createElement(WorkspaceToolbar, { label: "Channel toolbar", forward: { label: "Titles", onPress: NOTHING } }),
     );
-    assert.ok(html.includes(`aria-label="Discard changes. ${NOTHING_CHANGED}"`));
-    assert.ok(html.includes(`aria-label="Save. ${NOTHING_CHANGED}"`));
-    assert.ok(html.indexOf("Discard changes") < html.indexOf(">Save<") && html.indexOf(">Save<") < html.indexOf("Titles →"));
+    assert.equal((html.match(/<button/g) ?? []).length, 1);
+    assert.ok(/<button[^>]*aria-label="Titles"[^>]*title="Titles"/.test(html));
+    assert.ok(!html.includes("Discard") && !html.includes("Save") && !/>[^<]+<\/button>/.test(html));
+    assert.equal((renderToStaticMarkup(createElement(WorkspaceToolbar, { label: "Account toolbar" })).match(/<button/g) ?? []).length, 0);
+  });
+
+  it("draws Discard changes as the form's pinned ghost verb and Save details as its one primary, both with the reason", () => {
+    const bar = renderToStaticMarkup(createElement(DiscardBar, { dirty: false, onDiscard: NOTHING }));
+    assert.ok(bar.includes(`aria-label="Discard changes. ${NOTHING_CHANGED}"`) && bar.includes("border-b border-hair"));
+    assert.ok(!bar.includes("text-accent-ink"), "Discard is ghost");
+    const dirty = renderToStaticMarkup(createElement(DiscardBar, { dirty: true, onDiscard: NOTHING }));
+    assert.ok(!dirty.includes("disabled=\"\""));
+    const save = renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING, reason: NOTHING_CHANGED } }));
+    assert.ok(save.includes(`aria-label="Save details. ${NOTHING_CHANGED}"`) && save.includes("text-accent-ink"));
+    assert.ok(renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING } })).includes(">Save details</button>"));
   });
 
   it("draws the rail: the way back named for the tab, then the sections, the lit one selected", () => {

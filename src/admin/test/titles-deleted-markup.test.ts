@@ -47,17 +47,21 @@ describe("the Deleted titles group", () => {
     assert.ok(deleted.indexOf(">The Matrix<") < deleted.indexOf(">Movie<"), "the name comes before the kind");
     assert.ok(deleted.includes(">tv-1399<"), "a title with no kept text is named by its id");
     assert.ok(deleted.includes(">2026-10-"), "the day it was deleted");
-    assert.equal(deleted.match(/>Restore</g)?.length, 3, "one per row and the bulk verb");
+    assert.equal(deleted.match(/>Restore</g)?.length, 2, "one per row; the bulk verb is an icon in the strip, once ticked");
+    assert.ok(deleted.includes('aria-label="Refresh deleted titles"'), "Refresh is the strip's");
+    assert.ok(!deleted.slice(0, deleted.indexOf('role="toolbar"')).includes("<button type=\"button\" class=\"inline-flex h-ctl-sm"));
     assert.ok(deleted.includes('title="Lets the title return on the next browse or sync."'));
     assert.ok(!deleted.includes("animate-skel-shimmer"));
   });
 
-  it("disables the bulk Restore until a row is ticked, with the reason as its tooltip", () => {
+  it("draws the bulk Restore as an icon in the strip only once a row is ticked, with the count", () => {
     state().titlesDeletedLoaded([gone("movie-603", "The Matrix")]);
-    assert.ok(group(page()).includes('aria-label="Restore. Tick a row first"'));
+    const strip = (html: string): string => html.slice(html.indexOf('aria-label="Deleted titles table"'));
+    assert.ok(!strip(group(page())).includes('aria-label="Restore"'));
     state().titleDeletedTick("movie-603", true);
     const ticked = group(page());
-    assert.ok(!ticked.includes('aria-label="Restore. Tick a row first"'));
+    assert.ok(/<button[^>]*aria-label="Restore"[^>]*title="Restore"/.test(strip(ticked)));
+    assert.ok(strip(ticked).includes("selected"));
     assert.match(ticked, /<li[^>]*data-ticked=""/);
   });
 
@@ -66,5 +70,6 @@ describe("the Deleted titles group", () => {
     state().titleDeletedTick("movie-603", true);
     state().titlesMarkUnreachable(true);
     assert.ok(group(page()).includes("Restore. The admin backend cannot be reached."));
+    assert.ok(group(page()).includes('aria-label="Restore. The admin backend cannot be reached."'));
   });
 });
