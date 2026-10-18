@@ -23,7 +23,7 @@ const refuse = (code: string, status: number, field?: string) =>
   new ApiError(code, `sentence for ${code}`, status, field === undefined ? {} : { field });
 const notice = (): string => state().notice?.sentence ?? "";
 /* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
-const lastEvent = (): string => state().events.at(-1)?.sentence ?? "";
+const lastEvent = (): string | undefined => state().events.at(-1)?.sentence;
 
 type Script = Partial<ProvidersService>;
 
