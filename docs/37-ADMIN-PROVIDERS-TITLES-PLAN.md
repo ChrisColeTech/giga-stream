@@ -78,7 +78,9 @@ until a row is ticked (`lib/provider-bulk.ts`, pure): `Enable` / `Disable` are `
 | detail | `GET /api/titles/:id` | `includeDisabled=true` | the row plus `plot cast runtimeMs seasons sources` |
 | create (manual) | `POST /api/titles` | `{ kind, title, year?, genres?, rating?, posterUrl?, backdropUrl?, plot?, cast?, runtimeMs?, seasons?, streamUrl?, tmdbId? }` | `201` row, `state: "manual"`, id `custom-<uuid>` |
 | save | `PATCH /api/titles/:id` | changed fields; `null` clears an optional one; `enabled`; `tmdbId` only on a manual title | row |
-| delete | `DELETE /api/titles/:id` | none | `{ id }` (a synced title returns on the next sync or read; the tooltip says so) |
+| delete | `DELETE /api/titles/:id` | none | `{ id }` (a synced title stays deleted until restored; the tooltip says so) |
+| list deleted | `GET /api/titles/deleted` | none | `{ items: { id, kind, tmdbId, title?, deletedAt }[] }`, latest first; `title` is the last known text |
+| restore | `DELETE /api/titles/deleted/:id` | none (`:id` like `movie-603`) | `{ id }`; the title returns on the next browse or sync; `404 title.not_found` when none is recorded |
 | revert | `POST /api/titles/:id/revert` | none | the row refetched from TMDB; `409 title.manual` for a manual title |
 
 The admin token is required for `includeDisabled`. With no `TMDB_READ_TOKEN` and no manual title the read is `503 tmdb.unavailable`: the list keeps its
@@ -99,7 +101,7 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
 - `Older` raises `page`, `Newer` lowers it, each re-reads; `Newer` is disabled at page 1 with `This is the first page.`, `Older` at `totalPages` with `This is
   the last page.`. A search, a kind change or a sort change returns to page 1. Page, search text, kinds and sort live in the slice (and are not remembered across sessions).
 - Headings `title`, `kind`, `year`, `rating`, `state`; state words `synced`, `edited` (its tooltip `edited: plot` names the `editedFields`), `manual`, `disabled` (`titleState`); `Jobs →` in the toolbar;
-  `Delete` is an `ArmedButton` whose rest title for a synced title says the next sync adds it again and points to `Enabled`.
+  `Delete` is an `ArmedButton` whose rest title for a synced title says it stays deleted and points to `Deleted titles`.
 - **Bulk verbs** (owner, 2026-10-17; `39` section 6; `lib/title-bulk.ts`, pure), ghost, beside `Jobs →`, disabled with `Tick a row first` until a row is ticked:
 
   | Verb | Calls | Skipped, with its reason | Verb disabled when |
@@ -108,9 +110,9 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
   | `Revert to TMDB` | `POST .../revert` | a manual title: `A title made by hand has no TMDB copy to go back to.`; an unedited synced title: `Nothing was edited.` | nothing left: the first skipped reason |
   | `Delete` | `DELETE` (two-step: `Delete N titles?`), **manual and synced titles alike** (owner, 2026-10-17: "bulk delete should apply for manual and auto added") | none | none ticked |
 
-  **What the backend does with a deleted synced title (read in `services/title-records.ts`, `title-list-cache.ts`, `title-reads.ts`, `title-sync.ts`):** `DELETE` really removes the row (`store.titles.remove`; there is no tombstone: migration `012` dropped tombstones in favour of `Enabled`). Nothing refuses it. The title comes back as a fresh synced row the next time TMDB data for it is stored: the next catalog sync that lists it, a browse or search page that lists it (the list cache stores what it reads), or a detail read of its id. Its admin edits, if any, are gone with it. The admin adds no refusal. The run's summary says it: `Deleted 5 titles; 3 were synced and come back on the next catalog sync or browse that lists them. Disable a title to keep it hidden.` (the count of synced ones from the plan), and each synced row's single `Delete` keeps its rest tooltip saying the same.
+  **What the backend does with a deleted synced title (soft delete, owner, 2026-10-17; migration `020`, `03` section 7.4):** `DELETE` removes the stored copy (its admin edits go with it) and records the title's TMDB identity in `deleted_titles`. Browse, search, detail and the catalog sync then skip it, so it stays deleted until it is restored under `Deleted titles` (4.4). A title made by hand is deleted for real and never recorded. The admin adds no refusal. The run's summary says it: `Deleted 5 titles; 3 were synced and stay deleted until restored under Deleted titles.` (the count of synced ones from the plan; `; 1 failed` and `; 1 skipped` follow as for every bulk run), and each synced row's single `Delete` has the rest tooltip `Deletes the title and keeps it deleted: no browse or catalog sync adds it back. Restore it under Deleted titles.`. After a synced title is deleted (single or bulk) the `Deleted titles` list is read again; the list's `Refresh` reads it too.
 
-  The single-row `Delete` of a synced title in the grid is unchanged. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
+  The single-row `Delete` of a synced title in the grid keeps its place. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
 
 ### 4.3 Workspace (rail `‹ Titles`, `Details`, `People and plot`, `Seasons` (series only), `Sources`; toolbar `Discard changes`, `Save`, `Jobs →`)
 
@@ -125,6 +127,14 @@ its groups wear shimmer lines in their shape until it answers.
   series the seasons are read-only with their `episodeCount`. A movie's workspace has no Seasons rail item and no Seasons group.
 - **Sources** (`plug`): the stream sources the providers produce, **read-only** because they are derived (`sources[]` of the detail); a title with none shows shimmer lines, never a sentence.
 - One `Save` sends only changed fields (`lib/title-body.ts`); a cleared optional field is `null`; the answer replaces the row and baseline.
+
+### 4.4 Deleted titles (soft delete)
+
+`DeletedTitlesGroup` (`trash-2`, id `ti-deleted`) is the Titles page's second group, under the list. It reads `GET /api/titles/deleted` when the tab first shows, after a synced title is deleted and on `Refresh`; its rows live in the titles slice (`titles.deleted`: `status`, `items`, `ticked`). The list is a `RecordGrid` with a select-all tick, headings `name` (first: the title text kept at delete time, or the id such as `movie-603` when none was kept), `kind` and `deleted` (`YYYY-MM-DD HH:mm`), and each row ends with a ghost `Restore` (its tooltip `Lets the title return on the next browse or sync.`). Pressing a row ticks it. While the list is read, and while it holds nothing, the group shows shimmer rows: **the skeleton is the empty state**, never a sentence.
+
+- **Row `Restore`** (`DELETE /api/titles/deleted/:id` through `flows.restore`) says `Restored <title>. It returns on the next browse or sync.`, drops the row and re-reads the audit tail. A `404 title.not_found` says its sentence and reads the list again.
+- **Bulk `Restore`** (the heading's action slot) runs the ticked rows through the shared bulk piece (`lib/bulk-plan.ts`, `useBulkAction`, `services/bulk-run.ts`): one `DELETE` per row, a failure never stops the rest, one summary `Restored 3 titles; they return on the next browse or sync.` (`; 1 failed` follows) and a re-read at the end; the rows that finished are unticked, the failed ones stay ticked and are listed under the heading (`BulkNotes`). A plan skips nothing, so only the shared reasons disable it: `Tick a row first`, `Saving.`, `The admin backend cannot be reached.` (natively disabled, the reason as its focusable tooltip).
+- Files: `components/titles/DeletedTitlesGroup.tsx`, `hooks/useDeletedTitles.ts`, `lib/title-restore.ts` (pure: names, ticks, plan, words, reasons), `services/title-deleted-flow.ts`, the restore call in `services/title-bulk.ts`, `listDeleted` and `restore` in `services/titles.ts` (zod `DeletedTitleListSchema`), copy in `constants/title-copy.ts`, columns in `constants/title-grid.ts`. Tests: `title-restore.test.ts` (service, flows, bulk run, plan), `titles-deleted-markup.test.ts`, and the new wording in `title-bulk.test.ts` and `titles-markup.test.ts`.
 
 ## 5. Files
 
@@ -200,4 +210,4 @@ Temporary backend (`39` 9) with `TMDB_READ_TOKEN` unset (the Titles list then sh
 | 6 | `29` 9.3 "with both Kind chips on, search makes two calls" | `GET /api/titles` already merges two kinds on the backend (`kind=all`); only search needs the admin to merge |
 | 7 | `26` 4.9b: a manual row's id `custom-0001` | the backend id is `custom-<uuid>`; the tooltip shows the id as the backend gives it |
 | 8 | `28` 7.2: Providers and Titles toolbars have only the forward verb | superseded (owner, 2026-10-17): bulk verbs on the ticked rows (3.2, 4.2) |
-| 9 | `26` 3.10 rule 4: deleting a synced row really deletes it and the next sync adds it again | confirmed in code (no tombstone since `012`); a synced title also returns on a browse, search or detail read that stores it; bulk `Delete` covers synced titles and says so (4.2) |
+| 9 | `26` 3.10 rule 4: deleting a synced row really deletes it and the next sync adds it again | true of channels, and of titles until 2026-10-17 (no tombstone since `012`, so a synced title returned on a browse, search, detail read or sync). **Superseded for titles (owner, 2026-10-17):** a deleted synced title is recorded (`deleted_titles`, migration `020`) and stays deleted; `Deleted titles` restores it (4.2, 4.4) |

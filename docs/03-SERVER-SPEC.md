@@ -742,7 +742,7 @@ Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and imag
 
 The backend browses, searches and describes TMDB's titles on demand (`11` section 5). Titles are also ordinary records
 an admin can create, edit and delete (`POST`, `PATCH`, `DELETE /api/titles`, `26` section 3.11; a sync never overwrites
-an edited title). Any movie or series TMDB has can be listed. A title id is the kind and TMDB id, `movie-603` or `tv-1399`.
+an edited title, and a deleted synced title stays deleted until it is restored). Any movie or series TMDB has can be listed. A title id is the kind and TMDB id, `movie-603` or `tv-1399`.
 
 ```ts
 interface BackendTitle {
@@ -763,12 +763,44 @@ interface BackendTitle {
 
 | Route | Behaviour |
 |---|---|
-| `GET /api/titles` | a page of titles: `kind` (`movie`, `tv`, or both), `sort` (`newest`, `oldest`, `az`, `year`, `trending`), `genre` (repeatable), `year`, `page`; answers `{ items: BackendTitle[], page, totalPages, totalResults }` |
+| `GET /api/titles` | a page of titles: `kind` (`movie`, `tv`, or both), `sort` (`newest`, `oldest`, `az`, `year`, `trending`), `genre` (repeatable), `year`, `page`; answers `{ items: BackendTitle[], page, totalPages, totalResults, skipped }` (`skipped`: rows of this page left out, below) |
 | `GET /api/titles/search` | `q`, `kind`, `page`; TMDB's search, people left out; the same answer shape |
 | `GET /api/titles/genres` | TMDB's genre names for movies and for series |
 | `GET /api/titles/:titleId` | the title with `plot`, `cast` (ten names), `runtimeMs` (a movie) or `seasons` (a series); a thin list row is refetched whole on read; with `OMDB_API_KEY`, an `omdb` block (age rating, ratings, awards, box office — `11` section 7.2) |
 | `GET /api/titles/:titleId/seasons/:season` | `{ episodes }`: each with season, episode, title, air date, runtime, still address and its `streamUrl` from the rule |
 | `GET /api/titles/:titleId/recommendations` | `{ items: BackendTitle[] }`: TMDB's recommendations, first page, in TMDB's order |
+| `DELETE /api/titles/:titleId` | signed in, audited `title.deleted`; answers `{ id }`. A title made by hand is deleted for real; a **synced** title is deleted and **stays deleted** (below) |
+| `GET /api/titles/deleted` | signed in, `Cache-Control: no-store`; `{ items: DeletedTitle[] }`, the latest deletion first |
+| `DELETE /api/titles/deleted/:titleId` | signed in, audited `title.restored`; the id is `movie-603`; removes the record and answers `{ id }`; `404 title.not_found` when none is recorded |
+
+**A deleted synced title stays deleted** (owner, 2026-10-17; migration `020-deleted-titles.sql`). Deleting a title whose
+origin is `tmdb` removes the stored copy (and any admin edits with it) and records its TMDB identity in `deleted_titles`
+(`kind`, `tmdb_id`, `title`, `deleted_at`; primary key `kind, tmdb_id`; `title` is the last known title text, kept only to
+name the row in the restore list). A title made by hand (`custom-<uuid>`) is never recorded. Every read that lists or
+fetches TMDB titles then skips a recorded one:
+
+- Browse, search and recommendations leave it out of `items`; the catalog sync (both the trending and popular scopes and
+  the `titles` ids scope) neither fetches, inserts nor refreshes it; the list cache never stores it.
+- A detail, seasons or recommendations read of a recorded id answers `404 title.not_found`, exactly as for a title that
+  does not exist, whatever TMDB says. The fileserver reads titles only through these routes, so a deleted title simply
+  vanishes from its catalogue answers.
+- **Paging.** A browse or search page is one TMDB page, so a page that loses titles is thinner and keeps its place (page
+  `n` is TMDB's page `n` minus the skipped titles; TMDB's `totalPages` is unchanged). The answer carries `skipped`: how
+  many of that page's rows were left out (deleted titles, and disabled titles on a public read). A reader fills from it
+  the way the library pages do (section 3.5): a page with `skipped > 0` counts as thinned, so the fileserver reads the next
+  page and tops up until it holds a page, never answering a short or empty page with a cursor.
+- **Restore.** `DELETE /api/titles/deleted/:titleId` removes the record; the title returns on the next browse, search or
+  catalog sync that lists it, as a plain synced title (its earlier edits are gone).
+
+```ts
+interface DeletedTitle {
+  id: string;        // movie-603
+  kind: "movie" | "tv";
+  tmdbId: number;
+  title?: string;    // the last known title text; absent when none was kept
+  deletedAt: number; // epoch ms
+}
+```
 
 - `trending` uses TMDB's trending list; the other sorts and the genre and year narrowing use TMDB's
   discover lists (`11` section 3), with the vote floor `11` records on the release-date and name sorts.
@@ -852,7 +884,9 @@ nobody "adds a title" — the store only ever mirrors TMDB.
 
 Migration `004-titles.sql` creates the store: `titles` (kind, tmdb_id, payload, popularity_score,
 popularity_read_at, fetched_at; primary key kind+tmdb_id) and `title_lists` (key, ids, fetched_at),
-where a list key is the kind, sort, filters and page of one `7.4` browse answer. A payload is TMDB's
+where a list key is the kind, sort, filters and page of one `7.4` browse answer. Migration
+`020-deleted-titles.sql` adds `deleted_titles` (kind, tmdb_id, title, deleted_at; primary key kind+tmdb_id): the synced
+titles an admin deleted, which no read or sync stores again until it is restored (`7.4`). A payload is TMDB's
 metadata answer as JSON — image **paths**, never image bytes (`01` section 7). List routes answer
 from a stored list when TMDB cannot be reached and the snapshot is within its hours; per-title routes
 answer from `titles` within their days.
@@ -980,7 +1014,7 @@ An entry is `{ id, at, actorId?, actorEmail?, action, subject?, detail?, address
 `account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`,
 `channel.imported`, `channel.fault_set`, `channel.fault_cleared`, `channel.rebuilt`, `channel.reverted`,
 `provider.created`, `provider.updated`, `provider.deleted`, `title.created`, `title.updated`, `title.deleted`,
-`title.reverted`, `playlist.created`, `playlist.updated`, `playlist.deleted`, `job.created`, `job.updated`,
+`title.reverted`, `title.restored`, `playlist.created`, `playlist.updated`, `playlist.deleted`, `job.created`, `job.updated`,
 `job.deleted`, `sync.started`. A password, token or hash is never written to it.
 
 ## 8. Errors

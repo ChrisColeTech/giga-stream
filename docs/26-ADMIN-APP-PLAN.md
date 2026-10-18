@@ -225,7 +225,7 @@ row if it is missing or stale (a read then heals a thin row by refetching the de
 | c | An admin **deletes** a synced channel | the next sync creates it again, with a new id |
 | d | `prune` | deletes a sync-owned row whose entry vanished, including one the admin edited |
 | e | An admin edits a synced title | a bulk sync, a stale read or the healing refetch replaces the edited payload |
-| f | An admin **deletes** a synced title | the next read by id (fill-through) or sync brings it back |
+| f | An admin **deletes** a synced title | the next read by id (fill-through) or sync brought it back (closed by D20's amendment: the deletion is recorded and stays) |
 | g | Sync by ids on a series | fetches it as a movie (an existing bug that `Sync selected` would hit) |
 
 **The rules** (decided as defaults; the owner redirects, 2026-10-17):
@@ -237,8 +237,10 @@ row if it is missing or stale (a read then heals a thin row by refetching the de
 4. **`Enabled` is a field on the record, drawn as a switch** (owner, 2026-10-17: "enabled/disable should be a checkbox on the record, not an
    entirely new section and category"). It replaces the tombstone, the "Ignored entries" group and the `Deleted` filter
    of the first version of this rule. A disabled channel or title stays in its list and is hidden from the public reads;
-   a sync still updates it but never re-enables it. **Deleting a synced row really deletes it**, and the next sync adds
-   it again; the Delete tooltip on a synced row says so and points to `Enabled`.
+   a sync still updates it but never re-enables it. **Deleting a synced channel really deletes it**, and the next sync
+   adds it again; the Delete tooltip on a synced row says so and points to `Enabled`. **Deleting a synced title** is
+   different (D20, amended): its TMDB identity is recorded in `deleted_titles`, no browse, search, detail or sync stores it
+   again, and `Restore` under `Deleted titles` lets it return.
 5. `Revert` on an edited row clears its `edited_fields` (titles refetch from TMDB; channels take the next sync's values).
 6. The ids scope takes a title id (`movie-603`, `tv-1399`), not a bare number.
 
@@ -757,7 +759,11 @@ Each has a recommended default. The waves proceed on the defaults and are redire
   stored, never returned) or stay environment-only (recommended until asked).
 - **D20.** *(Decided, owner, 2026-10-17: "this is a crud app".)* Titles are ordinary records: create, edit, delete. The
   one rule the sync adds is that it never overwrites a title or field an admin edited. Manual titles carry their own id
-  (`custom-<uuid>`); an optional TMDB id lets the providers produce sources for it.
+  (`custom-<uuid>`); an optional TMDB id lets the providers produce sources for it. *(Amended, owner, 2026-10-17: a
+  deleted **synced** title stays deleted. Delete removes the stored copy and records the TMDB identity in
+  `deleted_titles` (migration 020); browse, search, detail and the sync skip it; the Titles tab's `Deleted titles` group
+  lists and restores them, `GET /api/titles/deleted` and `DELETE /api/titles/deleted/:id`, `03` section 7.4. A manual
+  title is deleted for real and never recorded.)*
 - **D16.** *(Decided, owner, 2026-10-17, reversing the earlier default of persisting nothing.)* The admin persists
   its settings and shell layout per signed-in account in the backend (`admin_ui_state`, `GET`/`PUT /api/auth/me/state`,
   4.2 Persistence).
