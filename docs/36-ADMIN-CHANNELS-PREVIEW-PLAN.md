@@ -242,6 +242,43 @@ Moved by its header, resized by its edges, closed by its `X` or `Escape` (not wh
 - **Disabled reasons.** The index verb: `Tick a row first`, `Tick only one row`. The workspace verb: `Save the channel first` while the draft is dirty. A New form never gates it.
   A stream row's workspace verb behaves identically.
 
+### 8.1 The Preview toolbar (owner, 2026-10-18; supersedes the state row and `Retry` under the stage)
+
+Reference, read 2026-10-18: LoRA Studio's gallery viewer (`giga-lora-studio` `components/viewer/ViewerStage.tsx`: a top toolbar with
+Previous / Next icon buttons, a `N / total` counter, the item's name, then the verbs and a close; `min-h-10`, hairline underneath) and the
+Library's Title information window (`Actions pinned` directly under the header, nothing at the foot). The Preview copies that layout.
+
+- **Position.** One toolbar strip directly under the window header (the shared `Actions` with `pinned`, as Title information
+  does). There is NO row under the stage: the stage fills the body.
+- **Left, in this order:** `Previous` (chevron-left) and `Next` (chevron-right) icon buttons, the position `N / total` (mono, faint,
+  tabular), the channel's name (truncating, with a tooltip), and the state word (`live`, `loading`, `failed`, `missing`: `8` status line)
+  after the name. Right: `Enable` / `Disable` (one button showing the action the channel can take), `Mark live` / `Mark dead` (one button, the
+  other verdict than the channel's own; a stream channel only), and `Retry` when it is offered (as before: failed or stopped state, a
+  player error, a missing channel).
+- **Browsing.** Previous and Next walk the channels the Channels list currently shows (its search, filters and sort), in that order, from
+  the channel being previewed; the position is that channel's place among them. They move the request value (`channels.preview`
+  `channelId`, new `serial`), so the window stays open at its place and size, the old player detaches first and the new channel
+  attaches, with the same attach rule. `ArrowLeft` / `ArrowRight` do the same while focus is not in a field or on the video's own
+  controls. At the first or last channel the button is disabled with the reason `This is the first channel.` / `This is the last
+  channel.`; a list holding one channel disables both with `Only one channel.` The walk never wraps and never reads the list again.
+  If the list is only partly loaded the walk covers the loaded rows and Next at the end of them reads the next page through the list's
+  own load-more (never a new route).
+- **Enable / Disable** is the Channels list's own single-row action (`PATCH /api/channels/:id { enabled }` via the existing flow: same
+  notice, same audit, the row and the window update together). The label is `Disable` for an enabled channel and `Enable` for a disabled
+  one. A synced stream channel obeys its playlist (`published` stays false while the playlist is disabled): the notice already says so.
+- **Mark live / Mark dead.** A manual verdict on a stream channel's own stream address, the same `status` the sync writes (`43`, the
+  per-channel live/dead verdict) with `checkedAt` = now. New backend route `PUT /api/channels/:channelId/status { status: "live" | "dead" }`:
+  admin only, stream channels only (`422 channel.not_stream` for a live channel, `404 channel.not_found`), writes `status` and `checked_at`
+  only (a sync-owned column set: no revision bump, no `edited_fields`, the row's other columns untouched), audited as `channel.status.set`
+  with the old and new verdict, answers the channel row. The next sync run overwrites it with its own check (the owner's choice: the
+  mark is a hand-set verdict, not a lock). The button shows for a stream channel only; for a live channel it is absent, not disabled. After
+  the call the Channels row's `live` / `dead` word and the window update.
+- **Disabled reasons** follow the rule: Previous/Next as above; Enable/Disable and Mark: `The admin backend is not reachable.` while
+  `unreachable`; Mark: none for a channel with a stream address.
+- Tests: the route (auth, stream only, writes only status/checked_at, no revision bump, audit, 404/422), the walk (order follows the list's
+  query, ends disabled with their reasons, single channel, keys not in a field), the toolbar markup (order, no row under the stage), the
+  mark and enable flows updating row and window.
+
 ## 9. Tests (`node:test`, written AND run by the worker; no server, no browser, no sleeping)
 
 | File | Cases |
