@@ -1,7 +1,7 @@
 import { useContext, type ReactNode } from "react";
 import { Checkbox } from "../controls/Checkbox";
 import { cn } from "../lib/cn";
-import { GridShapeContext } from "./record-grid-layout";
+import { GridRowIndexContext, GridShapeContext } from "./record-grid-layout";
 
 export interface RecordGridRowProps {
   /** The row's state word, also its `data-st` (`live`, `preparing`, `disabled`...). The word itself is a cell. */
@@ -24,9 +24,12 @@ export interface RecordGridRowProps {
  *  open it), the tick before it and the end action after it. */
 export function RecordGridRow({ state, dimmed = false, ticked = false, tick, onOpen, end, children }: RecordGridRowProps) {
   const shape = useContext(GridShapeContext);
+  const index = useContext(GridRowIndexContext);
   if (shape === null) throw new Error("RecordGridRow belongs inside a RecordGrid");
   return (
     <li
+      data-index={index ?? undefined}
+      aria-rowindex={index === null ? undefined : index + 1}
       data-st={state}
       data-ticked={ticked ? "" : undefined}
       className={cn(
@@ -39,6 +42,7 @@ export function RecordGridRow({ state, dimmed = false, ticked = false, tick, onO
       {tick !== undefined && <Checkbox checked={ticked} onChange={tick.onToggle} aria-label={tick.label} />}
       <button
         type="button"
+        data-primary={index === null ? undefined : ""}
         className="grid cursor-pointer grid-cols-subgrid items-center border-0 bg-transparent p-0 text-left"
         style={{ gridColumn: `${shape.first} / span ${shape.span}` }}
         onClick={onOpen}

@@ -38,3 +38,7 @@ export function gridShape(layout: GridLayout, selectable: boolean): GridShape {
 }
 
 export const GridShapeContext = createContext<GridShape | null>(null);
+
+/** A windowed grid's row position (0-based), set around each mounted row: the row then carries `data-index`,
+ *  `aria-rowindex` and a `data-primary` open button, which keyboard movement by index finds. Null in a plain grid. */
+export const GridRowIndexContext = createContext<number | null>(null);
