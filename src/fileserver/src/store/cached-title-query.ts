@@ -21,7 +21,8 @@ const ORDER: Record<TitleSort, string> = {
 const SEARCH_ORDER = `${BY_POPULARITY}, ${TIE}`;
 
 const Count = z.object({ total: z.number() });
-const GenreName = z.object({ genre: z.string() });
+const IdRow = z.object({ id: z.string() });
+const GenreName =z.object({ genre: z.string() });
 
 /** Make `%`, `_` and the escape itself literal inside a LIKE pattern. */
 const likeOf = (text: string): string => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
@@ -42,7 +43,7 @@ function whereOf(filter: TitleFilter): { sql: string; params: Param[] } {
   }
   if (filter.genres.length > 0) {
     parts.push(
-      `EXISTS (SELECT 1 FROM cached_title_genres g WHERE g.title_id = t.id AND g.genre IN (${marks(filter.genres.length)}))`,
+      `t.id IN (SELECT g.title_id FROM cached_title_genres g WHERE g.genre IN (${marks(filter.genres.length)}))`,
     );
     params.push(...filter.genres);
   }
@@ -85,10 +86,20 @@ export function createCachedTitleQuery(db: Database): CachedTitleQuery {
       const counted = Count.parse(prepared(`SELECT COUNT(*) AS total FROM cached_titles t WHERE ${where.sql}`).get(...where.params));
       if (request.limit <= 0 || request.offset >= counted.total) return { rows: [], total: counted.total };
       const order = request.q !== undefined ? SEARCH_ORDER : ORDER[request.sort];
-      const rows = prepared(
-        `SELECT ${TITLE_COLUMNS} FROM cached_titles t WHERE ${where.sql} ORDER BY ${order} LIMIT ? OFFSET ?`,
-      ).all(...where.params, request.limit, request.offset);
-      return { rows: cachedTitlesOf(rows), total: counted.total };
+      // Rank on the id alone: a sort that carries the wide columns (and the per-row genre subquery) pays for every
+      // matching row, so the page's rows are read afterwards, by id, in the ranked order.
+      const ids = prepared(`SELECT t.id FROM cached_titles t WHERE ${where.sql} ORDER BY ${order} LIMIT ? OFFSET ?`)
+        .all(...where.params, request.limit, request.offset)
+        .flatMap((raw) => {
+          const row = IdRow.safeParse(raw);
+          return row.success ? [row.data.id] : [];
+        });
+      if (ids.length === 0) return { rows: [], total: counted.total };
+      const fetched = cachedTitlesOf(
+        prepared(`SELECT ${TITLE_COLUMNS} FROM cached_titles t WHERE t.id IN (${marks(ids.length)})`).all(...ids),
+      );
+      const byId = new Map(fetched.map((title) => [title.id, title]));
+      return { rows: ids.flatMap((id) => byId.get(id) ?? []), total: counted.total };
     },
 
     genreFacets(kinds) {
