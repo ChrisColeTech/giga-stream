@@ -17,7 +17,6 @@ import { titles } from "@/services/titles";
 
 const SRC = fileURLToPath(new URL("../src", import.meta.url));
 const RECORD_SERVICES = { channels, providers, titles, playlists, jobs, accounts };
-const STUBS = { providers, titles };
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((item) =>
@@ -41,18 +40,13 @@ describe("the service modules", () => {
     assert.equal(typeof jobs.run, "function");
   });
 
-  it("refuse, in every method of a tab not wired yet, with the typed not-connected ApiError", async () => {
-    for (const [name, service] of Object.entries(STUBS)) {
-      for (const call of [() => service.list(), () => service.create({}), () => service.update(1 as never, {}), () => service.remove(1 as never)]) {
-        await assert.rejects(call(), (error: unknown) => {
-          assert.ok(error instanceof ApiError && error.code === NOT_CONNECTED_CODE, name);
-          assert.ok(isNotConnected(error) && error.message.length > 0);
-          return true;
-        });
-      }
-    }
+  it("refuse, in every method of a service not wired yet (account state, health), with the typed not-connected ApiError", async () => {
     for (const call of [() => accountState.read(), () => accountState.write({}), () => health.read()]) {
-      await assert.rejects(call(), isNotConnected);
+      await assert.rejects(call(), (error: unknown) => {
+        assert.ok(error instanceof ApiError && error.code === NOT_CONNECTED_CODE);
+        assert.ok(isNotConnected(error) && error.message.length > 0);
+        return true;
+      });
     }
   });
 });
