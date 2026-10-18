@@ -22,6 +22,8 @@ export interface ChildSpec {
   readonly modal: boolean;
   readonly place: ChildPlace;
   readonly escape: ChildEscape;
+  /** The header's Maximize button and the double-click on the header; default true, `false` opts the window out. */
+  readonly maximizable?: boolean;
 }
 
 /** A rectangle in window pixels. */

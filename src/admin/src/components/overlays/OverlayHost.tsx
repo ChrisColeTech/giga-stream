@@ -9,6 +9,8 @@ import { SettingsWindow } from "./SettingsWindow";
 const MEMORY: ChildMemory = {
   recall: (key) => useAppStore.getState().childBounds[key],
   remember: (key, box) => useAppStore.getState().rememberChild(key, box),
+  maximized: (key) => useAppStore.getState().childMaximized[key] === true,
+  setMaximized: (key, on) => useAppStore.getState().rememberMaximized(key, on),
 };
 
 /** THE ONE OPEN FLOW (`04` section 1): opening a flow replaces the open one. Every flow is a modal work window drawn

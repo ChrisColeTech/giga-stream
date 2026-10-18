@@ -148,6 +148,16 @@ describe("the chrome slice: settings, overlays and folds", () => {
     assert.deepEqual(state.childBounds.settings, { x: 5, y: 6, width: 310, height: 220 });
   });
 
+  it("remembers which child windows were maximized, by key, apart from their normal boxes", () => {
+    const { state } = makeStore();
+    state.rememberChild("preview", { x: 1, y: 2, width: 300, height: 200 });
+    state.rememberMaximized("preview", true);
+    state.rememberMaximized("settings", true);
+    state.rememberMaximized("settings", false);
+    assert.deepEqual(state.childMaximized, { preview: true, settings: false });
+    assert.deepEqual(state.childBounds.preview, { x: 1, y: 2, width: 300, height: 200 });
+  });
+
   it("flips a fold by id and keeps each id on its own", () => {
     const { state } = makeStore();
     state.toggleFold("appearance");

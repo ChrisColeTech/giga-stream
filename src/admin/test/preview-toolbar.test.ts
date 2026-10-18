@@ -21,9 +21,7 @@ const noop = (): void => undefined;
 
 function props(channel: AdminChannel | undefined, over: Partial<PreviewToolbarProps> = {}): PreviewToolbarProps {
   return {
-    reading: false,
     walk: { position: 2, total: 5, reasons: { previous: undefined, next: undefined }, step: noop },
-    line: "live",
     retry: false,
     onRetry: noop,
     verbs: { plan: previewVerbs(channel, CALM), toggleEnabled: noop, mark: noop },
@@ -40,9 +38,10 @@ beforeEach(() => {
 });
 
 describe("the Preview toolbar", () => {
-  it("draws the verbs left (Disable, Mark, Retry), then the state word, `N / total`, Previous, Next; no name, no Close", () => {
-    const html = toolbar(stream("a", { name: "Talk", status: "live" }), { retry: true, line: "failed" });
-    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", ">failed<", "2 / 5", 'aria-label="Previous"', 'aria-label="Next"']);
+  it("draws the verbs left (Disable, Mark, Retry), then Previous and Next; no name, state word, count or Close", () => {
+    const html = toolbar(stream("a", { name: "Talk", status: "live" }), { retry: true });
+    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", 'aria-label="Previous"', 'aria-label="Next"']);
+    assert.ok(!html.includes("2 / 5") && !html.includes('role="status"'), "the state and the count are the status bar's");
     assert.ok(!html.includes("Talk"), "the name is the window's title now");
     assert.ok(!html.includes("Close"), "the window header owns the close");
     assert.ok(html.includes("lucide-x"), "Disable carries the X icon");
@@ -83,11 +82,6 @@ describe("the Preview toolbar", () => {
     assert.ok(html.includes(`Disable. ${UNREACHABLE_REASON}`) && html.includes(`Mark live. ${UNREACHABLE_REASON}`));
   });
 
-  it("wears a shimmer, not words, for the place while the channel is read", () => {
-    const html = toolbar(undefined, { reading: true, walk: { position: null, total: 0, reasons: { previous: RETRY_READING, next: RETRY_READING }, step: noop } });
-    assert.ok(!html.includes("0 / 0") && !html.includes("–"));
-    assert.ok(html.split("aria-hidden").length > 4);
-  });
 });
 
 describe("the Preview window", () => {
@@ -106,14 +100,20 @@ describe("the Preview window", () => {
     const video = html.indexOf("<video");
     assert.ok(html.indexOf("Stream a window") >= 0 && video > 0);
     assert.ok(/<h2[^>]*>Stream a<\/h2>/.test(html), "the title bar is the channel's name");
+    const bar = html.slice(html.indexOf("data-child-status"));
+    assert.ok(html.indexOf("data-child-status") > html.indexOf("</video>"), "the status bar is the last row, under the stage");
+    assert.ok(bar.includes('role="status"') && /1 \/ 2/.test(bar), "the state word and the count are in the status bar");
+    assert.ok(html.indexOf('role="status"') > video, "and not in the toolbar");
+    assert.ok(html.includes('aria-label="Maximize Stream a"'), "the window gained the maximize button");
     assert.ok(!html.includes(">Preview<"), "never the word Preview");
     state().channelsOpenPreview("elsewhere");
     const reading = renderLive(createElement(PreviewWindow));
     assert.ok(/<h2[^>]*><span[^>]*aria-hidden/.test(reading) && !/<h2[^>]*>Preview</.test(reading), "a shimmer while read");
+    assert.ok(/data-child-status[^]*animate-skel-shimmer/.test(reading), "the count is a shimmer pill while read");
     assert.ok(html.indexOf('aria-label="Previous"') > html.indexOf("Close Stream a"), "the strip is under the header");
-    assert.ok(html.indexOf('aria-label="Previous"') < video && html.indexOf('role="status"') < video);
+    assert.ok(html.indexOf('aria-label="Previous"') < video);
     const below = html.slice(html.indexOf("</video>"));
-    assert.ok(!below.includes("<button") && !below.includes('role="status"'), "no row under the stage");
+    assert.ok(!below.includes("<button"), "no controls under the stage");
   });
 });
 

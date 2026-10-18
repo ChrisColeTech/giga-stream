@@ -44,6 +44,7 @@ export function createChromeSlice<K extends ChromeKinds>(
     overlayAnchor: null,
     overlayItem: null,
     childBounds: {},
+    childMaximized: {},
     folded: {},
     setTheme: (theme) => set({ theme }),
     setAccent: (accent) => set({ accent }),
@@ -53,6 +54,7 @@ export function createChromeSlice<K extends ChromeKinds>(
     openOverlay: (overlay, overlayAnchor = null, overlayItem = null) => set({ overlay, overlayAnchor, overlayItem }),
     closeOverlay: () => set({ overlay: null, overlayAnchor: null, overlayItem: null }),
     rememberChild: (key, box) => set({ childBounds: { ...get().childBounds, [key]: box } }),
+    rememberMaximized: (key, on) => set({ childMaximized: { ...get().childMaximized, [key]: on } }),
     toggleFold: (id) => set({ folded: { ...get().folded, [id]: !get().folded[id] } }),
     say: (sentence, tone: EventTone = "info", area = options.defaultArea) => {
       const serial = (get().notice?.serial ?? 0) + 1;

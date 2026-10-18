@@ -3,17 +3,12 @@ import { Button } from "@giga/ui/controls/Button";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { Actions } from "@giga/ui/form/Actions";
 import { Sep } from "@giga/ui/layout/Sep";
-import { SHIMMER_TILE } from "@giga/ui/lib/shimmer";
 import { RETRY_LABEL } from "@/constants/preview-copy";
 import type { PreviewVerbs } from "@/hooks/usePreviewVerbs";
 import type { PreviewWalk } from "@/hooks/usePreviewWalk";
 
 export interface PreviewToolbarProps {
-  /** The window is reading the channel: the place wears a shimmer. */
-  readonly reading: boolean;
   readonly walk: PreviewWalk;
-  /** The state word (`live`, `loading`, `failed`, `missing`). */
-  readonly line: string;
   readonly retry: boolean;
   readonly onRetry: () => void;
   readonly verbs: PreviewVerbs;
@@ -21,14 +16,13 @@ export interface PreviewToolbarProps {
 
 const FLAT = "flex-none";
 
-/** The Preview's toolbar (`36` section 8.1), the shared pinned `Actions` strip directly under the header, laid out as LoRA
- *  Trainer's `ViewerToolbar`: tools LEFT, navigation RIGHT. Left, what changes the channel, as ghost verbs (icon first
+/** The Preview's toolbar (`36` sections 8.1 and 8.3), the shared pinned `Actions` strip directly under the header, laid out as
+ *  LoRA Trainer's `ViewerToolbar`: tools LEFT, navigation RIGHT. Left, what changes the channel, as ghost verbs (icon first
  *  where the icon vocabulary has one): `Enable` (Check) / `Disable` (X), `Mark live` / `Mark dead` (a stream channel only;
- *  the word alone) and `Retry` when offered. Right, what moves around: the state word, the `N / total` chip, then
- *  `Previous` and `Next`. The channel's name is the window's title (`36` section 8.2) and the header has the close X. */
-export function PreviewToolbar({ reading, walk, line, retry, onRetry, verbs }: PreviewToolbarProps) {
+ *  the word alone) and `Retry` when offered. Right, only `Previous` and `Next`. The channel's name is the window's title
+ *  (8.2) and its state word and `N / total` are the window's status bar (8.3): the toolbar holds controls only. */
+export function PreviewToolbar({ walk, retry, onRetry, verbs }: PreviewToolbarProps) {
   const { plan } = verbs;
-  const place = reading && walk.position === null ? null : `${walk.position ?? "–"} / ${walk.total}`;
   const Icon = plan.enable.label === "Enable" ? Check : X;
   return (
     <Actions
@@ -54,13 +48,6 @@ export function PreviewToolbar({ reading, walk, line, retry, onRetry, verbs }: P
         </>
       }
     >
-      <span role="status" className="flex-none font-mono text-xs text-faint">{line}</span>
-      <Sep />
-      {place === null ? (
-        <span className={`${SHIMMER_TILE} h-3 w-10 flex-none`} aria-hidden />
-      ) : (
-        <span className="flex-none font-mono text-xs tabular-nums text-faint">{place}</span>
-      )}
       <IconButton className={FLAT} aria-label="Previous" title="Previous (←)" reason={walk.reasons.previous}
         onClick={() => walk.step(-1)}>
         <ChevronLeft className="size-4" aria-hidden />

@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useContext, useRef } from "react";
 import type { ReactNode } from "react";
@@ -12,6 +12,7 @@ import type { ChildSpec } from "../lib/child-types";
 import { EASE_OUT } from "../lib/motion-timing";
 import { ChildGrips } from "./ChildGrips";
 import { ChildScrim } from "./ChildScrim";
+import { ChildStatusbar, type ChildStatus } from "./ChildStatusbar";
 
 export interface ChildWindowProps {
   readonly spec: ChildSpec;
@@ -23,6 +24,8 @@ export interface ChildWindowProps {
   readonly heading?: ReactNode;
   /** The name the window answers to (its `aria-label` and the close button's) when `heading` is not plain text. */
   readonly label?: string;
+  /** A status bar at the window's foot (`36` section 8.3): state only, words and counts. Absent, nothing is drawn. */
+  readonly status?: ChildStatus;
 }
 
 /* THE AUTHORED CHILD WINDOW, drawn inside the main window (the family's in-app stand-in for a second OS window; the
@@ -33,9 +36,12 @@ export interface ChildWindowProps {
  * than its least, stays inside the main window, and remembers its size and place for the run. A modal one puts a scrim
  * over the main window and makes it deaf. Closing is dismissal, never a commit. Its entrance and exit are one
  * framer-motion fade-and-rise; the host holds the AnimatePresence. */
-export function ChildWindow({ spec, onClose, children, heading, label = spec.title }: ChildWindowProps) {
+export function ChildWindow({ spec, onClose, children, heading, label = spec.title, status }: ChildWindowProps) {
   const frame = useRef<HTMLDivElement | null>(null);
-  const { box, move, grip } = useChildWindowBox(spec, useContext(ChildMemoryContext));
+  const { box, move, grip, maximized, toggleMaximized } = useChildWindowBox(spec, useContext(ChildMemoryContext));
+  const maximizable = spec.maximizable !== false;
+  const MaxIcon = maximized ? Minimize2 : Maximize2;
+  const maxLabel = `${maximized ? "Restore" : "Maximize"} ${label}`;
   const reduced = useReduceMotion();
   useChildWindowKeys(frame, { escape: spec.escape, modal: spec.modal, onClose });
 
@@ -63,21 +69,30 @@ export function ChildWindow({ spec, onClose, children, heading, label = spec.tit
         exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
         transition={{ duration: reduced ? 0 : 0.2, ease: EASE_OUT }}
       >
-        <ChildGrips grip={grip} />
+        {!maximized && <ChildGrips grip={grip} />}
         <div
           data-drag
           className="flex flex-none cursor-default touch-none items-center gap-2 border-b border-hair select-none"
           style={{ height: TITLE_HEIGHT, marginBottom: HEADER_GAP }}
+          onDoubleClick={(event) => {
+            if (maximizable && (event.target as HTMLElement).closest("button") === null) toggleMaximized();
+          }}
           {...move}
         >
           <h2 className="m-0 min-w-0 flex-1 truncate pl-1 font-sans text-sm font-semibold text-text" title={heading === undefined ? undefined : label}>
             {heading ?? spec.title}
           </h2>
+          {maximizable && (
+            <IconButton bordered title={maxLabel} aria-label={maxLabel} onClick={toggleMaximized}>
+              <MaxIcon className="size-3.5" aria-hidden />
+            </IconButton>
+          )}
           <IconButton bordered title={`Close ${label}`} aria-label={`Close ${label}`} onClick={onClose}>
             <X className="size-3.5" aria-hidden />
           </IconButton>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        {status !== undefined && <ChildStatusbar {...status} />}
       </motion.div>
     </>
   );

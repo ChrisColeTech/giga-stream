@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { clampSize, inside, limitsOf, openBox, resized, roomOf } from "../lib/child-bounds";
+import { clampSize, inside, limitsOf, maximizedBox, openBox, resized, roomOf } from "../lib/child-bounds";
 import type { Edge } from "../lib/child-bounds";
+import { toggleMaximized } from "../lib/child-memory";
 import type { ChildMemory } from "../lib/child-memory";
 import type { Box, ChildSpec } from "../lib/child-types";
 import { useViewport } from "./useViewport";
@@ -29,9 +30,15 @@ export function useChildWindowBox(spec: ChildSpec, memory: ChildMemory) {
   const room = useMemo(() => roomOf(viewport), [viewport]);
   const limits = useMemo(() => limitsOf(spec, room), [spec, room]);
   const [box, setBox] = useState<Box>(() => openBox(spec, room, memory.recall(spec.key)));
+  /* Maximized (`36` section 8.4): the flag is remembered for the run; `box` stays the NORMAL box underneath, so Restore
+   * goes back to it exactly, and the shown box is derived from the viewport so a resize keeps it fitted. */
+  const [maximized, setMaximized] = useState<boolean>(() => spec.maximizable !== false && memory.maximized?.(spec.key) === true);
   const gesture = useRef<Gesture | null>(null);
   const live = useRef(box);
   live.current = box;
+  const toggle = (): void => {
+    if (spec.maximizable !== false) setMaximized(toggleMaximized(memory, spec.key, live.current, maximized));
+  };
 
   useEffect(() => {
     setBox((now) => {
@@ -41,7 +48,7 @@ export function useChildWindowBox(spec: ChildSpec, memory: ChildMemory) {
   }, [room, limits]);
 
   const begin = (edge: Gesture["edge"]) => (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest("button") !== null) return;
+    if (maximized || event.button !== 0 || (event.target as HTMLElement).closest("button") !== null) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { edge, pointer: { x: event.clientX, y: event.clientY }, start: live.current };
   };
@@ -72,5 +79,6 @@ export function useChildWindowBox(spec: ChildSpec, memory: ChildMemory) {
     onPointerUp: end,
   });
 
-  return { box, limits, move: handlers("move"), grip: (edge: Edge) => handlers(edge) };
+  const shown = useMemo(() => (maximized ? maximizedBox(viewport) : box), [maximized, viewport, box]);
+  return { box: shown, maximized, toggleMaximized: toggle, limits, move: handlers("move"), grip: (edge: Edge) => handlers(edge) };
 }
