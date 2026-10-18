@@ -41,9 +41,12 @@ beforeEach(() => {
 });
 
 describe("the Preview toolbar", () => {
-  it("draws Previous, Next, `N / total`, the name, the state word, then Enable/Disable, Mark and Retry, in that order", () => {
+  it("draws the verbs left (Disable, Mark, Retry), then the name, state word, `N / total`, Previous, Next; no Close", () => {
     const html = toolbar(stream("a", { name: "Talk", status: "live" }), { retry: true, line: "failed" });
-    const at = order(html, ['aria-label="Previous"', 'aria-label="Next"', "2 / 5", ">Talk<", ">failed<", ">Disable<", ">Mark dead<", ">Retry<"]);
+    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", ">Talk<", ">failed<", "2 / 5", 'aria-label="Previous"', 'aria-label="Next"']);
+    assert.ok(!html.includes("Close"), "the window header owns the close");
+    assert.ok(html.includes("lucide-x"), "Disable carries the X icon");
+    assert.ok(toolbar(stream("a", { enabled: false })).includes("lucide-check"), "Enable carries the Check icon");
     assert.ok(at.every((index) => index >= 0), JSON.stringify(at));
     assert.deepEqual([...at].sort((x, y) => x - y), at, "the order is the specified one");
     assert.ok(html.includes("border-b border-hair"), "the shared pinned strip");
@@ -51,11 +54,11 @@ describe("the Preview toolbar", () => {
   });
 
   it("shows the action the channel can take, and the other verdict than its own (a stream channel only)", () => {
-    assert.ok(toolbar(stream("a", { enabled: false, status: "dead" })).includes(">Enable<"));
+    assert.ok(toolbar(stream("a", { enabled: false, status: "dead" })).includes(" Enable<"));
     assert.ok(toolbar(stream("a", { enabled: false, status: "dead" })).includes(">Mark live<"));
     assert.ok(toolbar(stream("a", { status: "live" })).includes(">Mark dead<"));
     const liveHtml = toolbar(live("a"));
-    assert.ok(liveHtml.includes(">Disable<") && !liveHtml.includes("Mark "), "a live channel has no Mark button at all");
+    assert.ok(liveHtml.includes(" Disable<") && !liveHtml.includes("Mark "), "a live channel has no Mark button at all");
   });
 
   it("takes the player's word for a stream nobody has checked", () => {
