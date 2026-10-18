@@ -19,6 +19,7 @@ export const TITLE_WORKSPACE_LABELS: readonly string[] = [
   "Plot",
   "Cast",
   "Season",
+  "Episode",
 ];
 
 export const TITLE_SECTIONS_MOVIE = [
@@ -102,4 +103,5 @@ export const editedTip = (fields: readonly string[]): string => `edited: ${field
 /** The bulk verbs (`37` section 4.2). */
 export const ALREADY_ENABLED = "Already enabled.";
 export const ALREADY_DISABLED = "Already disabled.";
-export const SYNCED_RETURN = "come back on the next catalog sync or browse that lists them. Disable a title to keep it hidden";
+export const SYNCED_RETURN =
+  "come back on the next catalog sync or browse that lists them. Disable a title to keep it hidden";

@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { START_VIEW } from "@/lib/title-query";
 import { TitlesPage } from "@/pages/TitlesPage";
-import type { AdminTitleRow } from "@/services/schemas/title-schema";
+import type { AdminTitleDetail, AdminTitleRow } from "@/services/schemas/title-schema";
 import { useAppStore } from "@/store/app-store";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
@@ -58,7 +58,10 @@ describe("the list heading", () => {
 
   it("locks the last lit kind chip with its reason", () => {
     state().titlesSetView({ ...START_VIEW, kinds: ["tv"] });
-    assert.match(page(), /<button[^>]*aria-pressed="true"[^>]*disabled=""[^>]*title="At least 1 must stay on\."[^>]*>Series</);
+    const html = page();
+    const series = html.slice(at(html, 'aria-label="Kind filter"')).match(/<button[^>]*>Series</)?.[0] ?? "";
+    assert.ok(series.includes('aria-pressed="true"') && series.includes('disabled=""'), series);
+    assert.ok(series.includes('title="At least 1 must stay on."'), series);
   });
 
   it("enables Older below the last page", () => {
@@ -84,19 +87,24 @@ describe("the titles grid", () => {
       row("movie-3", { enabled: false }),
     ]);
     const html = page();
-    for (const heading of [">title<", ">kind<", ">year<", ">rating<", ">state<"]) assert.ok(html.includes(heading), heading);
+    for (const heading of [">title<", ">kind<", ">year<", ">rating<", ">state<"]) {
+      assert.ok(html.includes(heading), heading);
+    }
     for (const word of ["synced", "edited", "manual", "disabled"]) assert.ok(html.includes(`data-st="${word}"`), word);
     assert.ok(html.includes(">8.3<") || html.includes(">8.2<"));
     assert.ok(html.includes("opacity-45"));
     assert.ok(html.includes('title="Deletes the title made here."'));
-    assert.ok(html.includes("the next catalog sync or browse that lists it adds it again. Turn Enabled off to keep it hidden."));
+    assert.ok(html.includes("the next catalog sync or browse that lists it adds it again."));
+    assert.ok(html.includes("Turn Enabled off to keep it hidden."));
   });
 });
 
 describe("the toolbar", () => {
   it("draws Enable, Disable, Revert to TMDB and Delete, disabled until a row is ticked, beside Jobs →", () => {
     const html = page();
-    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
+    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) {
+      assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
+    }
     assert.match(html, /<button[^>]*disabled=""[^>]*title="Tick a row first"[^>]*>Delete</);
     const forward = html.match(/<button[^>]*>Jobs →/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
@@ -106,5 +114,63 @@ describe("the toolbar", () => {
     loaded([row("custom-1", { state: "manual" })]);
     state().titleTick("custom-1", true);
     assert.ok(page().includes('aria-label="Revert to TMDB. A title made by hand has no TMDB copy to go back to."'));
+  });
+});
+
+describe("a title's workspace", () => {
+  const open = (item: AdminTitleRow, detail?: Partial<AdminTitleDetail>): string => {
+    loaded([item]);
+    state().openWorkspace("titles", item.id);
+    if (detail !== undefined) {
+      state().titleDetailStart(item.id);
+      state().titleDetailLoaded({ ...item, ...detail });
+    }
+    return page();
+  };
+
+  it("wears shimmer lines in its groups until the detail answers, with Save waiting", () => {
+    const html = open(row("tv-1", { kind: "tv" }));
+    assert.ok(html.includes("animate-skel-shimmer") && html.includes(">Seasons<"));
+    assert.ok(html.includes('aria-label="Save. Loading."') && !html.includes('aria-label="Title"'));
+  });
+
+  it("a movie: Details, People and plot, Sources, no Seasons; its fields in order; sources read-only", () => {
+    const sources = [{ name: "VidSrc", url: "https://v.test/603" }];
+    const html = open(row("movie-1"), { plot: "P", runtimeMs: 7_200_000, sources });
+    assert.ok(html.includes('aria-label="Title sections"') && !html.includes(">Seasons<"));
+    assert.ok(at(html, ">Details<") < at(html, ">People and plot<"));
+    assert.ok(at(html, ">People and plot<") < at(html, ">Sources<"));
+    const order = ["Title", "Kind", "Year", "Enabled", "TMDB id", "Rating", "Genres", "Runtime", "Poster address"];
+    for (let i = 1; i < order.length; i += 1) {
+      assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
+    }
+    assert.ok(html.includes('value="120"') && html.includes(">https://v.test/603<") && html.includes("Jobs →"));
+    assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
+  });
+
+  it("disables Revert to TMDB with its reasons: manual, nothing edited; enables it on an edited title", () => {
+    const manual = open(row("custom-1", { state: "manual" }), {});
+    assert.ok(manual.includes('aria-label="Revert to TMDB. A title made by hand has no TMDB copy to go back to."'));
+    assert.ok(open(row("movie-1"), { editedFields: [] }).includes('aria-label="Revert to TMDB. Nothing was edited."'));
+    const edited = open(row("movie-2", { state: "edited", editedFields: ["plot"] }), {});
+    assert.ok(!edited.includes("Revert to TMDB. ") && edited.includes("Revert to TMDB"));
+  });
+
+  it("a manual series edits its seasons; a synced one shows the counts read-only", () => {
+    const manual = open(row("custom-2", { kind: "tv", state: "manual" }), {
+      seasons: [{ season: 1, episodes: [{ episode: 1, title: "Pilot" }] }],
+    });
+    assert.ok(manual.includes('aria-label="Season 1 number"') && manual.includes('value="Pilot"'));
+    assert.ok(manual.includes("Add season<") && manual.includes("Add episode<"));
+    assert.ok(manual.includes('aria-label="Move season 1 up. Already first"'));
+    const synced = open(row("tv-9", { kind: "tv" }), { seasons: [{ season: 1, episodeCount: 8 }] });
+    assert.ok(synced.includes(">8 episodes<") && !synced.includes("Add season"));
+    assert.match(synced, /<input[^>]*readOnly=""[^>]*aria-label="TMDB id"/);
+  });
+
+  it("a title with no sources shows shimmer lines there, never a sentence", () => {
+    const html = open(row("custom-3", { state: "manual" }), {});
+    const sources = html.slice(at(html, 'id="tw-sources"'));
+    assert.ok(sources.includes("animate-skel-shimmer") && !sources.includes("No sources"));
   });
 });
