@@ -92,10 +92,14 @@ export function createCachedTitleQuery(db: Database): CachedTitleQuery {
     },
 
     genreFacets(kinds) {
-      const sql = `SELECT DISTINCT g.genre AS genre FROM cached_title_genres g JOIN cached_titles t ON t.id = g.title_id
-                   WHERE t.kind IN (${marks(kindsOf(kinds).length)}) ORDER BY g.genre COLLATE NOCASE`;
+      // Both kinds need no join: the genre index alone yields the distinct names.
+      const both = kinds.length === 2;
+      const sql = both
+        ? "SELECT DISTINCT genre FROM cached_title_genres ORDER BY genre COLLATE NOCASE"
+        : `SELECT DISTINCT g.genre AS genre FROM cached_title_genres g JOIN cached_titles t ON t.id = g.title_id
+           WHERE t.kind IN (${marks(kindsOf(kinds).length)}) ORDER BY g.genre COLLATE NOCASE`;
       return prepared(sql)
-        .all(...kindsOf(kinds))
+        .all(...(both ? [] : kindsOf(kinds)))
         .flatMap((raw) => {
           const row = GenreName.safeParse(raw);
           return row.success ? [row.data.genre] : [];
