@@ -160,19 +160,6 @@ test("revert has nothing to go back to for a title made by hand, and a missing t
   assert.equal((await send(t.app, "POST", "/api/titles/movie-999/revert", undefined, token)).status, 404);
 });
 
-test("deleting a synced title is a real delete: the stored copy goes, and a later read or sync may add it again", async () => {
-  const h = await titleApp();
-  const { t, token } = h;
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
-  await send(t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, token);
-  assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 200);
-  assert.equal((await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token)).status, 404, "nothing stored to delete");
-  h.tmdb.calls.length = 0;
-  const again = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.deepEqual([again.status, field(again, "plot"), field(again, "state")], [200, "TMDB plot v1", "synced"], "TMDB's copy, without the edit");
-  assert.ok(h.tmdb.calls.includes("/movie/603"));
-});
-
 test("enabled is a field of the title: a disabled title leaves the public reads, and an admin's read keeps it", async () => {
   const h = await titleApp();
   const { t, token } = h;

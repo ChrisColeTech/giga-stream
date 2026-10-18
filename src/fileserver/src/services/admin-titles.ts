@@ -55,6 +55,8 @@ export interface TitlePage {
   page: number;
   totalPages: number;
   totalResults: number;
+  /** Rows of this page the backend left out (deleted or disabled titles). */
+  skipped?: number;
 }
 
 /** One entry of TMDB's genre list (docs/03 section 7.4). */
@@ -98,6 +100,8 @@ const PageSchema = z.object({
   page: z.number(),
   totalPages: z.number(),
   totalResults: z.number(),
+  /** Rows of this page the backend left out (deleted or disabled titles); absent from an older backend. */
+  skipped: z.number().int().min(0).optional(),
 });
 const GenresSchema = z.array(z.object({ id: z.number(), name: z.string() }));
 const SeasonSchema = z.object({

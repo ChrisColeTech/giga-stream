@@ -44,6 +44,7 @@ export interface ListAnswer {
   page: number;
   totalPages: number;
   totalResults: number;
+  skipped?: number; // rows of this page left out (deleted or disabled titles): a thinned page, not the end
 }
 
 export const asRecord = (value: unknown): Record<string, unknown> =>

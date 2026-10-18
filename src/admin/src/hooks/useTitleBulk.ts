@@ -32,7 +32,7 @@ export interface TitleBulk {
 
 /** The Titles toolbar's bulk verbs over the ticked rows (`37` section 4.2): Enable, Disable, Revert to TMDB and Delete
  *  (manual and synced alike), each planned from the page's rows and run through the shared bulk runner; the rows that
- *  finished are unticked. Delete's summary names how many deleted titles were synced and come back. */
+ *  finished are unticked. Delete's summary names how many deleted titles were synced and stay deleted. */
 export function useTitleBulk(): TitleBulk {
   const flows = useTitleFlows();
   const bulk = useBulkAction();

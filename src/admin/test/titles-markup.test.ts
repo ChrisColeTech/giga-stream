@@ -94,8 +94,8 @@ describe("the titles grid", () => {
     assert.ok(html.includes(">8.3<") || html.includes(">8.2<"));
     assert.ok(html.includes("opacity-45"));
     assert.ok(html.includes('title="Deletes the title made here."'));
-    assert.ok(html.includes("the next catalog sync or browse that lists it adds it again."));
-    assert.ok(html.includes("Turn Enabled off to keep it hidden."));
+    assert.ok(html.includes("Deletes the title and keeps it deleted: no browse or catalog sync adds it back."));
+    assert.ok(!html.includes("adds it again") && !html.includes("comes back"));
   });
 });
 

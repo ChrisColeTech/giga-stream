@@ -34,6 +34,10 @@ export type TitleStore = Pick<
   | "titleDetailStart"
   | "titleDetailLoaded"
   | "titleDetailFailed"
+  | "titlesDeletedStart"
+  | "titlesDeletedLoaded"
+  | "titlesDeletedFailed"
+  | "titleDeletedRemove"
   | "closeWorkspace"
   | "say"
 >;

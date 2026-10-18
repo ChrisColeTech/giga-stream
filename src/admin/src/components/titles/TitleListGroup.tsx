@@ -40,7 +40,7 @@ export function TitleListGroup() {
   );
 
   return (
-    <ListGroup id="ti-list" icon={Clapperboard} title="Titles" action={action}>
+    <ListGroup id="ti-list" icon={Clapperboard} title="Titles" action={action} last={false}>
       <div className="flex flex-col gap-3">
         <TitleFilters
           view={view}

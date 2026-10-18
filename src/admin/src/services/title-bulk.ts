@@ -30,3 +30,22 @@ export function createTitleBulkCall(deps: {
     }
   };
 }
+
+/** The one call Restore makes for each ticked deleted title (`DELETE /api/titles/deleted/:id`): the record goes and the
+ *  row leaves the list; the shared runner says one summary and re-reads once. A failure answers its sentence. */
+export function createTitleRestoreCall(deps: {
+  readonly service: Pick<TitlesService, "restore">;
+  readonly store: () => Pick<TitleStore, "titleDeletedRemove" | "titlesMarkUnreachable">;
+}): (item: BulkItem<string>) => Promise<string | null> {
+  const { service, store } = deps;
+  return async (item) => {
+    try {
+      await service.restore(item.id);
+      store().titleDeletedRemove(item.id);
+      return null;
+    } catch (error: unknown) {
+      if (isUnreachable(error)) store().titlesMarkUnreachable(true);
+      return sentenceOf(error);
+    }
+  };
+}

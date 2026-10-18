@@ -40,7 +40,7 @@ export const corsOrigins = (settings: Config): string[] =>
   settings.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
 
 /** The public reads the fileserver makes (docs/03 sections 7.2 and 7.4): channels, providers and the title browse routes. */
-const PUBLIC_READ = /^\/api\/(channels|providers|titles(?!\/sync(\/|\?|$)))(\/|\?|$)/;
+const PUBLIC_READ = /^\/api\/(channels|providers|titles(?!\/(sync|deleted)(\/|\?|$)))(\/|\?|$)/;
 
 /**
  * Routes whose answers must never be cached: every `/api` route, since each carries tokens, account details,

@@ -37,6 +37,8 @@ function rig(script: Partial<TitlesService> = {}) {
     update: async (id) => row(id, { state: "edited" }),
     remove: async (id) => ({ id }),
     revert: async (id) => row(id),
+    listDeleted: async () => (calls.push("listDeleted"), []),
+    restore: async (id) => ({ id }),
     ...script,
   };
   const audit = { reload: async () => undefined };

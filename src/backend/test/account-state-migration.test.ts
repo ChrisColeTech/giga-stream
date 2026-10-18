@@ -1,4 +1,4 @@
-// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018 and 019 follow, so the version reads 19), a
+// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018, 019 and 020 follow, so the version reads 20), a
 // current database opens, and a database from a newer program is refused by the existing rule.
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -56,18 +56,18 @@ const UNDO_018 = [
   "ALTER TABLE admin_accounts DROP COLUMN security_question",
 ];
 
-test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 19", () => {
+test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 20", () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-ui-state-migration-"));
   const file = path.join(dataDir, DATABASE_FILE_NAME);
   try {
     createStore(file).close();
-    assert.equal(versionOf(file), 19);
-    reshape(file, [...UNDO_019, ...UNDO_018, "DROP TABLE admin_ui_state"], 16);
+    assert.equal(versionOf(file), 20);
+    reshape(file, ["DROP TABLE deleted_titles", ...UNDO_019, ...UNDO_018, "DROP TABLE admin_ui_state"], 16);
     assert.equal(tableExists(file, "admin_ui_state"), false);
 
     createStore(file).close();
 
-    assert.equal(versionOf(file), 19);
+    assert.equal(versionOf(file), 20);
     assert.equal(tableExists(file, "admin_ui_state"), true);
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
@@ -80,9 +80,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     createStore(file).close();
     createStore(file).close();
-    assert.equal(versionOf(file), 19);
+    assert.equal(versionOf(file), 20);
 
-    reshape(file, [], 20);
+    reshape(file, [], 21);
     assert.throws(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,

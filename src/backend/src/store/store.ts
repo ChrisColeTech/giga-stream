@@ -4,6 +4,7 @@ import { createAccountRepository } from "./account-repository.js";
 import { createAuditRepository } from "./audit-repository.js";
 import { createChannelRepository } from "./channel-repository.js";
 import { openDatabase, runInTransaction } from "./database.js";
+import { createDeletedTitleRepository } from "./deleted-title-repository.js";
 import { createJobRepository } from "./job-repository.js";
 import { migrate } from "./migrate.js";
 import { createPlaylistRepository } from "./playlist-repository.js";
@@ -27,6 +28,7 @@ export function createStore(file: string) {
     channels: createChannelRepository(db),
     providers: createProviderRepository(db),
     titles: createTitleRepository(db),
+    deletedTitles: createDeletedTitleRepository(db),
     playlists: createPlaylistRepository(db),
     jobs: createJobRepository(db),
     revisions: createRevisionRepository(db),

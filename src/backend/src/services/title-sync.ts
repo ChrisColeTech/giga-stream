@@ -2,6 +2,7 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import { type Actor, type AuditService } from "./audit-service.js";
 import { type OmdbClient } from "./omdb-client.js";
+import { type TitleDeleted } from "./title-deleted.js";
 import { describeRequest } from "./title-sync-request.js";
 import { type TmdbClient } from "./tmdb-client.js";
 import {
@@ -39,6 +40,7 @@ export function createTitleSync(deps: {
   audit: AuditService;
   tmdb: TmdbClient;
   omdb: OmdbClient;
+  deleted: TitleDeleted;
   now: () => number;
   /** A full-detail fetch for the explicit-ids scope. */
   ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
@@ -60,6 +62,7 @@ export function createTitleSync(deps: {
       for (const titleId of request.ids ?? []) {
         if (stopped) return pulled;
         const [kind, id] = parseTitleId(titleId);
+        if (deps.deleted.isDeleted(kind, id)) continue; // deleted stays deleted until it is restored
         await deps.ensureTitle(kind, id);
         pulled += 1;
       }
@@ -74,7 +77,7 @@ export function createTitleSync(deps: {
           if (stopped) return pulled;
           const record = asRecord(row);
           const id = num(record.id);
-          if (id === undefined) continue;
+          if (id === undefined || deps.deleted.isDeleted(kind, id)) continue;
           const shaped = rowOf(kind, record, now());
           if (shaped === undefined) continue;
           const existing = store.titles.find(kind, id);
