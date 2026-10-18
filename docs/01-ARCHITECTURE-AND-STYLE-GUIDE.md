@@ -347,23 +347,48 @@ chrome; at most one filled accent per surface, as a form's commit.** The titleba
 |---|---|
 | Ghost (`Button variant="ghost"`, `IconButton` plain); the default | Everywhere in the body: pane content, rails, `Group`/`Row`/`Wide`/`Actions` verbs, row and card verbs, popovers, panel footers, notes over a stage |
 | Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | Window and popup headers (the close `X`). Nothing in a body, and nothing in the titlebar |
-| Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), at most one per surface |
+| Primary (`Button variant="primary"`, the accent fill) | Never in the chrome. The ONE commit at the end of a form's body (`Create`, `Save details`), the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), and the page's forward verb in the page toolbar (`Button size="sm" variant="primary"`, below; LoRA Trainer `pages/datasets/DatasetsIndex.tsx` 66-68, `pages/datasets/DatasetWorkspace.tsx` 67-69, `pages/gallery/GalleryToolbar.tsx` 47-49) |
 | Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
 | Icon-only (`IconButton`) | Navigation, dismissal and a row's small inner actions only: `‹ ›` paging, the close `X`, move up and down, remove one entry, a narrow pane's toolbar, a form row's trailing glyph, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape. Never a verb that changes records (LoRA Trainer: `ViewerToolbar.tsx` 80-88, `PromptBank.tsx` 56-64, `UnfreezeGroup.tsx` 43, `Titlebar.tsx` 48) |
-| Icon and word (`Button size="sm" variant="ghost"`, the icon first) | Every verb in a table's selection toolbar and every `Refresh`; a verb with no family icon (vocabulary below) is the word alone (LoRA Trainer `GalleryToolbar.tsx` 28-36, `CheckpointsView.tsx` 73-91, `DatasetRows.tsx` 44-46) |
-| Forward verb (`Button size="sm" variant="ghost"`, the destination's word and `→`, no icon) | The rightmost control of a toolbar, moving the work on to another tab or window (`Titles →`, `Preview →`); disabled with its reason (`Tick a row first`) when it needs a ticked row (LoRA Trainer `GalleryToolbar.tsx` 47-49, `DatasetsIndex.tsx` 66-67, `CheckpointsView.tsx` 95-96) |
+| Icon and word (`Button size="sm" variant="ghost"`, the icon first) | Every verb in a list's first row (the table strip) and every `Refresh`; a verb with no family icon (vocabulary below) is the word alone (LoRA Trainer `GalleryToolbar.tsx` 28-36, `CheckpointsView.tsx` 73-91, `DatasetRows.tsx` 44-46) |
+| Forward verb (`Button size="sm" variant="primary"`, the destination's word and `→`, no icon, a `title`) | The rightmost control of the PAGE toolbar, moving the work on to another tab or window (`Titles →`, `Preview →`); disabled with its reason (`Tick a row first`) when it needs a ticked row. Never in a list's first row (LoRA Trainer `DatasetsIndex.tsx` 64-70, `DatasetWorkspace.tsx` 67-69, `GalleryToolbar.tsx` 47-49) |
 | Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
 
-Where LoRA Trainer differs and Giga Stream keeps its own rule: LoRA's resting look is an outline (`Button.tsx` 31, the
-owner's "ghost/outline", `03` section 4.3) and its forward verb is the surface's ONE `primary` (`GalleryToolbar.tsx` 47).
-Giga Stream's ghost is flat, and its one primary is the form's commit, so the forward verb is a ghost word with `→`; an
-admin index already ends its New form with `Create`, and LoRA's own Training index shows the clash, with two primaries
-on one surface (`pages/training/TrainingIndex.tsx` 85 and 98).
+*(Corrected 2026-10-17: this table said a primary is never in a toolbar and drew the forward verb as a ghost word in the
+table strip, so the admin lost its page toolbar. The reference draws the forward verb as the small primary at the right
+of the page toolbar, over every index and workspace: LoRA Trainer `DatasetsIndex.tsx` 64-70 and `DatasetWorkspace.tsx`
+61-72.)*
+
+### Page toolbar
+
+Every page opens with its page toolbar (LoRA Trainer `components/layout/Toolbar.tsx` 12-25; the family's
+`layout/Toolbar` and `layout/Sep` in `src/shared/ui`):
+`<div className={cn(STRIP, 'bg-panel', className)} role="toolbar">{left}<span className="min-w-0 flex-1" aria-hidden />{right}</div>`,
+where `STRIP` is `flex flex-none flex-wrap items-center gap-2 border-b border-hair px-3 py-2` (`components/media/HandoffStrip.tsx`
+8) and `Sep` is the hairline between clusters (`Toolbar.tsx` 22-25).
+
+- **Placement.** The toolbar is the first child of the centre pane, above the scrolling column, and never scrolls away
+  (`DatasetsIndex.tsx` 63-72: the `Toolbar`, then `<div className="min-h-0 flex-1 overflow-y-auto">` holding the New form
+  and the rows; `DatasetWorkspace.tsx` 60-73).
+- **An index** holds only the page's forward verb, on the RIGHT (`DatasetsIndex.tsx` 64-70). An index with no forward
+  verb still draws the toolbar, empty, so the page keeps its place from tab to tab.
+- **A workspace** holds its own verbs on the left (the admin's `Discard changes`) and the forward verb rightmost
+  (`DatasetWorkspace.tsx` 61-72). A form's commit still ends the form's body (Forms).
+- **The forward verb** is `Button size="sm" variant="primary"`: the destination's word and `→`, a `title` saying what it
+  does, disabled with its reason when it cannot act (`DatasetsIndex.tsx` 66: `Tick a dataset first`). Per page (`28`
+  section 7.2): Channels index `Preview →` (exactly one ticked row: `Tick a row first`, `Tick only one row`); Providers
+  `Titles →`; Titles and Playlists `Jobs →`; the Jobs and Accounts indexes none; a channel workspace `Preview →` (`Save
+  the channel first` while the draft differs); a job workspace `Channels →` (a playlist job) or `Titles →` (a catalog
+  job); an account workspace none.
+- Every button in it has a tooltip (`title`), as LoRA's do.
 
 ### Selection toolbar
 
-The strip directly above a table whose rows are ticked (the admin's `TableStrip`; LoRA Trainer's gallery toolbar,
-`pages/gallery/GalleryToolbar.tsx`, `06` section 2.4, `03` sections 4.2 and 4.3). Left to right:
+What acts on the LIST lives in the list's own first row, inside the list group, never on the group heading and never in
+the page toolbar (LoRA Studio `components/library/LibraryToolbar.tsx` 7-12: "a heading is tile, title and badge; what
+acts on the list sits in the list's first row"). That row is the admin's `TableStrip`, drawn with LoRA Trainer's
+gallery-toolbar grammar (`pages/gallery/GalleryToolbar.tsx`, `06` section 2.4, `03` sections 4.2 and 4.3). It holds only
+list verbs; the page's forward verb is the page toolbar's. Left to right:
 
 1. **`Refresh`**, the icon and the word, first on the left, then a hairline separator (LoRA `CheckpointsView.tsx` 73-76,
    `Rescan` then `Sep`). LoRA puts a list's `Refresh` on its group heading (`DatasetRows.tsx` 43-46); a Giga Stream
@@ -379,7 +404,9 @@ The strip directly above a table whose rows are ticked (the admin's `TableStrip`
    section 2.4 "Selection is a checkbox, not a pair of verbs"). It obeys the list's filters and paging: it means the
    rows listed, never every record.
 4. **Navigation**: a list that pages draws `‹ ›` (`Newer`, `Older`) as icons (LoRA `ViewerToolbar.tsx` 80-85).
-5. A hairline, then **the one forward verb, rightmost** (`Titles →`), when the page has one.
+
+No forward verb: it moved to the page toolbar (Page toolbar above). *(Corrected 2026-10-17: item 5 put the forward verb
+rightmost in this strip.)*
 
 **No text in the toolbar** (LoRA `03` section 4.2; `06` section 2.4: "Five controls, and no status text"). No
 `N selected` count: the count is in the armed question (`Delete 3 channels?`) and the run's summary on the notice line.
@@ -445,9 +472,10 @@ Five heading roles, each one component's, and no surface invents a sixth:
 | Strip or shelf | mono 12, faint, the count dim | Continue watching, the Rows shelves, the Live channels head |
 | Filter label | 14px sans semibold over its control | the Library filters pane |
 
-A heading carries no button. LoRA Trainer's `Group` has an `action` slot for a list's `Refresh` (`components/ui/Form.tsx`
-58 and 96, `DatasetRows.tsx` 43-46); Giga Stream keeps its own rule (owner; `06` section 6, the Collections window), so that `Refresh` is the
-first verb of the table's selection toolbar.
+A heading carries nothing: no button, no search, sort or view switch. LoRA Trainer's `Group` has an `action` slot for a
+list's `Refresh` (`components/ui/Form.tsx` 58 and 96, `DatasetRows.tsx` 43-46); Giga Stream follows LoRA Studio instead
+(`components/library/LibraryToolbar.tsx` 7-12; owner; `06` section 6, the Collections window), so that `Refresh` is the
+first verb of the list's first row, and a page's verbs are its page toolbar's.
 
 The brand and the surface switch in the titlebar keep the family's own radii and spacing, drawn as the family
 draws them; they are not rebuilt from the token scale.
