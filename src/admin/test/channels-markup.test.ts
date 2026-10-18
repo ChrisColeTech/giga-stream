@@ -108,21 +108,21 @@ describe("the channels grid", () => {
     state().channelsLoaded(
       [
         live("a", { number: "2", state: "preparing" }),
-        live("b", { number: "1", enabled: false, fault: "stall" }),
+        live("b", { number: "1", enabled: false }),
         stream("c", { number: "3", source: "lists.example" }),
       ],
       1,
     );
     state().channelTick("a", true);
     const html = renderLive(createElement(ChannelRows));
-    for (const heading of ["number", "name", "category", "kind", "state", "mode", "now playing", "fault"]) {
+    for (const heading of ["number", "name", "category", "kind", "state", "mode", "now playing"]) {
       assert.ok(html.includes(`>${heading}</span>`), heading);
     }
     assert.ok(html.indexOf("Select Channel b") < html.indexOf("Select Channel a"), "by number");
     assert.ok(html.includes('data-st="preparing"') && html.includes('data-st="disabled"') && html.includes('data-st="synced"'));
     assert.ok(/<li data-st="disabled"[^>]*opacity-45/.test(html));
     assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));
-    assert.ok(html.includes(">stall</span>"));
+    assert.ok(!html.includes(">fault</span>"));
     assert.ok(html.includes('title="The next sync adds it again. Disable it to keep it off."'));
     assert.ok(html.includes('aria-label="Select all channels"') && html.includes('aria-checked="mixed"'));
   });

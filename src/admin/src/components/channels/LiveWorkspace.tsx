@@ -6,16 +6,15 @@ import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { CHANNEL_LABELS, CHOOSE_UNAVAILABLE, LIVE_SECTION_IDS, LIVE_SECTIONS, LOADING_REASON } from "@/constants/channel-copy";
 import { useChannelEditor } from "@/hooks/useChannelEditor";
-import { applyReason, clearReason, rebuildReason } from "@/lib/channel-guard";
+import { rebuildReason } from "@/lib/channel-guard";
 import { useAppStore } from "@/store/app-store";
 import type { LiveAdminChannel } from "@/types/admin-channel";
-import { FaultGroup } from "./FaultGroup";
 import { LiveDetailsGroup } from "./LiveDetailsGroup";
 import { LiveStatusGroup } from "./LiveStatusGroup";
 import { PlaybackGroup } from "./PlaybackGroup";
 
-/** A live channel's workspace (`36` section 6): the rail (`‹ Channels`, Details, Playback, Fault, Status), the strip
- *  (`Discard changes`, `Save`, `Preview →`) and one scrolling page. `Rebuild`, the fault pair and the Status `Refresh` are
+/** A live channel's workspace (`36` section 6): the rail (`‹ Channels`, Details, Playback, Status), the strip
+ *  (`Discard changes`, `Save`, `Preview →`) and one scrolling page. `Rebuild` and the Status `Refresh` are
  *  their own verbs; everything else is the one Save. */
 export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdminChannel; readonly active: boolean }) {
   const { form, actions, unreachable, toolbar } = useChannelEditor(channel);
@@ -62,17 +61,6 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           </div>
           <div ref={spy.bind("lv-playback")}>
             <PlaybackGroup draft={draft} onChange={form.set} />
-          </div>
-          <div ref={spy.bind("lv-fault")}>
-            <FaultGroup
-              applyReason={applyReason(channel, write)}
-              clearReason={clearReason(channel, write)}
-              onApply={async (request) => {
-                const result = await track("fault", () => flows.applyFault(channel.id, request));
-                return result.ok || result.dropped === true ? null : result.sentence;
-              }}
-              onClear={() => void track("fault", () => flows.clearFault(channel.id))}
-            />
           </div>
           <div ref={spy.bind("lv-status")}>
             <LiveStatusGroup

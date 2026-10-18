@@ -97,7 +97,7 @@ describe("the sentences", () => {
   const DOCUMENTED = [
     "auth.unauthorized", "auth.invalid_credentials", "auth.refresh_invalid", "auth.rate_limited", "auth.locked",
     "auth.reset_invalid", "account.not_found", "account.invalid", "account.username_taken", "account.last_admin", "account_state.invalid",
-    "channel.not_found", "channel.invalid", "channel.taken", "fault.invalid", "path.invalid", "media.not_found",
+    "channel.not_found", "channel.invalid", "channel.taken","path.invalid", "media.not_found",
     "range.unsatisfiable", "provider.not_found", "provider.invalid", "title.not_found", "title.invalid",
     "title.manual", "tmdb.unavailable", "playlist.not_found", "playlist.invalid", "playlist.unreachable",
     "playlist.busy", "playlist.unavailable", "job.not_found", "job.invalid", "job.disabled", "sync.busy",

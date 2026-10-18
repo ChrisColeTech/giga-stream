@@ -33,8 +33,8 @@ describe("the service modules", () => {
     }
   });
 
-  it("carry each tab's own extras beside them: channels rebuild, revert and the fault pair; jobs run", () => {
-    for (const method of ["rebuild", "revert", "applyFault", "clearFault"] as const) {
+  it("carry each tab's own extras beside them: channels rebuild and revert; jobs run", () => {
+    for (const method of ["rebuild", "revert"] as const) {
       assert.equal(typeof channels[method], "function", method);
     }
     assert.equal(typeof jobs.run, "function");

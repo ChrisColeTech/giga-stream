@@ -33,7 +33,6 @@ const LiveSchema = z.object({
   videos: z.array(z.string()).optional(),
   state: z.enum(["preparing", "starting", "live", "restarting", "stopped", "failed"]),
   problem: z.string().optional(),
-  fault: z.enum(["stall", "segment-404", "slow-segments", "playlist-500", "discontinuity", "restart", "end"]).nullable(),
   renditions: z.array(z.string()),
   playlist: z.array(z.object({ name: z.string(), durationMs: z.number() })),
   nowPlaying: z.object({ index: z.number(), name: z.string() }).nullable(),
@@ -53,16 +52,5 @@ export interface ChannelList {
   readonly revision: number;
   readonly unreadable: number;
 }
-
-const FAULT = z.enum(["stall", "segment-404", "slow-segments", "playlist-500", "discontinuity", "restart", "end"]);
-
-/** `PUT|DELETE /api/channels/:id/fault`. The backend answers the applied fault as `{ fault, expiresInMs }` (or the bare
- *  word, or null once cleared); either reads as the fault's name. */
-export const FaultAnswerSchema = z
-  .object({ id: z.string(), fault: z.union([FAULT, z.object({ fault: FAULT }), z.null()]) })
-  .transform((answer) => ({
-    id: answer.id,
-    fault: answer.fault === null || typeof answer.fault === "string" ? answer.fault : answer.fault.fault,
-  }));
 
 export const DeletedChannelSchema = z.object({ id: z.string() });

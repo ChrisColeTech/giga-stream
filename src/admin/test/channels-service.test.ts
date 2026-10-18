@@ -84,31 +84,24 @@ describe("the channels service", () => {
     );
   });
 
-  it("deletes, rebuilds, reverts, applies and clears a fault on their routes", async () => {
+  it("deletes, rebuilds and reverts on their routes", async () => {
     await withBackend(
       (call) => {
-        if (call.method === "DELETE" && call.url.endsWith("/fault")) return success({ id: "a", fault: null });
         if (call.method === "DELETE") return success({ id: "a" });
-        if (call.method === "PUT") return success({ id: "a", fault: { fault: "stall", expiresInMs: 5000 } });
         return success(call.url.endsWith("/revert") ? stream("a") : live("a", { state: "preparing" }));
       },
       async (calls) => {
         assert.deepEqual(await channels.remove("a"), { id: "a" });
         await channels.rebuild("a");
         await channels.revert("a");
-        assert.deepEqual(await channels.applyFault("a", { fault: "stall", durationMs: 5000 }), { id: "a", fault: "stall" });
-        assert.deepEqual(await channels.clearFault("a"), { id: "a", fault: null });
         assert.deepEqual(
           calls.map((call) => `${call.method} ${call.url}`),
           [
             "DELETE /api/channels/a",
             "POST /api/channels/a/rebuild",
             "POST /api/channels/a/revert",
-            "PUT /api/channels/a/fault",
-            "DELETE /api/channels/a/fault",
           ],
         );
-        assert.deepEqual(calls[3]?.body, { fault: "stall", durationMs: 5000 });
       },
     );
   });

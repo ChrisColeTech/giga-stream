@@ -14,7 +14,7 @@ export interface ChannelRowProps {
 }
 
 /** One channel of the list (`36` section 5.2): the tick, then number, name, category, kind, the state as a word, mode,
- *  what is on air and the fault (only when one is set), and the end `Delete`, an armed two-step naming the channel. A
+ *  what is on air, and the end `Delete`, an armed two-step naming the channel. A
  *  synced row's Delete says at rest that the next sync adds it again. A disabled channel stays, dimmed. A press on the
  *  cells opens the workspace; the tick and Delete sit outside that press. */
 export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete }: ChannelRowProps) {
@@ -42,8 +42,6 @@ export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
       <span className="truncate text-muted">{row.kind}</span>
       <StateWord state={row.state} />
       <span className="truncate text-muted">{row.mode}</span>
-      <span className="truncate text-muted">{row.nowPlaying}</span>
-      <span className="truncate font-mono text-xs text-st-failed">{row.fault}</span>
-    </RecordGridRow>
+      <span className="truncate text-muted">{row.nowPlaying}</span>    </RecordGridRow>
   );
 }

@@ -15,8 +15,6 @@ export interface ChannelRowView {
   readonly mode: string;
   /** What is on air; blank when nothing is, and for a stream channel. */
   readonly nowPlaying: string;
-  /** The applied fault's name; blank unless one is set (the list shows it only when set). */
-  readonly fault: string;
   /** The tooltip of `Delete`: a synced row says what happens next; any other row has none. */
   readonly deleteTip: string | undefined;
 }
@@ -39,12 +37,11 @@ export function channelRow(channel: AdminChannel): ChannelRowView {
       state: channelState({ enabled: channel.enabled, state: channel.state }),
       mode: MODE_LABEL[channel.mode],
       nowPlaying: channel.nowPlaying?.name ?? "",
-      fault: channel.fault ?? "",
     };
   }
   const edited = (channel.editedFields ?? []).length > 0;
   const origin = channel.source === undefined ? "manual" : edited ? "edited" : "synced";
-  return { ...base, kind: "Stream", state: channelState({ enabled: channel.enabled, origin }), mode: "", nowPlaying: "", fault: "" };
+  return { ...base, kind: "Stream", state: channelState({ enabled: channel.enabled, origin }), mode: "", nowPlaying: "" };
 }
 
 /** The rows in the order the list shows them: by number, then name. A channel with no number sorts last. */

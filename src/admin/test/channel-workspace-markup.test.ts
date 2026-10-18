@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
-import { FaultGroup } from "@/components/channels/FaultGroup";
 import { LiveDetailsGroup } from "@/components/channels/LiveDetailsGroup";
 import { LiveStatusGroup } from "@/components/channels/LiveStatusGroup";
 import { PlaybackGroup } from "@/components/channels/PlaybackGroup";
@@ -48,8 +47,7 @@ describe("a live channel's workspace", () => {
     assert.ok(html.includes('aria-label="Channel sections"'));
     for (const [before, after] of [
       [">Details<", ">Playback<"],
-      [">Playback<", ">Fault<"],
-      [">Fault<", ">Status<"],
+      [">Playback<", ">Status<"],
     ]) {
       assert.ok(at(html, before) < at(html, after), `${before} before ${after}`);
     }
@@ -85,20 +83,6 @@ describe("a live channel's workspace", () => {
     assert.ok(html.includes('aria-label="Mode"') && html.includes(">Encode</button>") && html.includes('aria-label="Captions"'));
     assert.equal((html.match(/title="A channel keeps at least two qualities\."/g) ?? []).length, 2);
     assert.ok(/aria-pressed="false"[^>]*>1080p/.test(html), "an unlit quality can be added");
-  });
-
-  it("disables Apply with its reason unless live, and Clear while no fault is set", () => {
-    const html = renderLive(
-      createElement(FaultGroup, {
-        applyReason: "Apply a fault only while the channel is live.",
-        clearReason: "No fault is applied.",
-        onApply: async () => null,
-        onClear: () => undefined,
-      }),
-    );
-    assert.ok(html.includes('aria-label="Apply. Apply a fault only while the channel is live."'));
-    assert.ok(html.includes('aria-label="Clear. No fault is applied."'));
-    assert.ok(html.includes(">segment-404</option>") && html.includes('aria-label="Duration"') && html.includes('aria-label="Delay"'));
   });
 
   it("draws Status facts as shimmer while the channel is being built, keeping the rows", () => {

@@ -16,8 +16,8 @@ Preview section 9.7 and live flows section 10 still govern). The program is `39`
 | Wire types | `types/admin-channel.ts` | built (the backend's own shapes) |
 | Zod | `services/schemas/channel-schema.ts` (`ChannelSchema`, `ChannelListSchema`) | built; the list fails whole if one row fails (to tighten, 3.2) |
 | Pure helpers | `lib/channel-rows.ts` (`channelRows`, `isSynced`), `lib/channel-draft.ts` (`draftOf`, `sameDraft`, `rebuilds`), `lib/channel-check.ts` (`checkChannel`), `lib/live-time.ts`, `lib/row-state.ts` (`channelState`) | built |
-| Copy | `constants/channel-copy.ts` (categories, faults, variants, labels), `constants/channel-tips.ts` | built |
-| The service | `services/channels.ts` (`ChannelsService`: `list create update remove rebuild revert applyFault clearFault`) | **a stub: every method refuses with `backend.not_connected`** |
+| Copy | `constants/channel-copy.ts` (categories, variants, labels), `constants/channel-tips.ts` | built |
+| The service | `services/channels.ts` (`ChannelsService`: `list create update remove rebuild revert`) | **a stub: every method refuses with `backend.not_connected`** |
 | Request layer | `services/api.ts` (`request`), `services/session-api.ts` | built, real |
 | Folder picker | `services/admin-host.ts` (`hostAvailable`, `chooseFolder`) | built (Wave 2) |
 | Shell pieces | `ListGroup`, `NewRecordGroup`, `WorkspaceFrame`, `RecordRail`, `WorkspaceToolbar`, `IndexToolbar`, `TabPage`, `workspaces` slice, `work` slice (`setWork`), the statusbar's `N preparing` readout | built (Wave 2) |
@@ -35,7 +35,7 @@ The whole Channels tab, wired, in this order (one commit each):
 
 1. **Service and store.** `services/channels.ts` real; `store/channels-slice.ts`; `services/channel-flows.ts`; the loads.
 2. **Index.** New channel form, the list, `Refresh`, `Delete`, the toolbar `Preview →` gate, the statusbar count.
-3. **Live workspace.** Details, Playback, Fault, Status, `Rebuild`.
+3. **Live workspace.** Details, Playback, Status, `Rebuild`.
 4. **Stream workspace.** Details with `Edited` tags and `Revert to playlist`, Stream with a refused address, Status.
 5. **Preview.** The child window, the player, the status line, `Retry`, closing.
 
@@ -55,8 +55,6 @@ the Status heading's `Refresh`); a stop-a-build route (the statusbar `Stop` stay
 | `remove` | `DELETE /api/channels/:id` | none | `{ id }` |
 | `rebuild` | `POST /api/channels/:id/rebuild` | none | `LiveAdminChannel`; `422 channel.invalid` field `enabled` while disabled, and for a stream row |
 | `revert` | `POST /api/channels/:id/revert` | none | `StreamAdminChannel` with `editedFields` cleared; `422` field `source` for a hand-made row |
-| `applyFault` | `PUT /api/channels/:id/fault` | `{ fault, durationMs?, delayMs? }` (positive integers, at most 86 400 000) | `{ id, fault }` |
-| `clearFault` | `DELETE /api/channels/:id/fault` | none | `{ id, fault: null }` |
 
 Read in the backend (`types/channel-input.ts`, `services/live-channel-rules.ts`): a live **id** is required on create, kebab-case, at
 most 64 (`LIVE_ID_MAX`); the **number** is a whole number 1 to 9999; a live PATCH that carries `streamUrl` or `logoUrl` is
@@ -83,18 +81,18 @@ Paths under `src/admin/src/`. "C" create, "U" update. Bounds are expected sizes;
 | U | `services/schemas/channel-schema.ts` | `ChannelListLenientSchema` |
 | C | `lib/channel-bulk.ts` (70) | pure: the bulk verbs' eligibility and reasons (5.3) |
 | C | `lib/channel-body.ts` (80) | pure: a create body from a New form (no id), a PATCH body from `draft` against the saved channel (only changed fields; `folder`/`videos` only when the source changed; `number` as text) |
-| C | `lib/channel-guard.ts` (70) | pure: every disabled reason of this tab (`Rebuild`, `Apply`, `Preview →` index and workspace, `Revert`, `Delete` tooltip of a synced row) |
+| C | `lib/channel-guard.ts` (70) | pure: every disabled reason of this tab (`Rebuild`, `Preview →` index and workspace, `Revert`, `Delete` tooltip of a synced row) |
 | C | `lib/preview-state.ts` (50), `lib/preview-address.ts` (20) | pure: the status line, `Retry` visibility, skeleton flag, attach rule; the path-only address (`new URL(streamUrl).pathname` for a live row) |
 | C | `lib/video-order.ts` (30) | pure: move up/down, remove, add keeping order |
 | C | `store/channels-slice.ts` (110) | `channels: { status, items, revision, unreachable, ticked }`, `preview: { channelId, serial } \| null`; actions `startLoad`, `loaded`, `loadFailed`, `upsert`, `remove`, `tick`, `tickAll`, `openPreview`, `closePreview`, `reset` |
-| C | `services/channel-flows.ts` (180) | `create`, `save`, `remove`, `rebuild`, `revert`, `applyFault`, `clearFault`, `refresh`, each with the store and the service injected; a `serial` guard; typed results `{ ok } \| { ok: false; field?; sentence }` |
+| C | `services/channel-flows.ts` (180) | `create`, `save`, `remove`, `rebuild`, `revert`, `refresh`, each with the store and the service injected; a `serial` guard; typed results `{ ok } \| { ok: false; field?; sentence }` |
 | C | `hooks/useChannelsLoad.ts` (40), `hooks/useChannelActions.ts` (80) | load when the tab is first shown after sign-in; the actions |
 | C | `hooks/usePreviewSession.ts` (70), `hooks/usePreviewPlayer.ts` (60) | the window's session over `GET /api/admin-channels`; the player instance, destroyed on unmount |
 | C | `services/preview-player.ts` (90) | pure of React: drives `<video>` and hls.js (`28` 7.4, `29` 9.7) |
 | C | `components/records/StateWord.tsx`, `useRecordForm` | **Wave 3a's**; consumed |
 | C | `components/records/FolderRow.tsx` (70), `components/records/VideoList.tsx` (120) | a `Row` with a mono field and a trailing ghost `Choose` button; the live source's ordered rows and the add row (a path field and `Add`; no `Choose`: the preload picks folders only) |
 | C | `components/channels/ChannelsIndex.tsx` (60), `NewChannelForm.tsx` (140), `NewChannelRows.tsx` (110), `ChannelsList.tsx` (60), `ChannelRows.tsx` (110), `ChannelRow.tsx` (70) | index |
-| C | `components/channels/ChannelWorkspace.tsx` (60), `LiveDetailsGroup.tsx` (150), `PlaybackGroup.tsx` (80), `FaultGroup.tsx` (90), `LiveStatusGroup.tsx` (100), `PlaylistRows.tsx` (50) | live workspace |
+| C | `components/channels/ChannelWorkspace.tsx` (60), `LiveDetailsGroup.tsx` (150), `PlaybackGroup.tsx` (80), `LiveStatusGroup.tsx` (100), `PlaylistRows.tsx` (50) | live workspace |
 | C | `components/channels/StreamDetailsGroup.tsx` (110), `StreamAddressGroup.tsx` (60), `StreamStatusGroup.tsx` (60) | stream workspace |
 | C | `components/channels/PreviewWindow.tsx` (60), `PreviewStage.tsx` (60), `PreviewStatus.tsx` (40) | the window |
 | C | `constants/preview-copy.ts` (30), `constants/channel-grid.ts` (20) | the window's words; the list's column set |
@@ -131,11 +129,11 @@ window; type the path.`, and the field is a typed path. `Choose` exists only on 
 
 ### 5.2 The list (`ListGroup`, icon `radio`, title `Channels`, heading action ghost `Refresh`)
 
-`RecordGrid` over the rows of `channelRows`; headings `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
+`RecordGrid` over the rows of `channelRows`; headings `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`
 (`constants/channel-grid.ts`, tracks in rem, the end track fits `Delete Fixture Entertainment?`, a minimum width inside its own
 scroller). Select-all tick `Select all channels` (`mixed` over a part); row tick `Select <name>`; a press on the data cells opens
 the workspace (no `Open` button, no double click); the state column is the `StateWord` of `channelState`; a disabled row is
-dimmed to 45% (its word `disabled`); `fault` shows only when set. The end is the library `ArmedButton` `Delete`, question
+dimmed to 45% (its word `disabled`). The end is the library `ArmedButton` `Delete`, question
 `Delete <name>?`, re-arming after 4 s, disarmed by blur and `Escape`; its rest title is the synced row's `DELETE_SYNCED_TIP`
 (a synced row is really deleted and the next sync adds it again; the tip points to `Enabled`) or nothing. `SkeletonGrid`
 while `idle` or `loading` or empty - never a sentence over it, never an empty card. A failed read keeps the last rows and sets one
@@ -165,7 +163,7 @@ failed and skipped rows stay ticked - is `39` section 6, built by Wave 3a and co
 on every load and every write (and on delete). It changes only on those events: no timer. `Stop` stays disabled with `A channel
 build cannot be cancelled; change or delete the channel.` (the readout owner is the Wave 2 statusbar).
 
-## 6. The live workspace (`ChannelWorkspace`, rail `‹ Channels`, `Details`, `Playback`, `Fault`, `Status`)
+## 6. The live workspace (`ChannelWorkspace`, rail `‹ Channels`, `Details`, `Playback`, `Status`)
 
 `WorkspaceFrame` + `RecordRail` (sections a module constant) + `WorkspaceToolbar` with `Discard changes`, `Save` and the filled
 `Preview →`. It opens from the held list; if the id is no longer in a `ready` list it closes with a `warn` notice and re-reads.
@@ -184,9 +182,7 @@ while disabled; the answer shows `preparing`.
 **Playback** (`play`): Mode (`Segmented` Loop / Encode, the cost in the tip), Captions (`Toggle`), Qualities (the pill `ChipGroup`,
 `min` 2, the last two cannot be switched off, with their reason).
 
-**Fault** (`zap`): Fault (`Select` of the seven), Duration (ms, `NumericInput`), Delay (ms), `Apply` and `Clear`. `Apply` is disabled with
-`Apply a fault only while the channel is live.` unless `state === "live"`; its tip marks it a test tool. `Clear` is disabled
-while no fault is set. A `fault.invalid` refusal goes under Fault. The applied fault shows in the list's `fault` column.
+There is no Fault group: fault injection was removed from the admin (owner, 2026-10-17: "why would I sabotage my own broadcast").
 
 **Status** (`activity`; a heading `Refresh` that re-reads `GET /api/admin-channels` and replaces the list): while `state` is
 `preparing`, `starting` or `restarting` the facts are replaced by shimmer lines in their shape (the group keeps its heading and
@@ -246,12 +242,12 @@ Moved by its header, resized by its edges, closed by its `X` or `Escape` (not wh
 
 | File | Cases |
 |---|---|
-| `channels-service.test.ts` | each route of 3.1 with the body it sends (fake backend from `test/support/fake-backend.ts`): create live with a folder and with videos, create stream, only changed fields in a PATCH, `folder` and `videos` exclusive, number as text, rebuild, revert, both fault calls; the list drops an unreadable row and counts it; `409` and `422` carry `field` |
+| `channels-service.test.ts` | each route of 3.1 with the body it sends (fake backend from `test/support/fake-backend.ts`): create live with a folder and with videos, create stream, only changed fields in a PATCH, `folder` and `videos` exclusive, number as text, rebuild, revert; the list drops an unreadable row and counts it; `409` and `422` carry `field` |
 | `channel-body.test.ts` | the create body carries no `id`; the PATCH body |
 | `channel-bulk.test.ts` | each verb's skip rules and reasons (stream/disabled/already), the disabled reasons, the plan over mixed ticked rows; a run through the shared runner with one forced failure keeps the rest |
-| `channel-guard.test.ts` | every reason in order: `Preview →` index (none, two, one live, one stream), workspace (dirty, new), `Rebuild` (dirty, disabled), `Apply` (not live), `Clear` (no fault), `Revert` (hand-made, nothing edited) |
+| `channel-guard.test.ts` | every reason in order: `Preview →` index (none, two, one live, one stream), workspace (dirty, new), `Rebuild` (dirty, disabled), `Revert` (hand-made, nothing edited) |
 | `channels-slice.test.ts` | the status transitions; `upsert` replaces by id; `remove`; ticks pruned with their row; `reset` on sign-out; `setWork({ preparing })` counts `preparing`, `starting`, `restarting` after every load and write |
-| `channel-flows.test.ts` | the create, save, remove, rebuild, revert, fault flows: answer replaces the record, form clears, notices, `channel.invalid` field to its row, `channel.taken` under Number, a changed `serial` drops the answer, a transport failure sets `unreachable` and disables writes until a read |
+| `channel-flows.test.ts` | the create, save, remove, rebuild, revert flows: answer replaces the record, form clears, notices, `channel.invalid` field to its row, `channel.taken` under Number, a changed `serial` drops the answer, a transport failure sets `unreachable` and disables writes until a read |
 | `video-list.test.ts`, `video-order.test.ts` | move up/down, remove, add keeps order, numbering, `Already first` / `Already last` |
 | `channels-markup.test.ts` | the New form in each kind (rows in order, no placeholder, `Create` reasons, `Choose` disabled with its reason without a host, enabled with one), the grid (headings, ticks, state words, dim, `Delete` question, synced tip), the live workspace groups (Plays switch, VideoList, `Rebuild` reasons, `Apply` reason, qualities `min`), the stream workspace (`Edited` tag, `Revert to playlist`, the refused-address `error`), skeletons while loading and preparing |
 | `preview-player.test.ts` | with a fake engine and a fake video: hls.js used when supported, native HLS only as the fallback, neither gives the sentence; the three fatal-error mappings; `detach` destroys, pauses and empties `src`; a second `detach` is harmless |
@@ -278,7 +274,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, all clean.
    `src/fileserver`, `src/shared/*` (a gap is added additively and named), the other tabs' pages, slices and services, `store/app-store.ts`, `store/slices/*` except `channels`, `index-frames.ts`, `package.json`, every `.env`, `docs/**`.
 2. **Rules.** `AGENTS.md`, `07`, `01`; this plan; no fixture and no fake feature; a control works or is disabled with its reason; skeletons never a sentence over them; no browser storage, no timers; files at most 200 lines; never print a secret.
 3. **Role.** Implements sections 3 to 8 in the five commits of section 2; writes and runs its tests; no browser, no server; edits no doc; commits on its branch, never pushes or merges.
-4. **Read first.** `AGENTS.md`; `07` 6; `01` 4, 5, 6, 8, 9; this document; `35` (the pattern: slice, flows, serial, notices); `29` 5, 7, 9.1, 9.7, 10, 13; `26` 4.5 to 4.7; `28` 7.2 to 7.4; the foundation files of section 1; the backend's `api/channels.ts`, `api/admin-channels.ts`, `api/live-faults.ts`, `types/channel-input.ts`, `services/live-channel-rules.ts` as read-only reference; the library's `ChildWindow`, `RecordGrid`, `ArmedButton`, `Toggle`, `Segmented`, `ChipGroup`.
+4. **Read first.** `AGENTS.md`; `07` 6; `01` 4, 5, 6, 8, 9; this document; `35` (the pattern: slice, flows, serial, notices); `29` 5, 7, 9.1, 9.7, 10, 13; `26` 4.5 to 4.7; `28` 7.2 to 7.4; the foundation files of section 1; the backend's `api/channels.ts`, `api/admin-channels.ts`, `types/channel-input.ts`, `services/live-channel-rules.ts` as read-only reference; the library's `ChildWindow`, `RecordGrid`, `ArmedButton`, `Toggle`, `Segmented`, `ChipGroup`.
 5. **Scope.** Section 4; out of scope as section 2.
 6. **Report.** `07` 6.4, plus every gap filled (the first one: anything the live-id change did not cover) and any signature of `StateWord` / `useRecordForm` that differed.
 
@@ -288,7 +284,7 @@ On a temporary backend (`39` section 9): `FIXTURE_DIR` of videos (`npm run fixtu
 
 1. Index: skeleton, then the rows; ticks arm `Preview →` with the three reasons; row click opens the workspace; armed `Delete <name>?` re-arms after 4 s and disarms on blur and `Escape`; `Refresh`.
 2. Create a live channel `zz-drive-news` from a fixture folder (typed path in Chrome; `Choose` in Electron): it shows `preparing`, the statusbar `1 preparing`; after `Refresh`, `live`, and the count clears.
-3. Live workspace: edit name, number, category, mode, captions, qualities (the last two cannot be switched off), switch Plays to Videos and back, move/remove/add videos; `Save` sends only changed fields (the network tab's body); `Discard changes`; `Rebuild`; `Enabled` off stops it; fault `segment-404` applied only while live, cleared.
+3. Live workspace: edit name, number, category, mode, captions, qualities (the last two cannot be switched off), switch Plays to Videos and back, move/remove/add videos; `Save` sends only changed fields (the network tab's body); `Discard changes`; `Rebuild`; `Enabled` off stops it.
 4. Stream workspace: create a stream channel; refuse a non-https address under its row; edit; a synced row (seed one through a local test playlist on the temporary backend with `ALLOW_LOOPBACK_STREAMS`) shows `Edited` after a save and `Revert to playlist` clears it.
 5. Preview: opens from the index and from the workspace; plays the live channel through its own path with hls.js (network: `master.m3u8` and segments from the page origin, no iframe, no `/test/` request); the line says `live`; closing stops all requests; focus returns to the opener; a `failed` or `stopped` channel opens it with the reason and `Retry`; a `preparing` one shows the skeleton; a stream channel plays or shows its error; after an edit `Preview →` says `Save the channel first`.
 6. Wire: every `/api` request but login and refresh carries `Authorization`; no storage writes; console clean; both sizes, dark and light, compared with the interface's Collections window for the pattern and the mockup's `channels-index.html`, `channel-workspace*.html` for content.
@@ -306,6 +302,6 @@ On a temporary backend (`39` section 9): `FIXTURE_DIR` of videos (`npm run fixtu
 | 4 | `28` Wave 2 row lists `useRecordForm`, `StateWord` as created | neither is in the tree; they are Wave 3a's (`35`) |
 | 5 | `29` 9.1: a live PATCH may change `logoUrl` | refused (`A live channel has no logoUrl...`); the live Logo row is read-only |
 | 6 | `29` 7: `ApiError.field` | the foundation's `ApiError` has none; `35` adds it, and this wave depends on it |
-| 7 | `26` 4.6 rail: `details · source · playback · fault · status` | `28` 7.2 folds the source into Details (Plays switch); this plan follows `28` |
+| 7 | `26` 4.6 rail: `details · source · playback · fault · status` | `28` 7.2 folds the source into Details (Plays switch); this plan follows `28`; the fault section is removed (owner, 2026-10-17) |
 | 8 | `26` 4.7: stream rows are read-only with "Owned by the playlist sync" | rule 1 of `26` 3.10 and the backend let a synced row be edited (`editedFields`); this plan follows the backend |
 | 9 | `29` 9.1: `Rebuild` on any live channel | the backend refuses it while disabled and for a stream row |
