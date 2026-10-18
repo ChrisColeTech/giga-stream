@@ -125,3 +125,4 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   while a control still calls a stub/mock service, or while a fixture supplies data the fileserver owns.
 - After every wave lands, the coordinator runs `npm run dist:win` and gives the owner the exe's path, so
   the owner tests the wave without disturbing development (`docs/07` section 6.5).
+- Commit messages say what and why, ending with the CORRECT trailer: `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` | `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` | `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` | `Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>` | `Co-Authored-By: GPT 5.6 Sol <codex@openai.com>` | `Co-Authored-By: GPT 6 Astra <codex@openai.com>`| `Co-Authored-By: GLM <noreply@z.ai>`
