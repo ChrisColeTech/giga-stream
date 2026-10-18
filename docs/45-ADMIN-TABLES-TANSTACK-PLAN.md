@@ -1,6 +1,8 @@
 # 45 - One TanStack table system for the admin index lists (plan)
 
-**Status: PROPOSED 2026-10-18; awaiting the owner's answers to section 11 (esp. the stack amendment, section 7).** Written by a
+**Status: APPROVED by the owner 2026-10-18 ("ok approved") with the plan's recommendations: (1) the New-record form stays open
+above the list; (2) rows stay 36px; (3) Deleted titles stays its own bounded group under Stored; (4) low-priority columns hide at
+narrow widths and the table never scrolls sideways; (5) the two stack rows are authorized (recorded in `01` section 2).** Written by a
 read-only planning pass (references: `giga-extension` downloads/history/settings tables, `giga-cut-poc` `DataTable`). Docs before
 code (`07`). Scope: the admin app (`src/admin`) and `src/shared/ui`.
 

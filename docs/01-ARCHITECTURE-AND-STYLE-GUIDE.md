@@ -117,6 +117,8 @@ No CLI, Rust runtime, Python sidecar, inference worker or second renderer archit
 | Desktop | Electron, sandboxed renderer, context isolation, no Node integration |
 | Live playback | hls.js whenever the browser can run it; the browser's own HLS only as a fallback |
 | Icons | lucide-react |
+| Tables (admin) | `@tanstack/react-table` v9 (`^9.2.4`, the family references' pin): `useTable` + `tableFeatures`; sorting, visibility and sizing metadata only; confined to `src/shared/ui` (owner, 2026-10-18, plan `45`) |
+| Row windowing (admin) | `@tanstack/react-virtual` `^3.14`, the long admin lists only (owner, 2026-10-18, plan `45`) |
 | Context menus | @radix-ui/react-dropdown-menu, pinned at 2.1.24: the one context menu and its one-level `Collections ▸` submenu; menus only, never dialogs (the family standard, Giga Images' `docs/frontend/00`) |
 | Quality | oxlint, TypeScript, an executable architecture checker |
 
@@ -299,6 +301,18 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 
 ## 9. Interface grammar
 
+### Tables (the admin's index lists; plan `45`, owner 2026-10-18)
+
+One table system for every index list, built on TanStack Table (and TanStack Virtual for the long lists): one column-definition
+API (`shared/ui/src/lib/record-columns.ts`); **columns always fit the pane** (fluid `minmax`/`fr` columns, truncation, and
+priority-based hiding of the least important columns at narrow widths) - **no horizontal scrollbar** at 900px or wider;
+**one scroll strategy** - the table fills the remaining pane height and scrolls inside itself under a sticky header, and
+never grows the page (the page scrolls once only when the form above plus an 8-row table exceed the pane); **one row height**
+(36px, header 29px) and one left edge for every table; the tri-state `All` in the header above the row ticks; skeleton rows in
+the same columns while loading; sort from the header and from the query bar's sort control. TanStack is used for column
+definitions, sorting, visibility and sizing metadata only: selection stays by id (`ListSelection`) and paging stays
+index-addressed (`41`). `helper.columns()` types each column's value, so no `any` is needed.
+
 ### Shell
 
 One persistent window: a titlebar (brand, the Live / Library / Player switch, pane toggles, window
@@ -421,12 +435,13 @@ list verbs; the page's forward verb is the page toolbar's. Left to right:
    is disabled with its reason (`Tick a row first`; LoRA `Select images first`, `GalleryToolbar.tsx` 28-34), so the bar
    never changes shape when the first row is ticked. *(Corrected 2026-10-17: the strip drew its verbs only while rows
    were ticked; a verb is present and states its refusal before the press, `03` section 4.3.)*
-3. A spacer, then on the right **the three-state `All` checkbox**: all, none or some of the listed rows, the word
-   `All` beside the box. From "some" a press selects all; from "all" it clears. It replaces both the header's
-   select-all tick and a `Clear selection` button: a button cannot show whether anything is selected, and a tick in the
-   table's header is a second row of controls (LoRA `GalleryToolbar.tsx` 45, `components/ui/Toggle.tsx` 37-70, `06`
-   section 2.4 "Selection is a checkbox, not a pair of verbs"). It obeys the list's filters and paging: it means the
-   rows listed, never every record.
+3. **The three-state `All` checkbox** (all, none or some of the listed rows) **sits in the table's HEADER, in the tick
+   column directly above the row ticks** (owner, 2026-10-18: a toolbar `All` at the far right was nowhere near the
+   checkboxes it controls; LoRA's gallery has no checkbox column, so its right-hand `All` does not apply to a table).
+   From "some" a press selects all; from "all" it clears. It replaces a `Clear selection` button: a button cannot show
+   whether anything is selected (`06` section 2.4 "Selection is a checkbox, not a pair of verbs"). It obeys the list's
+   filters and paging: it means the rows listed, never every record; `Select all M matching` stays in the selection
+   toolbar.
 4. **Navigation**: a list that pages draws `‹ ›` (`Newer`, `Older`) as icons (LoRA `ViewerToolbar.tsx` 80-85).
 
 No forward verb: it moved to the page toolbar (Page toolbar above). *(Corrected 2026-10-17: item 5 put the forward verb
