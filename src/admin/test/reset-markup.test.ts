@@ -59,12 +59,11 @@ describe("the answer view", () => {
     assert.ok(!/\splaceholder=/.test(html) && !html.includes("aria-disabled"));
   });
 
-  it("says plainly, under the question and for every username, that a signed-in admin must set one first", () => {
+  it("keeps the question-less note as a tip on the Question row, not a card, and the same for every username", () => {
     const html = answerView(answerState());
-    assert.ok(html.includes("No security question?"));
-    assert.ok(html.includes("a signed-in admin must set one first, under Settings &gt; Account."));
-    assert.ok(at(html, QUESTION) < at(html, "No security question?"));
-    assert.ok(at(html, "No security question?") < at(html, 'aria-label="Answer"'));
+    assert.ok(!html.includes("No security question?") && !html.includes('role="status"'), "no standing card or paragraph");
+    assert.ok(at(html, 'aria-label="About Question"') < at(html, QUESTION), "the tip is on the label, before the value");
+    assert.ok(at(html, QUESTION) < at(html, 'aria-label="Answer"'));
     const other = answerView(answerState({ username: "someone-else" }));
     assert.equal(other.replace(/someone-else/g, "ada"), html, "identical whatever the username");
   });

@@ -144,6 +144,17 @@ describe("the accounts bulk run", () => {
     assert.deepEqual(outcome?.failed.map((i) => i.id), ["b"]);
     assert.deepEqual(state().accounts.ticked, ["b", "d"], "failed and skipped rows stay ticked; finished ones are unticked");
     assert.equal(state().notice?.sentence, "Disabled 2 accounts; 1 failed; 1 skipped.");
+    const rows = state().events.filter((row) => row.area === "Account" && row.tone === "warn");
+    assert.deepEqual(
+      rows.map((row) => row.sentence),
+      [
+        "b@x.test: Refused by the server.",
+        "d@x.test: The last enabled account cannot be disabled.",
+        "Disabled 2 accounts; 1 failed; 1 skipped.",
+      ],
+      "each failed or skipped record is a warning row naming it and the sentence, then the summary last",
+    );
+    assert.equal(rows[0]?.identity, "b@x.test", "the record is the row's identity");
     assert.equal(rereads, 1);
     assert.ok(working.includes(1) && state().work.syncing === 0, "counted while it ran, back to zero after");
     assert.equal(state().accounts.items.find((i) => i.id === "a")?.disabled, true);

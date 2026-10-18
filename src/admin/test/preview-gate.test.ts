@@ -47,7 +47,8 @@ describe("the Preview's gate and its window", () => {
     const html = renderLive(createElement(OverlayHost));
     assert.ok(html.includes('aria-label="Preview window"') && html.includes('aria-modal="true"'));
     assert.ok(/<video[^>]*controls=""[^>]*muted=""/.test(html) && html.includes("bg-stage"));
-    assert.ok(html.includes('role="status"') && html.includes(">loading</p>"), "the first read is running");
+    assert.ok(html.includes('role="status"') && html.includes(">loading</span>"), "the first read is running");
+    assert.ok(!html.includes("<p>") && !html.includes("<p "), "the window's status is one state word, never a paragraph");
     assert.ok(html.includes("animate-skel-shimmer"), "the stage waits under its skeleton");
     assert.ok(html.includes('aria-label="Close Preview"'));
     assert.ok(!html.includes("<iframe") && !html.includes("/test/") && !html.includes("<select"));
