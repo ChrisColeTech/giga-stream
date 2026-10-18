@@ -182,7 +182,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, clean.
 
 ## 9. The coordinator's acceptance
 
-Temporary backend (`39` 7) with `TMDB_READ_TOKEN` unset (the Titles list then shows its skeleton and the notice; manual titles are still driven) and, for the synced behaviour, the backend's titles stubs (`TMDB_BASE` pointed at a local stub the backend tests already use, `test/title-stubs.ts`) - never the owner's token.
+Temporary backend (`39` 9) with `TMDB_READ_TOKEN` unset (the Titles list then shows its skeleton and the notice; manual titles are still driven) and, for the synced behaviour, the backend's titles stubs (`TMDB_BASE` pointed at a local stub the backend tests already use, `test/title-stubs.ts`) - never the owner's token.
 1. Providers: create (Embed needs the Movie template; Stream does not), edit every field, `Enabled` off and on (the row dims), frame origins (add, remove, a malformed one and a ninth refused inline), message shape, `Save` sends only changed fields by `PUT`, `null` clears; delete two-step; `Titles →`.
 2. Titles: create a manual movie and a manual series (seasons editor), search by Enter, both chips and one chip (the last cannot switch off), every sort, `Older`/`Newer` bounds, edit and save, `Enabled`, `Revert to TMDB` disabled for manual with its reason, a synced stubbed title shows `edited` after a save and reverts, Sources read-only, delete two-step with its tooltip.
 3. Both sizes, dark and light; console clean; every request carries `Authorization`; no storage; `Ctrl+F` focuses the search; records created are deleted; owner data untouched.

@@ -84,7 +84,7 @@ backs the file up, and removes that line if it is `3001` (the code default is 80
 Start it from `src/backend` with the variables in the **process environment** and without any `--env-file` (`node src/build-shared.ts && npx tsx src/server.ts`; `config.ts` reads `process.env` only), detached
 through `Win32_Process.Create` as `07` section 4 shows, keeping the PID. Do not use `npm run dev` in `src/backend`: it loads `.env`. Then check, before any browser: `GET /healthz` answers `role: "admin-backend"`;
 `Test-Path $env:TEMP\giga-accounts-verify\admin.db` is true; the owner's `~\.giga-stream-admin` has no new or modified file (timestamps before and after). The admin is served by that backend at
-`http://127.0.0.1:8391/admin/` (same origin, no Vite, no collision with the owner's 5172). Stop it by PID at the end and delete the temporary folder. The generalised recipe is `39` section 7.
+`http://127.0.0.1:8391/admin/` (same origin, no Vite, no collision with the owner's 5172). Stop it by PID at the end and delete the temporary folder. The generalised recipe is `39` section 9.
 
 ### 3.4 The owner's checklist (the real app, once this has landed)
 

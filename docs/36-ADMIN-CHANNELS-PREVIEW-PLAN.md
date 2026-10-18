@@ -287,7 +287,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, all clean.
 
 ## 12. The coordinator's acceptance
 
-On a temporary backend (`39` section 7): `FIXTURE_DIR` of videos (`npm run fixtures` output, `scripts/fixtures`) as the live folders; the real built admin in Chrome at 1600 x 1000 and 900 x 640, plus the backend's Electron window for `Choose`.
+On a temporary backend (`39` section 9): `FIXTURE_DIR` of videos (`npm run fixtures` output, `scripts/fixtures`) as the live folders; the real built admin in Chrome at 1600 x 1000 and 900 x 640, plus the backend's Electron window for `Choose`.
 
 1. Index: skeleton, then the rows; ticks arm `Preview →` with the three reasons; row click opens the workspace; armed `Delete <name>?` re-arms after 4 s and disarms on blur and `Escape`; `Refresh`.
 2. Create a live channel `zz-drive-news` from a fixture folder (typed path in Chrome; `Choose` in Electron): it shows `preparing`, the statusbar `1 preparing`; after `Refresh`, `live`, and the count clears.

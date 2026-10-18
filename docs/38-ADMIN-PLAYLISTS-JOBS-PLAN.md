@@ -183,7 +183,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, clean.
 
 ## 10. The coordinator's acceptance
 
-Temporary backend (`39` 7) with `ALLOW_LOOPBACK_STREAMS` and a local test playlist served from a throwaway static server on a free port (the owner's playlists and TMDB token are never used); `TMDB_BASE` at the backend tests' local stub for the catalog job.
+Temporary backend (`39` 9) with `ALLOW_LOOPBACK_STREAMS` and a local test playlist served from a throwaway static server on a free port (the owner's playlists and TMDB token are never used); `TMDB_BASE` at the backend tests' local stub for the catalog job.
 1. Playlists: create (the address refused unless it passes the address rule), the masked address with `Replace`, edit, `Enabled`, Status with channel links (after `36`), delete two-step with its notice.
 2. Jobs: create a playlist job and a catalog job, `Run job` with `Dry run` (counts at once), `Prune` tip, the toolbar run on two ticked jobs in sequence with a forced refusal on one, a catalog run showing `running`, `1 syncing`, the pulsing bar, then `Refresh` shows the outcome; Last run counts, refused examples, created ids as links; a bad interval as a field error; `Channels →` / `Titles →`; the disabled reasons.
 3. Both sizes, dark and light; console clean; every request carries `Authorization`; no storage; records created are deleted; owner data untouched.
