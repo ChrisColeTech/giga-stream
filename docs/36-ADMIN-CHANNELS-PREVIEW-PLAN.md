@@ -279,6 +279,28 @@ Library's Title information window (`Actions pinned` directly under the header, 
   query, ends disabled with their reasons, single channel, keys not in a field), the toolbar markup (order, no row under the stage), the
   mark and enable flows updating row and window.
 
+### 8.2 The title bar is the channel, and the window reads ONE channel (owner, 2026-10-18; supersedes "What is read" and `Retry` above)
+
+Owner: "the title bar says Preview, instead of the videos title ... retry button appears to refresh the entire list and not just the
+loaded preview, what does retry even do?". Verified: `usePreviewSession` calls `flows.refresh`, which is `GET /api/admin-channels` with no
+`limit` = ALL channels (2,602 rows today), on every open, every Retry and (as built) the list's pages are dropped by it.
+
+- **The title bar** (the `ChildWindow` header) shows the CHANNEL'S NAME (`Close <name>` for the X), not `Preview`; while the channel is
+  being read the header wears a short shimmer where the name goes (never the word `Preview`, never a sentence). The toolbar no longer
+  carries the name: left = the verbs, right = the state word, `N / total` and Previous / Next. A step updates the header at once.
+- **One-channel read.** New backend route `GET /api/admin-channels/:channelId` (signed-in admin, `Cache-Control: no-store`, the same
+  admin view of ONE row as the list: `404 channel.not_found`). The window reads it on open, on each step to a neighbour whose row the list
+  does not already hold (a held row shows at once and is read afresh in the background only for a live channel), and on `Retry`. The
+  Preview NEVER calls `GET /api/admin-channels` without `limit`, never replaces the Channels slice, and never drops the list's loaded
+  pages; the one row it reads is upserted into the slice by id (the existing `channelUpsert`).
+- **What `Retry` is for.** It plays THAT channel again: it re-reads that one channel (a live channel's `state` may have moved
+  `failed` -> `preparing` -> `live`; a stream channel's address may have been edited) and then attaches the player again (the attempt is
+  raised even when the address did not change, as built). It is offered only when there is something to retry: the player reported an
+  error, a live channel is `failed` or `stopped`, or the channel was missing. It never touches the list.
+- Tests: the new route (auth, one row, 404, no-store); the session reads exactly one channel on open, one on each Retry, one on a step to an
+  unheld row, and NEVER the list route (a fake counts both); the header shows the channel's name and `Close <name>`; the toolbar has no name;
+  the list's pages survive opening, stepping and Retry.
+
 ## 9. Tests (`node:test`, written AND run by the worker; no server, no browser, no sleeping)
 
 | File | Cases |
