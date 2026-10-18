@@ -48,7 +48,7 @@ call `fetch`; the request layer is the only caller. Application URLs are relativ
    `ChildWindow`) on a saved channel: a 16:9 HLS video, one mono status line and a `Retry`. It is wired in section 9.7: no
    iframe, no `/test/player.html`, no `testPage` field in `/healthz`, no `TEST_PAGE` dependency (the env value stays for the
    backend's own test page only). Both channel kinds preview; a stopped or failed channel still opens it and says why.
-2. **Session** (`26` D5). The access token and the refresh token live in the store's session slice, in memory only. A reload signs in again. Nothing is written to `localStorage`, `sessionStorage`, IndexedDB or a cookie.
+2. **Session** (`26` D5). The access token lives in the store's session slice, in memory only. The refresh token is the backend's httpOnly `giga_refresh` cookie (`03` section 7.12); on load the app sends one `POST /api/auth/refresh` with no body behind a shimmer wall and shows the gate only if that fails. Nothing is written to `localStorage`, `sessionStorage` or IndexedDB, and the app never reads the cookie.
 3. **Refresh is lazy and single-flight.** There is no timer: a request that finds the access token within `REFRESH_SKEW_MS` (30 s) of `accessExpiresAt`, or that is answered `401 auth.unauthorized`, makes one refresh through a shared promise, then retries once. The refresh token is single-use and a second use revokes every session of the account (`03` 7.12), so two requests must never refresh at once; section 6 makes that a tested rule.
 4. **Titles list.** `GET /api/titles` is TMDB-backed (browse by `page`, TMDB-sized pages), so the Titles index pages with `Older` / `Newer` over `page` and `totalPages`, and the `Older` / `Newer` controls disable at the ends with their reasons. With no `TMDB_READ_TOKEN` and no manual title the read is `503 tmdb.unavailable`: the list shows its skeleton and the notice says why.
 5. **Playlist Status channels.** The backend's channel answer carries `source` (the playlist's host) but not the playlist id, so the playlist's channels are the admin channels whose `source` equals its `host`.
@@ -750,7 +750,7 @@ A wave's worker: `npm ci` in its own worktree, typecheck, lint, `node scripts/ch
 
 ## 20. Done when
 
-No control calls a stub or reads a fixture; every route of section 9 is used by a control or is listed as not needed; the Events drawer shows the real audit log; a reload signs in again and restores the account's saved appearance and layout once; the Preview window plays a saved channel and stops on close; the gate passes with the admin's tests and the live smoke; the coordinator's real-wire drive and the visual acceptance at both sizes pass; the backend serves the built admin at `/admin/` and its Electron window opens it.
+No control calls a stub or reads a fixture; every route of section 9 is used by a control or is listed as not needed; the Events drawer shows the real audit log; a reload restores the session from the refresh cookie and then the account's saved appearance and layout once; the Preview window plays a saved channel and stops on close; the gate passes with the admin's tests and the live smoke; the coordinator's real-wire drive and the visual acceptance at both sizes pass; the backend serves the built admin at `/admin/` and its Electron window opens it.
 
 ## 21. Risks
 

@@ -729,8 +729,9 @@ Each has a recommended default. The waves proceed on the defaults and are redire
   them (recommended).
 - **D4.** Accept that restarting the admin backend stops live channels (recommended). The alternative is keeping the engine
   as a child process the backend supervises.
-- **D5.** The refresh token lives in memory only, so a reload signs in again (recommended). `sessionStorage` is browser
-  storage, which `01` section 4.4 forbids.
+- **D5.** The access token lives in memory only. The refresh token is an httpOnly, same-site cookie the backend sets
+  (owner, 2026-10-18: a reload must not sign the admin out), so a reload restores the session with one silent refresh.
+  The app code never touches `sessionStorage`, `localStorage` or `document.cookie`, which `01` section 4.4 forbids.
 - **D6.** *(Retired.)* There is no Audit tab; the audit log is the Events drawer (4.9).
 - **D23.** *(Retired with roles, D22.)* Every signed-in admin reads the audit log in the Events drawer.
 - **D22.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The

@@ -29,7 +29,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | # | Decision |
 |---|---|
 | 1 | One worker (A), one worktree, five commits in the order of section 2. No backend change (section 8); one additive change in `src/shared/http` (`ApiError.field`, 5.1). |
-| 2 | Tokens stay in the session slice, in memory only (`26` D5). A reload signs in again. Nothing is written to the browser. |
+| 2 | The access token stays in the session slice, in memory only (`26` D5). The refresh token is the backend's httpOnly cookie; a reload restores the session silently. The app writes nothing to the browser. |
 | 3 | A failed call is said once by the hook that made it, with the `ApiError` sentence on the notice line (`warn`; the chrome slice's `say` also writes the drawer row for `warn` and `error`). A success is a notice only; the audit row is the record. `onEvent` stays unused (a finished request carries no sentence). |
 | 4 | The gate's refusal kinds are the foundation's `refusalFor` (`invalid` for a wrong pair and any other 4xx, `locked`, `rate_limited`, `unreachable` for transport, unreadable and 5xx answers). A session that ends under the app always shows `34`'s notice `Your session ended. Sign in again.`; the refresh failure's own sentence is not shown. |
 | 5 | Own-account effects end the session locally with a notice: a new password for yourself (`Password changed. Sign in again.`), disabling or deleting yourself (`Your account was disabled.` / `Your account was deleted.`). Changing your own username or name updates the signed-in actor and nothing else. The signed-in actor gains its **account id** (the foundation's `SessionActor` has only username and name, and a username can change). |

@@ -123,7 +123,7 @@ interface AuthPort {
   `auth.rate_limited` and `backend.unreachable` to the four kinds; `signOut` becomes `POST /api/auth/logout`.
 - **The store contract Wave 7 keeps** (`SessionSlice`): `signedIn: boolean`, `actor: SessionActor | null`,
   `gate: GateState`, `beginSignIn()`, `finishSignIn(result)`, `endSession(sentence)` (what the request layer calls on
-  a second 401 or a failed refresh), `signOut()`. Wave 7 adds the tokens next to `actor` (in memory only, `26` D5) and
+  a second 401 or a failed refresh), `signOut()`. Wave 7 adds the tokens next to `actor` (the access token in memory only, the refresh token the backend's cookie, `26` D5; the gate waits behind a shimmer wall for the on-load restore) and
   `finishSignIn` stores them; the components read `signedIn`, `actor`, `gate` only and do not change.
 - `hooks/useSignIn.ts` and `hooks/useSignOut.ts` are the only code that awaits the port; the store holds no promise.
 
