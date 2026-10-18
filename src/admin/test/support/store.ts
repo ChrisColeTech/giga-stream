@@ -18,7 +18,8 @@ export function resetStore(): void {
 export function signInForTest(): void {
   useAppStore.setState({
     signedIn: true,
-    actor: { email: "ada@example.test", name: "Ada" },
+    actor: { id: 7, email: "ada@example.test", name: "Ada" },
+    serial: 1,
     tokens: { accessToken: "a", accessExpiresAt: 9e12, refreshToken: "r", refreshExpiresAt: 9e12 },
   });
 }

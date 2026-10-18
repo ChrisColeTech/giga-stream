@@ -13,5 +13,14 @@ export const AccountSchema = z.object({
 
 export const AccountListSchema = z.object({ items: z.array(AccountSchema) });
 
+/** The list as the service reads it: rows stay `unknown` so one unreadable row costs that row, not the list
+ *  (`01` section 8). `services/accounts.ts` parses each with `AccountSchema`. */
+export const AccountListLenientSchema = z.object({ items: z.array(z.unknown()) });
+
 export type AdminAccount = z.infer<typeof AccountSchema>;
-export type AccountList = z.infer<typeof AccountListSchema>;
+
+/** The readable accounts and how many rows could not be read. */
+export interface AccountList {
+  readonly items: AdminAccount[];
+  readonly unreadable: number;
+}

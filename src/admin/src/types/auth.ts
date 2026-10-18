@@ -3,6 +3,8 @@
 
 /** Who is signed in, as the Session section and the events sentences show them. */
 export interface SessionActor {
+  /** The account id as the backend gives it: an email can change, an id cannot, so own-account rules compare ids. */
+  readonly id: string | number;
   readonly email: string;
   readonly name: string;
 }
