@@ -18,7 +18,11 @@ const row = (id: string, extra: Partial<AdminTitleRow> = {}): AdminTitleRow => (
   enabled: true,
   ...extra,
 });
-const page = (): string => renderLive(createElement(TitlesPage, { active: true }));
+/** These tests are about the TMDB browse list, so the page is drawn in its `Browse TMDB` view (`Stored` is the default). */
+const page = (): string => {
+  state().storedSetMode("browse");
+  return renderLive(createElement(TitlesPage, { active: true }));
+};
 const at = (html: string, text: string): number => {
   const index = html.indexOf(text);
   assert.ok(index >= 0, `missing: ${text}`);
