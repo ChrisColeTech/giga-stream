@@ -136,16 +136,17 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     return () => controller.abort();
   }, [playingRequest]);
 
-  /* The statusbar's bar reads the store (`50` section 2.3): the video is busy while any of this hook's pendings run
-     or the stage is loading, and the flag clears on rest, failure and unmount alike. */
-  const stageLoading = useAppStore((state) => state.playerMedia.stage.kind === "loading");
+  /* The statusbar's bar reads the store (`50` section 2.3): the video is busy exactly while this hook's reads are in
+     flight, and the flag clears on rest, failure and unmount alike. The stage's kind is deliberately NOT a load
+     signal: `setPlayerSources` forces `loading` on every sources write and only a media event advances it, so it can
+     sit at `loading` while the mounted media plays — the render layer derives its own states and ignores the kind. */
   const view: LoadedPlayerData = loaded.key !== key
     ? (tab === null ? EMPTY : { ...EMPTY, basePending: true, relatedPending: tab.ref.kind !== "local" })
     : loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
   const pending = view.basePending || view.seasonPending || view.playingPending || view.relatedPending;
   useEffect(() => {
-    useAppStore.getState().setActivity("video", pending || stageLoading);
+    useAppStore.getState().setActivity("video", pending);
     return () => useAppStore.getState().setActivity("video", false);
-  }, [pending, stageLoading]);
+  }, [pending]);
   return view;
 }

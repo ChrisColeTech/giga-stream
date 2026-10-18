@@ -27,3 +27,19 @@ export function selectedPlayerSource(
 ): PlayerSource | undefined {
   return sources.find((source) => source.id === activeId) ?? sources[0];
 }
+
+/** Whether two source lists carry the same media: same ids, kinds, names and addresses (a provider by its id), in
+ *  order. A re-read that answers the same sources recomputes the list into new objects; the stage must not treat
+ *  that as a change (`50` section 2.4's stop fix): the write would force the stage back to `loading`, which no
+ *  media event then advances while the mounted element keeps playing. */
+export function sameSources(left: readonly PlayerSource[], right: readonly PlayerSource[]): boolean {
+  return left.length === right.length && left.every((source, at) => {
+    const other = right[at];
+    if (other === undefined || source.id !== other.id || source.kind !== other.kind || source.name !== other.name) {
+      return false;
+    }
+    return source.kind === "embed"
+      ? other.kind === "embed" && source.embed.providerId === other.embed.providerId
+      : other.kind === "stream" && source.url === other.url;
+  });
+}

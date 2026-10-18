@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { blankForStop } from "@/components/player/EmbedHost";
 import { pauseForStop } from "@/components/player/NativePlayer";
+import { videoPlayingOf } from "@/components/chrome/RunningWork";
 import { detachForStop } from "@/hooks/useStreamPlayer";
 import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";
@@ -18,6 +19,36 @@ describe("the stop serial", () => {
     assert.equal(state().stopRequest, 1);
     state().requestStop();
     assert.equal(state().stopRequest, 2, "a second press is just another change, never a queued one");
+  });
+});
+
+describe("stop's playback pause", () => {
+  it("pauses the fake element in place - position and source untouched - and tolerates a missing one", () => {
+    let pauses = 0;
+    const media = { pause: (): void => { pauses += 1; }, currentTime: 11.2, src: "https://media.test/movie.mp4" };
+    pauseForStop(media);
+    assert.equal(pauses, 1);
+    assert.equal(media.currentTime, 11.2, "Stop keeps the position for Resume");
+    assert.equal(media.src, "https://media.test/movie.mp4", "Stop never clears or reloads the source");
+    pauseForStop(null);
+    pauseForStop(undefined);
+    assert.equal(pauses, 1, "nothing else pressed");
+  });
+
+  it("the stop's pause lands in the store and disarms the playing gate; a play re-arms it", () => {
+    const state = () => useAppStore.getState();
+    assert.equal(state().playerPaused, true, "a freshly opened item starts paused");
+    state().setPlayerSources(
+      [{ id: "app", kind: "stream", name: "App player", url: "https://media.test/movie.mp4" }], "app",
+    );
+    state().setPlayerStage({ kind: "ready" });
+    state().setPlayerPaused(false);
+    assert.equal(videoPlayingOf(state().playerMedia, state().playerPaused), true, "playing");
+    state().setPlayerPaused(true);
+    assert.equal(state().playerPaused, true, "the stop's pause reaches the store");
+    assert.equal(videoPlayingOf(state().playerMedia, state().playerPaused), false, "so Stop disarms at once");
+    state().setPlayerPaused(false);
+    assert.equal(videoPlayingOf(state().playerMedia, state().playerPaused), true, "a following play re-arms");
   });
 });
 

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { runningWorkView, trackedJob } from "@/components/chrome/RunningWork";
+import { runningWorkView, trackedJob, videoPlayingOf } from "@/components/chrome/RunningWork";
 import { useAppStore } from "@/store/app-store";
 import type { ActivityFlags } from "@/store/slices/shell-slice";
+import type { PlayerMediaState } from "@/types/player";
 import type { Job } from "@/types/job";
 
 const job = (over: Partial<Job> = {}): Job => ({
@@ -93,6 +94,29 @@ describe("the tracked job", () => {
     assert.equal(trackedJob([job({ id: "a", state: "done" }), job({ id: "b", state: "queued" })])?.id, "b");
     assert.equal(trackedJob([job({ id: "a", state: "failed" }), job({ id: "b", state: "cancelled" })]), null);
     assert.equal(trackedJob([]), null);
+  });
+});
+
+describe("the playback playing gate", () => {
+  const hosted: PlayerMediaState = {
+    sources: [{ id: "app", kind: "stream", name: "App player", url: "https://media.test/a.m3u8" }],
+    activeSourceId: "app",
+    stage: { kind: "ready" },
+  };
+
+  it("arms while the hosted media plays - even while its stage kind still reads loading", () => {
+    assert.equal(videoPlayingOf(hosted, false), true);
+    assert.equal(videoPlayingOf({ ...hosted, stage: { kind: "loading" } }, false), true,
+      "starting counts, as the live stage's does: the kind only advances on a media event");
+  });
+
+  it("disarms on pause, failure, closing and an unhosted stage", () => {
+    assert.equal(videoPlayingOf(hosted, true), false, "paused");
+    assert.equal(videoPlayingOf({ ...hosted, stage: { kind: "failed", reason: "Dead." } }, false), false);
+    assert.equal(videoPlayingOf({ ...hosted, stage: { kind: "idle" } }, false), false);
+    assert.equal(videoPlayingOf({ ...hosted, sources: [] }, false), false);
+    assert.equal(videoPlayingOf({ sources: [], activeSourceId: null, stage: { kind: "idle" } }, false), false,
+      "nothing open: nothing to stop");
   });
 });
 
