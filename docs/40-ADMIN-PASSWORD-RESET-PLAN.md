@@ -95,11 +95,14 @@ Events drawer sentences: `<email> set a security question`, `Password reset fail
 ALTER TABLE admin_accounts ADD COLUMN security_question INTEGER CHECK (security_question BETWEEN 1 AND 8);
 ALTER TABLE admin_accounts ADD COLUMN security_answer_hash TEXT;
 CREATE TABLE reset_attempts (
-  email_key    TEXT PRIMARY KEY,
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,   -- every backend table has a generated integer key (EVERYTHING, 39 section 7.1)
+  email_key    TEXT NOT NULL UNIQUE,                -- the normalised email the attempts belong to; known or unknown
   failed       INTEGER NOT NULL DEFAULT 0,
   locked_until INTEGER
 );
 ```
+
+The two columns on `admin_accounts` are added to the table that migration `018` has already rebuilt: its primary key is the generated integer `id`, and the string account id is `api_id` (`39` section 7.1). The reset answers never show an id of any kind; the reset is keyed by the email, and the session tokens stay keyed by the API string `api_id` as they are today.
 
 Existing accounts get no question (NULL): see 5.1. `user_version` becomes at least 19. The newer-schema rule (an older binary refuses a newer database) is unchanged. Migration 018 (real ids, `40` no longer owns it, see `39` 7.1) is applied first.
 
@@ -108,7 +111,7 @@ Existing accounts get no question (NULL): see 5.1. `user_version` becomes at lea
 - `constants/security-questions.ts`: the eight questions (2.1), `SECURITY_QUESTION_COUNT = 8`, `SECURITY_ANSWER_MAX = 200`, `RESET_LOCK_FAILURES = 5`, `RESET_LOCK_MS = 15 * 60 * 1000`.
 - `constants/errors.ts`: `authResetInvalid: { code: "auth.reset_invalid", status: 401, message: "That answer is not right, or the reset is not available for this email." }`.
 - `types/account.ts`: `SecurityQuestionSetSchema = z.object({ currentPassword, question: z.number().int().min(1).max(8), answer: z.string().min(1).max(200) }).strict()`; `ResetStartSchema = z.object({ email: z.string().max(254) }).strict()`; `ResetSchema = z.object({ email, answer: z.string().max(200), newPassword: password })` (`password` is the existing 12-to-256 schema, so a short password is the body refusal of 2.4 step 1).
-- `AdminAccount` gains `securityQuestionSet: boolean` (read-only, for the Accounts workspace's Details row, `35`).
+- `AdminAccount` gains `securityQuestionSet: boolean` (read-only, for the Accounts workspace's Details row, `35`). Its `idNumber` (the generated database key, `39` 7.1) is added by 018, not by this plan.
 
 ### 3.3 Service, repositories and routes
 
