@@ -12,7 +12,10 @@ export function createAuthPort(api: Pick<SessionApi, "login" | "logout">): AuthP
         const session = await api.login(email, password);
         return {
           ok: true,
-          session: { actor: { email: session.account.email, name: session.account.name }, tokens: tokensOf(session) },
+          session: {
+            actor: { id: session.account.id, email: session.account.email, name: session.account.name },
+            tokens: tokensOf(session),
+          },
         };
       } catch (error: unknown) {
         return { ok: false, refusal: refusalFor(error) };

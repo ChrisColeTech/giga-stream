@@ -8,6 +8,8 @@ import type { OverlayId } from "@/types/overlays";
 import { auditSlice, type AuditSlice } from "./audit-slice";
 import { panesSlice, type PanesSlice } from "./panes-slice";
 import { sessionSlice, type SessionSlice } from "./session-slice";
+import { tabSlices, type TabSlices } from "./slices";
+import { createStaleSlice, type StaleSlice } from "./slices/stale";
 import { workSlice, type WorkSlice } from "./work-slice";
 import { workspaceSlice, type WorkspaceSlice } from "./workspace-slice";
 
@@ -28,7 +30,9 @@ export type AppState = ChromeSlice<AdminKinds> &
   PanesSlice &
   SessionSlice &
   AuditSlice &
-  WorkSlice;
+  WorkSlice &
+  StaleSlice &
+  TabSlices;
 
 export const useAppStore = create<AppState>()((set, get) => {
   const session = sessionSlice(set, get);
@@ -42,5 +46,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     ...session,
     ...auditSlice(set, get),
     ...workSlice(set, get),
+    ...createStaleSlice(set, get),
+    ...tabSlices(set, get),
   };
 });

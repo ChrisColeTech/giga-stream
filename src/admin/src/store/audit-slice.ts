@@ -1,57 +1,32 @@
-import { ApiError } from "@giga/http/api-error";
-import type { EventRow, EventTone } from "@giga/ui/lib/event-log";
-import { eventFromAudit } from "@/lib/event-sentence";
-import { audit } from "@/services/audit";
-import type { AuditList } from "@/services/schemas/audit-schema";
+import type { EventRow } from "@giga/ui/lib/event-log";
 import type { EventArea } from "@/types/events";
 
-/* The Events drawer's history, a slice of the one store (`29` section 11). The rows come from the audit SERVICE: the
- * newest page after sign-in (`loadAudit`) and, on `Load older`, the page before the cursor. The backend answers newest
- * first; the drawer keeps oldest first, so a page is reversed and prepended whole. A refusal (the service is not connected
- * yet, the backend is down) is one warn row and notice and changes nothing else. `olderCursor` is the `before` of the next
- * page, or null when there is none, which keeps `Load older` disabled. */
+/* The Events drawer's history, a slice of the one store (`29` section 11). PURE: the I/O (the audit service, the merge of a
+ * page into the held rows) lives in `hooks/useAuditTail.ts` and `services/audit-tail.ts`; this slice only takes the rows
+ * they hand it. `olderCursor` is the `nextBefore` of the last page read, or null when there is none, which keeps
+ * `Load older` disabled. */
+export type AuditMode = "reload" | "older";
+
 export interface AuditSlice {
   olderCursor: number | null;
-  /** Reads the newest page; called once after a sign-in. */
-  loadAudit: () => Promise<void>;
-  loadOlder: () => Promise<void>;
+  /** Replaces the held rows with the merged ones. A reload sets the cursor only when none was read yet; `Load older`
+   *  always sets it, so reaching the first entry clears it. */
+  takeAudit: (rows: readonly EventRow<EventArea>[], nextBefore: number | null, mode: AuditMode) => void;
 }
 
 interface Host {
   events: readonly EventRow<EventArea>[];
-  say: (sentence: string, tone?: EventTone, area?: EventArea) => void;
 }
 
 type Set = (partial: Partial<AuditSlice & Host>) => void;
 type Get = () => AuditSlice & Host;
 
-const REFUSED = "The history could not be read.";
-
 export function auditSlice(set: Set, get: Get): AuditSlice {
-  const take = (page: AuditList): void => {
-    const rows = [...page.items].reverse().map((entry) => eventFromAudit(entry));
-    set({ events: [...rows, ...get().events], olderCursor: page.nextBefore ?? null });
-  };
-  const refuse = (error: unknown): void => {
-    get().say(error instanceof ApiError ? error.message : REFUSED, "warn", "Connection");
-  };
   return {
     olderCursor: null,
-    loadAudit: async () => {
-      try {
-        take(await audit.list());
-      } catch (error: unknown) {
-        refuse(error);
-      }
-    },
-    loadOlder: async () => {
-      const before = get().olderCursor;
-      if (before === null) return;
-      try {
-        take(await audit.list({ before }));
-      } catch (error: unknown) {
-        refuse(error);
-      }
+    takeAudit: (rows, nextBefore, mode) => {
+      const cursor = mode === "older" || get().olderCursor === null ? nextBefore : get().olderCursor;
+      set({ events: rows, olderCursor: cursor });
     },
   };
 }

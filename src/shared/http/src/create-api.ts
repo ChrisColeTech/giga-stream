@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { ApiError } from "./api-error";
+import type { ApiErrorExtras } from "./api-error";
 import { errorSentence } from "./error-sentence";
 import { EnvelopeSchema } from "./envelope-schema";
 import type { ApiClient, ApiConfig, HttpMethod, RequestOptions, RequestStatus } from "./request-types";
@@ -16,6 +17,20 @@ async function readJson(response: Response): Promise<Read> {
   }
 }
 
+interface ErrorBody {
+  readonly details?: Readonly<Record<string, unknown>>;
+  readonly correlationId?: string;
+}
+
+/** The field a validation refusal names and the correlation id; a `field` that is not a string is ignored. */
+function extrasOf(error: ErrorBody | undefined): ApiErrorExtras {
+  const field = error?.details?.["field"];
+  return {
+    ...(typeof field === "string" && { field }),
+    ...(error?.correlationId !== undefined && { correlationId: error.correlationId }),
+  };
+}
+
 /** The request layer of one program (`01` section 4.1): `api` decodes the standard envelope and validates its data,
  *  `apiStream` returns a streamed body after a refusal check. React-free; the program supplies the sentences, the
  *  failure codes, the headers and what to do with each finished request. */
@@ -29,8 +44,8 @@ export function createApi<Area extends string>(config: ApiConfig<Area>): ApiClie
     new ApiError(failureCodes.invalid, errorSentence(sentences, failureCodes.invalid), status);
   const unreachable = (): ApiError =>
     new ApiError(failureCodes.unreachable, errorSentence(sentences, failureCodes.unreachable));
-  const refused = (code: string, message: string, status: number): ApiError =>
-    new ApiError(code, errorSentence(sentences, code, message), status);
+  const refused = (code: string, message: string, status: number, error?: ErrorBody): ApiError =>
+    new ApiError(code, errorSentence(sentences, code, message), status, extrasOf(error));
 
   function target(path: string): string {
     if (!path.startsWith("/api/")) throw new TypeError("API paths must be relative and begin /api/.");
@@ -65,7 +80,8 @@ export function createApi<Area extends string>(config: ApiConfig<Area>): ApiClie
     const read = await readJson(response);
     const parsed = read.ok ? EnvelopeSchema.safeParse(read.value) : null;
     if (parsed === null || !parsed.success || parsed.data.ok) return invalid(response.status);
-    return refused(parsed.data.error.code, parsed.data.error.message, response.status);
+    const { error } = parsed.data;
+    return refused(error.code, error.message, response.status, error);
   }
 
   async function api<T>(path: string, schema: z.ZodType<T>, options: RequestOptions<Area> = {}): Promise<T> {
@@ -85,7 +101,9 @@ export function createApi<Area extends string>(config: ApiConfig<Area>): ApiClie
         throw invalid(response.status);
       }
       const envelope = parsed.data;
-      if (!envelope.ok) throw refused(envelope.error.code, envelope.error.message, response.status);
+      if (!envelope.ok) {
+        throw refused(envelope.error.code, envelope.error.message, response.status, envelope.error);
+      }
       const data = schema.safeParse(envelope.data);
       if (!data.success) {
         status = "invalid";

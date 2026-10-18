@@ -44,8 +44,17 @@ function count(detail: AuditEntry["detail"], key: string): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+/** An account is named by its email: the backend writes it on `account.created` and `deleted`; an `updated` entry holds
+ *  only the account's name, so the held email for the subject id comes first. Only the named keys are read, never a
+ *  field called `password`. */
+function accountName(entry: AuditEntry, names: SubjectNames): string {
+  const held = entry.subject === undefined ? undefined : names[entry.subject];
+  return text(entry.detail, "email") ?? held ?? text(entry.detail, "name") ?? entry.subject ?? "";
+}
+
 /** The record's name: the entry's own (`name`, `title`, `host`), else the one the admin holds for the subject, else the id. */
 function nameOf(entry: AuditEntry, names: SubjectNames): string {
+  if (entry.action.startsWith("account.")) return accountName(entry, names);
   const own = text(entry.detail, "name") ?? text(entry.detail, "title") ?? text(entry.detail, "host");
   if (own !== undefined) return own;
   return entry.subject === undefined ? "" : (names[entry.subject] ?? entry.subject);

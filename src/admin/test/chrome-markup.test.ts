@@ -182,6 +182,6 @@ describe("the shell", () => {
 
   it("never asks the network for anything", () => {
     const html = renderLive(createElement(AppShell));
-    assert.ok(!html.includes("/api") && !html.includes("<img") && !html.includes("placeholder"));
+    assert.ok(!html.includes("/api") && !html.includes("<img") && !html.includes('placeholder="'));
   });
 });

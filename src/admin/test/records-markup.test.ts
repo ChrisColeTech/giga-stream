@@ -114,13 +114,14 @@ describe("a tab's page", () => {
     assert.ok(html.includes("h-10"));
   });
 
-  it("gives Providers a forward verb that works, and Accounts a strip with none", () => {
+  it("gives Providers a forward verb that works, and Accounts the bulk verbs, all waiting for a ticked account", () => {
     const providers = renderToStaticMarkup(createElement(ProvidersPage, { active: true }));
     assert.ok((providers.match(/<button[^>]*>Titles →/)?.[0] ?? "").length > 0);
     assert.ok(!(providers.match(/<button[^>]*>Titles →/)?.[0] ?? "").includes('disabled=""'));
     const accounts = renderToStaticMarkup(createElement(AccountsPage, { active: true }));
-    const strip = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("</div>", accounts.indexOf('role="toolbar"')));
-    assert.ok(!strip.includes("<button"), "an empty strip is still drawn");
+    const strip = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("New account"));
+    for (const verb of ["Enable", "Disable"]) assert.ok(strip.includes(`aria-label="${verb}. Tick an account first"`), verb);
+    assert.ok(strip.includes('title="Tick an account first"'), "Delete is an armed two-step, disabled with the same reason");
   });
 });
 

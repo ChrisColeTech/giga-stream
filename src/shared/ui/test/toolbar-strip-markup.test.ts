@@ -39,6 +39,15 @@ test('every verb is the small stock button', () => {
   for (const button of buttons(strip(VERBS))) assert.ok(button.includes('h-ctl-sm'), button.slice(0, 60))
 })
 
+test('a verb with a question is an armed two-step: ghost at rest, and disabled with its reason as the tooltip', () => {
+  const armed: ToolbarVerb = { id: 'del', label: 'Delete', tone: 'ghost', question: 'Delete 2 accounts?', onPress: () => undefined }
+  const rest = strip([armed])
+  assert.ok(rest.includes('>Delete</button>') && !rest.includes('Delete 2 accounts?'), 'the question shows only once armed')
+  assert.ok(rest.includes('bg-transparent') && !rest.includes('disabled=""'))
+  const blocked = strip([{ ...armed, reason: 'Tick an account first' }])
+  assert.ok(blocked.includes('disabled=""') && blocked.includes('title="Tick an account first"'))
+})
+
 test('a verb with a reason is natively disabled in the focusable tooltip; one without is an ordinary button', () => {
   const html = strip(VERBS)
   assert.equal(html.split('role="group"').length - 1, 2, 'Discard and Save are wrapped')
