@@ -29,6 +29,8 @@ export interface AdminChannel {
   category: string;
   number?: string;
   logoUrl?: string;
+  /** The backend's own cached copy of the logo (docs/46 D.1); relative to the backend or absolute. */
+  cachedLogoUrl?: string;
   revision: number;
   streamUrl: string;
 }
@@ -57,6 +59,7 @@ const ChannelSchema = z.object({
   category: z.string(),
   number: z.string().optional(),
   logoUrl: z.string().optional(),
+  cachedLogoUrl: z.string().optional(),
   revision: z.number(),
   streamUrl: z.string().min(1),
 });

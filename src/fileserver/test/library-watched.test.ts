@@ -47,7 +47,7 @@ function catalogSeam(movies: number, shows: number, every: number): typeof fetch
 
 async function seamApp(movies: number, shows: number, every = 10) {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-watched-"));
-  const app: FastifyInstance = await buildApp({ dataDir, adminFetch: catalogSeam(movies, shows, every), logger: false });
+  const app: FastifyInstance = await buildApp({ dataDir, adminFetch: catalogSeam(movies, shows, every), logger: false, syncOnStart: false });
   return { app, close: async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); } };
 }
 

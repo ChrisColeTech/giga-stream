@@ -33,8 +33,6 @@ const EnvSchema = z.object({
   DATA_DIR: z.string().default(""),
   // A LAN or cloud admin backend must use https; the flag is the development override (03 section 3.2).
   ALLOW_INSECURE_ADMIN: BooleanFlag,
-  // How long the live view counts as fresh between on-demand reads (03 section 5.1).
-  LIVE_VIEW_TTL_MS: z.coerce.number().int().min(0).max(60 * 60 * 1000).default(30_000),
   // Desktop shell only: the page the window loads, overriding the Vite-or-own-origin choice (src/app/main.ts).
   GIGA_APP_URL: z.string().trim().default(""),
   // Test lane only: `POST /api/fs/dialog` then takes `{ name }` directly under this root (03 section 3.8).
@@ -53,7 +51,6 @@ export const config = {
   /** The fileserver's own data folder: `~/.giga-stream` unless `DATA_DIR` is set. */
   dataDir: env.DATA_DIR !== "" ? path.resolve(env.DATA_DIR) : path.join(os.homedir(), ".giga-stream"),
   allowInsecureAdmin: env.ALLOW_INSECURE_ADMIN,
-  liveViewTtlMs: env.LIVE_VIEW_TTL_MS,
   appUrl: env.GIGA_APP_URL,
   /** Where the proof of concept's saved results go (gitignored). */
   pocResultsDir: path.join(POC_DIR, "results"),

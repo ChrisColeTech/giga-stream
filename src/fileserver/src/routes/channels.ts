@@ -14,13 +14,9 @@ const LastBody = z.object({ channelId: z.string().min(1).max(200) }).strict();
 
 /** `GET /api/channels`, `POST /api/channels/refresh`, `PATCH /api/channels/last` (docs/03 section 3.4). */
 export function registerChannelsRoutes(app: FastifyInstance, services: AppServices): void {
-  app.get("/api/channels", async (request, reply) => {
+  app.get("/api/channels", async (request) => {
     const query = parseInput(ChannelsQuery, request.query);
-    const read = await services.live.list(query);
-    if ("failure" in read) {
-      throw new AppError(read.failure.code, read.failure.status, read.failure.message);
-    }
-    return okEnvelope(read.list);
+    return okEnvelope((await services.live.list(query)).list);
   });
 
   app.post("/api/channels/refresh", async (_request, reply) => {
@@ -34,15 +30,7 @@ export function registerChannelsRoutes(app: FastifyInstance, services: AppServic
 
   app.patch("/api/channels/last", async (request) => {
     const body = parseInput(LastBody, request.body);
-    const lastId = services.live.lastId(() => services.channelState.readLastChannelId());
-    if (lastId === undefined && services.channelState.readLastChannelId() !== undefined) {
-      throw new AppError("channel.not_found", 404, "That channel is not in the live view.");
-    }
-    const list = await services.live.list({});
-    if ("failure" in list) {
-      throw new AppError(list.failure.code, list.failure.status, list.failure.message);
-    }
-    if (!list.list.items.some((channel) => channel.id === body.channelId)) {
+    if (!(await services.live.knows(body.channelId))) {
       throw new AppError("channel.not_found", 404, "That channel is not in the live view.");
     }
     services.channelState.writeLastChannelId(body.channelId);
