@@ -180,11 +180,11 @@ Wachowski, Lilly Wachowski"; Game of Thrones — `totalSeasons` 8, `Type` series
 
 ### 7.3 How it runs (the owner's decision, 2026-10-16)
 
-- **Enrich on read, after TMDB** — exactly the fill-through shape (`03` section 7.6b): the backend
-  answers a title detail from TMDB (fresh or fetched), and if the stored payload has no OMDb block and
-  an `imdb_id` exists, it makes **one** OMDb call, merges the fields of section 7.2 into the stored
-  payload as an `omdb` object, and answers. The next reader and every restart read it from the store;
-  the block is fresh for days, like the rest of the payload.
+- **Enrich in the sync, after TMDB** (changed 2026-10-18, `47`: reads are store-only and never call TMDB or OMDb): the Library
+  fill's `details` phase stores a title's TMDB detail and then, if an OMDb key is configured, the stored payload has no OMDb block
+  (or an old one) and an `imdb_id` exists, makes **one** OMDb call, merges the fields of section 7.2 into the stored payload as an
+  `omdb` object. Readers and every restart read it from the store; the block is fresh for days. A title OMDb cannot answer is
+  recorded (`omdb_failed_at`) and asked again only after the freshness window; the job's counts carry `enriched`.
 - **The quota is a budget, not a rule.** One call per opened title; a title is enriched at most once
   every few days. The backend counts the day's calls and stops enriching (leaving details TMDB-only)
   when the count nears the 1,000; it resumes at the next UTC day. A `Request limit reached.` answer
