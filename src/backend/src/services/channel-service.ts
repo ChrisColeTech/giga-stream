@@ -55,10 +55,13 @@ export function createChannelService(deps: {
     if (holder !== undefined && holder !== record.id) throw new AppError(ERRORS.channelTaken, { field: "number", holder });
   }
 
+  /** A stream row's id is always assigned (`ch_<uuid>`); a live row's is the sent one or, absent, `live-<uuid>`:
+   *  lower-case kebab-case, 41 characters, within `LIVE_ID_MAX`, so `/live/<id>/` and `/logos/<id>.png` hold. */
   function createRecord(input: ChannelInput): ChannelRecord {
     if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`, allowLoopback);
-    if (store.channels.find(input.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
-    const record = newLiveRecord(input);
+    const id = input.id ?? `live-${randomUUID()}`;
+    if (store.channels.find(id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
+    const record = newLiveRecord({ ...input, id });
     claimNumber(record);
     checkLiveSource(record.live);
     return record;

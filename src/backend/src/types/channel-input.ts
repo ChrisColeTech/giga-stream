@@ -51,11 +51,15 @@ const StreamInputSchema = z
   })
   .strict();
 
-/** A new live channel: `mode`, `captions` and `variants` have defaults; the source is a folder or a list. */
+/**
+ * A new live channel: `mode`, `captions` and `variants` have defaults; the source is a folder or a list. The `id` is
+ * optional: without one the service assigns `live-<uuid>` (docs/36 section 3.2), as it assigns a stream row's; a sent
+ * id (the seed, scripts, tests) is checked as before.
+ */
 const LiveInputSchema = z
   .object({
     kind: z.literal("live"),
-    id: z.string().regex(KEBAB_CASE, "must be kebab-case").max(LIVE_ID_MAX),
+    id: z.string().regex(KEBAB_CASE, "must be kebab-case").max(LIVE_ID_MAX).optional(),
     name: text(CHANNEL_NAME_MAX),
     category: z.enum(LIVE_CATEGORIES),
     number: LiveNumberSchema,
@@ -82,7 +86,10 @@ export const ChannelInputSchema = z
   });
 export type ChannelInput = z.infer<typeof ChannelInputSchema>;
 export type StreamChannelInput = Extract<ChannelInput, { kind: "stream" }>;
-export type LiveChannelInput = Extract<ChannelInput, { kind: "live" }>;
+/** A live create as the route reads it: the id may be absent. */
+export type NewLiveChannelInput = Extract<ChannelInput, { kind: "live" }>;
+/** A live channel with its id settled (sent, or assigned by the service). */
+export type LiveChannelInput = NewLiveChannelInput & { id: string };
 
 /**
  * A change: any field but the id. `kind` is optional and, when given, must be the row's own. Which fields a
