@@ -382,7 +382,7 @@ Status: Host, Channels (the admin channels with `source === host`, each a link),
 | Action | Route | Body | Answer |
 |---|---|---|---|
 | list | `GET /admin-accounts` | - | `{ items: AdminAccount[] }` |
-| create | `POST /admin-accounts` | `{ email, name, password }` (password 12 to 256 characters) | `201` account |
+| create | `POST /admin-accounts` | `{ email, name, password }` (password 1 to 256 characters) | `201` account |
 | save | `PATCH /admin-accounts/:id` | any of `email name password disabled` (`Enabled` is `!disabled`) | account |
 | delete | `DELETE /admin-accounts/:id` | - | `{ id }` |
 

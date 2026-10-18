@@ -26,7 +26,7 @@ export const TYPE_PASSWORD = "Type a new password.";
 /** Value refusals (`35` section 5.9). */
 export const EMAIL_SHAPE = "Email must look like name@example.com.";
 export const NAME_LENGTH = "Name must be 1 to 80 characters.";
-export const PASSWORD_SHORT = "Password must be at least 12 characters.";
+export const PASSWORD_REQUIRED = "Password is required.";
 export const PASSWORD_LONG = "Password must be at most 256 characters.";
 
 /** Notices. A password is never part of one. */

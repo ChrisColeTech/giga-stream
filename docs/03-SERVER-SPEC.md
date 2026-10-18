@@ -922,7 +922,7 @@ interface AdminAccount {
 
 There are no roles (owner, 2026-10-17): every signed-in account is equal and may call every write and read route.
 
-- A password is at least 12 characters, stored only as a scrypt hash with its own salt.
+- A password is 1 to 256 characters, stored only as a scrypt hash with its own salt.
 - Changing an account's password or `disabled`, or deleting it, **revokes all of its sessions at
   once** (section 7.12).
 - The last enabled account cannot be disabled or deleted (`409 account.last_admin`), so the backend

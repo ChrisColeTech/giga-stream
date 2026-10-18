@@ -104,8 +104,10 @@ test("changing the password needs the current one and ends every session", async
   const session = await signIn(t.app);
   const wrong = await send(t.app, "POST", "/api/auth/password", { currentPassword: "nope", newPassword: "a-brand-new-password" }, session.access);
   assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"]);
-  const short = await send(t.app, "POST", "/api/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: "short" }, session.access);
-  assert.equal(short.status, 400);
+  for (const bad of ["", "x".repeat(257)]) {
+    const refused = await send(t.app, "POST", "/api/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: bad }, session.access);
+    assert.equal(refused.status, 400);
+  }
   const changed = await send(t.app, "POST", "/api/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: "a-brand-new-password" }, session.access);
   assert.equal(changed.status, 200);
   assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, session.access)).status, 401);
