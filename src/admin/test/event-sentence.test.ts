@@ -70,6 +70,17 @@ describe("the record actions", () => {
     assert.equal(eventFromAudit(bare).sentence, `${ADA} updated account a1`);
   });
 
+  it("words the security question and the password reset by username, never with an answer", () => {
+    const set = eventFromAudit(entry("auth.security_question_set", { actorUsername: ADA, detail: { username: ADA } }));
+    assert.deepEqual([set.area, set.tone, set.sentence], ["Session", "info", `${ADA} set a security question`]);
+    const failed = eventFromAudit(entry("auth.reset_failed", { detail: { username: "eve", answer: "Rex" } }));
+    assert.deepEqual([failed.tone, failed.sentence], ["warn", "Password reset failed for eve"]);
+    const locked = eventFromAudit(entry("auth.reset_locked", { detail: { username: "eve" } }));
+    assert.equal(locked.sentence, "Password reset locked for eve after five wrong answers");
+    const done = eventFromAudit(entry("auth.reset_completed", { actorUsername: ADA, detail: { username: ADA } }));
+    assert.deepEqual([done.tone, done.sentence], ["info", `${ADA} reset a password`]);
+  });
+
   it("calls the actor `system` when the entry has none", () => {
     assert.equal(eventFromAudit(entry("channel.created", { detail: { name: "X" } })).sentence, "system created channel X");
     const sync = eventFromAudit(entry("sync.started"));

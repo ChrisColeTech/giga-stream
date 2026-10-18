@@ -343,7 +343,7 @@ follow the theme through the preload's overlay colours (4.1). The minimum size i
 
 ### 4.3 Sign-in gate (proposed)
 
-Without a session the centre is a sign-in page (email, password, one primary `Sign in`). It is a page, not a modal; the
+Without a session the centre is a sign-in page (username, password, one primary `Sign in`, and a `Forgot password?` link to the reset views of `40`). It is a page, not a modal; the
 titlebar and statusbar stay. It calls `POST /api/auth/login`. The access token lives in memory; where the refresh token
 lives is D5. A 401 on any call returns to the gate with the reason on the notice line.
 
@@ -372,12 +372,12 @@ is now the family's record pattern and nothing else:
 7. **One form pattern** (owner, 2026-10-17, after the six New forms disagreed: the Kind or Type selector was first on
    Channels and Jobs, second on Titles, third on Providers and Accounts; selectors were 126 to 151 px wide while every
    input spanned the row; info glyphs sat on arbitrary rows; Playlists used different row markup):
-   - **Row 1 is always the record's name** (Name, Title, Email). **Row 2 is the Kind, Type or Family selector** when the
+   - **Row 1 is always the record's name** (Name, Title). **Row 2 is the Kind, Type or Family selector** when the
      record has one that changes the rows below it (Channels: Kind; Providers: Family; Jobs: Type); the rows it switches
      follow it directly. A selector that does not switch rows (Titles' Kind) is an ordinary field and sits
      where the field-order table puts it.
    - **Every control spans the row at 36px**, a Segmented included (equal segments). The one exception is a Toggle.
-   - **An info glyph sits on every row except a row labelled Name, Title, Email or Password** (their labels explain
+   - **An info glyph sits on every row except a row labelled Name, Title, Username or Password** (their labels explain
      themselves); every other row has one.
    - **One row markup for every form and workspace:** `<div class="row"><label>Label ⓘ</label><div class="control">…</div></div>`,
      with a label element on every row (a Segmented row's too) and `.row-field` for a trailing button. No page builds its
@@ -394,7 +394,7 @@ is now the family's record pattern and nothing else:
 | **Titles** | a title | title, kind, year, rating, state | details · people and plot · seasons · sources | `Jobs →` | signed in |
 | **Playlists** | a playlist (an M3U address) | name, host, channels, last synced, state | details · status | `Jobs →` | signed in |
 | **Jobs** | a sync job (a playlist sync or a catalog sync) | name, type, target, schedule, last run, outcome, state | details · schedule · run · last run | `Run job` (acts on the ticked jobs) | signed in |
-| **Accounts** | an admin account | email, name, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | signed in |
+| **Accounts** | an admin account | username, name, state, last sign-in | details · password | none (the last tab, as Studio is the family's) | signed in |
 
 **The tab pill is Channels · Providers · Titles · Playlists · Jobs · Accounts** (owner, 2026-10-17: "we need a jobs
 tab for the sync jobs, the title and playlist should be crud for titles and playlists"). Titles and Playlists are plain
@@ -413,7 +413,7 @@ the Titles or Playlists pages.
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
 | Catalog job | Name*, Type*, Scope*, Kind* | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
-| Account | Email*, Name*, Password* (New only) | `Enabled` | none | Last sign-in |
+| Account | Name*, Username*, Password* (New only) | `Enabled` | none | Last sign-in, Security question (`Set` or `Not set`) |
 
 ### 4.5 Channels index (proposed)
 
@@ -492,10 +492,10 @@ checked against the address rule, the refusal shown as a field error. Status: `S
 
 ### 4.8 Accounts index and workspace (proposed; owner)
 
-- **Index:** New account (Email, Name, Password of at least twelve characters, `Create`);
-  the list (email, name, state, last sign-in); row end `Delete` as an `ArmedButton` (the last enabled account's
+- **Index:** New account (Name, Username, Password of 1 to 256 characters, `Create`);
+  the list (username, name, state, last sign-in); row end `Delete` as an `ArmedButton` (the last enabled account's
   refusal is that row's disabled reason). The toolbar strip has no verb: Accounts is the last tab.
-- **Workspace:** rail `‹ Accounts`, then **details** (Email, Name, `Enabled`; the stored `disabled` flag, shown
+- **Workspace:** rail `‹ Accounts`, then **details** (Name, Username, `Enabled`; the stored `disabled` flag, shown
   inverted) and **password** (`Set new password`, whose tip says it signs this account out everywhere). Toolbar:
   `Discard changes`, `Save`.
 
@@ -731,7 +731,7 @@ Each has a recommended default. The waves proceed on the defaults and are redire
 - **D23.** *(Retired with roles, D22.)* Every signed-in admin reads the audit log in the Events drawer.
 - **D22.** *(Decided, owner, 2026-10-17: "i didnt ask for roles… that extra mess we dont need".)* There are no roles. The
   backend's `owner` and `editor` roles came with its first commit, not from the owner; they are removed: every signed-in
-  admin account is equal and may do everything, accounts have an email, a name, a password and `Enabled`.
+  admin account is equal and may do everything, accounts have a username (the sign-in name, not an email: owner, 2026-10-17), a name, a password and `Enabled`.
 - **D7.** *(Reversed by the owner, 2026-10-17.)* Providers, Titles and Playlists are tabs in version one: an admin has to
   be able to start a sync from a page.
 - **D8.** The production admin is served by the backend at `/admin/` (recommended).

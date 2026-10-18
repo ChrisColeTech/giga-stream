@@ -30,6 +30,7 @@ const VERBS: Readonly<Record<string, string>> = {
 const COUNTS = ["created", "updated", "removed", "refused"] as const;
 const FAILURE = /fail/i;
 const SYSTEM = "system";
+const UNKNOWN_USERNAME = "an unknown username";
 
 /** What the admin knows of record ids: an id to the name it has loaded. A record it never loaded is named by its id. */
 export type SubjectNames = Readonly<Record<string, string>>;
@@ -75,9 +76,19 @@ function describe(entry: AuditEntry, names: SubjectNames, area: EventArea): [Eve
     case "auth.logout":
       return ["info", `${actor} signed out`];
     case "auth.login_failed":
-      return ["warn", `Sign-in failed for ${text(entry.detail, "username") ?? "an unknown username"}`];
+      return ["warn", `Sign-in failed for ${text(entry.detail, "username") ?? UNKNOWN_USERNAME}`];
     case "auth.password_changed":
       return ["info", `${actor} changed a password`];
+    case "auth.security_question_set":
+      return ["info", `${actor} set a security question`];
+    case "auth.reset_failed":
+      return ["warn", `Password reset failed for ${text(entry.detail, "username") ?? UNKNOWN_USERNAME}`];
+    case "auth.reset_locked": {
+      const who = text(entry.detail, "username") ?? UNKNOWN_USERNAME;
+      return ["warn", `Password reset locked for ${who} after five wrong answers`];
+    }
+    case "auth.reset_completed":
+      return ["info", `${actor} reset a password`];
     case "sync.started":
       return ["info", `${actor} started a catalog sync`];
     case "channel.fault_set":

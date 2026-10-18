@@ -32,7 +32,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 2 | Tokens stay in the session slice, in memory only (`26` D5). A reload signs in again. Nothing is written to the browser. |
 | 3 | A failed call is said once by the hook that made it, with the `ApiError` sentence on the notice line (`warn`; the chrome slice's `say` also writes the drawer row for `warn` and `error`). A success is a notice only; the audit row is the record. `onEvent` stays unused (a finished request carries no sentence). |
 | 4 | The gate's refusal kinds are the foundation's `refusalFor` (`invalid` for a wrong pair and any other 4xx, `locked`, `rate_limited`, `unreachable` for transport, unreadable and 5xx answers). A session that ends under the app always shows `34`'s notice `Your session ended. Sign in again.`; the refresh failure's own sentence is not shown. |
-| 5 | Own-account effects end the session locally with a notice: a new password for yourself (`Password changed. Sign in again.`), disabling or deleting yourself (`Your account was disabled.` / `Your account was deleted.`). Changing your own email or name updates the signed-in actor and nothing else. The signed-in actor gains its **account id** (the foundation's `SessionActor` has only email and name, and an email can change). |
+| 5 | Own-account effects end the session locally with a notice: a new password for yourself (`Password changed. Sign in again.`), disabling or deleting yourself (`Your account was disabled.` / `Your account was deleted.`). Changing your own username or name updates the signed-in actor and nothing else. The signed-in actor gains its **account id** (the foundation's `SessionActor` has only username and name, and a username can change). |
 | 6 | A password change of any account goes through `PATCH /api/admin-accounts/:id { password }`, never `POST /api/auth/password`: the Password group has only `New password` (`28` 7.3) and the PATCH needs no current password. Both revoke the account's sessions. |
 | 7 | **Ticks arm bulk verbs** (owner, 2026-10-17: "add some bulk actions when we select them"; this supersedes the earlier "ticks only select" default). The Accounts toolbar offers `Enable`, `Disable` and `Delete` on the ticked rows (5.10), through the shared bulk piece this wave builds for every tab (`39` section 6). |
 | 8 | The Events drawer reads `GET /api/audit`: the `audit` service is wired, and the I/O the foundation put inside `store/audit-slice.ts` moves into a hook (`01` section 6: the store holds no promise and does no I/O). |
@@ -40,7 +40,7 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 10 | This wave builds what every later tab shares: `StateWord`, `useRecordForm`, the per-tab slice registry and the stale registry (section 5.6), so the parallel waves of `39` never edit the same file. |
 | 11 | Verification runs on a temporary backend that serves the built admin on its own free port, with a temporary `DATA_DIR`; the owner's backend, database and `.env` are never read or written by it (section 3). |
 
-| 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Email`, `Password`; Details is `Name`, `Email`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
+| 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Username`, `Password`; Details is `Name`, `Username`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
 | 13 | **Security question (`40`).** Accounts gain a read-only Details fact `Security question` (`Set` or `Not set`, from the answer's `securityQuestionSet`), placed after `Last sign-in`. The question itself is set by the account's own owner in Settings > Account (R, `40` 4.2), not in this Accounts workspace; no admin sets another account's question. |
 
 ## 2. Scope, in order (six commits)
@@ -56,10 +56,10 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 
 ### 3.1 How the first account exists
 
-The backend creates the first account itself: at start, with **no accounts** and both `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` set, it creates one named `Admin`
+The backend creates the first account itself: at start, with **no accounts** and both `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` set, it creates one named `Admin`
 (`services/bootstrap-admin.ts`, `03` 7.11); with accounts present it ignores both, so changing them later changes nothing; with neither set it starts and logs that nobody can sign in.
 `JWT_SECRET` (32 characters or more) is required to start. The owner's `src/backend/.env` already carries these three names; **the plan and the worker never read, print or copy their values**.
-The owner signs in with the email and password they set there. There is no password-reset route and none is added; a forgotten owner password is the owner's decision (`39` open decision 5).
+The owner signs in with the username and password they set there (a username is any text, not an email: owner, 2026-10-17). A forgotten password is reset on the gate by the account's security question (`40`).
 
 ### 3.2 The dev port line (a fix this wave carries, `AGENTS.md` "fix the obvious bug")
 
@@ -77,7 +77,7 @@ backs the file up, and removes that line if it is `3001` (the code default is 80
 | `PORT` | `8391` (a free port; never 8090, 8091, 8190, 8191, 3001, 5171, 5172, 5271, 5272, 9222, 9223) |
 | `DATA_DIR` | `%TEMP%\giga-accounts-verify` (created empty for the run) |
 | `JWT_SECRET` | `zz-verify-secret-not-real-0123456789abcdef` |
-| `ADMIN_BOOTSTRAP_EMAIL` | `zz-owner@example.test` (the account is named `Admin`) |
+| `ADMIN_BOOTSTRAP_USERNAME` | `zz-owner@example.test` (the account is named `Admin`) |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `zz-verify-owner-password-1` |
 | `ADMIN_DIST` | the landed tree's `src/admin/dist`, built with `npm run build --prefix src/admin` |
 
@@ -89,10 +89,10 @@ through `Win32_Process.Create` as `07` section 4 shows, keeping the PID. Do not 
 ### 3.4 The owner's checklist (the real app, once this has landed)
 
 1. Start the stack as usual (`npm run dev`); open the admin in its backend window or at `http://127.0.0.1:5172/admin/`.
-2. Sign in with the existing account's email and password. A wrong try shows `The email or password is wrong.`; five wrong ones lock that account for 15 minutes, so do not guess.
+2. Sign in with the existing account's username and password. A wrong try shows `The username or password is wrong.`; five wrong ones lock that account for 15 minutes, so do not guess.
 3. Press `Ctrl+6` (Accounts). The list shows your own row, state `enabled`, last sign-in a time; its `Delete` is disabled (the last enabled account).
-4. Under **New account** type the new person's name, email and a password of 1 to 256 characters (in that order); `Create` is disabled with `Name is required.` and its siblings until all three are filled. Press `Create`.
-5. The row appears; the notice says `Created <email>.`; the Events drawer (statusbar `Events`) shows `<you> created account <email>`.
+4. Under **New account** type the new person's name, username and a password of 1 to 256 characters (in that order); `Create` is disabled with `Name is required.` and its siblings until all three are filled. Press `Create`.
+5. The row appears; the notice says `Created <username>.`; the Events drawer (statusbar `Events`) shows `<you> created account <username>`.
 6. Optional: open a second admin window, sign in as the new account, and see it in the same list. To give someone a new password later: open the row, `New password`, `Set new password` (it signs that account out everywhere).
 
 ## 4. Dependencies and ordering
@@ -145,7 +145,7 @@ program's table (`errorSentence`), so `constants/api-sentences.ts` is the fallba
 
 ### 5.2 The session finished (`types/auth.ts`, `store/session-slice.ts`, `services/auth-port.ts`)
 
-- `SessionActor` gains `id: string | number` (the account id as the backend gives it); `createAuthPort` fills it from `session.account.id`. The own-account tests compare ids, never emails.
+- `SessionActor` gains `id: string | number` (the account id as the backend gives it); `createAuthPort` fills it from `session.account.id`. The own-account tests compare ids, never usernames.
 - The slice gains `serial: number`, raised at every sign-in (`finishSignIn`), and `updateActor(account)`. `signedOut()` also resets the accounts registry slice (`store/slices/accounts.ts`), the audit state and the stale registry. The foundation's `adoptTokens` and `endSession` are kept.
 - A late answer from an earlier session is recognised by its recorded `serial` and dropped (every flow and load, 5.4). Tokens are never copied into a notice, an event row, a URL or the console.
 - Nothing else changes: `services/session-api.ts`, `services/api.ts`, `lib/auth-errors.ts` and the sentences are frozen (`39` section 4).
@@ -153,23 +153,23 @@ program's table (`errorSentence`), so `constants/api-sentences.ts` is the fallba
 ### 5.3 Accounts data
 
 `services/accounts.ts` is real. This wave tightens it: the list is parsed row by row (`z.array(z.unknown())`, each row `AccountSchema.safeParse`), an unreadable row is counted and dropped, `01` section 8 (`AccountListLenientSchema`
-in `schemas/account-schema.ts`); the create body is built by `lib/account-body.ts` (trimmed email and name, the password untouched); a malformed write answer is `backend.bad_response` and the hook re-reads the list.
+in `schemas/account-schema.ts`); the create body is built by `lib/account-body.ts` (trimmed username and name, the password untouched); a malformed write answer is `backend.bad_response` and the hook re-reads the list.
 
 `store/accounts-slice.ts` (registered by `store/slices/accounts.ts`): `accounts: { status: "idle" | "loading" | "ready" | "failed"; items: AdminAccount[]; unreachable: boolean; ticked: (string | number)[] }` and actions `startLoad`,
-`loaded(items)`, `loadFailed(unreachable)`, `upsert(account)` (kept sorted by lower-cased email, as the backend does), `remove(id)`, `tick(id, on)`, `tickAll(on)`, `markUnreachable(bool)`. `unreachable` is set by a transport failure and
+`loaded(items)`, `loadFailed(unreachable)`, `upsert(account)` (kept sorted by lower-cased username, as the backend does), `remove(id)`, `tick(id, on)`, `tickAll(on)`, `markUnreachable(bool)`. `unreachable` is set by a transport failure and
 cleared by the next successful read; while set, every write is disabled with `The admin backend cannot be reached.` (`29` section 8).
 
 ### 5.4 Flows (`services/account-flows.ts`, `services/account-password-flow.ts`)
 
 `createAccountFlows(deps)` holds the orchestration the hooks call, with the store and the services injected so the tests drive it with fakes. Each flow records `serial` before it awaits and writes only if it is unchanged after.
-Results are typed (`{ ok: true } | { ok: false; field?; sentence }`) so the form puts a field-named refusal under its row (`ApiError.field`: `email`, `name`, `password`; any other field is notice-only).
+Results are typed (`{ ok: true } | { ok: false; field?; sentence }`) so the form puts a field-named refusal under its row (`ApiError.field`: `username`, `name`, `password`; any other field is notice-only).
 
 | Flow | Route | On success | On failure |
 |---|---|---|---|
-| create | `POST /api/admin-accounts` | `upsert`; the form clears; notice `Created <email>.`; reload the audit tail (`limit=10`) | `account.email_taken` under Email; `account.invalid` under its field; else a `warn` notice; the form keeps its values |
-| save | `PATCH` the changed fields | `upsert`; baseline = the answer; notice `Saved <email>.`; own account: `updateActor`; own `disabled: true`: end the session with `Your account was disabled.`; audit tail | `account.last_admin` under Enabled; `email_taken` under Email; `account.not_found` closes the workspace with a `warn` notice and re-reads the list |
-| setPassword | `PATCH { password }` | other account: notice `Password set; <email> is signed out everywhere.`, field cleared; own account: end the session with `Password changed. Sign in again.` (no logout call: the token is already dead) | under `New password`; the field is not cleared |
-| remove | `DELETE` | `remove`; notice `Deleted <email>.`; own account: end the session with `Your account was deleted.`; audit tail | `account.last_admin`: the row stays, the notice says why; `account.not_found`: the row is removed (it is already gone) and the list re-read |
+| create | `POST /api/admin-accounts` | `upsert`; the form clears; notice `Created <username>.`; reload the audit tail (`limit=10`) | `account.username_taken` under Username; `account.invalid` under its field; else a `warn` notice; the form keeps its values |
+| save | `PATCH` the changed fields | `upsert`; baseline = the answer; notice `Saved <username>.`; own account: `updateActor`; own `disabled: true`: end the session with `Your account was disabled.`; audit tail | `account.last_admin` under Enabled; `username_taken` under Username; `account.not_found` closes the workspace with a `warn` notice and re-reads the list |
+| setPassword | `PATCH { password }` | other account: notice `Password set; <username> is signed out everywhere.`, field cleared; own account: end the session with `Password changed. Sign in again.` (no logout call: the token is already dead) | under `New password`; the field is not cleared |
+| remove | `DELETE` | `remove`; notice `Deleted <username>.`; own account: end the session with `Your account was deleted.`; audit tail | `account.last_admin`: the row stays, the notice says why; `account.not_found`: the row is removed (it is already gone) and the list re-read |
 | refresh | `GET` the list and `GET /api/audit?limit=50`, together | `loaded`; unreadable rows: one `warn` notice `N accounts could not be read.` | keeps the last items, `loadFailed`, one `warn` notice |
 
 A password is never put in a notice, an event row, the store or an error: the field's value is read from the form at press time, sent, and the form state cleared on success.
@@ -177,11 +177,11 @@ A password is never put in a notice, an event row, the store or an error: the fi
 ### 5.5 The Events drawer from the audit log
 
 `services/audit.ts` is wired: `list({ limit?, before? })` -> `GET /api/audit?limit=&before=`, parsed entry by entry (`AuditEntrySchema`; an unreadable entry is counted and dropped). `lib/audit-merge.ts` is pure: it converts entries with
-`eventFromAudit` (names: the held accounts as id -> email), reverses the newest-first page, merges into the held rows by id (an audit row has the id `audit-<id>`; a local `say`/`logEvent` row keeps its own), keeps time order and
+`eventFromAudit` (names: the held accounts as id -> username), reverses the newest-first page, merges into the held rows by id (an audit row has the id `audit-<id>`; a local `say`/`logEvent` row keeps its own), keeps time order and
 the 200-row cap. `store/audit-slice.ts` keeps `events` and `olderCursor` but loses its async actions: it gains pure setters (`takeAudit(rows, nextBefore, mode)`), and `hooks/useAuditTail.ts` (`{ reload, loadOlder }`) awaits the service and calls them.
 `reload` sets the cursor only if none was read; `Load older` always sets it and passes `before=<smallest audit id held>`; it is available only when a cursor exists. `components/session/SessionState.tsx` (renders nothing, mounted by `AppShell` only
-while signed in, `key` = the session `serial`) calls `reload` on mount (replacing `useSignIn`'s `loadAudit` call); `AdminEventsDrawer` uses `loadOlder`. `lib/event-sentence.ts` changes for the Account area: the name is `detail.email` (the backend writes it
-on `account.created` and `account.deleted`), else the held email for the subject id, else `detail.name`, else the id; no field named `password` is ever read. A refusal is one `warn` notice and changes nothing else.
+while signed in, `key` = the session `serial`) calls `reload` on mount (replacing `useSignIn`'s `loadAudit` call); `AdminEventsDrawer` uses `loadOlder`. `lib/event-sentence.ts` changes for the Account area: the name is `detail.username` (the backend writes it
+on `account.created` and `account.deleted`), else the held username for the subject id, else `detail.name`, else the id; no field named `password` is ever read. A refusal is one `warn` notice and changes nothing else.
 
 ### 5.6 The registries every later tab shares (`store/slices/`)
 
@@ -200,22 +200,22 @@ puts a refusal under its row. Both are consumed unchanged by every tab; their si
 `AccountsPage` is the only reader of `workspaces.accounts`: null shows `AccountsIndex`, an id shows `AccountWorkspace`. `useAccountsLoad(active)` loads when the tab is first shown after sign-in (status `idle`) or after `stale.accounts`, and not otherwise.
 
 - **AccountsIndex** (60): `IndexToolbar` (empty strip, Accounts is the last tab), `NewAccountForm`, `AccountsList`.
-- **NewAccountForm** (110): `NewRecordGroup` (`user-plus`, `New account`), rows in this order and no others: `Name`, `Email` (`type=email`, `autoComplete="off"`), `Password` (`type=password`, `autoComplete="new-password"`). No role, no info glyph on
-  these three (`26` 4.4). `Create` is disabled with `Name is required.`, then `Email is required.`, then `Password is required.`, then `Saving.` while a call runs, or the unreachable sentence. Pressing it runs the value checks first (5.9); a refusal shows under its row with `aria-invalid`.
+- **NewAccountForm** (110): `NewRecordGroup` (`user-plus`, `New account`), rows in this order and no others: `Name`, `Username` (`type=text`, `autoComplete="off"`), `Password` (`type=password`, `autoComplete="new-password"`). No role, no info glyph on
+  these three (`26` 4.4). `Create` is disabled with `Name is required.`, then `Username is required.`, then `Password is required.`, then `Saving.` while a call runs, or the unreachable sentence. Pressing it runs the value checks first (5.9); a refusal shows under its row with `aria-invalid`.
 - **AccountsList** (60): `ListGroup` (`users`, `Accounts`) with a ghost `Refresh` in the heading slot (`refresh-cw`); `SkeletonGrid` while `idle` or `loading` or with no items (never a sentence over it, never an empty card); a failed read keeps the last rows and sets one notice.
-- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `name`, `email`, `state`, `last sign-in`, the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
-  the time in mono as `YYYY-MM-DD HH:mm` local (`never` if absent), tick label `Select <email>`, a press opens the workspace, the end is an `ArmedButton` `Delete`, question `Delete <email>?`; disabled with `The last enabled account cannot be deleted.` for the last
+- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `username`, `name`, `state`, `last sign-in`, the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
+  the time in mono as `YYYY-MM-DD HH:mm` local (`never` if absent), tick label `Select <username>`, a press opens the workspace, the end is an `ArmedButton` `Delete`, question `Delete <username>?`; disabled with `The last enabled account cannot be deleted.` for the last
   enabled account (computed from the list by `lib/account-guard.ts`), at rest titled `Deletes the account and ends its sessions.`; also disabled with the unreachable sentence or while the call runs. The column set is `constants/account-grid.ts` (tracks in rem; the end track fits `Delete someone@example.test?`).
 - **AccountWorkspace** (90): `WorkspaceFrame` (tab `accounts`), `RecordRail` (`‹ Accounts`, `Details`, `Password`, the key list a module constant), `WorkspaceToolbar` with `Discard changes` and `Save` only. Opens from the held list; if the account is no longer in a `ready` list it closes with a notice.
-- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Name`, `Email`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), then the read-only facts `Last sign-in`, and `Security question` (`Set` / `Not set`, `40`). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
-  One `Save` per page sends only the changed fields of `email`, `name`, `disabled`.
+- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Name`, `Username`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), then the read-only facts `Last sign-in`, and `Security question` (`Set` / `Not set`, `40`). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
+  One `Save` per page sends only the changed fields of `username`, `name`, `disabled`.
 - **AccountPasswordGroup** (70): `Group` `Password` (`key-round`): `New password` (`type=password`, `autoComplete="new-password"`) and a ghost `Set new password` inside the library `Tooltip` with `Signs this account out everywhere`; disabled with `Type a new password.` or the length
   refusal until valid. It is its own verb and is not part of `Save`.
 - **Session section**: unchanged; `Sign out` still returns to the gate.
 
 ### 5.9 Field checks (`lib/account-checks.ts`, with `constants/account-limits.ts` mirroring `03` 7.11)
 
-`lib/field-checks.ts` is frozen; the account rules live in `lib/account-checks.ts` using its primitives: `emailAddress` (`name@host.tld`, at most 254), `nameLength` (1 to 80 after trim), `passwordLength` (1 to 256, never trimmed; an empty one is `Password is required.`). Sentences: `Email must look like name@example.com.`, `Name must be 1 to 80 characters.`,
+`lib/field-checks.ts` is frozen; the account rules live in `lib/account-checks.ts` using its primitives: `usernameLength` (1 to 254 after trim; any text, no format), `nameLength` (1 to 80 after trim), `passwordLength` (1 to 256, never trimmed; an empty one is `Password is required.`). Sentences: `Username must be 1 to 254 characters.`, `Name must be 1 to 80 characters.`,
 `Password must be at most 256 characters.`. The backend's own sentence for a bad field (`The password is not valid.`) is only the fallback.
 
 ### 5.10 Bulk actions on the ticked accounts (the mechanism is `39` section 6)
@@ -271,15 +271,15 @@ The request layer and the session already have their tests (`api.test.ts`, `auth
 |---|---|
 | `shared/http/test/create-api.test.ts` | a refusal carries `details.field`; no `details` leaves `field` undefined; a non-string `field` is ignored |
 | `session-slice.test.ts` (updated) | sign-in stores tokens, the actor with its id and a raised serial; `updateActor`; `endSession` leaves the notice and clears tokens, accounts, audit, events, stale; `signOut` likewise with nothing said; a second `beginSignIn` while submitting changes nothing |
-| `accounts-service.test.ts` | the list route and an unreadable row dropped and counted; create body trims email and name and leaves the password; update sends only the given fields; delete route; a malformed answer is `backend.bad_response`; `409` and `422` carry their `field` |
-| `accounts-slice.test.ts` | the status transitions; `upsert` keeps case-insensitive email order and replaces by id; `remove`; select-all `mixed`; ticks pruned when a row goes; reset on sign-out; `unreachable` set and cleared |
+| `accounts-service.test.ts` | the list route and an unreadable row dropped and counted; create body trims username and name and leaves the password; update sends only the given fields; delete route; a malformed answer is `backend.bad_response`; `409` and `422` carry their `field` |
+| `accounts-slice.test.ts` | the status transitions; `upsert` keeps case-insensitive username order and replaces by id; `remove`; select-all `mixed`; ticks pruned when a row goes; reset on sign-out; `unreachable` set and cleared |
 | `slices-registry.test.ts` | `tabSlices` returns all six slices' state; a placeholder adds no keys; `markStale`/`clearStale`; reset on sign-out |
 | `account-guard.test.ts` | the last enabled account: Delete and disabling refused with their reasons; two enabled: both allowed; a disabled account is always deletable |
-| `account-draft.test.ts`, `account-checks.test.ts`, `account-body.test.ts`, `format-when.test.ts` | dirty; only changed fields; discard; `Enabled` is the inverse of `disabled`; required reasons in order; email shape; name 1 to 80; password 11 refused, 12 and 256 accepted, 257 refused, whitespace kept; the time as `YYYY-MM-DD HH:mm` built from local parts |
+| `account-draft.test.ts`, `account-checks.test.ts`, `account-body.test.ts`, `format-when.test.ts` | dirty; only changed fields; discard; `Enabled` is the inverse of `disabled`; required reasons in order; username length (no format); name 1 to 80; password 11 refused, 12 and 256 accepted, 257 refused, whitespace kept; the time as `YYYY-MM-DD HH:mm` built from local parts |
 | `record-form.test.ts` | `useRecordForm` logic through its pure core: dirty by value, typing a value back is clean, `reset` rebases, field errors set and cleared |
-| `account-flows.test.ts` | the table of 5.4 row by row: create success and clear; `email_taken` under Email; save own email updates the actor; save own `disabled` ends the session; other account's password notice and cleared field; own password ends the session with `Password changed. Sign in again.`; delete other; delete own; `last_admin` keeps the row; a changed `serial` drops the answer; a transport failure sets `unreachable`; **no notice, event, state or error contains the password** |
-| `audit-tail.test.ts` | per-entry validation; newest at the foot; de-dup by id; the 200 cap; local rows survive and interleave by time; the cursor rules and `before` = the smallest held id; `Load older` unavailable without a cursor; the store has no async action; account sentences use the email |
-| `event-sentence.test.ts` (updated) | `account.created` and `deleted` name the email, `updated` the held email or the name; inline entries |
+| `account-flows.test.ts` | the table of 5.4 row by row: create success and clear; `username_taken` under Username; save own username updates the actor; save own `disabled` ends the session; other account's password notice and cleared field; own password ends the session with `Password changed. Sign in again.`; delete other; delete own; `last_admin` keeps the row; a changed `serial` drops the answer; a transport failure sets `unreachable`; **no notice, event, state or error contains the password** |
+| `audit-tail.test.ts` | per-entry validation; newest at the foot; de-dup by id; the 200 cap; local rows survive and interleave by time; the cursor rules and `before` = the smallest held id; `Load older` unavailable without a cursor; the store has no async action; account sentences use the username |
+| `event-sentence.test.ts` (updated) | `account.created` and `deleted` name the username, `updated` the held username or the name; inline entries |
 | `bulk-plan.test.ts`, `bulk-run.test.ts`, `bulk-report-markup.test.ts`, `toolbar-armed-markup.test.ts` (library), `account-bulk.test.ts`, `bulk-work.test.ts` | the shared signatures and cases of `39` section 6; the account rules of 5.10 row by row (own account, last enabled, already enabled, order); `N working` while a run is in flight |
 | `accounts-markup.test.ts` | New form rows in order with password type and `new-password`, no placeholder, `Create` reasons; the grid headings, ticks, state words, dimmed disabled row, last-account `Delete` disabled with its title, `never`; skeleton when loading; workspace groups, `Enabled` switch and its reasons, `Set new password` with its tooltip, toolbar with Discard and Save only, rail `‹ Accounts` |
 | `no-network-storage.test.ts` (kept) | still passes unchanged |
@@ -289,7 +289,7 @@ The request layer and the session already have their tests (`api.test.ts`, `auth
 
 **None are required for 3a.** B3 (`40`, the security-question reset) is needed only by R. The code already has every route and rule that 3a uses: `POST /api/auth/login|refresh|logout`, `GET /api/auth/me`, `GET|POST /api/admin-accounts`, `PATCH|DELETE /api/admin-accounts/:id`, `GET /api/audit`, the 15-minute access token, the single-use refresh token, `session_version`
 revocation, the ten-a-minute address limit (in memory) and the five-failure 15-minute lockout, the last-enabled-account rule, and tests for them (`test/auth.test.ts`, `accounts.test.ts`, `audit.test.ts`). Two quirks are handled in the admin, not changed: the audit detail of
-`account.created` and `deleted` holds the email, not a name (5.5), and a disabled account's sign-in answers the same `auth.invalid_credentials` as a wrong password (so the gate shows `The email or password is wrong.`).
+`account.created` and `deleted` holds the username, not a name (5.5), and a disabled account's sign-in answers the same `auth.invalid_credentials` as a wrong password (so the gate shows `The username or password is wrong.`).
 
 ## 9. Failure modes
 
@@ -323,15 +323,15 @@ Pre-flight (3.2): the `PORT` line, the 401 through 5172. Landing: read the diff,
 
 **On the temporary backend** (3.3), the real built admin in Chrome at `http://127.0.0.1:8391/admin/`, at 1600 x 1000 and 900 x 640, a page-level recorder installed first (a `fetch` wrapper in the page that logs each `/api` URL and whether it carried `Authorization`; it never writes to the server):
 
-1. **Gate.** Starts on the full-window gate. Wrong password: `The email or password is wrong.` under Password, password cleared, email kept. Backend stopped (by PID): `The admin backend cannot be reached.`, values kept; restart it. Sign in as `zz-owner@example.test`: the shell appears, `Signed in.`.
+1. **Gate.** Starts on the full-window gate. Wrong password: `The username or password is wrong.` under Password, password cleared, username kept. Backend stopped (by PID): `The admin backend cannot be reached.`, values kept; restart it. Sign in as `zz-owner@example.test`: the shell appears, `Signed in.`.
 2. **Create.** `Ctrl+6`: skeleton, then one row (`zz-owner`, state `enabled`, Delete disabled with `The last enabled account cannot be deleted.`). `Create` is disabled with each required reason in turn; a password of 11 characters is refused under Password after the press; fill `zz-second@example.test`,
-   `Second`, a 12-character password; `Create`. The row is listed, the form is empty, the drawer shows `zz-owner@example.test created account zz-second@example.test`. Creating it again shows `Another account already uses that email.` under Email.
+   `Second`, a 12-character password; `Create`. The row is listed, the form is empty, the drawer shows `zz-owner@example.test created account zz-second@example.test`. Creating it again shows `Another account already uses that username.` under Username.
 3. **Second window.** A second tab, sign in as the second account (its own session). Both sessions list both accounts.
-4. **Disable.** In the first tab open the second account, switch `Enabled` off, `Save`: the notice says it is signed out everywhere. In the second tab press the list `Refresh`: the gate returns with `Your session ended. Sign in again.`; signing in as it now says `The email or password is wrong.`. Enable it again, save.
+4. **Disable.** In the first tab open the second account, switch `Enabled` off, `Save`: the notice says it is signed out everywhere. In the second tab press the list `Refresh`: the gate returns with `Your session ended. Sign in again.`; signing in as it now says `The username or password is wrong.`. Enable it again, save.
 5. **Password.** Set a new password on the second account (`Set new password`; tooltip `Signs this account out everywhere`); the second tab returns to the gate; the old password is refused, the new one signs in.
 6. **Last enabled.** Disable every account but the owner: the owner's row Delete and its `Enabled` switch are disabled with their reasons; force the server rule through a stale list (disable in tab two, delete in tab one) and see `This is the last enabled account; another one is needed first.` with the row kept.
 7. **Own password.** As `zz-owner`, set a new password on its own row: the gate returns with `Password changed. Sign in again.`; the new password signs in. Own delete, once there is a second enabled account: gate with `Your account was deleted.` (use a throwaway third account).
-8. **Lock.** With a throwaway account, five wrong passwords answer `The email or password is wrong.`; the sixth attempt, even with the right password, answers `This account is locked for a while after failed sign-ins.`. Eleven fast attempts in a minute: `Too many sign-in attempts; wait a minute.`; wait a minute before continuing.
+8. **Lock.** With a throwaway account, five wrong passwords answer `The username or password is wrong.`; the sixth attempt, even with the right password, answers `This account is locked for a while after failed sign-ins.`. Eleven fast attempts in a minute: `Too many sign-in attempts; wait a minute.`; wait a minute before continuing.
 9. **Refresh.** Restart the temporary backend (same `DATA_DIR`, same port) with a different `JWT_SECRET`: the held access token is dead, the refresh token is not. In a signed-in tab press `Refresh`: the recorder shows two `401`s, **one** `POST /api/auth/refresh`, two retries answered `200`, and the list stays. Restore the first secret afterwards.
 10. **Wire and storage.** Every `/api` request except `login` and `refresh` carried `Authorization`; in the page, `localStorage.length`, `sessionStorage.length`, `document.cookie` and `indexedDB.databases()` are empty before and after; no token appears in any notice or drawer row; the console has no errors or warnings.
 11. **Bulk.** Tick two throwaway accounts and the owner: the bulk verbs enable; `Disable` skips `zz-owner` (the signed-in account) with its reason and disables the other two (their next call returns to the gate); `Enable` re-enables them; `Delete` shows `Delete 2 accounts?`, disarms on blur/`Escape`/4 s, deletes them; tick only the owner: `Delete` is disabled with the reason; a forced stale row shows a per-row failure under the toolbar while the rest complete; the list is re-read once; `N working` shows during the run; failed rows stay ticked.
@@ -353,7 +353,7 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 6 | `29` 8: `session-slice` holds `session`, `signIn(session)`, `signOut()` | built: `signedIn`, `actor`, `tokens`, `gate`, `beginSignIn`, `finishSignIn`, `adoptTokens`, `endSession`, `signOut` |
 | 7 | `34` 5: four refusal kinds from four codes | `refusalFor` maps any other 4xx to `invalid` and 5xx or unreadable to `unreachable` (decision 4) |
 | 8 | `29` 7: `onEvent` appends one drawer row per failed call | `RequestEvent` carries method, status, elapsed and area only, no sentence; the hook says the failure (decision 3) |
-| 9 | `29` 11: `account.created`/`deleted` rows name `detail.name` | the backend writes `{ email }` for created and deleted, `{ name, fields }` for updated; `nameOf` would show the account id (5.5) |
+| 9 | `29` 11: `account.created`/`deleted` rows name `detail.name` | the backend writes `{ username }` for created and deleted, `{ name, fields }` for updated; `nameOf` would show the account id (5.5) |
 | 10 | `29` 6.2: own password via the Accounts workspace "or `POST /api/auth/password`" | the PATCH needs no current password, the POST does; the UI has only `New password` (decision 6) |
 | 11 | `29` 7 and 14: `/healthz` is read at the root | `vite.config.mts` proxies `/api`, `/live`, `/logos`, `/test` only; `/healthz` in dev returns Vite's page (Wave 4) |
 | 12 | `28` progress table, Wave 2 "Creates": `useRecordForm`, `useFixtureLoad` | none of them, nor `StateWord`, is in the tree (5.7) |
@@ -362,13 +362,13 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 15 | `03` 7.12: five wrong passwords lock the account | the fifth wrong answer is still `auth.invalid_credentials`; the sixth attempt, even with the right password, is `auth.locked` |
 | 16 | `03` 7.12: refresh and logout are "anyone with a refresh token" | a used or revoked token on logout is `401 auth.refresh_invalid`; sign-out ignores it |
 | 17 | `AGENTS.md` / `29` 3.7: dev backend on 8091 | the owner's local `.env` `PORT` is stale (3001) so the admin's proxy misses it (3.2) |
-| 18 | `03` 7.11: "an email already used is `409 account.email_taken`" | emails are compared case-insensitively (`email_key`), so `A@x` and `a@x` collide; the list is sorted by that key |
+| 18 | `03` 7.11: "an email already used is `409 account.email_taken`" | now `account.username_taken`: usernames are compared case-insensitively (`username_key`), so `A@x` and `a@x` collide; the list is sorted by that key |
 | 19 | `01` 6: the store holds no promise and does no I/O | the foundation's `store/audit-slice.ts` awaits `audit.list` inside its actions; this wave moves that into a hook |
 | 20 | `35` (first version) planned a request layer, schemas and sentences | the foundation built them; this revision removes that scope |
-| 21 | `28` 7.3: the Account New form is `Email`, `Name`, `Password`; `26` 4.8 lists Email first | superseded (owner, 2026-10-17): Name first (decision 12) |
+| 21 | `28` 7.3: the Account New form is `Email`, `Name`, `Password`; `26` 4.8 lists Email first (now Username) | superseded (owner, 2026-10-17): Name first (decision 12) |
 
 ## 13. Done when
 
-The owner signs in to the real admin with their existing account, opens Accounts, creates an account with an email, a name and a password of 1 to 256 characters, sees it listed and audited, and the new person can sign in; a disabled or re-passworded account is returned to the gate on its next request;
+The owner signs in to the real admin with their existing account, opens Accounts, creates an account with a name, a username and a password of 1 to 256 characters, sees it listed and audited, and the new person can sign in; a disabled or re-passworded account is returned to the gate on its next request;
 the last enabled account cannot be deleted or disabled; a token expiring refreshes once without a visible blip; every request but login and refresh carries the bearer; nothing is written to the browser; the Events drawer shows the real audit log; the shared record pieces and the slice and stale registries exist for
 the parallel waves; the gate, the admin and shared-http tests pass; the coordinator's section 11 drives pass on the temporary backend; the owner's data was never touched by verification.
