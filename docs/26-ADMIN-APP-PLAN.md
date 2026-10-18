@@ -263,14 +263,19 @@ should be crud for titles and playlists."* So there are two new record types: a 
   outlives its parent; hand-made channels are untouched; the armed Delete says how many channels go). **Precedence of the
   `Enabled` switches:** a channel is published when `channel.enabled` and (it has no playlist or `playlist.enabled`); a
   disabled playlist stops its sync, manual or scheduled; a disabled job stops only the scheduled run.
-- **Jobs** (`sync_jobs` table): `id`, `name`, `type` (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`,
-  `"24h"` or `"off"`), `config` JSON, `last_run_at`, `last_outcome`, `last_counts` JSON, `created_at`. A playlist job's
+- **Jobs** (`sync_jobs` table): `id`, `name` (catalog jobs only; a playlist job reads `Sync <playlist name>`), `type`
+  (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`, `"24h"` or `"off"`; a playlist job's is at least
+  15 minutes), `config` JSON (`{}` for a playlist job), `playlist_id` (a foreign key with cascade; one job per playlist),
+  `last_run_at`, `last_result` (`ok`, `failed`, `stopped`), `last_counts` (typed; no stored sentence: the admin words it),
+  `created_at`. A playlist job is created and deleted with its playlist; `POST /api/jobs` creates catalog jobs only and
+  `DELETE /api/jobs/:id` on a playlist job is `422 job.invalid`. A disabled **job** stops only the scheduled run; a
+  manual run is refused (`422 job.disabled`) only for a disabled **playlist**. A playlist job's
   config is `playlistId` only (no dry run, no prune: plan `43`), created with the playlist, and it caches the channels'
   images and checks each stream (`03` 7.2c); `POST /api/jobs/:id/stop` stops a playlist job and `run` resumes it; a
   catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
   (`movie` or `tv`, unused by `discover`) and `pages` (each kind's cap; up to 500 for discover). Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
-  /api/jobs/:id`; `POST /api/jobs/:id/run` (single-flight per job, `409 sync.busy`; a disabled job or a job whose
-  playlist is disabled is refused with `422 job.disabled` and its reason). A playlist job syncs only its playlist, under
+  /api/jobs/:id`; `POST /api/jobs/:id/run` (one run per playlist, `409 sync.busy`; refused with `422 job.disabled`
+  and its reason only when the job's playlist is disabled, or for a disabled catalog job). A playlist job syncs only its playlist, under
   the rules of 3.10; a catalog job syncs its scope.
 - **Seeding** (first start only, from the environment): playlists are **not** seeded (`PLAYLIST_URLS` and
   `PLAYLIST_SYNC_SCHEDULE` are retired; a playlist and its job come from an import, `43`); the catalog job - the library fill, scope `discover` - is created with

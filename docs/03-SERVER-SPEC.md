@@ -664,13 +664,15 @@ ignored):
 |---|---|---|
 | `limit` | 1 to 200 | page size |
 | `offset` | 0 to 10,000,000 (default 0) | rows to skip |
-| `q` | up to 120 characters (trimmed; empty is no search) | case-insensitive contains over `name`, `number`, `tvg_id`, `source`; `%`, `_` and `\` are literal |
+| `q` | up to 120 characters (trimmed; empty is no search) | case-insensitive contains over `name`, `number`, `tvg_id` and the parent playlist's name and host; `%`, `_` and `\` are literal |
 | `kind` | `live` \| `stream` | |
-| `origin` | `synced` \| `edited` \| `manual` | stream rows only: `source` and no edits, `source` and edits, no `source` |
+| `origin` | `synced` \| `edited` \| `manual` | stream rows only: has a playlist and no edits, has a playlist and edits, no playlist (`playlist_id`) |
+| `status` | `live` \| `dead` \| `unchecked` | stream rows only: the sync's verdict (`7.2c`); `unchecked` = never checked |
+| `playlist` | a playlist id | the channels of that playlist |
 | `enabled` | `true` \| `false` | |
 | `state` | `preparing` \| `starting` \| `live` \| `restarting` \| `stopped` \| `failed` | live rows only: the engine's state of each live row, applied as an id set |
-| `source` | a playlist host, up to 253 characters | exact match |
-| `sort` | `number` (default) \| `name` \| `category` \| `kind` \| `source` | `number` is numeric; rows with no number (or no source) last in either direction |
+| *(`source`)* | *removed* | the wire field `source` is derived from the playlist and nothing filters by it any more |
+| `sort` | `number` (default) \| `name` \| `category` \| `kind` \| `playlist` | `number` is numeric; rows with no number (or no playlist) last in either direction |
 | `dir` | `asc` (default) \| `desc` | |
 
 The paged answer is `{ items: AdminChannel[], revision, total, offset, limit }`; `total` counts the rows the filters keep,
@@ -736,7 +738,9 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
 - **Playlist record** (`playlists`): `id`, `name` (unique, case-insensitive), `kind` (`file` or `url`), `url` (a secret:
   the web address, `url` kind only, unique; never returned, audited by host only), `fileName` (`file` kind only,
   unique), `host` (`url` kind only), `enabled`. There is no stored sentence and no sync timestamp on it: the last run
-  lives on the playlist's one sync job (`26` 3.11). The uploaded file itself is **not kept**. Precedence of the three
+  lives on the playlist's one sync job (`26` 3.11). A derived name (the file name, or for a web address the URL's last
+  path segment without its extension, else the host) that clashes is suffixed ` (2)`, ` (3)`; only a typed name is
+  `409 playlist.taken`; a file re-import keeps the playlist's current name. The uploaded file itself is **not kept**. Precedence of the three
   `enabled` switches: a channel is published when `channel.enabled` and (it has no playlist or `playlist.enabled`); a
   disabled playlist stops its sync, manual or scheduled; a disabled job stops only the scheduled run.
 - **Import.** `POST /api/playlists/import` takes `multipart/form-data` with exactly one `file` part (at most 8 MiB; a
@@ -755,12 +759,17 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   is ever deleted), the playlist's sync job and one revision bump **only if a row changed** (a re-import with nothing new
   writes and bumps nothing). The `UNIQUE` columns decide a concurrent double import: the loser is `409 playlist.taken`
   (the same for a duplicate name, `url` or `fileName`). The answer is the playlist view (below) plus `created` and
-  `imported { created, updated, skipped, refused, refusalExamples }` (the examples carry an entry's name and host, never a
-  stream address); `201` for a new playlist, `200` for a replaced one. The playlist's sync job (`Sync <name>`, `24h`,
+  `imported { created, updated, skipped, refused, refusalExamples }` (the examples carry an entry's name only, never an
+  address); `201` for a new playlist, `200` for a replaced one. The playlist's sync job (`Sync <name>`, `24h`,
   enabled, due at once) is created in the same transaction.
 - **Sync (a `playlist` job; the job's `playlistId` column, one job per playlist).** `POST /api/jobs/:id/run` starts it
-  and answers `202` at once; the result is read on a refresh. One run at a time **per playlist** (`409 sync.busy`), a
-  shared limit bounds the total; a playlist job's schedule is at least 15 minutes (`422 job.invalid`). Steps: (1) refuse a
+  and answers `202` at once; the result is read on a refresh. One run at a time **per playlist** (`409 sync.busy`); two
+  shared limits bound all playlists (16 stream checks and 8 logo downloads at once, and at most 2 at once to one host in
+  each; every URL still gets its own request); a playlist job's schedule is at least 15 minutes (`422 job.invalid`); the
+  scheduler starts a run and re-arms at once, never awaiting it. A playlist job is part of its playlist: it is created
+  and deleted with it, `POST /api/jobs` creates catalog jobs only, `DELETE /api/jobs/:id` on a playlist job is
+  `422 job.invalid`, `PATCH` changes `enabled` and `schedule` only, and its name is not stored (it reads `Sync <playlist
+  name>`). Steps: (1) refuse a
   disabled playlist (`422 job.disabled`); (2) a **file** playlist is never re-read (the upload was the read); a **web**
   playlist is fetched on every run and imported (create and update only; it writes only if something changed); a fetch
   failure is recorded as `source: unreachable` and the run goes on; (3) fill missing `logoUrl`s from the iptv-org index
@@ -775,11 +784,14 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   `live` when the answer is 2xx and the body, after a byte-order mark and whitespace, starts `#EXTM3U`, else `dead` (a
   DNS or refused failure on that URL is `dead` for that channel only; a stream that is not HLS is `dead`). A host-level
   check (ping, TCP connect, DNS) is never a channel's verdict and there is no host shortcut. A verdict is written only
-  `WHERE id = ? AND streamUrl = ?` (a channel edited or removed mid-run is skipped), column by column in batches of 200,
-  each batch taking its own revision when it changed a row; (6) record on the job `lastRunAt`, `lastResult`
-  (`ok`, `failed` or `stopped`) and the typed counts (`created`, `updated`, `skipped`, `refused`, `source`, `logosCached`,
-  `logosFailed`, `live`, `dead`, `unchecked`, or `{ code }` when it failed); no sentence is stored and an exception's
-  message is never stored. The run is audited as `playlist.synced` with the counts and the host.
+  per distinct URL (`WHERE playlistId = ? AND streamUrl = ?`, so a channel edited or removed mid-run no longer matches), in
+  batches of 200, **taking no revision** (the sync-owned columns are admin-only; the revision counts what a public reader
+  can see); (6) record on the job `lastRunAt`, `lastResult` (`ok`, `failed` or `stopped`) and the typed `lastCounts`.
+  **Counts contract** (the backend and the admin each hold a schema; this table is the contract): a playlist run is
+  `{ created, updated, skipped, refused, source: "unchanged"|"updated"|"file"|"unreachable", logosCached, logosFailed,
+  live, dead, unchecked, refusalExamples, stopped? }`; a catalog run is `{ titles, stale, stopped? }`; a failed run of
+  either is `{ code }` (the `AppError` code, or `internal.failure`). No sentence is stored and an exception's message is
+  never stored; the admin words the result. The run is audited as `playlist.synced` with the counts and the host.
 - **Stop and resume.** `POST /api/jobs/:id/stop` (signed in, audited `job.stopped`, `202`) cancels a running playlist job
   and keeps everything already written (`409 job.not_running` when idle; `422 job.invalid` for a catalog job). A stopped run
   records `lastResult: stopped` and `stopped: true` in its counts, and sets `lastRunAt`, so the schedule does not fire it
@@ -790,8 +802,9 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
   the source address everywhere. A write that changes a channel's `streamUrl` or `logoUrl` clears the dependent verdict
   or cached file in the same statement. The channels' `source` is derived from the playlist (its host, or its file name),
   not stored.
-- **Revision.** An import bumps the revision once only if it wrote a row. A sync batch bumps it (its own value) only when
-  it changed a row.
+- **Revision.** An import bumps the revision once, only if it wrote a row. A sync's verdict and logo writes take none
+  (admin-only columns); a playlist's `enabled` change does bump it (it changes the published set), and a public channel
+  read joins the playlist's `enabled`.
 
 | Route | Who | Behaviour |
 |---|---|---|
@@ -820,11 +833,15 @@ Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and imag
 
 Every remote address the **backend itself fetches** (a playlist, the logo index, a logo, a stream check) must also resolve
 to a **public** address: a private, loopback, link-local, carrier-grade (CGNAT) or unique-local address is refused, redirects
-included, because the content of a playlist is untrusted and the backend may be exposed to a network (7.10). The backend
-resolves the name itself and connects to the checked address (so a rebinding DNS answer cannot redirect it), follows at most
-3 redirects (each re-checked, `https` only), refuses a URL with credentials, caps the decoded bytes while streaming, and
-sends no cookies and a fixed User-Agent. All remote requests go through that one function; `ALLOW_LOOPBACK_STREAMS` is the
-only development exception.
+included, because the content of a playlist is untrusted and the backend may be exposed to a network (7.10). This covers
+every address that comes from playlist content or an admin (a playlist, the logo index, a logo, a stream check); the fixed
+provider hosts (TMDB, OMDb) and the backend's own calls are not covered. It is one function built on `node:https` (not on
+`fetch`): a `lookup` hook resolves the name once, refuses a non-public result (IPv4 `0/8, 10/8, 100.64/10, 127/8,
+169.254/16, 172.16/12, 192.0.0/24, 192.0.2/24, 192.168/16, 198.18/15, 198.51.100/24, 203.0.113/24, 224/4, 240/4`; IPv6
+`::`, `::1`, IPv4-mapped, NAT64, 6to4 and Teredo with the embedded address checked, documentation, ULA, link-local,
+site-local, multicast) and connects to the address it validated (TLS still checks the host name), follows at most 3
+redirects (each re-validated, `https` only), refuses a URL with credentials, asks for `identity` encoding, caps the bytes
+while streaming, and sends no cookies and a fixed User-Agent. `ALLOW_LOOPBACK_STREAMS` is the only development exception.
 
 ### 7.4 Titles
 
@@ -1125,7 +1142,7 @@ An entry is `{ id, at, actorId?, actorUsername?, action, subject?, detail?, addr
 `account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`,
 `channel.enabled_bulk`, `playlist.imported`, `playlist.synced`, `job.stopped`, `channel.fault_set`, `channel.fault_cleared`, `channel.rebuilt`, `channel.reverted`,
 `provider.created`, `provider.updated`, `provider.deleted`, `title.created`, `title.updated`, `title.deleted`,
-`title.reverted`, `title.restored`, `playlist.created`, `playlist.updated`, `playlist.deleted`, `job.created`, `job.updated`,
+`title.reverted`, `title.restored`, `playlist.updated`, `playlist.deleted`, `job.created`, `job.updated`,
 `job.deleted`, `sync.started`. A password, token or hash is never written to it.
 
 ## 8. Errors
