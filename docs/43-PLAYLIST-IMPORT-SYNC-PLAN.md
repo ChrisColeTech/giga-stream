@@ -1,6 +1,6 @@
 # 43 - Playlist import, sync, logo cache and stream status (plan)
 
-**Status: PROPOSED, awaiting owner approval (2026-10-18).** Written by a read-only planning pass over the current code, `20`, `42`, `03` 7.2c, `26` 3.11, `38`, `41`. It supersedes `42` sections 2-4 and keeps its rulings 1-5. Nothing is built from it until the owner approves and the open questions in section 12 are answered. Docs before code (`07`).
+**Status: APPROVED by the owner 2026-10-18 (see the decision line in section 12); executing wave by wave, W0 docs first.** Written by a read-only planning pass over the current code, `20`, `42`, `03` 7.2c, `26` 3.11, `38`, `41`. It supersedes `42` sections 2-4 and keeps its rulings 1-5. Nothing is built from it until the owner approves and the open questions in section 12 are answered. Docs before code (`07`).
 
 ## 0. Verdict
 
@@ -326,6 +326,8 @@ W1 and W2 are sequential (same services). W3, W4 and W5 can run in parallel once
 3. **The backend verdict is the Live status; the fileserver stops re-probing those channels.** Upside: no multi-minute Live read. Risk: a cloud-hosted backend may see a geo-blocked stream differently from the viewer. Fallback: keep the fileserver probe and use the backend verdict only in the admin.
 4. **Confirm "ping" means a manifest GET per stream URL**, not a bare host reachability check.
 5. **Confirm the first-run behaviour.** The backfilled job is enabled and runs at the next start.
+
+**Decision (owner, 2026-10-18, "ok lets execute" - approval of the plan with its defaults; revisable):** Q1 `DELETE` keeps the channels as today (the `Dead` filter plus bulk `Delete` removes them); Q2 all four exceptions approved; Q3 the backend verdict is the Live status and the fileserver stops re-probing those channels; Q4 "ping" is a manifest GET per stream URL; Q5 the backfilled job is enabled and runs at the next start. Stop and resume (3.4a) is in scope.
 
 ## 13. Risks
 
