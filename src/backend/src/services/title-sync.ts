@@ -8,7 +8,10 @@ import { type TmdbClient } from "./tmdb-client.js";
 import {
   type Kind,
   type SyncRequest,
+  DEFAULT_DISCOVER_PAGES,
   DEFAULT_SYNC_PAGES,
+  KINDS,
+  MAX_DISCOVER_PAGES,
   MAX_SYNC_PAGES,
   TITLE_FRESH_MS,
   asRecord,
@@ -56,6 +59,32 @@ export function createTitleSync(deps: {
     return tmdb.get<Record<string, unknown>>(path, { page });
   }
 
+  /** One discover page by popularity: the library fill's source (`03` section 7.6b). */
+  function discoverPage(kind: Kind, page: number) {
+    return tmdb.get<Record<string, unknown>>(`/discover/${kind}`, { sort_by: "popularity.desc", page });
+  }
+
+  /** One list row into the store: the shaped payload unless a fresh stored one stands; the popularity always. */
+  function storeRow(kind: Kind, record: Record<string, unknown>): boolean {
+    const id = num(record.id);
+    if (id === undefined || deps.deleted.isDeleted(kind, id)) return false;
+    const shaped = rowOf(kind, record, now());
+    if (shaped === undefined) return false;
+    const existing = store.titles.find(kind, id);
+    const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS
+      && storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt) !== undefined;
+    const popularity = num(record.popularity);
+    store.titles.put({
+      kind,
+      tmdbId: id,
+      payload: fresh ? asRecord(existing.payload) : shaped,
+      popularityScore: popularity ?? existing?.popularityScore ?? null,
+      popularityReadAt: popularity !== undefined || popularity === null ? now() : existing?.popularityReadAt ?? null,
+      fetchedAt: fresh ? existing.fetchedAt : now(),
+    });
+    return true;
+  }
+
   async function runSync(request: SyncRequest): Promise<number> {
     let pulled = 0;
     if (request.scope === "titles") {
@@ -66,6 +95,20 @@ export function createTitleSync(deps: {
         await deps.ensureTitle(kind, id);
         pulled += 1;
       }
+    } else if (request.scope === "discover") {
+      // The library fill (03 section 7.6b): one run walks both kinds, each capped at `pages`.
+      const pages = Math.min(request.pages ?? DEFAULT_DISCOVER_PAGES, MAX_DISCOVER_PAGES);
+      for (const kind of KINDS) {
+        for (let page = 1; page <= pages; page++) {
+          if (stopped) return pulled;
+          const answer = asRecord(await discoverPage(kind, page));
+          if (stopped) return pulled;
+          for (const row of listOf(answer.results)) {
+            if (stopped) return pulled;
+            if (storeRow(kind, asRecord(row))) pulled += 1;
+          }
+        }
+      }
     } else {
       const kind = request.kind ?? "movie";
       const pages = Math.min(request.pages ?? DEFAULT_SYNC_PAGES, MAX_SYNC_PAGES);
@@ -75,24 +118,7 @@ export function createTitleSync(deps: {
         if (stopped) return pulled;
         for (const row of listOf(answer.results)) {
           if (stopped) return pulled;
-          const record = asRecord(row);
-          const id = num(record.id);
-          if (id === undefined || deps.deleted.isDeleted(kind, id)) continue;
-          const shaped = rowOf(kind, record, now());
-          if (shaped === undefined) continue;
-          const existing = store.titles.find(kind, id);
-          const fresh = existing !== undefined && now() - existing.fetchedAt < TITLE_FRESH_MS
-            && storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt) !== undefined;
-          const popularity = num(record.popularity);
-          store.titles.put({
-            kind,
-            tmdbId: id,
-            payload: fresh ? asRecord(existing.payload) : shaped,
-            popularityScore: popularity ?? existing?.popularityScore ?? null,
-            popularityReadAt: popularity !== undefined || popularity === null ? now() : existing?.popularityReadAt ?? null,
-            fetchedAt: fresh ? existing.fetchedAt : now(),
-          });
-          pulled += 1;
+          if (storeRow(kind, asRecord(row))) pulled += 1;
         }
       }
     }

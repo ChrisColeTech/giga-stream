@@ -9,7 +9,7 @@ import {
 import type { Actor, AuditService } from "./audit-service.js";
 import type { JobRunner } from "./job-runner.js";
 import { normaliseSchedule } from "./job-schedule.js";
-import { DEFAULT_SYNC_PAGES } from "./title-shapes.js";
+import { DEFAULT_DISCOVER_PAGES, DEFAULT_SYNC_PAGES } from "./title-shapes.js";
 
 const invalid = (field: string, message: string): AppError => new AppError(ERRORS.jobInvalid, { field }, message);
 
@@ -76,7 +76,7 @@ export function createJobService(deps: {
         const config = { playlistId: input.config.playlistId, dryRun: input.config.dryRun ?? false, prune: input.config.prune ?? false };
         id = store.jobs.insert({ ...base, type: "playlist", config }, now());
       } else {
-        const config = { scope: input.config.scope, kind: input.config.kind, pages: input.config.pages ?? DEFAULT_SYNC_PAGES };
+        const config = { scope: input.config.scope, kind: input.config.kind, pages: input.config.pages ?? (input.config.scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES) };
         id = store.jobs.insert({ ...base, type: "catalog", config }, now());
       }
       audit.record(actor, { action: "job.created", subject: String(id), detail: { name: input.name, type: input.type } });
@@ -100,7 +100,7 @@ export function createJobService(deps: {
       } else {
         const parsed = CatalogConfigSchema.safeParse({ ...current.config, ...patch.config });
         if (!parsed.success) throw invalid(configField(parsed.error.issues[0]), "That config is not valid.");
-        const config = { scope: parsed.data.scope, kind: parsed.data.kind, pages: parsed.data.pages ?? DEFAULT_SYNC_PAGES };
+        const config = { scope: parsed.data.scope, kind: parsed.data.kind, pages: parsed.data.pages ?? (parsed.data.scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES) };
         store.jobs.update({ ...current, ...change, config });
       }
       audit.record(actor, {

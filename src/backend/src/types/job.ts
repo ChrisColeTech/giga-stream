@@ -12,9 +12,10 @@ const PlaylistConfigSchema = z
   .strict();
 const CatalogConfigSchema = z
   .object({
-    scope: z.enum(["trending", "popular"]),
-    kind: z.enum(["movie", "tv"]),
-    pages: z.number().int().min(1).max(25).optional(),
+    scope: z.enum(["trending", "popular", "discover"]),
+    /** Not asked for a discover job: the walk covers both kinds (`03` section 7.6b). */
+    kind: z.enum(["movie", "tv"]).optional(),
+    pages: z.number().int().min(1).max(500).optional(),
   })
   .strict();
 

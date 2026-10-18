@@ -21,8 +21,9 @@ export interface PlaylistJobConfig {
 }
 
 export interface CatalogJobConfig {
-  scope: "trending" | "popular";
-  kind: "movie" | "tv";
+  scope: "trending" | "popular" | "discover";
+  /** Not set on a discover job: the walk covers both kinds (`03` section 7.6b). */
+  kind?: "movie" | "tv";
   pages: number;
 }
 
@@ -50,8 +51,8 @@ export type JobRecord = PlaylistJob | CatalogJob;
 
 const PlaylistConfig = z.object({ playlistId: z.number().int(), dryRun: z.boolean(), prune: z.boolean() });
 const CatalogConfig = z.object({
-  scope: z.enum(["trending", "popular"]),
-  kind: z.enum(["movie", "tv"]),
+  scope: z.enum(["trending", "popular", "discover"]),
+  kind: z.enum(["movie", "tv"]).optional(),
   pages: z.number().int(),
 });
 const Counts = z.record(z.unknown());
