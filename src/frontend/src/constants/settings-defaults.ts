@@ -27,4 +27,5 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = {
   libraryGenres: [],
   libraryYear: "",
   libraryWatched: "all",
+  libraryFilter: "",
 };

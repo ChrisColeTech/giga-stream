@@ -41,6 +41,7 @@ export function fieldsOfSettings(settings: SettingsAnswer): SettingsFields {
       libraryGenres: settings.libraryGenres,
       libraryYear: settings.libraryYear,
       libraryWatched: settings.libraryWatched,
+      libraryFilter: settings.libraryFilter,
     },
     adminUrl: settings.adminUrl,
   };
@@ -89,5 +90,6 @@ export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswe
     ...(sameList(value.libraryGenres, baseline.libraryGenres) ? {} : { libraryGenres: value.libraryGenres }),
     ...(value.libraryYear === baseline.libraryYear ? {} : { libraryYear: value.libraryYear }),
     ...(value.libraryWatched === baseline.libraryWatched ? {} : { libraryWatched: value.libraryWatched }),
+    ...(value.libraryFilter === baseline.libraryFilter ? {} : { libraryFilter: value.libraryFilter }),
   };
 }

@@ -27,13 +27,16 @@ export interface Settings {
   adminUrl: string;
   /** The Player's source the person last chose (`provider:<id>` or `app`); null plays an item's first source. */
   defaultSource: string | null;
-  /** The Library's Type strip, rail view and filters as the person last left them (the search is never saved). */
+  /** The Library's Type strip, rail view and filters as the person last left them, the Filter text included (owner,
+   *  2026-10-18). */
   libraryScope: "all" | "movie" | "tv" | "local";
   librarySource: string;
   libraryGenres: string[];
   /** A four-digit year, or "" for any year. */
   libraryYear: string;
   libraryWatched: "all" | "unwatched" | "watching" | "watched";
+  /** The Library's Filter text (it narrows the loaded list by title), "" for none. */
+  libraryFilter: string;
 }
 
 export type SettingKey = keyof Settings;
@@ -65,6 +68,8 @@ export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   libraryGenres: z.array(z.string().min(1).max(80)).max(40),
   libraryYear: z.string().regex(/^(1[89]\d\d|2[01]\d\d)?$/),
   libraryWatched: z.enum(["all", "unwatched", "watching", "watched"]),
+  /* The same bound as the Library read's `q` (routes/library.ts). */
+  libraryFilter: z.string().max(200),
 };
 
 export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
@@ -93,6 +98,7 @@ export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
   libraryGenres: [],
   libraryYear: "",
   libraryWatched: "all",
+  libraryFilter: "",
 });
 
 export const SETTING_KEYS = Object.keys(SETTING_SCHEMAS) as SettingKey[];
@@ -123,4 +129,5 @@ export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   libraryGenres: "Library genres must be a list of genre names.",
   libraryYear: "Library year must be a four-digit year or empty.",
   libraryWatched: "Library watched must be all, unwatched, watching or watched.",
+  libraryFilter: "The Library filter must be text of at most 200 characters.",
 };

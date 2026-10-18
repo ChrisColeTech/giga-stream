@@ -96,5 +96,6 @@ function settledSettings(local: SettingsAnswer, sent: SettingsPatch, answer: Set
       ? { libraryGenres: answer.libraryGenres } : {}),
     ...(sent.libraryYear === local.libraryYear ? { libraryYear: answer.libraryYear } : {}),
     ...(sent.libraryWatched === local.libraryWatched ? { libraryWatched: answer.libraryWatched } : {}),
+    ...(sent.libraryFilter === local.libraryFilter ? { libraryFilter: answer.libraryFilter } : {}),
   };
 }

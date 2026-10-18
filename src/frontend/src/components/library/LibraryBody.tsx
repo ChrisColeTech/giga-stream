@@ -34,6 +34,8 @@ export interface LibraryBodyProps {
   readonly onRemoveWatch: (item: ResolvedItem) => void;
   readonly onClearHistory: () => void;
   readonly onRefresh: () => void;
+  /** Opens the Search titles spotlight. */
+  readonly onSearch: () => void;
   readonly loading: boolean;
   readonly paging: boolean;
   readonly hasMore: boolean;
@@ -61,6 +63,7 @@ export function LibraryBody({
   onRemoveWatch,
   onClearHistory,
   onRefresh,
+  onSearch,
   loading,
   paging,
   hasMore,
@@ -75,7 +78,7 @@ export function LibraryBody({
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} />
+      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} onSearch={onSearch} />
       {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div ref={scroller} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <ContinueStrip
