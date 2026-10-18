@@ -10,16 +10,22 @@ export const PREVIEW_SIZE = { width: 640, body: 420, minWidth: 420, minBody: 300
 /** The line while the window reads the channels. */
 export const READING_WORD = "loading";
 
+/** The line for a channel that is no longer there (a word); its sentence goes on the notice line. */
+export const MISSING_WORD = "missing";
+
 /** The existing `channel.not_found` sentence: the channel is no longer there. */
 export const NO_CHANNEL = "That channel does not exist.";
 
-/** The player's errors as the line says them. */
+/** The player's errors as the line says them: always a word. */
 export const PLAYER_ERROR_TEXT: Readonly<Record<PlayerError, string>> = {
   "manifest failed": "manifest failed",
   unreachable: "unreachable",
   "media error": "media error",
-  unsupported: "This browser cannot play HLS streams.",
+  unsupported: "unsupported",
 };
+
+/** The sentence an `unsupported` player says once, on the notice line. */
+export const UNSUPPORTED_NOTICE = "This browser cannot play HLS streams.";
 
 /** The HLS type a browser's own player may play when hls.js cannot run. */
 export const HLS_TYPE = "application/vnd.apple.mpegurl";

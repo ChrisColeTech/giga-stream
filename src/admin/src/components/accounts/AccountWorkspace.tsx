@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
@@ -14,6 +14,8 @@ import {
   WORKSPACE_LABELS,
 } from "@/constants/account-copy";
 import { useAccountActions } from "@/hooks/useAccountActions";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, sameAccountDraft } from "@/lib/account-draft";
 import { disableReason } from "@/lib/account-guard";
@@ -31,12 +33,7 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
   const spy = useScrollSpy(ACCOUNT_SECTION_KEYS, ACCOUNT_SECTION_KEYS[0] ?? "ac-details");
 
-  /* The list changed under the workspace (a refresh, a save): a clean form follows the new record; a form being edited
-     keeps what the person typed, unless it already holds the saved values. */
-  useEffect(() => {
-    const next = draftOf(account);
-    if (!form.dirty || sameAccountDraft(form.draft, next)) form.reset(next);
-  }, [account]);
+  useFollowRecord(form, account, draftOf, sameAccountDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();
@@ -96,15 +93,7 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
 export function AccountWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const account = useAppStore((state) => state.accounts.items.find((item) => String(item.id) === id));
   const status = useAppStore((state) => state.accounts.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
-  const gone = account === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("accounts");
-    say(ACCOUNT_GONE, "warn", "Account");
-  }, [gone, closeWorkspace, say]);
+  useWorkspaceGone("accounts", account === undefined && status === "ready", ACCOUNT_GONE, "Account");
 
   return account === undefined ? null : <Editor key={String(account.id)} account={account} active={active} />;
 }

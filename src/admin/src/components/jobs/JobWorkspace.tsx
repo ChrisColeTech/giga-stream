@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
@@ -7,7 +7,9 @@ import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import { JOB_GONE, JOB_SECTIONS, JOB_SECTION_KEYS, JOB_WORKSPACE_LABELS } from "@/constants/job-copy";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useJobActions } from "@/hooks/useJobActions";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, sameJobDraft, type RunToggles } from "@/lib/job-draft";
 import { workspaceRunReason } from "@/lib/job-run-gate";
@@ -34,11 +36,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   const spy = useScrollSpy(JOB_SECTION_KEYS, JOB_SECTION_KEYS[0] ?? "jw-details");
   const runKey = `run:${job.id}`;
 
-  /* The list changed under the workspace (a refresh, a run, a save): a clean form follows the new record. */
-  useEffect(() => {
-    const next = draftOf(job);
-    if (!form.dirty || sameJobDraft(form.draft, next)) form.reset(next);
-  }, [job]);
+  useFollowRecord(form, job, draftOf, sameJobDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();
@@ -115,15 +113,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
 export function JobWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const job = useAppStore((state) => state.jobs.items.find((item) => item.id === idOf(id)));
   const status = useAppStore((state) => state.jobs.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
-  const gone = job === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("jobs");
-    say(JOB_GONE, "warn", "Job");
-  }, [gone, closeWorkspace, say]);
+  useWorkspaceGone("jobs", job === undefined && status === "ready", JOB_GONE, "Job");
 
   return job === undefined ? null : <Editor key={job.id} job={job} active={active} />;
 }

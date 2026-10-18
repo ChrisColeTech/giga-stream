@@ -1,6 +1,6 @@
-import { ArrowRight } from "lucide-react";
 import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
+import { FORWARD_ICON } from "@/constants/toolbar-icons";
 
 /** One verb of a workspace: what it says, what it does, and why it cannot be used now. */
 export interface ToolbarAction {
@@ -24,7 +24,7 @@ export function forwardVerbs(forward: ToolbarAction | undefined): readonly Toolb
     {
       id: "forward",
       label: forward.label,
-      icon: ArrowRight,
+      icon: FORWARD_ICON,
       onPress: forward.onPress,
       ...(forward.reason !== undefined && { reason: forward.reason }),
     },

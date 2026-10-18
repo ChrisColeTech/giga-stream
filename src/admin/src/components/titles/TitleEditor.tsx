@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { MANUAL_NO_TMDB, NOTHING_EDITED, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/title-copy";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { useTitleActions } from "@/hooks/useTitleActions";
 import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
@@ -39,12 +39,7 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
   const manual = isManualTitle(detail);
   const series = detail.kind === "tv";
 
-  /* The detail changed under the form (a save, a revert, a bulk run): a clean form follows it; a form being edited
-     keeps what the person typed, unless it already holds the saved values. */
-  useEffect(() => {
-    const next = draftOfTitle(detail);
-    if (!form.dirty || sameTitleDraft(form.draft, next)) form.reset(next);
-  }, [detail]);
+  useFollowRecord(form, detail, draftOfTitle, sameTitleDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();

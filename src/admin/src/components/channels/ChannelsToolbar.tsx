@@ -1,5 +1,5 @@
-import { ArrowRight } from "lucide-react";
 import { ToolbarStrip } from "@giga/ui/shell/ToolbarStrip";
+import { FORWARD_ICON } from "@/constants/toolbar-icons";
 import { usePreviewOpen } from "@/hooks/usePreviewOpen";
 import { previewIndexReason } from "@/lib/channel-guard";
 import { useAppStore } from "@/store/app-store";
@@ -19,7 +19,7 @@ export function ChannelsToolbar() {
         {
           id: "forward",
           label: "Preview",
-          icon: ArrowRight,
+          icon: FORWARD_ICON,
           ...(reason !== undefined && { reason }),
           onPress: () => {
             if (only !== undefined) openPreview(only);

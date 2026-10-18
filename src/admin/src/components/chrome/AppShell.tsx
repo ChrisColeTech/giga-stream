@@ -6,7 +6,7 @@ import { ChannelsPage } from "@/pages/ChannelsPage";
 import { JobsPage } from "@/pages/JobsPage";
 import { PlaylistsPage } from "@/pages/PlaylistsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
-import { SessionState } from "@/components/session/SessionState";
+import { useSessionState } from "@/hooks/useSessionState";
 import { SignInPage } from "@/pages/SignInPage";
 import { TitlesPage } from "@/pages/TitlesPage";
 import { useAppStore } from "@/store/app-store";
@@ -24,6 +24,7 @@ export function AppShell() {
   const tab = useTab();
   const signedIn = useAppStore((state) => state.signedIn);
   const serial = useAppStore((state) => state.serial);
+  useSessionState(signedIn, serial);
 
   return (
     <>
@@ -37,7 +38,6 @@ export function AppShell() {
         >
           {signedIn && (
             <>
-              <SessionState key={serial} />
               <ChannelsPage active={tab === "channels"} />
               <ProvidersPage active={tab === "providers"} />
               <TitlesPage active={tab === "titles"} />

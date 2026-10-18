@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { checkChannel, writeReason } from "@/lib/channel-check";
 import { draftOf, sameDraft, type ChannelDraft } from "@/lib/channel-draft";
 import { previewWorkspaceReason } from "@/lib/channel-guard";
@@ -6,6 +5,7 @@ import { changeReason, type SaveVerb, type ToolbarAction } from "@/lib/workspace
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
 import { useChannelActions, type ChannelActions } from "./useChannelActions";
+import { useFollowRecord } from "./useFollowRecord";
 import { usePreviewOpen } from "./usePreviewOpen";
 import { useRecordForm, type RecordForm } from "./useRecordForm";
 
@@ -29,12 +29,7 @@ export function useChannelEditor(channel: AdminChannel): ChannelEditor {
   const unreachable = useAppStore((state) => state.channels.unreachable);
   const openPreview = usePreviewOpen();
 
-  /* The held record changed under the workspace (a refresh, a write's answer): a clean form follows it; a form being
-     edited keeps what the person typed, unless it already holds the saved values. */
-  useEffect(() => {
-    const next = draftOf(channel);
-    if (!form.dirty || sameDraft(form.draft, next)) form.reset(next);
-  }, [channel]);
+  useFollowRecord(form, channel, draftOf, sameDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();

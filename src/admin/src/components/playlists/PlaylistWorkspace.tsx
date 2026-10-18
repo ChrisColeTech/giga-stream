@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
@@ -12,7 +12,9 @@ import {
   PLAYLIST_SECTION_KEYS,
   PLAYLIST_WORKSPACE_LABELS,
 } from "@/constants/playlist-copy";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { usePlaylistChannels } from "@/hooks/usePlaylistChannels";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, samePlaylistDraft } from "@/lib/playlist-draft";
@@ -32,12 +34,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
   const spy = useScrollSpy(PLAYLIST_SECTION_KEYS, PLAYLIST_SECTION_KEYS[0] ?? "pw-details");
   const channels = usePlaylistChannels(playlist.host);
 
-  /* The list changed under the workspace (a refresh, a save): a clean form follows the new record; a form being edited
-     keeps what the person typed. */
-  useEffect(() => {
-    const next = draftOf(playlist);
-    if (!form.dirty || samePlaylistDraft(form.draft, next)) form.reset(next);
-  }, [playlist]);
+  useFollowRecord(form, playlist, draftOf, samePlaylistDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();
@@ -96,15 +93,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
 export function PlaylistWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const playlist = useAppStore((state) => state.playlists.items.find((item) => item.id === idOf(id)));
   const status = useAppStore((state) => state.playlists.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
-  const gone = playlist === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("playlists");
-    say(PLAYLIST_GONE, "warn", "Playlist");
-  }, [gone, closeWorkspace, say]);
+  useWorkspaceGone("playlists", playlist === undefined && status === "ready", PLAYLIST_GONE, "Playlist");
 
   return playlist === undefined ? null : <Editor key={playlist.id} playlist={playlist} active={active} />;
 }

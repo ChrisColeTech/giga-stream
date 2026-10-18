@@ -20,9 +20,8 @@ export const RESET_ANSWER_REASON = "Enter your answer.";
 export const RESET_PASSWORD_REASON = "Enter a new password.";
 export const RESET_WAITING_REASON = "Waiting for the answer.";
 
-/** Under the question on every answer view, the same for every username (a different one would say which usernames are
- *  accounts). The backend shows a stand-in question to an account that has none. */
-export const NO_QUESTION_TITLE = "No security question?";
+/** The tip on the Question row of every answer view, the same for every username (a different one would say which
+ *  usernames are accounts). The backend shows a stand-in question to an account that has none. */
 export const NO_QUESTION_REASON =
   "If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one " +
   "first, under Settings > Account.";

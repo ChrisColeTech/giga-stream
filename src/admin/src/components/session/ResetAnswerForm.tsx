@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleHelp } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
 import { Input } from "@giga/ui/controls/Input";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
@@ -9,7 +8,6 @@ import {
   ANSWER_LIMIT,
   ANSWER_TIP,
   NO_QUESTION_REASON,
-  NO_QUESTION_TITLE,
   RESET_BACK,
   RESET_HEADING,
   RESET_SUBMIT,
@@ -19,7 +17,6 @@ import {
 import type { ResetState } from "@/lib/reset-state";
 import { resetReason } from "@/lib/reset-verb";
 import type { ResetResult } from "@/types/auth";
-import { GateNotice } from "./GateNotice";
 
 export interface ResetAnswerFormProps {
   readonly state: ResetState;
@@ -28,8 +25,8 @@ export interface ResetAnswerFormProps {
   readonly onBack: () => void;
 }
 
-/** Step 2 of the reset (`40` section 4.1): the question (read only), why a question-less account cannot be reset here,
- *  the Answer and New password rows, a primary `Reset password` and a ghost `Back to sign in`. Answer is focused on open.
+/** Step 2 of the reset (`40` section 4.1): the question (read only; the tip on its label says why a question-less
+ *  account cannot be reset here, the same for every username), the Answer and New password rows, a primary `Reset password` and a ghost `Back to sign in`. Answer is focused on open.
  *  A refusal of the answer clears the answer and the new password and puts focus back on Answer; a refusal of the new
  *  password keeps the answer and focuses the password. Both sit under their row as alerts. */
 export function ResetAnswerForm({ state, onReset, onBack }: ResetAnswerFormProps) {
@@ -58,10 +55,9 @@ export function ResetAnswerForm({ state, onReset, onBack }: ResetAnswerFormProps
   return (
     <Form ariaLabel={RESET_HEADING} onSubmit={() => void submit()} className="gap-3">
       <h2 className="m-0 mb-1 font-mono text-base font-semibold text-text">{RESET_HEADING}</h2>
-      <Row label="Question" align="start">
-        <p className="m-0 py-2 text-sm leading-5 text-text">{state.question}</p>
+      <Row label="Question" tip={NO_QUESTION_REASON} align="start">
+        <span className="py-2 text-sm leading-5 text-text">{state.question}</span>
       </Row>
-      <GateNotice sentence={NO_QUESTION_REASON} title={NO_QUESTION_TITLE} icon={CircleHelp} />
       <div ref={answerRow}>
         <Row label="Answer" tip={ANSWER_TIP} error={error?.field === "answer" ? error.sentence : null}>
           <Input

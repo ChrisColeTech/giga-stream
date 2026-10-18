@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
@@ -13,7 +13,9 @@ import {
   SAVING_REASON,
   UNREACHABLE_REASON,
 } from "@/constants/provider-copy";
+import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useProviderActions } from "@/hooks/useProviderActions";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { saveRequiredReason } from "@/lib/provider-checks";
 import { draftOfProvider, sameProviderDraft } from "@/lib/provider-draft";
@@ -32,12 +34,7 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
   const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(PROVIDER_SECTION_KEYS, PROVIDER_SECTION_KEYS[0] ?? "pv-details");
 
-  /* The list changed under the workspace (a refresh, a bulk run): a clean form follows the new record; a form being
-     edited keeps what the person typed, unless it already holds the saved values. */
-  useEffect(() => {
-    const next = draftOfProvider(provider);
-    if (!form.dirty || sameProviderDraft(form.draft, next)) form.reset(next);
-  }, [provider]);
+  useFollowRecord(form, provider, draftOfProvider, sameProviderDraft);
 
   const save = async (): Promise<void> => {
     form.clearErrors();
@@ -101,15 +98,7 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
 export function ProviderWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const provider = useAppStore((state) => state.providers.items.find((item) => String(item.id) === id));
   const status = useAppStore((state) => state.providers.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
-  const gone = provider === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("providers");
-    say(PROVIDER_GONE, "warn", "Provider");
-  }, [gone, closeWorkspace, say]);
+  useWorkspaceGone("providers", provider === undefined && status === "ready", PROVIDER_GONE, "Provider");
 
   return provider === undefined ? null : <Editor key={provider.id} provider={provider} active={active} />;
 }

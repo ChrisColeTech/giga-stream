@@ -8,14 +8,14 @@ export interface PreviewStatusProps {
   readonly onRetry: () => void;
 }
 
-/** The Preview's one mono status line under the stage and, beside it when there is something to try again, a ghost
- *  `Retry` that reads the channels once more. */
+/** The Preview's state word under the stage (`live`, `loading`, `failed`, `missing`: a state, never a sentence) and,
+ *  beside it when there is something to try again, a ghost `Retry` that reads the channels once more. */
 export function PreviewStatus({ line, retry, onRetry }: PreviewStatusProps) {
   return (
     <div className="flex h-8 flex-none items-center gap-2">
-      <p role="status" className="m-0 min-w-0 flex-1 truncate font-mono text-xs text-muted" title={line}>
+      <span role="status" className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
         {line}
-      </p>
+      </span>
       {retry && (
         <Button variant="ghost" size="sm" onClick={onRetry}>
           {RETRY_LABEL}

@@ -1,6 +1,6 @@
-import { ArrowRight } from "lucide-react";
 import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import type { ForwardVerb } from "@/constants/index-frames";
+import { FORWARD_ICON } from "@/constants/toolbar-icons";
 import type { Tab } from "@/types/shell";
 
 const NOTHING = (): void => undefined;
@@ -14,7 +14,7 @@ export function indexVerbs(forward: ForwardVerb | null, request: (tab: Tab) => v
     {
       id: "forward",
       label: forward.label,
-      icon: ArrowRight,
+      icon: FORWARD_ICON,
       ...(forward.reason !== undefined && { reason: forward.reason }),
       onPress: to === undefined ? NOTHING : () => request(to),
     },

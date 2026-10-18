@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { CHANNEL_GONE } from "@/constants/channel-copy";
 import { useChannelFlows } from "@/hooks/useChannelFlows";
+import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useAppStore } from "@/store/app-store";
 import { LiveWorkspace } from "./LiveWorkspace";
 import { StreamWorkspace } from "./StreamWorkspace";
@@ -10,17 +10,8 @@ import { StreamWorkspace } from "./StreamWorkspace";
 export function ChannelWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const channel = useAppStore((state) => state.channels.items.find((item) => item.id === id));
   const status = useAppStore((state) => state.channels.status);
-  const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const say = useAppStore((state) => state.say);
   const flows = useChannelFlows();
-  const gone = channel === undefined && status === "ready";
-
-  useEffect(() => {
-    if (!gone) return;
-    closeWorkspace("channels");
-    say(CHANNEL_GONE, "warn", "Channel");
-    void flows.refresh();
-  }, [gone, closeWorkspace, say, flows]);
+  useWorkspaceGone("channels", channel === undefined && status === "ready", CHANNEL_GONE, "Channel", flows.refresh);
 
   if (channel === undefined) return null;
   return channel.kind === "live" ? (
