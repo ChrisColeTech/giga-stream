@@ -69,6 +69,9 @@ call `fetch`; the request layer is the only caller. Application URLs are relativ
 
 ## 5. The wire shapes (copied from `src/backend/src/types` and the services, 2026-10-17)
 
+> **Amended (owner, 2026-10-17; `39` section 7.1, migration `018`).** `BackendChannel`, `AdminAccount` and the manual `AdminTitleRow` gain **`idNumber: number`**, a backend-assigned, never-reused integer (the string `id` stays the key; a synced title's number is its `tmdbId`); a live channel's
+> create body no longer needs an `id` (the backend assigns `live-<idNumber>`). The password-reset routes `POST /api/auth/reset-request` and `/reset` (migration `019`, `40`) join the auth routes. The shapes below are otherwise unchanged.
+
 `types/admin-*.ts` already hold these shapes from `28`; the first wiring wave adds their Zod schemas under `services/schemas/`,
 one file per resource (`channel-schema.ts`, `provider-schema.ts`, `title-schema.ts`, `playlist-schema.ts`, `job-schema.ts`,
 `account-schema.ts`, `audit-schema.ts`, `session-schema.ts`, `health-schema.ts`, `account-state-schema.ts`). Schemas are non-strict
