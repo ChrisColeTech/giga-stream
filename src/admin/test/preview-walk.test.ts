@@ -104,7 +104,7 @@ describe("the Preview walk", () => {
       throw new Error("unexpected call");
     };
     const service: ChannelsService = {
-      list: nope, create: nope, update: nope, remove: nope, rebuild: nope, revert: nope, setEnabled: nope, setStatus: nope,
+      list: nope, create: nope, update: nope, remove: nope, rebuild: nope, revert: nope, setEnabled: nope, setStatus: nope, readOne: nope,
       liveRows: nope,
       page: async (_query, index) => {
         asked.push(index);

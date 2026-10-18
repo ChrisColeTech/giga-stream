@@ -34,7 +34,7 @@ function fake(total: number, over: Partial<ChannelsService> = {}): Fake {
     throw new Error("unexpected call");
   };
   const service: ChannelsService = {
-    list: nope, create: nope, update: nope, remove: nope, rebuild: nope, revert: nope, setEnabled: nope, setStatus: nope,
+    list: nope, create: nope, update: nope, remove: nope, rebuild: nope, revert: nope, setEnabled: nope, setStatus: nope, readOne: nope,
     page: async (query, index, limit = 100) => {
       asked.push({ query, index, limit });
       return slice(index * limit, limit, total);

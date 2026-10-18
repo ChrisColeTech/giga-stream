@@ -25,6 +25,7 @@ export type ChannelStore = Pick<
   | "channelsLoadFailed"
   | "channelUpsert"
   | "channelRemove"
+  | "channelsPreviewLoaded"
   | "channelsMarkUnreachable"
   | "closeWorkspace"
   | "markStale"

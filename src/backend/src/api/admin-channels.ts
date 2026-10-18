@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 
 import { ERRORS } from "../constants/errors.js";
 import type { Services } from "../services/service-registry.js";
@@ -19,5 +20,12 @@ export function registerAdminChannels(app: FastifyInstance, services: Services):
     signedIn(services, request);
     const query = parseInput(AdminChannelQuerySchema, request.query, ERRORS.requestInvalid);
     return ok(reply, services.channels.listAdmin(baseOf(request), query.limit === undefined ? undefined : query));
+  });
+
+  /** One row, the same admin view (docs/36 section 8.2): signed in, `no-store`, `404 channel.not_found`. */
+  app.get("/api/admin-channels/:channelId", async (request, reply) => {
+    signedIn(services, request);
+    const { channelId } = parseInput(z.object({ channelId: z.string().min(1).max(200) }), request.params);
+    return ok(reply, services.channels.getAdmin(channelId, baseOf(request)));
   });
 }

@@ -21,7 +21,6 @@ const noop = (): void => undefined;
 
 function props(channel: AdminChannel | undefined, over: Partial<PreviewToolbarProps> = {}): PreviewToolbarProps {
   return {
-    name: channel?.name,
     reading: false,
     walk: { position: 2, total: 5, reasons: { previous: undefined, next: undefined }, step: noop },
     line: "live",
@@ -41,16 +40,16 @@ beforeEach(() => {
 });
 
 describe("the Preview toolbar", () => {
-  it("draws the verbs left (Disable, Mark, Retry), then the name, state word, `N / total`, Previous, Next; no Close", () => {
+  it("draws the verbs left (Disable, Mark, Retry), then the state word, `N / total`, Previous, Next; no name, no Close", () => {
     const html = toolbar(stream("a", { name: "Talk", status: "live" }), { retry: true, line: "failed" });
-    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", ">Talk<", ">failed<", "2 / 5", 'aria-label="Previous"', 'aria-label="Next"']);
+    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", ">failed<", "2 / 5", 'aria-label="Previous"', 'aria-label="Next"']);
+    assert.ok(!html.includes("Talk"), "the name is the window's title now");
     assert.ok(!html.includes("Close"), "the window header owns the close");
     assert.ok(html.includes("lucide-x"), "Disable carries the X icon");
     assert.ok(toolbar(stream("a", { enabled: false })).includes("lucide-check"), "Enable carries the Check icon");
     assert.ok(at.every((index) => index >= 0), JSON.stringify(at));
     assert.deepEqual([...at].sort((x, y) => x - y), at, "the order is the specified one");
     assert.ok(html.includes("border-b border-hair"), "the shared pinned strip");
-    assert.ok(html.includes('title="Talk"'), "the name truncates with a tooltip");
   });
 
   it("shows the action the channel can take, and the other verdict than its own (a stream channel only)", () => {
@@ -84,7 +83,7 @@ describe("the Preview toolbar", () => {
     assert.ok(html.includes(`Disable. ${UNREACHABLE_REASON}`) && html.includes(`Mark live. ${UNREACHABLE_REASON}`));
   });
 
-  it("wears shimmers, not words, for the place and the name while the channels are read", () => {
+  it("wears a shimmer, not words, for the place while the channel is read", () => {
     const html = toolbar(undefined, { reading: true, walk: { position: null, total: 0, reasons: { previous: RETRY_READING, next: RETRY_READING }, step: noop } });
     assert.ok(!html.includes("0 / 0") && !html.includes("–"));
     assert.ok(html.split("aria-hidden").length > 4);
@@ -105,8 +104,13 @@ describe("the Preview window", () => {
     state().channelsOpenPreview("a");
     const html = renderLive(createElement(PreviewWindow));
     const video = html.indexOf("<video");
-    assert.ok(html.indexOf("Preview window") >= 0 && video > 0);
-    assert.ok(html.indexOf('aria-label="Previous"') > html.indexOf("Close Preview"), "the strip is under the header");
+    assert.ok(html.indexOf("Stream a window") >= 0 && video > 0);
+    assert.ok(/<h2[^>]*>Stream a<\/h2>/.test(html), "the title bar is the channel's name");
+    assert.ok(!html.includes(">Preview<"), "never the word Preview");
+    state().channelsOpenPreview("elsewhere");
+    const reading = renderLive(createElement(PreviewWindow));
+    assert.ok(/<h2[^>]*><span[^>]*aria-hidden/.test(reading) && !/<h2[^>]*>Preview</.test(reading), "a shimmer while read");
+    assert.ok(html.indexOf('aria-label="Previous"') > html.indexOf("Close Stream a"), "the strip is under the header");
     assert.ok(html.indexOf('aria-label="Previous"') < video && html.indexOf('role="status"') < video);
     const below = html.slice(html.indexOf("</video>"));
     assert.ok(!below.includes("<button") && !below.includes('role="status"'), "no row under the stage");

@@ -46,6 +46,9 @@ export interface ChannelsSlice {
   /** The walk's Previous / Next (`36` section 8.1): the request value moves to this row at this place, its serial raised;
    *  `opened` stays, so the window stays mounted where it is. */
   channelsStepPreview: (row: AdminChannel, at: number) => void;
+  /** The Preview's one-channel read answered: a row the list holds is upserted by id; a row it does not hold is kept only as
+   *  the window's own copy, so the list's loaded pages are never dropped by it. */
+  channelsPreviewLoaded: (channel: AdminChannel) => void;
   channelsClosePreview: () => void;
   /** Back to the start: the page leaving with the session (sign-out, a session ending). */
   channelsReset: () => void;
@@ -110,6 +113,7 @@ export function createChannelsSlice(set: SliceSet<ChannelsSlice>, get: SliceGet<
         live: s.live.filter((row) => row.id !== id),
         held: keepHeld(s.held, s.ticked.filter((one) => one !== id)),
         opened: s.opened?.id === id ? null : s.opened,
+        preview: s.preview?.channelId === id ? { ...s.preview, channel: null } : s.preview,
         ticked: s.ticked.filter((one) => one !== id),
       });
     },
@@ -147,6 +151,11 @@ export function createChannelsSlice(set: SliceSet<ChannelsSlice>, get: SliceGet<
     channelsStepPreview: (row, at) => {
       const preview = get().channels.preview;
       if (preview !== null) patch({ preview: { ...preview, channelId: row.id, serial: preview.serial + 1, at, channel: row } });
+    },
+    channelsPreviewLoaded: (channel) => {
+      const s = get().channels;
+      if (known(s, channel.id)) get().channelUpsert(channel);
+      else if (s.preview?.channelId === channel.id) patch({ preview: { ...s.preview, channel } });
     },
     channelsClosePreview: () => patch({ preview: null }),
     channelsReset: () => set({ channels: NO_CHANNELS }),
