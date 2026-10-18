@@ -27,9 +27,9 @@ statusbar count. Out of scope: Channels, Titles (read-only cross-references only
 
 ## 3. Playlists
 
-### 3.0 Ids (final decision, owner)
+### 3.0 Ids (owner, final: EVERYTHING)
 
-A playlist's `id` and a job's `id` are the generated, never-reused integers from their `AUTOINCREMENT` sequences (`014-playlists-jobs.sql`), which are already in creation order. Migration `018` does **not** renumber them: a renumber would break `channels.playlist_id` and the `playlistId` inside every playlist job's config. The Id row and column show that `id`. Nothing in this plan changes it.
+A playlist's and a job's primary key is already a generated, never-reused integer from its `AUTOINCREMENT` sequence (`014-playlists-jobs.sql`), in creation order. Migration `018` leaves their tables alone (they already satisfy the rule), and it does not renumber them: a renumber would break `channels.playlist_id` and the `playlistId` inside every playlist job's config. Their API `id` is that number, and the Id row and column show it (as `idNumber`, which repeats it). Nothing else in this plan changes.
 
 ### 3.1 Routes (`29` 9.4)
 
