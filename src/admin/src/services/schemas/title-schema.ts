@@ -17,6 +17,9 @@ export const TitleRowSchema = z.object({
   state: z.enum(["synced", "edited", "manual"]),
   enabled: z.boolean().optional(),
   editedFields: z.array(z.string()).optional(),
+  /** Browse TMDB rows only (`docs/47` section 3.3): the store holds this TMDB title / the admin deleted it. */
+  stored: z.boolean().optional(),
+  deleted: z.boolean().optional(),
 });
 
 export const EpisodeSchema = z.object({

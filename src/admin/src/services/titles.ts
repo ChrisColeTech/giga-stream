@@ -15,8 +15,10 @@ import {
 } from "./schemas/title-schema";
 import type { RecordInput } from "./service-types";
 
-/** The Titles routes (`37` section 4.1), REAL. Every read asks for the disabled titles (`includeDisabled=true`,
- *  honoured for an admin's token). A list or search page is read row by row: an unreadable row is dropped and counted.
+/** The Titles routes (`37` section 4.1), REAL. `list` and `search` are the Browse TMDB reads (`/api/admin/tmdb/titles` and
+ *  `/api/admin/tmdb/search`, `docs/47` section 3.3): TMDB's own rows, each marked `stored` / `deleted`, nothing written;
+ *  the detail read asks for the disabled titles (`includeDisabled=true`). A page is read row by row: an unreadable row is
+ *  dropped and counted.
  *  A save is a `PATCH` of the changed fields (`null` clears); `detail` reads the fields a list row lacks; `revert`
  *  drops an admin's edits and refetches from TMDB (`409 title.manual` for a title made by hand). With no TMDB token and
  *  no manual title a read is `503 tmdb.unavailable`, which arrives as that `ApiError`. Writes take the 256 KiB body
@@ -26,6 +28,9 @@ export interface TitlesService {
   readonly list: (query?: BrowseQuery, signal?: AbortSignal) => Promise<TitleList>;
   readonly search: (query: SearchQuery, signal?: AbortSignal) => Promise<TitleList>;
   readonly detail: (id: string) => Promise<AdminTitleDetail>;
+  /** `POST /api/titles/from-tmdb { id }` (`docs/47` section 3.3): the explicit add of a Browse TMDB title; `201` with the
+   *  stored title, `409 title.taken` when it is already stored or was deleted, `404 title.not_found`, `422`. */
+  readonly addFromTmdb: (id: string) => Promise<AdminTitleDetail>;
   readonly create: (input: RecordInput) => Promise<AdminTitleDetail>;
   readonly update: (id: string, patch: RecordInput) => Promise<AdminTitleDetail>;
   readonly remove: (id: string) => Promise<{ readonly id: string }>;
@@ -69,8 +74,10 @@ async function stored(query: StoredQuery, offset: number, limit?: number, signal
 
 export const titles: TitlesService = {
   listStored: stored,
-  list: (query = BROWSE_START, signal) => page(`/api/titles?${queryString(query)}`, signal),
-  search: (query, signal) => page(`/api/titles/search?${queryString(query)}`, signal),
+  list: (query = BROWSE_START, signal) => page(`/api/admin/tmdb/titles?${queryString(query)}`, signal),
+  search: (query, signal) => page(`/api/admin/tmdb/search?${queryString(query)}`, signal),
+  addFromTmdb: (id) =>
+    request("/api/titles/from-tmdb", TitleDetailSchema, { method: "POST", body: { id }, area: "Title" }),
   detail: (id) => request(`${path(id)}?includeDisabled=true`, TitleDetailSchema, { area: "Title" }),
   create: (input) => request("/api/titles", TitleDetailSchema, { method: "POST", body: input, area: "Title" }),
   update: (id, patch) => request(path(id), TitleDetailSchema, { method: "PATCH", body: patch, area: "Title" }),

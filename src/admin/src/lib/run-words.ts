@@ -29,8 +29,14 @@ function parts(counts: RunCounts): string[] {
   }
   const catalog = catalogCountsOf(counts);
   if (catalog === undefined) return [];
-  return [[catalog.titles, "titles"], [catalog.stale, "stale"]]
-    .flatMap(([count, word]) => (typeof count === "number" && count > 0 ? [`${number(count)} ${word}`] : []));
+  const found: ReadonlyArray<readonly [number | undefined, string]> = [
+    [catalog.titles, "titles"],
+    [catalog.detailed, "details"],
+    [catalog.seasons, "seasons"],
+    [catalog.enriched, "enriched"],
+    [catalog.stale, "stale"],
+  ];
+  return found.flatMap(([count, word]) => (count !== undefined && count > 0 ? [`${number(count)} ${word}`] : []));
 }
 
 /** The run's words, or undefined when it never ran (no result, no counts). */

@@ -66,6 +66,8 @@ export interface TitlesSlice {
   titlesLoadFailed: (view: TitleView, unreachable: boolean) => void;
   titleUpsert: (title: AdminTitleRow) => void;
   titleRemove: (id: string) => void;
+  /** A Browse TMDB row was added to the store: it reads `stored` (and dims) without reading TMDB again. */
+  titleMarkStored: (id: string) => void;
   titleTick: (id: string, on: boolean) => void;
   titlesTickAll: (on: boolean) => void;
   titlesSetTicked: (ids: readonly string[]) => void;
@@ -108,6 +110,8 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
     },
     titleUpsert: (title) => patch(withItems(upsertTitle(now().items, title))),
     titleRemove: (id) => patch(withItems(withoutTitle(now().items, id))),
+    titleMarkStored: (id) =>
+      patch({ items: now().items.map((item) => (item.id === id ? { ...item, stored: true } : item)) }),
     titleTick: (id, on) => {
       const rest = now().ticked.filter((one) => one !== id);
       patch({ ticked: on ? [...rest, id] : rest });

@@ -17,7 +17,9 @@ export type StateWord =
   | "running"
   | "enabled"
   | "dead"
-  | "not checked";
+  | "not checked"
+  | "stored"
+  | "deleted";
 
 /** The colour a word takes: the status tokens (`done`, `loading`, `failed`), the faint text, or the accent. */
 export type StateTone = "done" | "loading" | "failed" | "faint" | "accent";
@@ -50,10 +52,23 @@ const TONES: Readonly<Record<StateWord, StateTone>> = {
   synced: "faint",
   idle: "faint",
   disabled: "faint",
+  stored: "faint",
+  deleted: "faint",
   manual: "accent",
 };
 
-const state = (word: StateWord): RowState => ({ word, tone: TONES[word], dimmed: word === "disabled" });
+const state = (word: StateWord): RowState => ({
+  word,
+  tone: TONES[word],
+  dimmed: word === "disabled" || word === "stored" || word === "deleted",
+});
+
+/** A Browse TMDB row's word (`docs/47` section 3.3): `deleted` (the admin deleted it; it stays deleted), `stored` (the
+ *  store already holds it), or null for a title TMDB has that the store lacks. Both words dim the row. */
+export function browseState(row: { readonly stored?: boolean; readonly deleted?: boolean }): RowState | null {
+  if (row.deleted === true) return state("deleted");
+  return row.stored === true ? state("stored") : null;
+}
 
 export interface ChannelStateInput {
   readonly enabled: boolean;

@@ -21,14 +21,14 @@ export const START_VIEW: TitleView = { page: 1, typed: "", search: "", kinds: ["
 export const FIRST_PAGE = "This is the first page.";
 export const LAST_PAGE = "This is the last page.";
 
-/** `GET /api/titles`: one kind or both (`all`, two TMDB reads on the backend). */
+/** `GET /api/admin/tmdb/titles`: one kind or both (`all`, two TMDB reads on the backend). */
 export interface BrowseQuery {
   readonly kind: TitleKind | "all";
   readonly sort: TitleSort;
   readonly page: number;
 }
 
-/** `GET /api/titles/search`: one kind. */
+/** `GET /api/admin/tmdb/search`: one kind. */
 export interface SearchQuery {
   readonly q: string;
   readonly kind: TitleKind;
@@ -54,11 +54,10 @@ export function titleReads(view: TitleView): TitleRead[] {
   return kinds.map((kind) => ({ route: "search", query: { q, kind, page: view.page } }));
 }
 
-/** A query as its URL's search part; every admin read asks for the disabled titles too (`includeDisabled=true`). */
+/** A query as its URL's search part (`kind`, `sort`, `page` / `q`, `kind`, `page`); TMDB has no disabled titles. */
 export function queryString(query: BrowseQuery | SearchQuery): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) params.set(key, String(value));
-  params.set("includeDisabled", "true");
   return params.toString();
 }
 

@@ -29,6 +29,7 @@ export const ERROR_SENTENCES: SentenceTable = {
   "provider.invalid": "That provider is not valid.",
   "title.not_found": "That title does not exist.",
   "title.invalid": "That title is not valid.",
+  "title.taken": "That title is already stored, or it was deleted; restore it under Deleted titles.",
   "title.manual": "A title made by hand has no TMDB copy to go back to.",
   "tmdb.unavailable": "The title service cannot be reached right now.",
   "playlist.not_found": "That playlist does not exist.",

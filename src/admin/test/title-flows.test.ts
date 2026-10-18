@@ -34,6 +34,7 @@ function rig(script: Partial<TitlesService> = {}) {
     list: async (query?: BrowseQuery) => (calls.push(`list:${query?.kind}:${query?.page}`), list([row("movie-1")])),
     search: async (query: SearchQuery) => (calls.push(`search:${query.kind}`), list([row(`${query.kind}-5`)])),
     detail: async (id) => ({ ...row(id), plot: "P", sources: [{ name: "S", url: "https://s.test" }] }),
+    addFromTmdb: async (id) => row(id),
     create: async (input) => row("custom-1", { state: "manual", title: String(input["title"]) }),
     update: async (id) => row(id, { state: "edited" }),
     remove: async (id) => ({ id }),

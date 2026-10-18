@@ -22,6 +22,7 @@ function rig(totalPages: number) {
     },
     search: NEVER,
     detail: NEVER,
+    addFromTmdb: NEVER,
     create: NEVER,
     update: NEVER,
     remove: NEVER,

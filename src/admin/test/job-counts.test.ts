@@ -47,6 +47,27 @@ describe("a run worded in the admin from its typed result", () => {
     assert.equal(runWords("ok", { titles: 1240, stale: 0 }), "Synced: 1,240 titles.");
   });
 
+  it("words the Library fill's details and seasons from the typed counts, tolerating the fields a result lacks", () => {
+    assert.equal(
+      runWords("ok", { titles: 10923, detailed: 10901, seasons: 31204, stale: 0 }),
+      "Synced: 10,923 titles, 10,901 details, 31,204 seasons.",
+    );
+    assert.equal(runWords("ok", { titles: 5, detailed: 0, seasons: 0, stale: 2 }), "Synced: 5 titles, 2 stale.");
+    assert.equal(
+      runWords("ok", { titles: 9, detailed: 8, seasons: 3, enriched: 7, stale: 0 }),
+      "Synced: 9 titles, 8 details, 3 seasons, 7 enriched.",
+    );
+    assert.equal(runWords("stopped", { titles: 4, detailed: 1, stale: 0, stopped: true }), "Stopped: 4 titles, 1 details.");
+  });
+
+  it("reads a catalog result with the new counts, an unknown extra field, or none of them", () => {
+    const read = (lastCounts: unknown) => JobSchema.parse({ ...job(1, 1), type: "catalog", lastResult: "ok", lastCounts }).lastCounts;
+    const full = catalogCountsOf(read({ titles: 3, detailed: 2, seasons: 9, stale: 0, later: 1 }));
+    assert.deepEqual([full?.detailed, full?.seasons, full?.enriched], [2, 9, undefined]);
+    assert.equal(catalogCountsOf(read({ titles: 3, stale: 1 }))?.detailed, undefined);
+    assert.equal(catalogCountsOf(read({ titles: 3, detailed: "many", stale: 1 })), undefined);
+  });
+
   it("says a stopped run and an unreachable web list, and a failure by its code", () => {
     assert.equal(runWords("stopped", counts({ created: 1, stopped: true })), "Stopped: 1 created.");
     assert.equal(runWords("ok", counts({ source: "unreachable" })), "Synced: web list unreachable.");

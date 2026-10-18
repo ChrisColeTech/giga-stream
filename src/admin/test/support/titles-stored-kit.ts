@@ -35,6 +35,7 @@ export const serviceOf = (script: Partial<TitlesService>): TitlesService => ({
   list: UNUSED,
   search: UNUSED,
   detail: UNUSED,
+  addFromTmdb: UNUSED,
   create: UNUSED,
   update: UNUSED,
   remove: async (id) => ({ id }),

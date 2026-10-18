@@ -88,49 +88,27 @@ describe("the titles grid", () => {
     assert.ok(!html.includes("cannot be reached"));
   });
 
-  it("shows the headings, the state words, a dimmed disabled row, and the delete tips", () => {
-    loaded([
-      row("movie-1"),
-      row("movie-2", { state: "edited", editedFields: ["plot", "cast"] }),
-      row("custom-1", { state: "manual" }),
-      row("movie-3", { enabled: false }),
-    ]);
+  it("shows the headings and the values; a title TMDB has that the store lacks wears no state word and is not dimmed", () => {
+    loaded([row("movie-1", { stored: false, deleted: false }), row("movie-2")]);
     const html = page();
     for (const heading of [">title<", ">kind<", ">year<", ">rating<", ">state<"]) {
       assert.ok(html.includes(heading), heading);
     }
-    for (const word of ["synced", "edited", "manual", "disabled"]) assert.ok(html.includes(`data-st="${word}"`), word);
     assert.ok(html.includes(">8.3<") || html.includes(">8.2<"));
-    assert.ok(html.includes("opacity-45"));
-    assert.ok(html.includes('title="Deletes the title made here."'));
-    assert.ok(html.includes("Deletes the title and keeps it deleted: no browse or catalog sync adds it back."));
-    assert.ok(!html.includes("adds it again") && !html.includes("comes back"));
+    assert.ok(!html.includes("data-st=") && !/<li[^>]*opacity-45/.test(html));
+    assert.ok(!html.includes(">Delete</button>"), "Browse rows end in Add, not Delete");
   });
 });
 
 describe("the table strip", () => {
-  it("leaves the enabled Jobs → to the page toolbar; the bulk verbs are drawn and wait for a ticked row", () => {
+  it("leaves the enabled Jobs → to the page toolbar; Add is drawn and waits for a ticked row", () => {
     const html = page();
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
     const top = html.slice(0, at(html, "overflow-y-auto"));
     const forward = top.match(/<button[^>]*title="Go to Jobs"[^>]*>Jobs →<\/button>/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""') && !table.includes("→"));
-    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
-  });
-
-  it("enables Enable, Disable, Revert to TMDB and the armed Delete for a ticked row, with no count text", () => {
-    loaded([row("movie-1", { state: "edited", editedFields: ["plot"] })]);
-    state().titleTick("movie-1", true);
-    const html = page();
-    const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
-    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(table.includes(`${verb}</button>`), verb);
-    assert.ok(table.includes(">Delete</button>") && !table.includes("selected<") && !table.includes("Clear selection"));
-  });
-
-  it("refuses Revert to TMDB on a ticked manual title with its reason", () => {
-    loaded([row("custom-1", { state: "manual" })]);
-    state().titleTick("custom-1", true);
-    assert.ok(page().includes('aria-label="Revert to TMDB. A title made by hand has no TMDB copy to go back to."'));
+    assert.ok(table.includes('aria-label="Add. Tick a row first"'));
+    for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(!table.includes(`aria-label="${verb}.`), verb);
   });
 });
 
