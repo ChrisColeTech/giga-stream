@@ -31,13 +31,14 @@ test("private, loopback, link-local, carrier-grade, reserved and documentation I
 
 test("IPv6 loopback, unspecified, mapped, NAT64, 6to4, Teredo, documentation, unique-local, link-local and multicast are refused", () => {
   for (const host of [
-    "::", "::1", "::ffff:10.0.0.1", "::ffff:7f00:1", "::ffff:192.168.0.1", "64:ff9b::808:808", "2002:a00:1::", "2002:c0a8:101::",
+    "::", "::1", "::ffff:10.0.0.1", "::ffff:7f00:1", "::ffff:192.168.0.1", "64:ff9b::a00:1", "2002:a00:1::", "2002:c0a8:101::",
     "2001::1", "2001:db8::1", "fc00::1", "fd12:3456::1", "fe80::1", "fec0::1", "ff02::1",
   ]) {
     assert.equal(accepted(`https://[${host}]/a`), false, host);
   }
   assert.equal(accepted("https://[::ffff:8.8.8.8]/a"), true, "a mapped public address is public");
   assert.equal(accepted("https://[2002:808:808::1]/a"), true, "a 6to4 address embeds a public one");
+  assert.equal(accepted("https://[64:ff9b::808:808]/a"), true, "a NAT64 address embeds a public one (docs/43 section 3.8)");
 });
 
 test("the names localhost and *.localhost are refused too", () => {

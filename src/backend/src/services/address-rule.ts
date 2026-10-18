@@ -1,4 +1,16 @@
-import { isLoopbackHost, isPublicHost } from "./public-address.js";
+import { isIP } from "node:net";
+
+import { isBlockedAddress } from "./address-ranges.js";
+
+/** `localhost` and its subdomains: names that resolve to loopback, so only `ALLOW_LOOPBACK_STREAMS` admits them. */
+const isLoopbackName = (host: string): boolean => host === "localhost" || host.endsWith(".localhost");
+
+/** An IP literal must be public (loopback only when allowed); a name is judged where it is fetched, bar loopback names. */
+function isPublicHost(hostname: string, allowLoopback: boolean): boolean {
+  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (isIP(host) !== 0) return !isBlockedAddress(host, allowLoopback);
+  return allowLoopback || !isLoopbackName(host);
+}
 
 /**
  * The address rule of docs/03 section 7.3: a stream or image address must be `https`, carry no credentials and not be
@@ -18,7 +30,7 @@ export function isAcceptedAddress(value: string, allowLoopback: boolean): boolea
   if (!isPublicHost(url.hostname, allowLoopback)) return false;
   if (url.protocol === "https:") return true;
   const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost";
-  return allowLoopback && url.protocol === "http:" && loopback && isLoopbackHost(url.hostname);
+  return allowLoopback && url.protocol === "http:" && loopback;
 }
 
 /** The sentence that names why an address was refused. */
