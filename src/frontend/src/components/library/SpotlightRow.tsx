@@ -17,8 +17,11 @@ export interface SpotlightRowProps {
   readonly onInfo: (opener: HTMLElement) => void;
 }
 
-/** One result of Search titles (`06` section 4.6), in the list view's row shape: a compact poster, the title over its
- *  year and kind, then Play and Info as icon buttons. */
+/** The icons wait out of sight on a resting row; the selected or hovered row, or a focused button, shows them. */
+const ACTION = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 group-data-[focused]:opacity-100";
+
+/** One result of Search titles (`06` section 4.6), a flat 44px menu-like row: a 28x42 poster, the title, its year and
+ *  kind in dim mono on the same line, then Play and Info as small ghost icon buttons. */
 export function SpotlightRow({ item, focused, onHover, onPlay, onInfo }: SpotlightRowProps) {
   const row = useRef<HTMLLIElement>(null);
   useEffect(() => {
@@ -32,26 +35,26 @@ export function SpotlightRow({ item, focused, onHover, onPlay, onInfo }: Spotlig
       aria-current={focused || undefined}
       onPointerEnter={onHover}
       className={cn(
-        "flex min-w-0 items-center gap-3 rounded-card border px-1.5 py-1.5",
-        "transition-[background,border-color] duration-fade ease-linear",
-        focused ? "border-accent-edge bg-accent-tint" : "border-transparent",
+        "group flex h-11 flex-none min-w-0 items-center gap-3 rounded-lg px-2",
+        "transition-[background] duration-fade ease-linear",
+        focused ? "bg-accent-tint" : "bg-transparent",
       )}
     >
-      <span className="w-9 flex-none">
+      <span className="w-7 flex-none">
         <PosterImage src={item.posterUrl} alt={item.title} compact className="rounded-ctl" />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="truncate text-sm text-text" title={item.title}>{item.title}</span>
-        <span className="truncate font-mono text-xs text-dim">
+      <span className="flex min-w-0 flex-1 items-baseline gap-2.5">
+        <span className="min-w-0 truncate text-sm text-text" title={item.title}>{item.title}</span>
+        <span className="flex-none font-mono text-xs whitespace-nowrap text-dim">
           {spotlightFacts(item, { movie: LIBRARY_COPY.movie, series: LIBRARY_COPY.series })}
         </span>
       </span>
       <IconButton aria-label={LIBRARY_COPY.playTitle(item.title)} title={LIBRARY_COPY.playTitle(item.title)}
-        onClick={onPlay}>
+        className={ACTION} onClick={onPlay}>
         <Play className="size-3.5" aria-hidden />
       </IconButton>
       <IconButton aria-label={LIBRARY_COPY.infoTitle(item.title)} title={LIBRARY_COPY.infoTitle(item.title)}
-        onClick={(event) => onInfo(event.currentTarget)}>
+        className={ACTION} onClick={(event) => onInfo(event.currentTarget)}>
         <Info className="size-3.5" aria-hidden />
       </IconButton>
     </li>
