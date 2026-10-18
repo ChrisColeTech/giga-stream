@@ -4,13 +4,13 @@ import type { JobProgress } from "@/services/schemas/job-event-schema";
  * fixed phase weights (the programs never import each other): a playlist run reads (0), fills logos (0 to 20%) and checks
  * streams (20 to 100%); the Library fill walks movies then series (0 to 10%, a half each) and fetches `details` (10 to
  * 100%; a series' episodes ride its detail calls, so there is no episodes phase); the Library update reads `recent` (0 to
- * 10%), `changes` (10 to 20%) and `refresh` (20 to 100%, `49`); any other phase (`list`, one catalog scope) fills the
+ * 10%), `airing` (10 to 20%) and `refresh` (20 to 100%, `49`); any other phase (`list`, one catalog scope) fills the
  * whole bar. Before a phase's total is known it reads its lower bound. Pure. */
 export const LOGOS_SHARE = 0.2;
 export const WALK_SHARE = 0.1;
-/** The Library update's phase end points: `recent` ends at 10%, `changes` at 20%. */
+/** The Library update's phase end points: `recent` ends at 10%, `airing` at 20%. */
 export const RECENT_SHARE = 0.1;
-export const CHANGES_SHARE = 0.2;
+export const AIRING_SHARE = 0.2;
 
 type Part = Pick<JobProgress, "phase" | "done" | "total">;
 
@@ -26,8 +26,8 @@ export function fractionOf(progress: Part): number {
     case "tv": return WALK_SHARE / 2 + (WALK_SHARE / 2) * share;
     case "details": return WALK_SHARE + (1 - WALK_SHARE) * share;
     case "recent": return RECENT_SHARE * share;
-    case "changes": return RECENT_SHARE + (CHANGES_SHARE - RECENT_SHARE) * share;
-    case "refresh": return CHANGES_SHARE + (1 - CHANGES_SHARE) * share;
+    case "airing": return RECENT_SHARE + (AIRING_SHARE - RECENT_SHARE) * share;
+    case "refresh": return AIRING_SHARE + (1 - AIRING_SHARE) * share;
     default: return share;
   }
 }

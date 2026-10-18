@@ -1,5 +1,5 @@
 -- 028-library-update (docs/49 sections 2.4 and 2.7): the Library update is an incremental catalog job (scope 'recent').
--- `cursor_at` is where its next /changes window starts: written only by a run that ended `ok` (to that run's start minus
+-- `cursor_at` is where its next airing window starts: written only by a run that ended `ok` (to that run's start minus
 -- an hour), never by `last_run_at`, which also moves on a stopped or failed run. Nullable: every job is kept as it was.
 -- The job itself is made only on a database whose first-start seed already ran (a fresh database leaves it to the seed,
 -- which would otherwise make a second one) and that has no 'recent' job yet; the migration runs once, so a job the admin

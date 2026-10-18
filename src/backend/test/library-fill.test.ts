@@ -26,7 +26,7 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2", "movie:3", "tv:1", "tv:2"], "every page TMDB has, whatever the job's pages");
   const job = await f.job();
   assert.deepEqual([job.lastResult, job.running, job.progress], ["ok", false, undefined]);
-  assert.deepEqual(job.lastCounts, { titles: 10, detailed: 10, seasons: 8, enriched: 0, changed: 0, stale: 0 }, "a series' seasons ride its detail call; season 0 is not asked for");
+  assert.deepEqual(job.lastCounts, { titles: 10, detailed: 10, seasons: 8, enriched: 0, airing: 0, stale: 0 }, "a series' seasons ride its detail call; season 0 is not asked for");
   assert.equal(await f.stored(), 10);
 
   const frames = stream.frames();
@@ -74,7 +74,7 @@ test("Stop between pages ends the run stopped with the rows seen kept, audited s
   assert.deepEqual([stopped.status, pick(stopped.body, "data.running")], [202, true]);
   await f.finished();
   const job = await f.job();
-  assert.deepEqual([job.lastResult, job.lastCounts], ["stopped", { titles: 2, detailed: 0, seasons: 0, enriched: 0, changed: 0, stale: 0, stopped: true }]);
+  assert.deepEqual([job.lastResult, job.lastCounts], ["stopped", { titles: 2, detailed: 0, seasons: 0, enriched: 0, airing: 0, stale: 0, stopped: true }]);
   assert.equal(await f.stored(), 2, "page one stays");
   gate.release();
   assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2"], "no further page and no series");

@@ -14,7 +14,7 @@ import { createOmdbStep } from "./title-omdb-step.js";
 import { createGenreSync } from "./title-genre-sync.js";
 import { type PhaseRun, type Seen, isStopping } from "./title-run.js";
 import { createTitleWalk } from "./title-walk.js";
-import { createChangesPhase } from "./title-changes.js";
+import { createAiringPhase } from "./title-airing.js";
 import { createRecentPhase } from "./title-recent.js";
 import { createLibraryUpdate } from "./title-update.js";
 
@@ -29,8 +29,8 @@ export interface SyncResult {
   seasons: number;
   /** Titles given an OMDb block, this run (docs/11 section 7.3). */
   enriched: number;
-  /** Stored titles the Library update's `/changes` window listed (docs/49). */
-  changed: number;
+  /** Stored series the Library update found airing in its window (docs/49). */
+  airing: number;
 }
 
 /** What a caller hands one run: its stop signal and where its progress goes. */
@@ -68,7 +68,7 @@ export function createTitleSync(deps: {
   const syncGenres = createGenreSync({ store, tmdb });
   const update = createLibraryUpdate({
     recent: createRecentPhase({ store, tmdb, storeRow, now }),
-    changes: createChangesPhase({ store, tmdb, now }),
+    airing: createAiringPhase({ store, tmdb, storeRow, now }),
     refresh: details,
   });
 
@@ -91,7 +91,7 @@ export function createTitleSync(deps: {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
     const signal = options.signal ?? new AbortController().signal;
     recordSyncAudit("sync.started", actor, detail);
-    const seen: Seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0, changed: 0 };
+    const seen: Seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 };
     const notes: string[] = [];
     let result: SyncResult;
     try {
@@ -99,7 +99,7 @@ export function createTitleSync(deps: {
       // The Library fill (scope `discover`) is the whole sync: genres, the walk, then details (docs/47 3.1).
       tmdb.resetPace();
       if (request.scope === "recent") {
-        // The Library update (docs/49): the genres, then `recent`, `changes` and `refresh` in one run.
+        // The Library update (docs/49): the genres, then `recent`, `airing` and `refresh` in one run.
         await syncGenres(signal);
         await update(request, run);
       } else {
@@ -117,9 +117,9 @@ export function createTitleSync(deps: {
     } finally {
       running = null;
     }
-    const { detailed, seasons, enriched, changed } = result;
+    const { detailed, seasons, enriched, airing } = result;
     const audited = {
-      ...detail, titles: result.titles, detailed, seasons, enriched, changed, ...(notes.length > 0 && { notes }),
+      ...detail, titles: result.titles, detailed, seasons, enriched, airing, ...(notes.length > 0 && { notes }),
     };
     if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
     else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);

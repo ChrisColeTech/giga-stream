@@ -37,7 +37,7 @@ interface JobBase {
   lastResult?: RunResult;
   lastCounts?: RunCounts;
   createdAt: number;
-  /** Where a Library update's next `/changes` window starts (`49` section 2.4); absent until a run ended `ok`. */
+  /** Where a Library update's next `airing` window starts (`49` section 2.4); absent until a run ended `ok`. */
   cursorAt?: number;
 }
 /** A playlist's one job: part of the playlist, with no name of its own (the view says `Sync <playlist name>`). */

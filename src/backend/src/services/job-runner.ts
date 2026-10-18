@@ -106,8 +106,8 @@ export function createJobRunner(deps: {
         ? { scope: "recent", ...(job.cursorAt !== undefined && { since: job.cursorAt }) }
         : { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages };
       const done = await titles.runNow(request, actor, triggered, { signal, report });
-      const { titles: seen, detailed, seasons, enriched, changed } = done;
-      const counts = { titles: seen, detailed, seasons, enriched, changed, stale: titles.status().stale };
+      const { titles: seen, detailed, seasons, enriched, airing } = done;
+      const counts = { titles: seen, detailed, seasons, enriched, airing, stale: titles.status().stale };
       if (done.result === "ok") keep(job, "ok", counts, recent ? startedAt - CURSOR_OVERLAP_MS : undefined);
       else if (done.result === "stopped") keep(job, "stopped", { ...counts, stopped: true });
       else keep(job, "failed", { code: done.code ?? ERRORS.internalFailure.code });

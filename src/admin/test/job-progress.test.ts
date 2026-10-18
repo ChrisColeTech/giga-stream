@@ -37,9 +37,9 @@ describe("fractionOf", () => {
     assert.equal(percentOf(at("details", 5000, 10000)), 55);
   });
 
-  it("weights the Library update like the backend: recent 0-10%, changes 10-20%, refresh 20-100%, never backwards", () => {
+  it("weights the Library update like the backend: recent 0-10%, airing 10-20%, refresh 20-100%, never backwards", () => {
     const values = [
-      at("recent", 0, 4), at("recent", 4, 4), at("changes", 0, 133), at("changes", 133, 133), at("refresh", 0, 40),
+      at("recent", 0, 4), at("recent", 4, 4), at("airing", 0, 3), at("airing", 3, 3), at("refresh", 0, 40),
       at("refresh", 10, 40), at("refresh", 40, 40),
     ].map(fractionOf);
     assert.deepEqual(values.map((value) => Math.round(value * 1000)), [0, 100, 100, 200, 200, 400, 1000]);
@@ -78,9 +78,9 @@ describe("the words", () => {
     assert.equal(progressWords(at("checking", 0, 0)), "Checking streams");
   });
 
-  it("names the Library update's phases: pages for recent and changes, a plain count for the refresh", () => {
+  it("names the Library update's phases: pages for recent and airing, a plain count for the refresh", () => {
     assert.equal(progressWords(at("recent", 3, 5)), "Reading recent titles 3 of 5 pages");
-    assert.equal(progressWords(at("changes", 40, 1330)), "Reading changes 40 of 1,330 pages");
+    assert.equal(progressWords(at("airing", 2, 3)), "Reading airing series 2 of 3 pages");
     assert.equal(progressWords(at("refresh", 12, 40)), "Refreshing 12 of 40");
     assert.equal(progressWords(at("recent", 0, 0)), "Reading recent titles");
     assert.equal(progressWords(at("refresh", 0, 0)), "Refreshing");
