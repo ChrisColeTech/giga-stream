@@ -74,4 +74,30 @@ export const PLAYLIST_DELETE_SETTLE_MS = 10_000;
 export const LOGO_INDEX_TIMEOUT_MS = 15_000;
 export const LOGO_INDEX_MAX_BYTES = 8 * 1024 * 1024;
 
+// The sync's steps 3 to 5 (docs/43 sections 3.1 and 3.4): logo cache, stream check, the shared request limits.
+/** A whole playlist run may not outlast this; the steps stop starting new work past it. */
+export const SYNC_RUN_MAX_MS = 30 * 60 * 1000;
+/** The stream check stops starting probes this long after it began; the rest stay unchecked and go first next run. */
+export const PROBE_BUDGET_MS = 10 * 60 * 1000;
+export const LOGO_FETCH_TIMEOUT_MS = 10_000;
+export const LOGO_MAX_BYTES = 1024 * 1024;
+/** A cached logo is fetched again after this long, success or failure. */
+export const LOGO_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
+/** A failed iptv-org index load is not tried again for this long. */
+export const LOGO_INDEX_RETRY_MS = 60 * 60 * 1000;
+export const STREAM_CHECK_TIMEOUT_MS = 5_000;
+export const STREAM_CHECK_PREFIX_BYTES = 64 * 1024;
+/** One limit for stream checks and logo downloads together, across every playlist, and one for a single host. */
+export const SYNC_CONCURRENCY = 16;
+export const SYNC_PER_HOST_CONCURRENCY = 2;
+/** Verdicts written per transaction. */
+export const HEALTH_BATCH = 200;
+export const LOGO_CACHE_DIR = "logo-cache";
+/** A cached logo's file name: 32 hex characters of the content hash, and the extension its magic bytes chose. */
+export const LOGO_CACHE_NAME = /^[0-9a-f]{32}\.(png|jpg|gif|webp)$/;
+export const LOGO_CACHE_HASH_CHARS = 32;
+export const LOGO_CACHE_MAX_AGE_S = 31_536_000;
+/** Ids one bulk channel change may carry (about 210 KB of body). */
+export const CHANNEL_BULK_MAX = 5_000;
+
 export const DATABASE_BUSY_TIMEOUT_MS = 5000;

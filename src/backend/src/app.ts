@@ -80,6 +80,7 @@ export async function buildApp(
       playlistSyncMaxBytes: settings.PLAYLIST_SYNC_MAX_BYTES,
       playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
       safeFetch: safeFetchImpl,
+      logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
     });
     const ready = services;
     const bootstrap = await bootstrapAdmin(

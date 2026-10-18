@@ -23,8 +23,11 @@ export function fakeFeed(initial: Record<string, string> = {}) {
   const failures = new Map<string, SafeFetchCode>();
   const gates = new Map<string, { wait: Promise<void>; started: () => void }>();
   const asked: string[] = [];
+  const everything: string[] = [];
   const safeFetch: SafeFetch = async (url, options) => {
-    asked.push(url);
+    everything.push(url);
+    // `asked` is the playlist addresses the test set up; stream checks and logo-index lookups of the sync only reach `everything`.
+    if (bodies.has(url) || failures.has(url) || gates.has(url)) asked.push(url);
     gates.get(url)?.started();
     const gate = gates.get(url);
     if (gate) {
@@ -42,6 +45,7 @@ export function fakeFeed(initial: Record<string, string> = {}) {
   return {
     safeFetch,
     asked,
+    everything,
     set: (url: string, text: string): void => void bodies.set(url, text),
     fail: (url: string, code: SafeFetchCode): void => void failures.set(url, code),
     heal: (url: string): void => void failures.delete(url),

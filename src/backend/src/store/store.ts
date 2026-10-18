@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { createAccountRepository } from "./account-repository.js";
 import { createAuditRepository } from "./audit-repository.js";
+import { createChannelHealth } from "./channel-health.js";
 import { createChannelRepository } from "./channel-repository.js";
 import { openDatabase, runInTransaction } from "./database.js";
 import { createDeletedTitleRepository } from "./deleted-title-repository.js";
@@ -25,6 +26,7 @@ export function createStore(file: string) {
   }
   return {
     channels: createChannelRepository(db),
+    health: createChannelHealth(db),
     providers: createProviderRepository(db),
     titles: createTitleRepository(db),
     deletedTitles: createDeletedTitleRepository(db),
