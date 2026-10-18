@@ -11,6 +11,7 @@ import {
   FAMILY_OPTIONS,
   FAMILY_TIP,
   MOVIE_TEMPLATE_TIP,
+  NAME_TIP,
   ORDER_TIP,
   SOURCE_TIP,
 } from "@/constants/provider-copy";
@@ -32,10 +33,9 @@ export interface ProviderDetailsGroupProps {
 export function ProviderDetailsGroup({ draft, created, errors, onChange }: ProviderDetailsGroupProps) {
   return (
     <Group id="pv-details" icon={FileText} title="Details">
-      <ProviderTextRow label="Name" value={draft.name} error={errors["name"]} onChange={(name) => onChange({ name })} />
+      <ProviderTextRow label="Name" tip={NAME_TIP} value={draft.name} error={errors["name"]} onChange={(name) => onChange({ name })} />
       <Row label="Family" tip={FAMILY_TIP} error={errors["family"]}>
         <Segmented
-          field
           aria-label="Family"
           options={FAMILY_OPTIONS}
           value={draft.family}

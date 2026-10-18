@@ -18,7 +18,14 @@ const details = (channel: StreamAdminChannel) =>
     createElement(StreamDetailsGroup, { channel, draft: streamDraft(channel), errors: {}, onChange: () => undefined }),
   );
 const statusGroup = (channel: StreamAdminChannel, revertReason?: string) =>
-  renderLive(createElement(StreamStatusGroup, { channel, revertReason, onRevert: () => undefined }));
+  renderLive(
+    createElement(StreamStatusGroup, {
+      channel,
+      revertReason,
+      onRevert: () => undefined,
+      preview: { label: "Preview", onPress: () => undefined },
+    }),
+  );
 const SAVE = { onPress: () => undefined, reason: "Nothing has changed." };
 const SYNCED = stream("s", { source: "lists.example", editedFields: ["name", "streamUrl"] });
 
@@ -36,7 +43,7 @@ describe("a stream channel's workspace", () => {
     assert.ok(!html.includes(">Playback<"));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "the toolbar's forward arrow is an icon button");
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "Preview is an icon button in the Status group");
     assert.ok(!html.includes("Preview →") && !html.includes(">Save<"));
     assert.ok(html.indexOf("Save details") > html.indexOf(">Stream<"), "the commit ends the Stream group");
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));
@@ -51,8 +58,8 @@ describe("a stream channel's workspace", () => {
   it("tags a synced row's edited fields `Edited`, and says the next sync keeps them", () => {
     const html = details(SYNCED);
     assert.equal((html.match(/>Edited</g) ?? []).length, 1, "the name, in Details");
-    assert.ok(html.includes("About Name"), "the edited Name gains the glyph whose tip says the next sync keeps it");
-    assert.ok(!details(stream("s")).includes("About Name"));
+    assert.ok(html.includes("About Name"), "the edited Name's glyph carries the tip that the next sync keeps it");
+    assert.ok(details(stream("s")).includes("About Name"), "an unedited Name has its glyph too");
     const address = renderLive(
       createElement(StreamAddressGroup, {
         draft: streamDraft(SYNCED),

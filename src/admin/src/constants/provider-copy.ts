@@ -40,6 +40,7 @@ export const MESSAGE_SHAPE_OPTIONS = [
 /** Info tips (the mockup's sentences). */
 export const FAMILY_TIP =
   "Embed providers play in their own frame from an address template. Stream providers give a direct stream.";
+export const NAME_TIP = "What the provider is called in the list and the picker. 1 to 120 characters.";
 export const SOURCE_TIP = "The id of the external service. Unique for each provider.";
 export const MOVIE_TEMPLATE_TIP = "The embed address for a movie. Use {tmdbId} where the TMDB id goes.";
 export const ENABLED_TIP = "A disabled provider stays in the list but is not used.";

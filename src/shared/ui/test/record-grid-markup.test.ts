@@ -23,10 +23,9 @@ const cells = [
   createElement("span", { key: "s" }, "live"),
 ];
 
-function grid(rows: ReactNode, selectable = true): string {
-  const selection = selectable ? { label: "Select all channels", checked: false as const, onToggle: NOTHING } : undefined;
+function grid(rows: ReactNode, ticks = true): string {
   return renderToStaticMarkup(
-    createElement(RecordGrid, { ariaLabel: "Channels", layout: LAYOUT, headings: HEADINGS, selection, children: rows }),
+    createElement(RecordGrid, { ariaLabel: "Channels", layout: LAYOUT, headings: HEADINGS, ticks, children: rows }),
   );
 }
 
@@ -75,7 +74,13 @@ test("the tick and the end action sit outside the spanning button", () => {
   const close = html.indexOf("</button>", open);
   assert.ok(html.indexOf('aria-label="Select Fixture News"') < open);
   assert.ok(html.indexOf("END") > close);
-  assert.ok(html.includes('aria-label="Select all channels"'));
+});
+
+test("the header's tick cell is empty: select-all is the selection toolbar's All, never a header tick", () => {
+  const html = grid(row());
+  const header = html.slice(0, html.indexOf("<ul"));
+  assert.ok(!header.includes('role="checkbox"') && !header.includes("Select all"));
+  assert.ok(header.includes("<span aria-hidden=\"true\"></span><span class=\"truncate text-right\">number</span>"));
 });
 
 test("with no selection there is no tick column and the cells start at line 1", () => {

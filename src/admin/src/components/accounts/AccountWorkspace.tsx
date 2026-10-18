@@ -4,7 +4,6 @@ import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
   ACCOUNT_GONE,
   ACCOUNT_SECTIONS,
@@ -55,7 +54,6 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Account toolbar" />}
     >
       <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">

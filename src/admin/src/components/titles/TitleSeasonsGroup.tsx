@@ -3,6 +3,7 @@ import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import { SeasonList } from "@/components/records/SeasonList";
+import { SEASON_COUNT_TIP } from "@/constants/title-copy";
 import type { SaveVerb } from "@/lib/workspace-verbs";
 import { SkeletonFields } from "@/components/records/SkeletonFields";
 import type { SeasonDraft } from "@/lib/season-edit";
@@ -33,7 +34,7 @@ export function TitleSeasonsGroup({ detail, manual, seasons, onChange, save }: T
         <SkeletonFields count={SKELETON_ROWS} />
       ) : (
         counts.map((season) => (
-          <Row key={season.season} label={`Season ${season.season}`}>
+          <Row key={season.season} label={`Season ${season.season}`} tip={SEASON_COUNT_TIP}>
             <span className="flex h-9 items-center font-mono text-sm text-muted">{season.episodes}</span>
           </Row>
         ))

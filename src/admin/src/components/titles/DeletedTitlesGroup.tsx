@@ -13,18 +13,18 @@ import { deletedRow, deletedSelectAll } from "@/lib/title-restore";
 import { useAppStore } from "@/store/app-store";
 
 /** `Deleted titles` (`37` section 4.4): the synced titles that were deleted and stay deleted, the name first, then the
- *  kind and when. Its table strip holds `Refresh` and, once rows are ticked, the count, the bulk `Restore` and `Clear
- *  selection`; each row ends with its own `Restore`. Shimmer rows while the list is read and while it is empty; never a sentence. */
+ *  kind and when. Its selection toolbar (`01` section 9) holds `Refresh`, the bulk `Restore` (always drawn, disabled
+ *  with its reason until a row is ticked) and the three-state `All`; each row ends with its own `Restore`. Shimmer rows while the list is read and while it is empty; never a sentence. */
 export function DeletedTitlesGroup() {
   const { status, items, ticked } = useAppStore((state) => state.titles.deleted);
   const session = useAppStore((state) => state.titles.session);
   const serial = useAppStore((state) => state.serial);
   const tick = useAppStore((state) => state.titleDeletedTick);
   const tickAll = useAppStore((state) => state.titlesDeletedTickAll);
-  const setTicked = useAppStore((state) => state.titlesDeletedSetTicked);
   const { flows, track } = useTitleActions();
   const { verbs, row } = useDeletedTitles();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
+  const all = { label: "Select all deleted titles", checked: deletedSelectAll(items, ticked), onToggle: tickAll };
 
   const strip = (
     <TableStrip
@@ -34,7 +34,7 @@ export function DeletedTitlesGroup() {
         onPress: () => void track("deleted", flows.loadDeleted),
         reason: status === "loading" ? LOADING_REASON : undefined,
       }}
-      selection={{ count: ticked.length, verbs, onClear: () => setTicked([]) }}
+      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
     />
   );
 
@@ -44,7 +44,7 @@ export function DeletedTitlesGroup() {
         ariaLabel={DELETED_TITLES}
         layout={DELETED_GRID}
         headings={DELETED_HEADINGS}
-        selection={{ label: "Select all deleted titles", checked: deletedSelectAll(items, ticked), onToggle: tickAll }}
+        ticks
       >
         {waiting ? (
           <SkeletonGrid />

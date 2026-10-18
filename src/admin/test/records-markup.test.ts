@@ -10,7 +10,7 @@ import { SaveDetails } from "@/components/records/SaveDetails";
 import { ListGroup } from "@/components/records/ListGroup";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
+import { PreviewButton } from "@/components/channels/PreviewButton";
 import { INDEX_FRAMES } from "@/constants/index-frames";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
 import { TAB_ORDER } from "@/constants/tabs";
@@ -124,35 +124,42 @@ describe("a tab's page", () => {
     assert.ok(hidden.includes("BODY") && hidden.includes("hidden"));
   });
 
-  it("shows the toolbar strip over the skeleton: Channels' forward verb waits for a ticked row", () => {
-    const html = renderToStaticMarkup(createElement(ChannelsPage, { active: true }));
-    assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New channel"));
-    assert.ok(html.includes('aria-label="Preview channel. Tick a row first"'));
-    assert.ok(html.includes("h-10"));
+  it("draws no page toolbar: the first thing under the titlebar is the New group, not a bar", () => {
+    for (const page of [ChannelsPage, ProvidersPage, AccountsPage]) {
+      const html = renderToStaticMarkup(createElement(page, { active: true }));
+      assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New "), "the only toolbar is the table strip, after the form");
+      assert.ok(!html.includes("h-10 flex-none"), "no 40px bar");
+    }
   });
 
-  it("gives Providers a forward arrow that works; Accounts' toolbar is empty and its table strip holds Refresh only", () => {
+  it("puts Channels' Preview in the table strip, waiting for a ticked row", () => {
+    const html = renderToStaticMarkup(createElement(ChannelsPage, { active: true }));
+    const table = html.slice(html.indexOf('aria-label="Channels table"'));
+    assert.ok(table.includes('aria-label="Preview channel. Tick a row first"'));
+  });
+
+  it("puts Providers' Go to Titles in its table strip, working; Accounts' strip holds Refresh only", () => {
     const providers = renderToStaticMarkup(createElement(ProvidersPage, { active: true }));
-    const arrow = providers.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
+    const table0 = providers.slice(providers.indexOf('aria-label="Providers table"'));
+    const arrow = table0.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
     assert.ok(arrow.length > 0 && !arrow.includes('disabled=""'));
     const accounts = renderToStaticMarkup(createElement(AccountsPage, { active: true }));
-    const toolbar = accounts.slice(accounts.indexOf('role="toolbar"'), accounts.indexOf("New account"));
-    assert.ok(!toolbar.includes("<button"), "no table verb in the page toolbar");
+    assert.ok(!accounts.includes("Go to"), "Accounts has no forward verb");
     const table = accounts.slice(accounts.indexOf('aria-label="Accounts table"'));
-    assert.ok(table.includes('aria-label="Refresh accounts"'), "Refresh is the strip's, always there");
-    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), `${verb} waits for a ticked row`);
+    assert.ok(table.includes('title="Refresh accounts"'), "Refresh is the strip's, always there");
+    for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), `${verb} waits, drawn`);
   });
 });
 
 describe("a workspace's pieces", () => {
-  it("draws the toolbar with the forward arrow alone: no Discard, no Save, no text button", () => {
-    const html = renderToStaticMarkup(
-      createElement(WorkspaceToolbar, { label: "Channel toolbar", forward: { label: "Titles", onPress: NOTHING } }),
+  it("draws Preview channel as an icon button with its tooltip, and the reason when the draft differs", () => {
+    const html = renderToStaticMarkup(createElement(PreviewButton, { preview: { label: "Preview", onPress: NOTHING } }));
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*title="Preview channel"/.test(html));
+    assert.ok(!/>[^<]+<\/button>/.test(html), "icon only");
+    const held = renderToStaticMarkup(
+      createElement(PreviewButton, { preview: { label: "Preview", onPress: NOTHING, reason: "Save the channel first" } }),
     );
-    assert.equal((html.match(/<button/g) ?? []).length, 1);
-    assert.ok(/<button[^>]*aria-label="Go to Titles"[^>]*title="Go to Titles"/.test(html));
-    assert.ok(!html.includes("Discard") && !html.includes("Save") && !/>[^<]+<\/button>/.test(html));
-    assert.equal((renderToStaticMarkup(createElement(WorkspaceToolbar, { label: "Account toolbar" })).match(/<button/g) ?? []).length, 0);
+    assert.ok(held.includes("Save the channel first") && held.includes('disabled=""'));
   });
 
   it("draws Discard changes as the form's pinned ghost verb and Save details as its one primary, both with the reason", () => {

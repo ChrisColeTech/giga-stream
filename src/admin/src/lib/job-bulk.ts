@@ -7,14 +7,15 @@ import { planBulk, type BulkPlan, type BulkWords } from "./bulk-plan";
 import { runGate } from "./job-run-gate";
 import { tickedOf } from "./playlist-rows";
 
-/* The Jobs toolbar's verbs on the ticked jobs (`38` section 4.2), pure. `Run job` (the filled verb) is a bulk verb too:
+/* The Jobs toolbar's verbs on the ticked jobs (`38` section 4.2), pure. `Run job` is a bulk verb too:
  * the shared runner takes the ticked jobs one after another. It is all or nothing: the gate refuses the press when any
  * ticked job cannot run. Enable and Disable skip a job already so; Delete skips a running job. */
 
 export type JobBulkVerb = "run" | "enable" | "disable" | "delete";
 
-/** The strip's order: the ghost verbs, then the filled `Run job` at the right edge (the forward verb's place). */
-export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["enable", "disable", "delete", "run"];
+/** The selection toolbar's order (`01` section 9): `Run job` first, as Playlists' `Sync now`, then Enable and Disable,
+ *  and the armed `Delete` last (LoRA Trainer `GalleryToolbar.tsx`: the destructive verb ends the cluster). */
+export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["run", "enable", "disable", "delete"];
 
 const words = (past: string): BulkWords => ({ past, noun: "job", nouns: "jobs" });
 

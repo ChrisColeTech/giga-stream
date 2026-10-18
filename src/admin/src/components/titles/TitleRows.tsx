@@ -12,7 +12,7 @@ import {
 } from "@/constants/title-copy";
 import { TITLE_GRID, TITLE_HEADINGS } from "@/constants/title-grid";
 import { useTitleActions } from "@/hooks/useTitleActions";
-import { titleRow, titleSelectAll } from "@/lib/title-rows";
+import { titleRow } from "@/lib/title-rows";
 import { useAppStore } from "@/store/app-store";
 
 /** The titles grid (`37` section 4.2): the header with its select-all tick, then a row per title in the backend's
@@ -24,7 +24,6 @@ export function TitleRows() {
   const { status, items, ticked, unreachable, session } = useAppStore((state) => state.titles);
   const serial = useAppStore((state) => state.serial);
   const tick = useAppStore((state) => state.titleTick);
-  const tickAll = useAppStore((state) => state.titlesTickAll);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = useTitleActions();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
@@ -34,7 +33,7 @@ export function TitleRows() {
       ariaLabel="Titles"
       layout={TITLE_GRID}
       headings={TITLE_HEADINGS}
-      selection={{ label: "Select all titles", checked: titleSelectAll(items, ticked), onToggle: tickAll }}
+      ticks
     >
       {waiting ? (
         <SkeletonGrid />

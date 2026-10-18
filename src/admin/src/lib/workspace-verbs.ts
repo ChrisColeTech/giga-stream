@@ -1,6 +1,5 @@
-import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
-import { FORWARD_ICONS, FORWARD_TOOLTIPS, type ForwardDestination } from "@/constants/toolbar-icons";
+import type { ForwardDestination } from "@/constants/toolbar-icons";
 
 /** One verb of a workspace: where it goes, what it does, and why it cannot be used now. */
 export interface ToolbarAction {
@@ -13,22 +12,6 @@ export interface ToolbarAction {
 export interface SaveVerb {
   readonly onPress: () => void;
   readonly reason?: string;
-}
-
-/** A workspace's page toolbar (`01` section 9): only its forward verb, an arrow icon whose tooltip names the tab it goes
- *  to (`Titles`), or nothing (Accounts). Save and Discard are not here: Save ends the form's body and Discard is the form's
- *  ghost verb (`changeReason`). The forward verb carries only its own reason. */
-export function forwardVerbs(forward: ToolbarAction | undefined): readonly ToolbarVerb[] {
-  if (forward === undefined) return [];
-  return [
-    {
-      id: "forward",
-      label: FORWARD_TOOLTIPS[forward.label],
-      icon: FORWARD_ICONS[forward.label],
-      onPress: forward.onPress,
-      ...(forward.reason !== undefined && { reason: forward.reason }),
-    },
-  ];
 }
 
 /** Why `Save details` and `Discard changes` cannot be used: `Nothing has changed.` while the draft equals its baseline;

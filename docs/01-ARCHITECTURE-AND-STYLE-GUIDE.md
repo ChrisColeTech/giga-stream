@@ -287,8 +287,13 @@ Events and Settings). Surfaces stay mounted so selection, scroll and playback su
 - Workspaces fill the window. Panes use Allotment and collapse fully to zero; centre stages do not
   collapse. A closed pane is `inert`: its controls leave the tab order, and a shell key (`Ctrl+F`) never
   lands inside it.
-- Pane toolbars use icons, not text buttons. Context actions stay contextual: a verb that could be a
-  toolbar button is a context-menu row first (the Player stage has no toolbar at all).
+- A narrow pane's toolbar (the Live channels head, the Library type strip) uses icons, not text buttons.
+  Context actions stay contextual: a verb that could be a toolbar button is a context-menu row first (the
+  Player stage has no toolbar at all). A table's selection toolbar is different: its verbs are words with an
+  icon, as LoRA Trainer's are (Selection toolbar below). *(Corrected 2026-10-17: this bullet said "pane
+  toolbars use icons" for every bar, and the admin's table strips became rows of unlabelled glyphs. LoRA
+  Trainer's toolbars draw `‹ › ✕` as icons and every verb that changes something as an icon and a word:
+  `pages/gallery/GalleryToolbar.tsx` 28-39, `pages/gallery/viewer/ViewerToolbar.tsx` 48-88.)*
 - A region that is loading or empty draws skeletons in the shape of its content. No sentence is placed
   over a skeleton, and there are no separate empty-state compositions. State is never a dot: a state is a
   word, a left-edge accent strip (the family `ACCENT` bar), or a shimmer where a number is still arriving
@@ -320,6 +325,12 @@ danger question naming what dies (`Remove Films?`, `Clear all history?`); a seco
 `TWO_STEP_MS` (4 seconds) confirms; the timeout, focus leaving it, or Escape disarms. A remove that touches
 no file (one watch entry, a collection whose files stay) is not danger at rest anywhere, including a menu row.
 
+The family does the same (LoRA Trainer `components/ui/TwoStep.tsx` 14 and 58-66: `ghost` at rest, `danger` and
+`Press again to confirm` once armed, re-armed after `TWO_STEP_MS`). A two-step is a word and draws no icon, at rest or
+armed (`GalleryToolbar.tsx` 34-40, `DatasetRows.tsx` 77-79, `PresetRows.tsx` 78-80: `Delete`, `Purge rejected`, never
+a bin). Over a selection the question carries the count (`Delete 3?`, `GalleryToolbar.tsx` 34); beside a row it carries
+the row's name (`Delete tesst?`, `DatasetRows.tsx` 77).
+
 Exception: a folder's Remove in the Collections folders table is an icon in a row of icon actions, so it
 arms by swapping the row for the consequence in words beside a check icon (`components/collections/FolderControls.tsx`);
 the same timeout, blur and close disarm it. An icon cannot turn into a question in place.
@@ -338,8 +349,79 @@ chrome; at most one filled accent per surface, as a form's commit.** The titleba
 | Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | Window and popup headers (the close `X`). Nothing in a body, and nothing in the titlebar |
 | Primary (`Button variant="primary"`, the accent fill) | Never in a toolbar or the chrome. Only the ONE commit at the end of a form's body (`Create`, `Save details`) or the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), at most one per surface |
 | Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
-| Icon-only (`IconButton`) | Toolbars, row ends, panel footers, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape |
+| Icon-only (`IconButton`) | Navigation, dismissal and a row's small inner actions only: `‹ ›` paging, the close `X`, move up and down, remove one entry, a narrow pane's toolbar, a form row's trailing glyph, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape. Never a verb that changes records (LoRA Trainer: `ViewerToolbar.tsx` 80-88, `PromptBank.tsx` 56-64, `UnfreezeGroup.tsx` 43, `Titlebar.tsx` 48) |
+| Icon and word (`Button size="sm" variant="ghost"`, the icon first) | Every verb in a table's selection toolbar and every `Refresh`; a verb with no family icon (vocabulary below) is the word alone (LoRA Trainer `GalleryToolbar.tsx` 28-36, `CheckpointsView.tsx` 73-91, `DatasetRows.tsx` 44-46) |
+| Forward verb (`Button size="sm" variant="ghost"`, the destination's word and `→`, no icon) | The rightmost control of a toolbar, moving the work on to another tab or window (`Titles →`, `Preview →`); disabled with its reason (`Tick a row first`) when it needs a ticked row (LoRA Trainer `GalleryToolbar.tsx` 47-49, `DatasetsIndex.tsx` 66-67, `CheckpointsView.tsx` 95-96) |
 | Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
+
+Where LoRA Trainer differs and Giga Stream keeps its own rule: LoRA's resting look is an outline (`Button.tsx` 31, the
+owner's "ghost/outline", `03` section 4.3) and its forward verb is the surface's ONE `primary` (`GalleryToolbar.tsx` 47).
+Giga Stream's ghost is flat, and its one primary is the form's commit, so the forward verb is a ghost word with `→`; an
+admin index already ends its New form with `Create`, and LoRA's own Training index shows the clash, with two primaries
+on one surface (`pages/training/TrainingIndex.tsx` 85 and 98).
+
+### Selection toolbar
+
+The strip directly above a table whose rows are ticked (the admin's `TableStrip`; LoRA Trainer's gallery toolbar,
+`pages/gallery/GalleryToolbar.tsx`, `06` section 2.4, `03` sections 4.2 and 4.3). Left to right:
+
+1. **`Refresh`**, the icon and the word, first on the left, then a hairline separator (LoRA `CheckpointsView.tsx` 73-76,
+   `Rescan` then `Sep`). LoRA puts a list's `Refresh` on its group heading (`DatasetRows.tsx` 43-46); a Giga Stream
+   heading carries no button (Headings), so it is the strip's first verb.
+2. **The selection verbs**, always drawn, in a fixed order with the two-step `Delete` last. With nothing ticked each one
+   is disabled with its reason (`Tick a row first`; LoRA `Select images first`, `GalleryToolbar.tsx` 28-34), so the bar
+   never changes shape when the first row is ticked. *(Corrected 2026-10-17: the strip drew its verbs only while rows
+   were ticked; a verb is present and states its refusal before the press, `03` section 4.3.)*
+3. A spacer, then on the right **the three-state `All` checkbox**: all, none or some of the listed rows, the word
+   `All` beside the box. From "some" a press selects all; from "all" it clears. It replaces both the header's
+   select-all tick and a `Clear selection` button: a button cannot show whether anything is selected, and a tick in the
+   table's header is a second row of controls (LoRA `GalleryToolbar.tsx` 45, `components/ui/Toggle.tsx` 37-70, `06`
+   section 2.4 "Selection is a checkbox, not a pair of verbs"). It obeys the list's filters and paging: it means the
+   rows listed, never every record.
+4. **Navigation**: a list that pages draws `‹ ›` (`Newer`, `Older`) as icons (LoRA `ViewerToolbar.tsx` 80-85).
+5. A hairline, then **the one forward verb, rightmost** (`Titles →`), when the page has one.
+
+**No text in the toolbar** (LoRA `03` section 4.2; `06` section 2.4: "Five controls, and no status text"). No
+`N selected` count: the count is in the armed question (`Delete 3 channels?`) and the run's summary on the notice line.
+The strip is one row (LoRA `components/media/HandoffStrip.tsx` 8: `gap-2 px-3 py-2`, a hairline under it).
+
+A row's own verbs stay at its end, ghost `sm` words in one fixed-width column (`Delete` as the two-step, `Restore`;
+LoRA `DatasetRows.tsx` 76-80). Clicking a row opens it; the tick in the first column selects it (`DatasetRows.tsx`
+67-69). A form's commit ends the form's body (Forms), never the toolbar.
+
+### Icon vocabulary
+
+One icon per verb, taken from LoRA Trainer or the interface, never chosen per screen. A verb not listed has no icon and
+is drawn as its word; a verb is never given an icon to fill a gap.
+
+| Verb | Lucide icon | Source |
+|---|---|---|
+| Refresh, Rescan | `RefreshCw` | LoRA `DatasetRows.tsx` 45, `CheckpointsView.tsx` 74; interface `TypeStrip.tsx` 24 |
+| Enable (include it: LoRA's Keep) | `Check` | LoRA `GalleryToolbar.tsx` 29, `ViewerToolbar.tsx` 65 |
+| Disable (exclude it, keep the record: LoRA's Reject) | `X` | LoRA `GalleryToolbar.tsx` 32 |
+| Run, Play | `Play` | interface `CardActions.tsx` 22, `TitleInfoWindow.tsx` 75 |
+| Restore, Revert to the source | `RotateCcw` | interface `AppearanceSection.tsx` 78 (`Restore defaults`) |
+| Preview, View | `Eye` | LoRA `ViewerStrip.tsx` 43 (`View`) |
+| Download | `Download` | LoRA `CheckpointsView.tsx` 79 |
+| Choose or open a folder | `FolderOpen` | LoRA `PathField.tsx` 36, `DatasetWorkspace.tsx` 65 |
+| Attach a folder | `FolderPlus` | interface `CollectionFolders.tsx` 59 |
+| Replace a folder | `FolderSync` | interface `FolderControls.tsx` 46 |
+| Remove a folder | `FolderMinus` | interface `FolderControls.tsx` 60 |
+| Cancel a scan, Stop | `CircleStop`; the statusbar's Stop `Square` | interface `FolderControls.tsx` 58; LoRA `Statusbar.tsx` 71 |
+| Add an entry | `Plus` | LoRA `PromptBank.tsx` 72 |
+| Move up, Move down | `ArrowUp`, `ArrowDown` | LoRA `PromptBank.tsx` 56-60 |
+| Previous, Next (Newer, Older) | `ChevronLeft`, `ChevronRight` | LoRA `ViewerToolbar.tsx` 80-84 |
+| Back (a rail's way back) | `ArrowLeft` | LoRA `NavRail.tsx` 40-41 |
+| Close, remove one entry | `X` | LoRA `ViewerToolbar.tsx` 86, `PromptBank.tsx` 62 |
+| Reroll | `Dices` | LoRA `ComposeRail.tsx` 66, `RunDetailsGroup.tsx` 26 |
+| Explain (the info glyph) | `Info` | LoRA `components/ui/Tooltip.tsx` 97 |
+| More (a card's menu) | `Ellipsis` | interface `CardActions.tsx` 40 |
+| Delete, Purge, Resume, Save, Create; the admin's `Rebuild` and `Sync now`, which no family app has an icon for | none: the word | LoRA `GalleryToolbar.tsx` 34-40, `CheckpointsView.tsx` 86-91, `PresetWorkspace.tsx` 64-71 |
+| A forward verb | none: the word and `→` | LoRA `GalleryToolbar.tsx` 48, `DatasetWorkspace.tsx` 68 |
+
+`X` means two things in the family: Reject (or Disable), always with its word, and Close or remove one entry, an icon
+alone. LoRA's viewer draws both on one bar (`ViewerToolbar.tsx` 68 and 87), and the word is what tells them apart. A
+group's tile icon (`Group icon=`) names a group, not a verb, and is not in this table.
 
 A lit toggle outside the titlebar is its accent glyph alone (a filled accent star for a favourite), with no
 edge and no `on` raise: the list row's star and Title information's Favorite are plain ghost buttons whose
@@ -362,6 +444,10 @@ Five heading roles, each one component's, and no surface invents a sixth:
 | Rail group | `NavRail` heading: 12px sans, dim | the Library rail (Views, Collections) |
 | Strip or shelf | mono 12, faint, the count dim | Continue watching, the Rows shelves, the Live channels head |
 | Filter label | 14px sans semibold over its control | the Library filters pane |
+
+A heading carries no button. LoRA Trainer's `Group` has an `action` slot for a list's `Refresh` (`components/ui/Form.tsx`
+58 and 96, `DatasetRows.tsx` 43-46); Giga Stream keeps its own rule (owner; `06` section 6, the Collections window), so that `Refresh` is the
+first verb of the table's selection toolbar.
 
 The brand and the surface switch in the titlebar keep the family's own radii and spacing, drawn as the family
 draws them; they are not rebuilt from the token scale.

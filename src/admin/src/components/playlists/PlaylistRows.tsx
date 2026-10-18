@@ -3,7 +3,7 @@ import { SkeletonGrid } from "@giga/ui/lists/SkeletonGrid";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import { PLAYLIST_GRID, PLAYLIST_HEADINGS } from "@/constants/playlist-grid";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
-import { playlistRow, selectAll } from "@/lib/playlist-rows";
+import { playlistRow } from "@/lib/playlist-rows";
 import { useAppStore } from "@/store/app-store";
 import { PlaylistRow } from "./PlaylistRow";
 
@@ -13,7 +13,6 @@ import { PlaylistRow } from "./PlaylistRow";
 export function PlaylistRows() {
   const { status, items, ticked, unreachable } = useAppStore((state) => state.playlists);
   const tick = useAppStore((state) => state.playlistTick);
-  const tickAll = useAppStore((state) => state.playlistsTickAll);
   const openWorkspace = useAppStore((state) => state.openWorkspace);
   const { flows, saving, isBusy, track } = usePlaylistActions();
   const waiting = items.length === 0 || status === "idle";
@@ -25,7 +24,7 @@ export function PlaylistRows() {
       ariaLabel="Playlists"
       layout={PLAYLIST_GRID}
       headings={PLAYLIST_HEADINGS}
-      selection={{ label: "Select all playlists", checked: selectAll(items, ticked), onToggle: tickAll }}
+      ticks
     >
       {waiting ? (
         <SkeletonGrid />

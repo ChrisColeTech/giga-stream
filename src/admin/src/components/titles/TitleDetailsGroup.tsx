@@ -14,6 +14,7 @@ import {
   STATE_TIP,
   STREAM_TIP,
   TMDB_ID_FIXED_TIP,
+  TITLE_TIP,
   TMDB_ID_TIP,
   YEAR_TIP,
 } from "@/constants/title-copy";
@@ -59,6 +60,7 @@ export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: T
     <Group id="tw-details" icon={FileText} title="Details">
       <TitleTextRow
         label="Title"
+        tip={TITLE_TIP}
         value={draft.title}
         error={errors["title"]}
         onChange={(title) => onChange({ title })}

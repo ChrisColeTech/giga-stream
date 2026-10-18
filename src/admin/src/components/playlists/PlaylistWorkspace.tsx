@@ -4,7 +4,6 @@ import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
 import {
   PLAYLIST_GONE,
@@ -30,7 +29,6 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
   const { flows, saving, track } = usePlaylistActions();
   const unreachable = useAppStore((state) => state.playlists.unreachable);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(PLAYLIST_SECTION_KEYS, PLAYLIST_SECTION_KEYS[0] ?? "pw-details");
   const channels = usePlaylistChannels(playlist.host);
 
@@ -57,7 +55,6 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Playlist toolbar" forward={{ label: "Jobs", onPress: () => requestTab("jobs") }} />}
     >
       <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">

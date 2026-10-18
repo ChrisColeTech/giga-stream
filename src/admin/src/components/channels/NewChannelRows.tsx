@@ -46,11 +46,11 @@ export function NewChannelRows({ draft, errors, onChange, onKind, onEnter, choos
 
   return (
     <>
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={CHANNEL_TIPS.name} error={errors["name"]}>
         {text("name", "Name")}
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kind}>
-        <Segmented field options={KINDS} value={draft.kind} onChange={onKind} aria-label="Kind" className="w-full" />
+        <Segmented options={KINDS} value={draft.kind} onChange={onKind} aria-label="Kind" />
       </Row>
       <Row label="Category" tip={CHANNEL_TIPS.categoryNew} error={errors["category"]}>
         {draft.kind === "live" ? (

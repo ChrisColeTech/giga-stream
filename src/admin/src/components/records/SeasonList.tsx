@@ -6,6 +6,7 @@ import { Actions } from "@giga/ui/form/Actions";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { NumericInput } from "@giga/ui/form/NumericInput";
 import { Row } from "@giga/ui/form/Row";
+import { EPISODE_TIP, SEASON_TIP } from "@/constants/title-copy";
 import * as edit from "@/lib/season-edit";
 import type { SeasonDraft } from "@/lib/season-edit";
 
@@ -28,6 +29,7 @@ export function SeasonList({ seasons, onChange }: SeasonListProps) {
         <div key={index} className="flex flex-col gap-2">
           <Row
             label="Season"
+            tip={SEASON_TIP}
             trailing={
               <>
                 <IconButton
@@ -67,6 +69,7 @@ export function SeasonList({ seasons, onChange }: SeasonListProps) {
             <Row
               key={at}
               label="Episode"
+              tip={EPISODE_TIP}
               trailing={
                 <IconButton
                   aria-label={`Remove episode ${episode.episode} of season ${season.season}`}

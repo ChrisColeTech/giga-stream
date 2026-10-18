@@ -34,20 +34,18 @@ export function PlaybackGroup({ draft, onChange, save }: PlaybackGroupProps) {
   return (
     <Group id="lv-playback" icon={Play} title="Playback">
       <Row label="Mode" tip={CHANNEL_TIPS.mode}>
-        <Segmented field options={MODES} value={draft.mode} onChange={(mode) => onChange({ mode })} aria-label="Mode" className="w-full" />
+        <Segmented options={MODES} value={draft.mode} onChange={(mode) => onChange({ mode })} aria-label="Mode" />
       </Row>
       <Row label="Captions" tip={CHANNEL_TIPS.captions}>
         <Toggle checked={draft.captions} aria-label="Captions" onChange={(captions) => onChange({ captions })} />
       </Row>
       <Row label="Qualities" tip={CHANNEL_TIPS.qualities}>
         <ChipGroup
-          field
           options={QUALITY_OPTIONS}
           selected={new Set<string>(draft.variants)}
           min={MIN_VARIANTS}
           minText={MIN_VARIANTS_REASON}
           aria-label="Qualities"
-          className="w-full"
           onToggle={(value) => {
             if (isVariant(value)) onChange({ variants: toggleVariant(draft.variants, value) });
           }}

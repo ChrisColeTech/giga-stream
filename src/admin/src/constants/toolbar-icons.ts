@@ -1,25 +1,17 @@
-import { Clock3, Eye, Film, ListVideo, Plug, Radio, Users, type LucideIcon } from "lucide-react";
+import { Eye, type LucideIcon } from "lucide-react";
 
-/** Where a page-toolbar forward verb goes: `Preview` opens a channel's preview window, the rest switch to that tab. The
- *  name is the verb's `label` in the data that declares it. */
+/** Where a forward verb goes: `Preview` opens a channel's preview window, the rest switch to that tab. The name is the
+ *  verb's `label` in the data that declares it, and the word the selection toolbar draws before its `→` (`Titles →`). */
 export type ForwardDestination = "Preview" | "Channels" | "Providers" | "Titles" | "Playlists" | "Jobs" | "Accounts";
 
-/** The icon of each forward verb in a page toolbar (`01` section 9: toolbars use icons, one meaningful icon per action as
- *  the interface's toolbars do). One per destination, none repeated, and none shared with a bulk verb. */
-export const FORWARD_ICONS: Readonly<Record<ForwardDestination, LucideIcon>> = {
-  Preview: Eye,
-  Channels: Radio,
-  Providers: Plug,
-  Titles: Film,
-  Playlists: ListVideo,
-  Jobs: Clock3,
-  Accounts: Users,
-};
+/** A forward verb in a toolbar is its word and `→`, no icon (`01` section 9; LoRA Trainer `GalleryToolbar.tsx` 48).
+ *  The one icon here is Preview's glyph as a channel workspace's trailing row action, LoRA Trainer's `View` (`Eye`). */
+export const PREVIEW_ICON: LucideIcon = Eye;
 
 export const PREVIEW_TOOLTIP = "Preview channel";
 export const GO_TO_TOOLTIP = "Go to";
 
-/** The tooltip and `aria-label` of a forward verb: the verb plus where it goes (`Preview channel`, `Go to Titles`). */
+/** The tooltip of a forward verb: what it does and where it goes (`Preview channel`, `Go to Titles`). */
 export const FORWARD_TOOLTIPS: Readonly<Record<ForwardDestination, string>> = {
   Preview: PREVIEW_TOOLTIP,
   Channels: `${GO_TO_TOOLTIP} Channels`,

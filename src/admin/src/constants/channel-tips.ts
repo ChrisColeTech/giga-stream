@@ -1,6 +1,7 @@
 /* The info glyph sentences of the Channels tab (the mockup's `data-tip` text; `28` section 7.3). A glyph sits on every
- * row except Name; the formats a field takes ride its tip, never a placeholder. */
+ * row, Name included; the formats a field takes ride its tip, never a placeholder. */
 export const CHANNEL_TIPS = {
+  name: "What the channel is called in the list and in the player app.",
   kind: "A live channel plays your videos. A stream channel plays an address.",
   kindFixed: "Fixed once the channel exists.",
   categoryLive: "Where the channel is listed. Live channels pick from six.",

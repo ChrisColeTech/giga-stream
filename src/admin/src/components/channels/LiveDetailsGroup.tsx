@@ -50,7 +50,7 @@ export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
 
   return (
     <Group id="lv-details" icon={FileText} title="Details">
-      <Row label="Name" error={errors["name"]}>
+      <Row label="Name" tip={CHANNEL_TIPS.name} error={errors["name"]}>
         {field("name", "Name")}
       </Row>
       <Row label="Kind" tip={CHANNEL_TIPS.kindFixed}>
@@ -66,7 +66,7 @@ export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
         </Select>
       </Row>
       <Row label="Plays" tip={CHANNEL_TIPS.plays}>
-        <Segmented field options={PLAYS} value={draft.plays} onChange={(plays) => onChange({ plays })} aria-label="Plays" className="w-full" />
+        <Segmented options={PLAYS} value={draft.plays} onChange={(plays) => onChange({ plays })} aria-label="Plays" />
       </Row>
       {draft.plays === "folder" ? (
         <FolderRow

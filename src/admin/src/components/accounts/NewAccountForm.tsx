@@ -3,6 +3,7 @@ import { Input } from "@giga/ui/controls/Input";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Row } from "@giga/ui/form/Row";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
+import { PASSWORD_TIP, USERNAME_TIP } from "@/constants/account-copy";
 import { useAccountActions } from "@/hooks/useAccountActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { EMPTY_NEW_ACCOUNT, sameNewAccount, type NewAccountDraft } from "@/lib/account-draft";
@@ -10,11 +11,17 @@ import { createReason } from "@/lib/account-checks";
 import { useAppStore } from "@/store/app-store";
 
 /* The rows, in the owner's order (the username, the identity, first) and no others: no name (owner, 2026-10-17), no
- * role (`26` D22), no info glyph, no placeholder. */
+ * role (`26` D22), no placeholder; every row has its info glyph. */
 const FIELDS = [
-  { key: "username", label: "Username", type: "text", autoComplete: "off" },
-  { key: "password", label: "Password", type: "password", autoComplete: "new-password" },
-] as const satisfies ReadonlyArray<{ key: keyof NewAccountDraft; label: string; type: string; autoComplete: string }>;
+  { key: "username", label: "Username", type: "text", autoComplete: "off", tip: USERNAME_TIP },
+  { key: "password", label: "Password", type: "password", autoComplete: "new-password", tip: PASSWORD_TIP },
+] as const satisfies ReadonlyArray<{
+  key: keyof NewAccountDraft;
+  label: string;
+  type: string;
+  autoComplete: string;
+  tip: string;
+}>;
 
 /** `New account`: Username, Password and one `Create`, disabled with the first missing field's reason (`Username is
  *  required.`, then Password), `Saving.` while a call runs, or the unreachable sentence. Pressing it (or Enter
@@ -44,7 +51,7 @@ export function NewAccountForm() {
       create={{ onPress: () => void create(), reason }}
     >
       {FIELDS.map((field) => (
-        <Row key={field.key} label={field.label} error={form.errors[field.key]}>
+        <Row key={field.key} label={field.label} tip={field.tip} error={form.errors[field.key]}>
           <Input
             type={field.type}
             value={form.draft[field.key]}

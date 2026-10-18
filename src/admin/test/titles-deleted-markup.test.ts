@@ -47,21 +47,21 @@ describe("the Deleted titles group", () => {
     assert.ok(deleted.indexOf(">The Matrix<") < deleted.indexOf(">Movie<"), "the name comes before the kind");
     assert.ok(deleted.includes(">tv-1399<"), "a title with no kept text is named by its id");
     assert.ok(deleted.includes(">2026-10-"), "the day it was deleted");
-    assert.equal(deleted.match(/>Restore</g)?.length, 2, "one per row; the bulk verb is an icon in the strip, once ticked");
-    assert.ok(deleted.includes('aria-label="Refresh deleted titles"'), "Refresh is the strip's");
+    assert.equal(deleted.match(/>Restore</g)?.length, 3, "one per row, and the strip's bulk Restore, always drawn");
+    assert.ok(deleted.includes('title="Refresh deleted titles"'), "Refresh is the strip's");
     assert.ok(!deleted.slice(0, deleted.indexOf('role="toolbar"')).includes("<button type=\"button\" class=\"inline-flex h-ctl-sm"));
     assert.ok(deleted.includes('title="Lets the title return on the next browse or sync."'));
     assert.ok(!deleted.includes("animate-skel-shimmer"));
   });
 
-  it("draws the bulk Restore as an icon in the strip only once a row is ticked, with the count", () => {
+  it("draws the bulk Restore as its icon and word, waiting for a tick, then enabled with no count text", () => {
     state().titlesDeletedLoaded([gone("movie-603", "The Matrix")]);
     const strip = (html: string): string => html.slice(html.indexOf('aria-label="Deleted titles table"'));
-    assert.ok(!strip(group(page())).includes('aria-label="Restore"'));
+    assert.ok(strip(group(page())).includes('aria-label="Restore. '), "drawn, disabled with its reason");
     state().titleDeletedTick("movie-603", true);
     const ticked = group(page());
-    assert.ok(/<button[^>]*aria-label="Restore"[^>]*title="Restore"/.test(strip(ticked)));
-    assert.ok(strip(ticked).includes("selected"));
+    assert.ok(/lucide-rotate-ccw[^>]*>.*?<\/svg>Restore<\/button>/.test(strip(ticked)));
+    assert.ok(!strip(ticked).includes("selected<") && strip(ticked).includes('aria-label="Select all deleted titles"'));
     assert.match(ticked, /<li[^>]*data-ticked=""/);
   });
 

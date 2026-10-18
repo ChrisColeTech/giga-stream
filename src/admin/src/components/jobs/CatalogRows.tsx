@@ -24,16 +24,10 @@ export function CatalogRows({ scope, kind, onChange }: CatalogRowsProps) {
   return (
     <>
       <Row label="Scope" tip={SCOPE_TIP}>
-        <Segmented
-          field
-          options={SCOPES}
-          value={scope}
-          aria-label="Scope"
-          onChange={(next) => onChange({ scope: next })}
-        />
+        <Segmented options={SCOPES} value={scope} aria-label="Scope" onChange={(next) => onChange({ scope: next })} />
       </Row>
       <Row label="Kind" tip={KIND_TIP}>
-        <Segmented field options={KINDS} value={kind} aria-label="Kind" onChange={(next) => onChange({ kind: next })} />
+        <Segmented options={KINDS} value={kind} aria-label="Kind" onChange={(next) => onChange({ kind: next })} />
       </Row>
     </>
   );

@@ -4,7 +4,6 @@ import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
   PROVIDER_GONE,
   PROVIDER_SECTIONS,
@@ -31,7 +30,6 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
   const { flows, saving, track } = useProviderActions();
   const unreachable = useAppStore((state) => state.providers.unreachable);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
-  const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(PROVIDER_SECTION_KEYS, PROVIDER_SECTION_KEYS[0] ?? "pv-details");
 
   useFollowRecord(form, provider, draftOfProvider, sameProviderDraft);
@@ -57,7 +55,6 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Provider toolbar" forward={{ label: "Titles", onPress: () => requestTab("titles") }} />}
     >
       <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">

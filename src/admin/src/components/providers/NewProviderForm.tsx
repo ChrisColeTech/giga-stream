@@ -4,7 +4,7 @@ import { Segmented } from "@giga/ui/controls/Segmented";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Row } from "@giga/ui/form/Row";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
-import { FAMILY_OPTIONS, FAMILY_TIP, MOVIE_TEMPLATE_TIP, SOURCE_TIP } from "@/constants/provider-copy";
+import { FAMILY_OPTIONS, FAMILY_TIP, MOVIE_TEMPLATE_TIP, NAME_TIP, SOURCE_TIP } from "@/constants/provider-copy";
 import { useProviderActions } from "@/hooks/useProviderActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { createReason } from "@/lib/provider-checks";
@@ -50,10 +50,9 @@ export function NewProviderForm() {
 
   return (
     <NewRecordGroup id="pv-create" icon={Plus} title="New provider" create={{ onPress: () => void create(), reason }}>
-      {text("name", "Name")}
+      {text("name", "Name", NAME_TIP)}
       <Row label="Family" tip={FAMILY_TIP}>
         <Segmented
-          field
           aria-label="Family"
           options={FAMILY_OPTIONS}
           value={form.draft.family}

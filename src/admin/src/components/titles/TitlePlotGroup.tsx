@@ -2,7 +2,7 @@ import { Users } from "lucide-react";
 import { Textarea } from "@giga/ui/controls/Textarea";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { CAST_TIP } from "@/constants/title-copy";
+import { CAST_TIP, PLOT_TIP } from "@/constants/title-copy";
 import type { FormErrors } from "@/lib/record-form";
 import type { TitleDraft } from "@/lib/title-draft";
 import { TitleTextRow } from "./TitleTextRow";
@@ -19,7 +19,7 @@ const PLOT_ROWS = 4;
 export function TitlePlotGroup({ draft, errors, onChange }: TitlePlotGroupProps) {
   return (
     <Group id="tw-plot" icon={Users} title="Plot">
-      <Row label="Plot" error={errors["plot"]} align="start">
+      <Row label="Plot" tip={PLOT_TIP} error={errors["plot"]} align="start">
         <Textarea
           rows={PLOT_ROWS}
           value={draft.plot}

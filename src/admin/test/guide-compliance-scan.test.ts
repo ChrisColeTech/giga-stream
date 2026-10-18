@@ -43,24 +43,18 @@ describe("a heading carries no button", () => {
   });
 });
 
-describe("a toolbar carries icon verbs only", () => {
-  const toolbars = COMPONENTS.filter((source) => source.path.endsWith("Toolbar.tsx"));
-
-  it("finds the admin's toolbars", () => {
-    assert.ok(toolbars.length >= 2, toolbars.map((source) => rel(source.path)).join());
+describe("there is no page toolbar", () => {
+  it("has no ToolbarStrip, IndexToolbar or WorkspaceToolbar anywhere in the admin: the table strip is the only bar", () => {
+    assert.deepEqual(offenders(SOURCES, /ToolbarStrip|IndexToolbar|WorkspaceToolbar|ChannelsToolbar/), []);
+    assert.deepEqual(COMPONENTS.filter((source) => source.path.endsWith("Toolbar.tsx")), []);
   });
 
-  it("renders no text Button, no ArmedButton and no bulk verb in any toolbar file", () => {
-    assert.deepEqual(offenders(toolbars, /<(?:Armed)?Button\b|use\w+Bulk\b|BulkBar|TableStrip/), []);
+  it("draws no one-of choice at the field size: no `field` prop on Segmented or ChipGroup", () => {
+    assert.deepEqual(offenders(COMPONENTS, /<(?:Segmented|ChipGroup)\b[^>]*(?:\n[^>]*)*?\n?\s+field\b(?!\w)[^=]/), []);
+    assert.deepEqual(offenders(COMPONENTS, /<(?:Segmented|ChipGroup) field\b/), []);
   });
 
-  it("is the library ToolbarStrip, which imports IconButton and no text Button", () => {
-    const strip = read(join(SHARED, "shell", "ToolbarStrip.tsx")).text;
-    assert.ok(/IconButton/.test(strip) && !/controls\/Button"/.test(strip) && !/ArmedButton/.test(strip));
-  });
-
-  it("holds no Segmented in a toolbar or a table strip (a choice is for a labelled row)", () => {
-    assert.deepEqual(offenders(toolbars, /Segmented/), []);
+  it("holds no Segmented in a table strip (a choice is for a labelled row)", () => {
     assert.ok(!/Segmented/.test(read(join(SHARED, "lists", "TableStrip.tsx")).text));
   });
 });
@@ -103,6 +97,18 @@ describe("a component renders props", () => {
   it("exports one component per file", () => {
     const many = COMPONENTS.filter((source) => (source.text.match(/^export function [A-Z]/gm) ?? []).length > 1);
     assert.deepEqual(many.map((source) => rel(source.path)), []);
+  });
+});
+
+describe("every form row carries its info glyph", () => {
+  it("gives each Row of a New form or a workspace a `tip` in its opening tag (the family look: Name has one too)", () => {
+    const forms = COMPONENTS.filter((source) => !/[\\/]session[\\/]/.test(source.path));
+    const bare = forms.filter((source) =>
+      [...source.text.matchAll(/<Row\b/g)].some(
+        (hit) => !/^<Row\b[^>]*tip=/.test(source.text.slice(hit.index, hit.index + 260).replace(/\n\s*/g, " ")),
+      ),
+    );
+    assert.deepEqual(bare.map((source) => rel(source.path)), []);
   });
 });
 

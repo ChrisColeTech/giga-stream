@@ -49,6 +49,14 @@ export const STATUS_TIP = "Scheduled runs by itself; Not scheduled has the inter
 export const DRY_RUN_TIP = "Count what a run would do and write nothing. Sent with this run only.";
 export const PRUNE_TIP =
   "Deletes synced channels whose entry vanished. Channels you edited are kept. Sent with this run only.";
+export const NAME_TIP = "What the job is called in the list. 1 to 120 characters.";
+export const RUN_STATE_TIP = "Whether the job is running now, or how its last run ended.";
+export const WHEN_TIP = "When the job last ran.";
+export const OUTCOME_TIP = "What the last run did.";
+export const COUNTS_TIP = "How many channels the last run created, updated, removed or refused.";
+export const REFUSED_TIP = "Entries the last run refused, with the reason.";
+export const CREATED_TIP = "The channels the last run created. Each opens its channel.";
+export const TITLES_TIP = "How many titles the last run wrote.";
 export const STALE_TIP = "Titles whose stored copy is old; the next run refetches them.";
 export const DELETE_TITLE = "Deletes the job; what it synced stays.";
 export const DISABLED_MARK = "disabled";

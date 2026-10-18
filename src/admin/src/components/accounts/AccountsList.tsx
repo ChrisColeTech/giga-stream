@@ -4,24 +4,26 @@ import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/account-copy";
 import { useAccountActions } from "@/hooks/useAccountActions";
 import { useAccountBulk } from "@/hooks/useAccountBulk";
+import { selectAllState } from "@/lib/account-rows";
 import { useAppStore } from "@/store/app-store";
 import { AccountRows } from "./AccountRows";
 
-/** `Accounts`: the list group. Its table strip holds `Refresh` (it reads the accounts and the audit tail together,
- *  disabled with `Loading.` while a read runs) and, once rows are ticked, the count, `Enable`, `Disable`, the armed
- *  `Delete` and `Clear selection`. The heading carries nothing. */
+/** `Accounts`: the list group. Its selection toolbar (`01` section 9) holds `Refresh` (it reads the accounts and the audit
+ *  tail together, disabled with `Loading.` while a read runs), then `Enable`, `Disable` and the armed `Delete`, always
+ *  drawn and disabled with their reason until a row is ticked, and the three-state `All` on the right. */
 export function AccountsList() {
-  const loading = useAppStore((state) => state.accounts.status === "loading");
-  const ticked = useAppStore((state) => state.accounts.ticked);
-  const setTicked = useAppStore((state) => state.accountsSetTicked);
+  const { status, items, ticked } = useAppStore((state) => state.accounts);
+  const tickAll = useAppStore((state) => state.accountsTickAll);
   const { flows, track } = useAccountActions();
   const { verbs } = useAccountBulk();
+  const reason = status === "loading" ? LOADING_REASON : undefined;
+  const all = { label: "Select all accounts", checked: selectAllState(items, ticked), onToggle: tickAll };
   const strip = (
     <TableStrip
       label="Accounts table"
       noun="accounts"
-      refresh={{ onPress: () => void track("refresh", flows.refresh), reason: loading ? LOADING_REASON : undefined }}
-      selection={{ count: ticked.length, verbs, onClear: () => setTicked([]) }}
+      refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
+      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
     />
   );
 

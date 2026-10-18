@@ -4,7 +4,7 @@ import { Segmented } from "@giga/ui/controls/Segmented";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Row } from "@giga/ui/form/Row";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
-import { KIND_NEW_TIP, KIND_OPTIONS, YEAR_TIP } from "@/constants/title-copy";
+import { KIND_NEW_TIP, KIND_OPTIONS, TITLE_TIP, YEAR_TIP } from "@/constants/title-copy";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { useTitleActions } from "@/hooks/useTitleActions";
 import { createReason } from "@/lib/title-checks";
@@ -34,7 +34,7 @@ export function NewTitleForm() {
 
   return (
     <NewRecordGroup id="nt-create" icon={Plus} title="New title" create={{ onPress: () => void create(), reason }}>
-      <Row label="Title" error={form.errors["title"]}>
+      <Row label="Title" tip={TITLE_TIP} error={form.errors["title"]}>
         <Input
           value={form.draft.title}
           className={FIELD_CONTROL}
@@ -47,7 +47,6 @@ export function NewTitleForm() {
       </Row>
       <Row label="Kind" tip={KIND_NEW_TIP}>
         <Segmented
-          field
           aria-label="Kind"
           options={KIND_OPTIONS}
           value={form.draft.kind}
