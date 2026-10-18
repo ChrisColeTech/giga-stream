@@ -191,7 +191,10 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   learns what changed from the call it just made, not from a second channel.
 - There is no WebSocket anywhere in the system. The interface reads state when it needs it — mount,
   a surface switch, after its own actions, a Refresh — and never on an interval: no polling, no
-  long polling, no SSE subscriptions, no request loops or timers, in any program or tool.
+  long polling, no SSE subscriptions, no request loops or interval timers, in any program or tool. **Clarified
+  2026-10-18 (owner): the rule bans polling, not timers.** A one-shot timer that does not repeat a request on a schedule
+  is allowed where a hook needs one - the search field's input debounce (`docs/41` 6) is the case today. **One dated
+  exception to "no SSE subscriptions" (owner, 2026-10-18, plan `44`):** `GET /api/jobs/events` (section 4.4).
 - One exception for streamed answers: a long-running operation (a folder scan, `03` section 3.8)
   answers with a single streamed NDJSON body that reports progress as the work happens — one
   request, one answer, not polling.
