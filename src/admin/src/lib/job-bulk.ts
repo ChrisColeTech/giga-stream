@@ -13,7 +13,8 @@ import { tickedOf } from "./playlist-rows";
 
 export type JobBulkVerb = "run" | "enable" | "disable" | "delete";
 
-export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["run", "enable", "disable", "delete"];
+/** The strip's order: the ghost verbs, then the filled `Run job` at the right edge (the forward verb's place). */
+export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["enable", "disable", "delete", "run"];
 
 const words = (past: string): BulkWords => ({ past, noun: "job", nouns: "jobs" });
 

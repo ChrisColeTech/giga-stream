@@ -1,0 +1,76 @@
+import { FileText } from "lucide-react";
+import { Input } from "@giga/ui/controls/Input";
+import { Toggle } from "@giga/ui/controls/Toggle";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { ENABLED_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
+import type { JobDraft } from "@/lib/job-draft";
+import { typeWord } from "@/lib/job-rows";
+import type { FormErrors } from "@/lib/record-form";
+import type { AdminJob } from "@/services/schemas/job-schema";
+import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
+import { CatalogRows } from "./CatalogRows";
+import { JobPlaylistSelect } from "./JobPlaylistSelect";
+
+export interface JobDetailsGroupProps {
+  readonly job: AdminJob;
+  readonly draft: JobDraft;
+  readonly errors: FormErrors;
+  readonly playlists: readonly AdminPlaylist[];
+  readonly onChange: (patch: Partial<JobDraft>) => void;
+}
+
+/** `Details` (`38` section 4.3): Name first, Type (read-only: it never changes), then the type's rows (Playlist, or
+ *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 25). */
+export function JobDetailsGroup({ job, draft, errors, playlists, onChange }: JobDetailsGroupProps) {
+  const catalog = job.type === "catalog";
+  return (
+    <Group id="jw-details" icon={FileText} title="Details">
+      <Row label="Name" error={errors["name"]}>
+        <Input
+          type="text"
+          value={draft.name}
+          className={FIELD_CONTROL}
+          aria-label="Name"
+          aria-invalid={errors["name"] !== undefined}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => onChange({ name: event.target.value })}
+        />
+      </Row>
+      <Row label="Type" tip={TYPE_FIXED_TIP}>
+        <Input type="text" value={typeWord(job)} readOnly className={`${FIELD_CONTROL} text-faint`} aria-label="Type" />
+      </Row>
+      {catalog ? (
+        <CatalogRows scope={draft.scope} kind={draft.kind} onChange={onChange} />
+      ) : (
+        <Row label="Playlist" tip={PLAYLIST_TIP} error={errors["playlistId"]}>
+          <JobPlaylistSelect
+            playlists={playlists}
+            value={draft.playlistId}
+            invalid={errors["playlistId"] !== undefined}
+            onChange={(playlistId) => onChange({ playlistId })}
+          />
+        </Row>
+      )}
+      <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
+        <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
+      </Row>
+      {catalog && (
+        <Row label="Pages" tip={PAGES_TIP} error={errors["pages"]}>
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={draft.pages}
+            className={`${FIELD_CONTROL} font-mono`}
+            aria-label="Pages"
+            aria-invalid={errors["pages"] !== undefined}
+            autoComplete="off"
+            onChange={(event) => onChange({ pages: event.target.value })}
+          />
+        </Row>
+      )}
+    </Group>
+  );
+}
