@@ -21,7 +21,7 @@ describe("the Interval field", () => {
   });
 
   it("refuses x, 0h and an empty value with a sentence for the row", () => {
-    assert.equal(scheduleRefusal("x"), "Interval is a number and m or h, like 30m or 6h, or off.");
+    assert.equal(scheduleRefusal("x"), "Interval is a number and s, m or h, like 30m or 6h, or off.");
     assert.ok(scheduleRefusal("0h") !== null);
     assert.equal(scheduleRefusal(""), "Interval is required.");
   });
@@ -29,7 +29,7 @@ describe("the Interval field", () => {
   it("is the save's refusal under `schedule`, after the name and a catalog job's pages", () => {
     assert.deepEqual(firstSaveRefusal({ ...draftOf(catalog), schedule: "x" }, true), {
       field: "schedule",
-      sentence: "Interval is a number and m or h, like 30m or 6h, or off.",
+      sentence: "Interval is a number and s, m or h, like 30m or 6h, or off.",
     });
     assert.equal(firstSaveRefusal({ ...draftOf(catalog), name: " " }, true)?.field, "name");
     assert.equal(firstSaveRefusal({ ...draftOf(catalog), pages: "26", schedule: "x" }, true)?.field, "pages");

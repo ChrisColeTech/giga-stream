@@ -112,8 +112,11 @@ notice and the rest continue. It is disabled, in this priority order, with: `Tic
 ### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Run`, `Last run`; toolbar `Discard changes`, `Save`, `Channels →` for a playlist job or `Titles →` for a catalog job)
 
 - **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog).
-- **Schedule** (`clock`): Interval (text; the page checks `^[1-9]\d*[mh]$|^off$` by `lib/field-checks.ts` `schedule`, a bad value is the `Row`'s `error` and the notice; the backend normalises it
-  and answers `422 job.invalid` field `schedule` otherwise). The tip lists `6h`, `30m`, `24h`, `off`.
+- **Schedule** (`clock`): Interval (a `Select`: Off, Every 15 minutes, Every 30 minutes, Every hour, Every 6 hours, Every 12 hours, Every day, `Custom...`; `lib/job-schedule.ts`). A stored value outside the list
+  shows as Custom with its text field (`Custom interval`), checked by `lib/field-checks.ts` `schedule` (`^[1-9]\d*(ms|s|m|h)$|^off$`, the backend's forms; a bad value is the `Row`'s `error`
+  and the notice; the backend normalises it and answers `422 job.invalid` field `schedule` otherwise). A read-only Status row says Scheduled, Not scheduled or Disabled. The Jobs list's
+  schedule column uses the same words. The backend does not expose a next run, so none is shown. The New job form's Playlist row is always the select, natively disabled with its reason as a tooltip
+  (`Loading.`, `The playlists could not be read.`, `Add a playlist first.`) when there are no options.
 - **Run** (`play`): a playlist job has **Dry run** and **Prune** (`Toggle`s; the Prune tip says it deletes synced channels whose entry vanished, and that edited ones are kept) and `Run job`;
   a catalog job has `Run job`. `Run job` on the workspace sends the toggles' current values as the once-only override (`{ dryRun, prune }`) and is disabled with the same reasons as the toolbar's plus
   `Save the job first` while the draft is dirty.

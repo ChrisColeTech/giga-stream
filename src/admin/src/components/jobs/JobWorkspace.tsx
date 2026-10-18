@@ -92,6 +92,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
           <div ref={spy.bind("jw-schedule")}>
             <JobScheduleGroup
               value={form.draft.schedule}
+              job={job}
               error={form.errors["schedule"]}
               onChange={(schedule) => form.set({ schedule })}
             />

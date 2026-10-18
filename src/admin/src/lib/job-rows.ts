@@ -1,5 +1,6 @@
 import type { AdminJob, CatalogJobConfig, PlaylistJobConfig } from "@/services/schemas/job-schema";
 import { formatWhen } from "./format-when";
+import { scheduleLabel } from "./job-schedule";
 import { jobState, type RowState } from "./row-state";
 
 /* A job as pure data (`38` section 4.2): its config narrowed by type, whether its last run failed, and the row a list
@@ -60,7 +61,7 @@ export function jobRow(job: AdminJob): JobRowView {
     name: job.name,
     type: typeWord(job),
     target: targetOf(job),
-    schedule: job.schedule,
+    schedule: scheduleLabel(job.schedule),
     lastRun: formatWhen(job.lastRunAt),
     outcome: job.lastOutcome ?? "",
     state: stateOfJob(job),

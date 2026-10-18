@@ -51,7 +51,7 @@ describe("a job's interval", () => {
 
   it("refuses everything else, and says what is accepted", () => {
     for (const value of ["x", "6", "h", "0m", "06h", "1.5h", "6d", "-1h", "6 h"]) {
-      assert.equal(schedule("Interval", value), "Interval is a number and m or h, like 30m or 6h, or off.", value);
+      assert.equal(schedule("Interval", value), "Interval is a number and s, m or h, like 30m or 6h, or off.", value);
     }
   });
 });

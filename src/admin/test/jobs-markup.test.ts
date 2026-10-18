@@ -126,7 +126,7 @@ describe("the jobs list", () => {
     assert.ok(page().includes("animate-skel-shimmer"));
     state().jobsLoaded([
       job(1, { running: true }),
-      job(2, { enabled: false }),
+      job(2, { enabled: false, schedule: "off" }),
       job(3, { ...CATALOG, lastRunAt: 5, lastOutcome: "TMDB down", lastCounts: { titles: 0 } }),
     ]);
     const html = page();
@@ -137,6 +137,7 @@ describe("the jobs list", () => {
     assert.ok(html.includes('data-st="disabled"') && html.includes("opacity-45") && html.includes('data-st="failed"'));
     assert.ok(html.includes(">popular series<") && html.includes(">List 1<") && html.includes(">never<"));
     assert.ok(html.includes('title="A running job cannot be deleted."'));
+    assert.ok(html.includes(">Every day<") && html.includes(">Off<"), "the schedule column words");
   });
 
   it("draws Enable, Disable, Delete and the filled Run job, each disabled with `Tick a job first`", () => {
@@ -188,8 +189,8 @@ describe("a job's workspace", () => {
     state().jobsLoaded([job(1, { enabled: false })]);
     state().openWorkspace("jobs", "1");
     assert.ok(page().includes('aria-label="Run job. Jobs that are disabled cannot run."'));
-    const sentence = "Interval is a number and m or h, like 30m or 6h, or off.";
-    const props = { value: "x", error: sentence, onChange: () => undefined };
+    const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
+    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined };
     const html = renderLive(createElement(JobScheduleGroup, props));
     assert.ok(html.includes('role="alert"') && html.includes(sentence) && html.includes('aria-invalid="true"'));
   });
