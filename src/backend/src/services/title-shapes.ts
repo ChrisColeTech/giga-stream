@@ -161,7 +161,7 @@ export function rowOf(kind: Kind, tmdb: Record<string, unknown>, now: number): R
 }
 
 export function rowsOf(kind: Kind, values: unknown[], now: number): Record<string, unknown>[] {
-  return values.flatMap((value) => rowOf(kind, asRecord(value), now) ?? []);
+  return values.map((value) => rowOf(kind, asRecord(value), now)).filter((row) => row !== undefined);
 }
 
 /** Validate a stored output row, or safely reshape a legacy raw TMDB list row. */
