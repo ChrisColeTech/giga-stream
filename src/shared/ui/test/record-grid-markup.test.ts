@@ -41,9 +41,9 @@ const row = (extra: Record<string, unknown> = {}) =>
     ...extra,
   });
 
-test("the header is the template's: sans 12px semibold faint on the panel over a hairline, one cell per heading", () => {
+test("the header is the Trainer's DatasetRows header: mono 12px dim on the page, no fill or rule, one cell per heading", () => {
   const html = grid(row());
-  assert.ok(html.includes("border-b border-hair bg-panel") && html.includes("font-sans text-xs font-semibold text-faint"));
+  assert.ok(html.includes("font-mono text-xs text-dim") && !html.includes("bg-panel"));
   for (const heading of HEADINGS) assert.ok(html.includes(`>${heading.label}</span>`), heading.label);
   assert.ok(html.includes("text-right"), "a number column is right-aligned");
 });

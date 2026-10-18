@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { selectedCount } from "@giga/ui/lib/list-selection";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import { TICK_FIRST } from "@/constants/record-copy";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/title-copy";
 import {
@@ -85,6 +86,7 @@ export function useTitleStoredBulk(): readonly StripVerb[] {
       id: verb,
       label: TITLE_BULK_LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason,
       ...(verb === "delete" && { question: titleDeleteQuestion(selection.mode === "ids" ? plan.runnable.length : count) }),
       onPress: () => void press(),

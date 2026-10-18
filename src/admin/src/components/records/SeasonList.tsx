@@ -97,14 +97,19 @@ export function SeasonList({ seasons, onChange }: SeasonListProps) {
             </Row>
           ))}
           <Actions>
-            <Button variant="ghost" size="sm" onClick={() => onChange(edit.addEpisode(seasons, index))}>
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Add an episode to this season"
+              onClick={() => onChange(edit.addEpisode(seasons, index))}
+            >
               <Plus aria-hidden /> Add episode
             </Button>
           </Actions>
         </div>
       ))}
       <Actions>
-        <Button variant="ghost" onClick={() => onChange(edit.addSeason(seasons))}>
+        <Button variant="ghost" title="Add a season to this title" onClick={() => onChange(edit.addSeason(seasons))}>
           <Plus aria-hidden /> Add season
         </Button>
       </Actions>

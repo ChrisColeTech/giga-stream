@@ -51,7 +51,7 @@ describe("the New title form", () => {
 describe("the list group", () => {
   it("holds one first row (the search with data-search, the Sort select, the Kind select), then the table strip with Newer, Older and Refresh", () => {
     const html = page();
-    const row = html.slice(at(html, 'aria-label="Browse titles filters"'));
+    const row = html.slice(at(html, 'role="search"'));
     assert.ok(at(row, 'aria-label="Search titles"') < at(row, 'aria-label="Sort"'));
     assert.ok(at(row, 'aria-label="Sort"') < at(row, 'aria-label="Kind"'));
     assert.match(html, /<input[^>]*aria-label="Search titles"[^>]*data-search=""/);

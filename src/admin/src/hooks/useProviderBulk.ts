@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import {
   PROVIDER_BULK_LABELS,
   PROVIDER_BULK_ORDER,
@@ -50,6 +51,7 @@ export function useProviderBulk(): ProviderBulk {
       id: verb,
       label: PROVIDER_BULK_LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason: providerBulkReason(verb, plan, ticked.length, { busy: bulk.running, unreachable }),
       ...(verb === "delete" && { question: deleteQuestion(plan.runnable.length) }),
       onPress: press,

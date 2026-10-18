@@ -49,7 +49,8 @@ export const LIVE_SECTION_IDS: readonly string[] = LIVE_SECTIONS.map((section) =
 export const STREAM_SECTION_IDS: readonly string[] = STREAM_SECTIONS.map((section) => section.id);
 
 /** Tooltips at rest and disabled reasons (shown as the control's tooltip). */
-export const DELETE_SYNCED_TIP = "The next sync adds it again. Disable it to keep it off.";
+export const DELETE_TIP = "Delete this channel permanently";
+export const DELETE_SYNCED_TIP ="The next sync adds it again. Disable it to keep it off.";
 export const REBUILD_DISABLED = "Enable the channel to rebuild it.";
 export const STREAM_NO_REBUILD = "A stream channel has nothing to rebuild.";
 export const REVERT_HAND_MADE = "This channel was made by hand; there is nothing to revert.";

@@ -33,7 +33,7 @@ export function Workspace({
   labels?: readonly string[]
   className?: string
   wide?: boolean
-  /** The last group's list takes the remaining height instead of the page scrolling (a settings pane whose body is one SplitList). */ fill?: boolean
+  /** The last group's list takes the remaining height instead of the page scrolling. */ fill?: boolean
 }) {
   return (
     <div className={cn('min-h-0 flex-1 overflow-y-auto bg-surface', fill && 'flex flex-col', className)}>

@@ -1,5 +1,6 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { RecordGrid } from "@giga/ui/lists/RecordGrid";
+import { CELL_MONO, CELL_NAME, CELL_NUMBER, CELL_TEXT } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { SkeletonGrid } from "@giga/ui/lists/SkeletonGrid";
 import { StateWord } from "@/components/records/StateWord";
@@ -54,10 +55,10 @@ export function ProviderRows() {
                 </ArmedButton>
               }
             >
-              <span className="truncate text-right font-mono text-xs text-muted">{row.order}</span>
-              <span className="truncate text-text">{row.name}</span>
-              <span className="truncate font-mono text-xs text-muted">{row.source}</span>
-              <span className="truncate text-muted">{row.family}</span>
+              <span className={CELL_NUMBER}>{row.order}</span>
+              <span className={CELL_NAME}>{row.name}</span>
+              <span className={CELL_MONO}>{row.source}</span>
+              <span className={CELL_TEXT}>{row.family}</span>
               <StateWord state={row.state} />
             </RecordGridRow>
           );

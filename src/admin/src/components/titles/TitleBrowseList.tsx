@@ -33,16 +33,18 @@ export function TitleBrowseList() {
 
   return (
     <SelectAllScope all={all}>
-      <TitleBrowseToolbar
-        view={view}
-        onType={flows.type}
-        onSearch={() => read(flows.search)}
-        onKind={(choice) => read(() => flows.kind(choice))}
-        onSort={(sort) => read(() => flows.sort(sort))}
-      />
       <TableStrip
         label="Titles table"
         noun="titles"
+        query={
+          <TitleBrowseToolbar
+            view={view}
+            onType={flows.type}
+            onSearch={() => read(flows.search)}
+            onKind={(choice) => read(() => flows.kind(choice))}
+            onSort={(sort) => read(() => flows.sort(sort))}
+          />
+        }
         refresh={{ onPress: () => read(flows.refresh), reason: loading ? LOADING_REASON : undefined }}
         paging={{
           newer: { onPress: () => read(flows.newer), reason: paging.newer },

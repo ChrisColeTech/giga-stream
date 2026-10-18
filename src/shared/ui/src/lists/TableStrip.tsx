@@ -15,6 +15,8 @@ export interface StripVerb {
   readonly label: string;
   readonly icon?: LucideIcon;
   readonly onPress: () => void;
+  /** The tooltip at rest (what the verb does to the ticked rows); the reason replaces it while the verb is disabled. */
+  readonly tip?: string;
   readonly reason?: string;
   readonly question?: string;
 }
@@ -54,14 +56,14 @@ export const REFRESH_WORD = "Refresh";
 function Verb({ verb }: { readonly verb: StripVerb }) {
   if (verb.question !== undefined && verb.reason === undefined) {
     return (
-      <ArmedButton question={verb.question} onConfirm={verb.onPress}>
+      <ArmedButton question={verb.question} title={verb.tip} onConfirm={verb.onPress}>
         {verb.label}
       </ArmedButton>
     );
   }
   const Glyph = verb.question === undefined ? verb.icon : undefined;
   return (
-    <Button size="sm" variant="ghost" reason={verb.reason} onClick={verb.onPress}>
+    <Button size="sm" variant="ghost" title={verb.tip} reason={verb.reason} onClick={verb.onPress}>
       {Glyph !== undefined && <Glyph aria-hidden />}
       {verb.label}
     </Button>
@@ -76,39 +78,51 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
   );
 }
 
-/** THE SELECTION TOOLBAR of a table (`01` section 9): the list's own first row, inside its list group, holding only what
- *  acts on the list (LoRA Studio `components/library/LibraryToolbar.tsx`), drawn with LoRA Trainer's
- *  `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
+/** THE FIRST ROWS of a table (`01` section 9), inside its list group. A long list's search, sort and filters are the
+ *  first row, a `flex-wrap gap-2` line of their own exactly as LoRA Studio's `components/library/LibraryToolbar.tsx`;
+ *  below it the selection toolbar, drawn with LoRA Trainer's `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
  *  last; right, the `‹ ›` paging of a list that pages (`All` is the grid header's tick). The page's forward verb is the page
  *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
 export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging, selection }: TableStripProps) {
   const verbs = selection?.verbs ?? [];
   return (
-    <div role="toolbar" aria-label={label} className={STRIP}>
-      {query}
-      <Button size="sm" variant="ghost" title={`${REFRESH_WORD} ${noun}`} reason={refresh.reason} onClick={refresh.onPress}>
-        <RefreshCw aria-hidden />
-        {REFRESH_WORD}
-      </Button>
-      {listVerbs.map((verb) => (
-        <Verb key={verb.id} verb={verb} />
-      ))}
-      {verbs.length > 0 && <Sep />}
-      {verbs.map((verb) => (
-        <Verb key={verb.id} verb={verb} />
-      ))}
-      {selection?.matching !== undefined && (
-        <Button size="sm" variant="ghost" reason={selection.matching.reason} onClick={selection.matching.onPress}>
-          {selection.matching.label}
+    <>
+      {query !== undefined && (
+        <div role="search" aria-label={`${label} search`} className="flex flex-wrap items-center gap-2 px-3 pt-2 pb-1">
+          {query}
+        </div>
+      )}
+      <div role="toolbar" aria-label={label} className={STRIP}>
+        <Button size="sm" variant="ghost" title={`${REFRESH_WORD} ${noun}`} reason={refresh.reason} onClick={refresh.onPress}>
+          <RefreshCw aria-hidden />
+          {REFRESH_WORD}
         </Button>
-      )}
-      <span className="min-w-0 flex-1" aria-hidden />
-      {paging !== undefined && (
-        <>
-          <Step press={paging.newer} label="Newer" glyph={ChevronLeft} />
-          <Step press={paging.older} label="Older" glyph={ChevronRight} />
-        </>
-      )}
-    </div>
+        {listVerbs.map((verb) => (
+          <Verb key={verb.id} verb={verb} />
+        ))}
+        {verbs.length > 0 && <Sep />}
+        {verbs.map((verb) => (
+          <Verb key={verb.id} verb={verb} />
+        ))}
+        {selection?.matching !== undefined && (
+          <Button
+            size="sm"
+            variant="ghost"
+            title={selection.matching.label}
+            reason={selection.matching.reason}
+            onClick={selection.matching.onPress}
+          >
+            {selection.matching.label}
+          </Button>
+        )}
+        <span className="min-w-0 flex-1" aria-hidden />
+        {paging !== undefined && (
+          <>
+            <Step press={paging.newer} label="Newer" glyph={ChevronLeft} />
+            <Step press={paging.older} label="Older" glyph={ChevronRight} />
+          </>
+        )}
+      </div>
+    </>
   );
 }

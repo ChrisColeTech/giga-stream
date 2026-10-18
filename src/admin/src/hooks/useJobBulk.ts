@@ -1,6 +1,7 @@
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import { RUN_JOB } from "@/constants/job-copy";
 import { JOB_BULK_ORDER, JOB_BULK_WORDS, jobVerbReason, planJobBulk, type JobBulkVerb } from "@/lib/job-bulk";
 import { useAppStore } from "@/store/app-store";
@@ -53,6 +54,7 @@ export function useJobBulk(): JobBulk {
       id: verb,
       label: LABELS[verb],
       icon: BULK_ICONS[verb],
+      tip: BULK_TIPS[verb],
       reason: jobVerbReason(verb, plan, { items, ticked, playlists, busy: bulk.running, unreachable }),
       onPress: press,
       ...(verb === "delete" && { question: `Delete ${count} ${count === 1 ? "job" : "jobs"}?` }),

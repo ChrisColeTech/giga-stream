@@ -1,5 +1,6 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { Tooltip } from "@giga/ui/form/Tooltip";
+import { CELL_NAME, CELL_NUMBER, CELL_TEXT } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { StateWord } from "@/components/records/StateWord";
 import {
@@ -47,10 +48,10 @@ export function TitleRowItem({ title, ticked, onTick, onOpen, onDelete, busy, un
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.title}</span>
-      <span className="truncate text-muted">{row.kind}</span>
-      <span className="truncate text-right font-mono text-xs text-muted">{row.year}</span>
-      <span className="truncate text-right font-mono text-xs text-muted">{row.rating}</span>
+      <span className={CELL_NAME}>{row.title}</span>
+      <span className={CELL_TEXT}>{row.kind}</span>
+      <span className={CELL_NUMBER}>{row.year}</span>
+      <span className={CELL_NUMBER}>{row.rating}</span>
       {row.stateTip === undefined ? word : <Tooltip text={row.stateTip}>{word}</Tooltip>}
     </RecordGridRow>
   );

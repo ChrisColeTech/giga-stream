@@ -1,4 +1,5 @@
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
+import { CELL_MONO, CELL_NAME, CELL_NUMBER } from "@giga/ui/lists/record-grid-classes";
 import { RecordGridRow } from "@giga/ui/lists/RecordGridRow";
 import { StateWord } from "@/components/records/StateWord";
 import { DELETE_TITLE } from "@/constants/playlist-copy";
@@ -36,10 +37,10 @@ export function PlaylistRow({ row, ticked, deleteReason, onTick, onOpen, onDelet
         </ArmedButton>
       }
     >
-      <span className="truncate text-text">{row.name}</span>
-      <span className="truncate font-mono text-xs text-muted">{row.host}</span>
-      <span className="truncate text-right font-mono text-xs text-muted tabular-nums">{row.channels}</span>
-      <span className="truncate font-mono text-xs text-muted">{row.lastSynced}</span>
+      <span className={CELL_NAME}>{row.name}</span>
+      <span className={CELL_MONO}>{row.host}</span>
+      <span className={CELL_NUMBER}>{row.channels}</span>
+      <span className={CELL_MONO}>{row.lastSynced}</span>
       <StateWord state={row.state} />
     </RecordGridRow>
   );

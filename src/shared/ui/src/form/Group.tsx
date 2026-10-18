@@ -32,7 +32,7 @@ export function Group({
   children: ReactNode
   className?: string
   last?: boolean
-  /** Take the remaining height; the last child (a SplitList without `height`) stretches to it. */ fill?: boolean
+  /** Take the remaining height; the last child stretches to it. */ fill?: boolean
   /** The heading folds the group — ON for every group app-wide (owner, 2026-09-06: "fold this change into the next batch of fixes app-wide for the other pages"), off only for a `fill` group whose list owns the height. The tile and title toggle it; the chevron on the readout edge says which way until the fold affordance is redesigned (doc 03). */ collapsible?: boolean
 }) {
   const [open, setOpen] = useState(true)

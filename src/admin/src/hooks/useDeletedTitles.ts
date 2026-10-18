@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_ICONS } from "@/constants/bulk-icons";
+import { BULK_TIPS } from "@/constants/bulk-tips";
 import { planRestore, restoreReason, RESTORE_WORDS } from "@/lib/title-restore";
 import { createTitleRestoreCall } from "@/services/title-bulk";
 import { titles } from "@/services/titles";
@@ -45,6 +46,7 @@ export function useDeletedTitles(): DeletedTitles {
         id: "restore",
         label: "Restore",
         icon: BULK_ICONS.restore,
+        tip: BULK_TIPS.restore,
         reason: restoreReason(ticked.length, { busy, unreachable }),
         onPress: press,
       },

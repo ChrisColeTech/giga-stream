@@ -18,8 +18,8 @@ const read = (index: number, total: number): void =>
   state().channelsPageLoaded(queryKey(DEFAULT_CHANNEL_QUERY), index, page(index * 100, Math.min(100, total - index * 100)), total, 1);
 const firstRow = (): string => {
   const html = renderLive(createElement(ChannelsIndex));
-  const from = html.indexOf('aria-label="Channels table"');
-  return html.slice(from, html.indexOf("</div>", from));
+  const from = html.indexOf('role="search"');
+  return html.slice(from, html.indexOf("</div>", html.indexOf('aria-label="Channels table"')));
 };
 
 beforeEach(() => {
@@ -28,10 +28,10 @@ beforeEach(() => {
 });
 
 describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
-  it("opens with the search field, the Sort select, then a select for each filter, before Refresh, in one toolbar", () => {
+  it("opens with the search field, the Sort select, then a select for each filter, a row of its own above the toolbar with Refresh", () => {
     const html = firstRow();
     const at = (needle: string): number => html.indexOf(needle);
-    assert.ok(html.startsWith('aria-label="Channels table"'));
+    assert.ok(html.startsWith('role="search"') && at('role="search"') < at('aria-label="Channels table"'));
     const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Enabled"', 'title="Refresh channels"'];
     assert.ok(order.every((needle, i) => at(needle) > (i === 0 ? -1 : at(order[i - 1] ?? ""))), order.map(at).join());
     assert.equal(count(html, "<select"), 5);
