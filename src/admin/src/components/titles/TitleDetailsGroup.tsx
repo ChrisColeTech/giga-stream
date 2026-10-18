@@ -6,11 +6,9 @@ import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { StateWord } from "@/components/records/StateWord";
 import {
-  BACKDROP_TIP,
   ENABLED_TIP,
   GENRES_TIP,
   KIND_FIXED_TIP,
-  POSTER_TIP,
   RATING_TIP,
   REVERT_TIP,
   RUNTIME_TIP,
@@ -35,11 +33,11 @@ export interface TitleDetailsGroupProps {
   readonly revert: { readonly reason: string | undefined; readonly onPress: () => void };
 }
 
-type TextKey = "year" | "rating" | "genres" | "runtime" | "posterUrl" | "backdropUrl" | "streamUrl";
+type TextKey = "year" | "rating" | "genres" | "runtime" | "streamUrl";
 
 /** `Details` (`37` section 4.3): Title, Kind (read-only), Year, the Enabled switch, TMDB id (editable only on a title
- *  made by hand), Rating, Genres (a comma list), Runtime (minutes, a movie only), Poster, Backdrop and Stream
- *  addresses, and the State word, read-only. `Revert to TMDB` sits in the action slot. */
+ *  made by hand), Rating, Genres (a comma list), Runtime (minutes, a movie only), the Stream address and the State
+ *  word, read-only. `Revert to TMDB` sits in the action slot. */
 export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: TitleDetailsGroupProps) {
   const manual = isManualTitle(detail);
   const text = (key: TextKey, label: string, tip: string, inputMode?: "numeric" | "decimal") => (
@@ -88,8 +86,6 @@ export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: T
       {text("rating", "Rating", RATING_TIP, "decimal")}
       {text("genres", "Genres", GENRES_TIP)}
       {detail.kind === "movie" && text("runtime", "Runtime", RUNTIME_TIP, "numeric")}
-      {text("posterUrl", "Poster address", POSTER_TIP)}
-      {text("backdropUrl", "Backdrop address", BACKDROP_TIP)}
       {text("streamUrl", "Stream address", STREAM_TIP)}
       <Row label="State" tip={STATE_TIP}>
         <span className="flex h-9 items-center">

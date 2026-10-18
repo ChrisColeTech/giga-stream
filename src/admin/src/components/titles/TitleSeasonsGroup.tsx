@@ -4,7 +4,7 @@ import { Row } from "@giga/ui/form/Row";
 import { SeasonList } from "@/components/records/SeasonList";
 import { SkeletonFields } from "@/components/records/SkeletonFields";
 import type { SeasonDraft } from "@/lib/season-edit";
-import { seasonCounts } from "@/lib/title-sources";
+import { seasonCounts } from "@/lib/title-seasons";
 import type { AdminTitleDetail } from "@/services/schemas/title-schema";
 
 export interface TitleSeasonsGroupProps {
@@ -22,7 +22,7 @@ const SKELETON_ROWS = 2;
 export function TitleSeasonsGroup({ detail, manual, seasons, error, onChange }: TitleSeasonsGroupProps) {
   const counts = seasonCounts(detail);
   return (
-    <Group id="tw-seasons" icon={Layers} title="Seasons">
+    <Group id="tw-seasons" icon={Layers} title="Seasons" last>
       {manual ? (
         <>
           <SeasonList seasons={seasons} onChange={onChange} />

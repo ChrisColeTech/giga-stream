@@ -134,17 +134,18 @@ describe("a title's workspace", () => {
     assert.ok(html.includes('aria-label="Save. Loading."') && !html.includes('aria-label="Title"'));
   });
 
-  it("a movie: Details, People and plot, Sources, no Seasons; its fields in order; sources read-only", () => {
+  it("a movie: Details, Plot, Images, no Seasons and no Sources; every editable field in order", () => {
     const sources = [{ name: "VidSrc", url: "https://v.test/603" }];
     const html = open(row("movie-1"), { plot: "P", runtimeMs: 7_200_000, sources });
     assert.ok(html.includes('aria-label="Title sections"') && !html.includes(">Seasons<"));
-    assert.ok(at(html, ">Details<") < at(html, ">People and plot<"));
-    assert.ok(at(html, ">People and plot<") < at(html, ">Sources<"));
-    const order = ["Title", "Kind", "Year", "Enabled", "TMDB id", "Rating", "Genres", "Runtime", "Poster address"];
+    assert.ok(!html.includes(">Sources<") && !html.includes("tw-sources") && !html.includes("v.test/603"));
+    assert.ok(at(html, ">Details<") < at(html, ">Plot<") && at(html, ">Plot<") < at(html, ">Images<"));
+    const order = ["Title", "Kind", "Year", "Enabled", "TMDB id", "Rating", "Genres", "Runtime", "Stream address"];
+    order.push("Plot", "Cast", "Poster address", "Backdrop address");
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
-    assert.ok(html.includes('value="120"') && html.includes(">https://v.test/603<") && html.includes("Jobs →"));
+    assert.ok(html.includes('value="120"') && html.includes("Jobs →"));
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });
 
@@ -168,9 +169,9 @@ describe("a title's workspace", () => {
     assert.match(synced, /<input[^>]*readOnly=""[^>]*aria-label="TMDB id"/);
   });
 
-  it("a title with no sources shows shimmer lines there, never a sentence", () => {
-    const html = open(row("custom-3", { state: "manual" }), {});
-    const sources = html.slice(at(html, 'id="tw-sources"'));
-    assert.ok(sources.includes("animate-skel-shimmer") && !sources.includes("No sources"));
+  it("a series ends on Seasons; a movie has no Sources group while loading either", () => {
+    const html = open(row("tv-2", { kind: "tv" }), { seasons: [] });
+    assert.ok(at(html, ">Images<") < at(html, ">Seasons<") && !html.includes(">Sources<"));
+    assert.ok(!open(row("movie-3")).includes(">Sources<"));
   });
 });

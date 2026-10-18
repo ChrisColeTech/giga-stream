@@ -24,14 +24,14 @@ export const TITLE_WORKSPACE_LABELS: readonly string[] = [
 
 export const TITLE_SECTIONS_MOVIE = [
   { id: "tw-details", label: "Details" },
-  { id: "tw-people", label: "People and plot" },
-  { id: "tw-sources", label: "Sources" },
+  { id: "tw-plot", label: "Plot" },
+  { id: "tw-images", label: "Images" },
 ] as const;
 export const TITLE_SECTIONS_SERIES = [
   { id: "tw-details", label: "Details" },
-  { id: "tw-people", label: "People and plot" },
+  { id: "tw-plot", label: "Plot" },
+  { id: "tw-images", label: "Images" },
   { id: "tw-seasons", label: "Seasons" },
-  { id: "tw-sources", label: "Sources" },
 ] as const;
 export const TITLE_KEYS_MOVIE: readonly string[] = TITLE_SECTIONS_MOVIE.map((section) => section.id);
 export const TITLE_KEYS_SERIES: readonly string[] = TITLE_SECTIONS_SERIES.map((section) => section.id);
