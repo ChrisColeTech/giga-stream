@@ -23,8 +23,8 @@ import type { RecordInput } from "./service-types";
  *  limit (B3). A synced title that is deleted stays deleted: `listDeleted` reads them (`GET /api/titles/deleted`) and
  *  `restore` removes one's record (`DELETE /api/titles/deleted/:id`); it returns on the next browse or sync. */
 export interface TitlesService {
-  readonly list: (query?: BrowseQuery) => Promise<TitleList>;
-  readonly search: (query: SearchQuery) => Promise<TitleList>;
+  readonly list: (query?: BrowseQuery, signal?: AbortSignal) => Promise<TitleList>;
+  readonly search: (query: SearchQuery, signal?: AbortSignal) => Promise<TitleList>;
   readonly detail: (id: string) => Promise<AdminTitleDetail>;
   readonly create: (input: RecordInput) => Promise<AdminTitleDetail>;
   readonly update: (id: string, patch: RecordInput) => Promise<AdminTitleDetail>;
@@ -33,15 +33,15 @@ export interface TitlesService {
   readonly listDeleted: () => Promise<readonly AdminDeletedTitle[]>;
   readonly restore: (id: string) => Promise<{ readonly id: string }>;
   /** `GET /api/titles/stored` (`docs/41` section 3.2): rows `offset` to `offset + limit` of the stored titles that match
-   *  the query, never TMDB. Read row by row. */
-  readonly listStored: (query: StoredQuery, offset: number, limit?: number) => Promise<StoredPage>;
+   *  the query, never TMDB. Read row by row. A `signal` aborts the request (a newer query replaced it). */
+  readonly listStored: (query: StoredQuery, offset: number, limit?: number, signal?: AbortSignal) => Promise<StoredPage>;
 }
 
 const path = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
 const BROWSE_START: BrowseQuery = { kind: "all", sort: START_VIEW.sort, page: 1 };
 
-async function page(url: string): Promise<TitleList> {
-  const answer = await request(url, TitleListLenientSchema, { area: "Title" });
+async function page(url: string, signal?: AbortSignal): Promise<TitleList> {
+  const answer = await request(url, TitleListLenientSchema, { area: "Title", ...(signal !== undefined && { signal }) });
   const items: AdminTitleRow[] = [];
   for (const row of answer.items) {
     const parsed = TitleRowSchema.safeParse(row);
@@ -56,9 +56,9 @@ async function page(url: string): Promise<TitleList> {
   };
 }
 
-async function stored(query: StoredQuery, offset: number, limit?: number): Promise<StoredPage> {
+async function stored(query: StoredQuery, offset: number, limit?: number, signal?: AbortSignal): Promise<StoredPage> {
   const url = `/api/titles/stored?${storedParams(query, offset, limit)}`;
-  const answer = await request(url, StoredPageLenientSchema, { area: "Title" });
+  const answer = await request(url, StoredPageLenientSchema, { area: "Title", ...(signal !== undefined && { signal }) });
   const items: AdminTitleRow[] = [];
   for (const row of answer.items) {
     const parsed = TitleRowSchema.safeParse(row);
@@ -69,8 +69,8 @@ async function stored(query: StoredQuery, offset: number, limit?: number): Promi
 
 export const titles: TitlesService = {
   listStored: stored,
-  list: (query = BROWSE_START) => page(`/api/titles?${queryString(query)}`),
-  search: (query) => page(`/api/titles/search?${queryString(query)}`),
+  list: (query = BROWSE_START, signal) => page(`/api/titles?${queryString(query)}`, signal),
+  search: (query, signal) => page(`/api/titles/search?${queryString(query)}`, signal),
   detail: (id) => request(`${path(id)}?includeDisabled=true`, TitleDetailSchema, { area: "Title" }),
   create: (input) => request("/api/titles", TitleDetailSchema, { method: "POST", body: input, area: "Title" }),
   update: (id, patch) => request(path(id), TitleDetailSchema, { method: "PATCH", body: patch, area: "Title" }),

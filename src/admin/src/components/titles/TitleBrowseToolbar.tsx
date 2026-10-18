@@ -1,5 +1,7 @@
+import { QueryBar } from "@giga/ui/lists/QueryBar";
 import { QuerySearch } from "@giga/ui/lists/QuerySearch";
 import { QuerySelect } from "@giga/ui/lists/QuerySelect";
+import { SortControl } from "@giga/ui/lists/SortControl";
 import { BROWSE_KIND_OPTIONS, SEARCH_LABEL, SORT_OPTIONS } from "@/constants/title-copy";
 import {
   isKindChoice,
@@ -18,19 +20,17 @@ export interface TitleBrowseToolbarProps {
   readonly onSort: (sort: TitleSort) => void;
 }
 
-/** THE BROWSE LIST'S FIRST ROW, the same grammar as the Stored list's (`01` section 9; `docs/41` section 6), handed to the
- *  table strip's query row: the shared `QuerySearch` taking the row's width (it runs on Enter, never as you type), then
- *  the Sort select and the Kind select, the filters the browse route takes (TMDB's discover list has no genre or year
- *  filter). A search, a kind or a sort change returns to page 1. */
+/** THE BROWSE LIST'S QUERY ROW, the same grammar as the Stored list's (`01` section 9; `docs/41` section 6): the shared
+ *  `QuerySearch` taking the row's width (TMDB is searched as you type), then the sort (TMDB's own orders, so no direction
+ *  toggle) and the self-labelling Kind select, the filters the browse route takes (TMDB's discover list has no genre or
+ *  year filter). A search, a kind or a sort change returns to page 1. */
 export function TitleBrowseToolbar({ view, onType, onSearch, onKind, onSort }: TitleBrowseToolbarProps) {
   return (
-    <>
-      <QuerySearch label={SEARCH_LABEL} value={view.typed} onChange={onType} onEnter={onSearch} />
-      <QuerySelect
+    <QueryBar search={<QuerySearch label={SEARCH_LABEL} value={view.typed} onChange={onType} onSearch={onSearch} />}>
+      <SortControl
         label="Sort"
         value={view.sort}
         options={SORT_OPTIONS}
-        width="w-[190px]"
         onChange={(sort) => {
           if (isTitleSort(sort)) onSort(sort);
         }}
@@ -43,6 +43,6 @@ export function TitleBrowseToolbar({ view, onType, onSearch, onKind, onSort }: T
           if (isKindChoice(kind)) onKind(kind);
         }}
       />
-    </>
+    </QueryBar>
   );
 }

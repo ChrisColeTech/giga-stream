@@ -14,6 +14,7 @@ import {
   type TitleView,
 } from "@/lib/title-query";
 import type { AppState } from "@/store/app-store";
+import { createLatestRequest } from "./latest-request";
 import { DROPPED, done, isUnreachable, refusalOf, type FlowResult, type RefusalPorts } from "./provider-flow-support";
 import type { TitlesService } from "./titles";
 
@@ -62,7 +63,10 @@ export const titlePorts = (store: () => TitleStore): RefusalPorts<TitleField> =>
 export interface TitleListFlow {
   /** Reads the list for the current view (first show, Refresh, after a write). */
   load: () => Promise<TitleResult>;
+  /** A keystroke: the field's text is kept; nothing is read (the field's pause timer, in the shared library, calls `search`). */
   type: (text: string) => void;
+  /** The pause after typing, Enter or the clear: the typed text becomes the search, on page 1. Reads nothing when the
+   *  search it makes is the one already shown. */
   search: () => Promise<TitleResult>;
   kind: (choice: KindChoice) => Promise<TitleResult>;
   sort: (sort: TitleSort) => Promise<TitleResult>;
@@ -80,15 +84,19 @@ export function createTitleListFlow(deps: {
 }): TitleListFlow {
   const { service, store } = deps;
   const ports = titlePorts(store);
+  const latest = createLatestRequest();
 
   async function read(view: TitleView): Promise<TitleResult> {
     const serial = store().serial;
+    const signal = latest.next();
     store().titlesSetView(view);
     store().titlesStartLoad();
     const answers = await Promise.allSettled(
-      titleReads(view).map((one) => (one.route === "browse" ? service.list(one.query) : service.search(one.query))),
+      titleReads(view).map((one) =>
+        one.route === "browse" ? service.list(one.query, signal) : service.search(one.query, signal),
+      ),
     );
-    if (!store().signedIn || store().serial !== serial || store().titles.view !== view) return DROPPED;
+    if (signal.aborted || !store().signedIn || store().serial !== serial || store().titles.view !== view) return DROPPED;
     const pages: TitlePage[] = [];
     const failures: unknown[] = [];
     let unreadable = 0;
@@ -112,7 +120,11 @@ export function createTitleListFlow(deps: {
   return {
     load: () => read(view()),
     type: (text) => store().titlesSetView(typeSearch(view(), text)),
-    search: () => read(runSearch(view())),
+    search: () => {
+      const next = runSearch(view());
+      const same = next.search === view().search && next.page === view().page;
+      return same ? Promise.resolve(done(undefined)) : read(next);
+    },
     kind: (choice) => {
       const next = withKind(view(), choice);
       return next === view() ? Promise.resolve(done(undefined)) : read(next);

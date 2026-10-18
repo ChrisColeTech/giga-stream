@@ -2,8 +2,8 @@ import { PAGE_SIZE } from "@giga/ui/lib/window-constants";
 
 /* The Stored titles list's query (`docs/41` sections 3.2 and 6), pure. It is exactly the contract of
  * `GET /api/titles/stored`: `q`, `kind`, `origin`, `edited`, `enabled`, `sort`, `dir`, then `limit` and `offset`. The
- * search runs on Enter (`typed` is the field's text, `q` the search that was run); a filter or a sort is a new query,
- * which resets the list to the top. The key is the query without its page, so an answer for an older query is dropped. */
+ * search runs as you type, 200 ms after the last key or at once on Enter (`typed` is the field's text, `q` the search
+ * that was run); a filter or a sort is a new query, which resets the list to the top. The key is the query without its page, so an answer for an older query is dropped. */
 
 export type StoredSort = "title" | "year" | "rating" | "fetched";
 export type StoredDir = "asc" | "desc";
@@ -53,6 +53,23 @@ export function withSortValue(query: StoredQuery, value: string): StoredQuery {
   const [sort, dir] = known.split(":");
   return { ...query, sort: sort as StoredSort, dir: dir as StoredDir };
 }
+
+/** The sort select's column choices; each starts in the direction that reads naturally (A to Z, newest, highest). */
+export const STORED_SORT_FIELDS: Readonly<Record<StoredSort, StoredDir>> = {
+  title: "asc",
+  year: "desc",
+  rating: "desc",
+  fetched: "desc",
+};
+
+export const isStoredSort = (value: string): value is StoredSort => value in STORED_SORT_FIELDS;
+
+/** The sort select picked a column: its own starting direction. The same column changes nothing. */
+export const withSortField = (query: StoredQuery, sort: StoredSort): StoredQuery =>
+  sort === query.sort ? query : { ...query, sort, dir: STORED_SORT_FIELDS[sort] };
+
+/** The direction toggle pressed. */
+export const flipDir = (query: StoredQuery): StoredQuery => ({ ...query, dir: query.dir === "asc" ? "desc" : "asc" });
 
 /** One page's URL search part. `limit` is 1 to 200 on the backend; `offset` is the first row's index. */
 export function storedParams(query: StoredQuery, offset: number, limit: number = PAGE_SIZE): string {

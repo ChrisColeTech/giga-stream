@@ -14,22 +14,20 @@ export const VIEW_TIP = "Stored: every title the backend holds. Browse TMDB: wha
 export const STORED_SEARCH_LABEL = "Search stored titles";
 export const STORED_SORT_LABEL = "Sort";
 
+/** The sort select's columns; the direction is the toggle beside it. */
 export const STORED_SORT_OPTIONS = [
-  { value: "title:asc", label: "Title, A to Z" },
-  { value: "title:desc", label: "Title, Z to A" },
-  { value: "year:desc", label: "Year, newest" },
-  { value: "year:asc", label: "Year, oldest" },
-  { value: "rating:desc", label: "Rating, highest" },
-  { value: "rating:asc", label: "Rating, lowest" },
-  { value: "fetched:desc", label: "Fetched, newest" },
-  { value: "fetched:asc", label: "Fetched, oldest" },
+  { value: "title", label: "Title" },
+  { value: "year", label: "Year" },
+  { value: "rating", label: "Rating" },
+  { value: "fetched", label: "Fetched" },
 ] as const;
 
-/** The filter Selects: each leads with its "no filter" option, which names the field. */
+/** The filter Selects, self-labelling (`QuerySelect`): the face shows `label` at rest, the chosen value otherwise; the
+ *  FIRST option is the default, worded for the open list only. */
 export const KIND_SELECT = {
   label: "Kind",
   options: [
-    { value: "all", label: "All kinds" },
+    { value: "all", label: "Any kind" },
     { value: "movie", label: "Movies" },
     { value: "tv", label: "Series" },
   ],
@@ -37,7 +35,7 @@ export const KIND_SELECT = {
 export const ORIGIN_SELECT = {
   label: "Origin",
   options: [
-    { value: "all", label: "All origins" },
+    { value: "all", label: "Any origin" },
     { value: "tmdb", label: "Synced" },
     { value: "manual", label: "Hand-made" },
   ],
@@ -45,7 +43,7 @@ export const ORIGIN_SELECT = {
 export const EDITED_SELECT = {
   label: "Edited",
   options: [
-    { value: "all", label: "Edited or not" },
+    { value: "all", label: "Any edit state" },
     { value: "true", label: "Edited" },
     { value: "false", label: "Not edited" },
   ],
@@ -53,7 +51,7 @@ export const EDITED_SELECT = {
 export const ENABLED_SELECT = {
   label: "Enabled",
   options: [
-    { value: "all", label: "Enabled or not" },
+    { value: "all", label: "Any state" },
     { value: "true", label: "Enabled" },
     { value: "false", label: "Disabled" },
   ],

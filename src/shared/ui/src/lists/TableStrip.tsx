@@ -35,8 +35,8 @@ export interface TableStripProps {
   /** Verbs of the list itself that need no ticked row (the admin's `Sync now`): words right after `Refresh`, each
    *  disabled with its reason, before the hairline and the selection verbs. */
   readonly listVerbs?: readonly StripVerb[];
-  /** A long list's search, sort and filters (LoRA Studio `LibraryToolbar`): the controls that open the SAME first row,
-   *  before `Refresh`, wrapping with it when the row is narrow. Absent for a short list. */
+  /** A long list's search, sort and filters (LoRA Studio `LibraryToolbar`): a `QueryBar` that opens the list, above the
+   *  verb row and separated from it by a hairline, both on the group's left edge. Absent for a short list. */
   readonly query?: ReactNode;
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
@@ -79,8 +79,8 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
 }
 
 /** THE FIRST ROWS of a table (`01` section 9), inside its list group. A long list's search, sort and filters are the
- *  first row, a `flex-wrap gap-2` line of their own exactly as LoRA Studio's `components/library/LibraryToolbar.tsx`;
- *  below it the selection toolbar, drawn with LoRA Trainer's `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
+ *  first row (`QueryBar`: compact controls on one line, LoRA Studio's `components/library/LibraryToolbar.tsx`), a hairline
+ *  under it; below, the selection toolbar, drawn with LoRA Trainer's `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
  *  last; right, the `‹ ›` paging of a list that pages (`All` is the grid header's tick). The page's forward verb is the page
  *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
 export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging, selection }: TableStripProps) {
@@ -88,7 +88,7 @@ export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging
   return (
     <>
       {query !== undefined && (
-        <div role="search" aria-label={`${label} search`} className="flex flex-wrap items-center gap-2 px-3 pt-2 pb-1">
+        <div role="search" aria-label={`${label} search`} className="flex flex-wrap items-center gap-2 border-b border-hair px-3 py-1.5">
           {query}
         </div>
       )}
