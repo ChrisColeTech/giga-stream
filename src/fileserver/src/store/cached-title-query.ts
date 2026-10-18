@@ -22,7 +22,7 @@ const SEARCH_ORDER = `${BY_POPULARITY}, ${TIE}`;
 
 const Count = z.object({ total: z.number() });
 const IdRow = z.object({ id: z.string() });
-const GenreName =z.object({ genre: z.string() });
+const GenreName = z.object({ genre: z.string() });
 
 /** Make `%`, `_` and the escape itself literal inside a LIKE pattern. */
 const likeOf = (text: string): string => `%${text.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
