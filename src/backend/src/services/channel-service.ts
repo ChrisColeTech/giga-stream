@@ -10,6 +10,7 @@ import type { AdminChannelQuery } from "../types/channel-query.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { adminChannels } from "./channel-admin-list.js";
 import { createChannelBulk } from "./channel-bulk.js";
+import { createChannelVerdict } from "./channel-verdict.js";
 import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
 import { invalid, newStreamRecord, patchedStreamRecord, withEdits } from "./stream-channel-rules.js";
@@ -61,6 +62,7 @@ export function createChannelService(deps: {
 
   return {
     ...createChannelBulk({ store, audit }),
+    ...createChannelVerdict({ store, audit, live, now }),
 
     /** The public read: a channel that is not published (itself or its playlist disabled) is not in it (docs/43 3.1). */
     list: (base: string): ChannelList => ({

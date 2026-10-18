@@ -1,6 +1,7 @@
 import { acceptPage, EMPTY_PAGES, loadedRows, patchRow, removeRow } from "@/lib/channel-pages";
 import { queryKey, type ChannelQuery } from "@/lib/channel-query";
 import { channelById } from "@/lib/channel-list";
+import { positionOf } from "@/lib/preview-walk";
 import type { AdminChannel } from "@/types/admin-channel";
 import { NO_CHANNELS, type ChannelsState } from "./channels-state";
 import type { SliceGet, SliceSet } from "./slices/slice-host";
@@ -42,6 +43,9 @@ export interface ChannelsSlice {
   channelsMarkUnreachable: (unreachable: boolean) => void;
   /** `Preview →`: the window's request value, its serial raised. The caller opens the overlay. */
   channelsOpenPreview: (channelId: string) => void;
+  /** The walk's Previous / Next (`36` section 8.1): the request value moves to this row at this place, its serial raised;
+   *  `opened` stays, so the window stays mounted where it is. */
+  channelsStepPreview: (row: AdminChannel, at: number) => void;
   channelsClosePreview: () => void;
   /** Back to the start: the page leaving with the session (sign-out, a session ending). */
   channelsReset: () => void;
@@ -93,6 +97,7 @@ export function createChannelsSlice(set: SliceSet<ChannelsSlice>, get: SliceGet<
         live,
         held: s.held[channel.id] === undefined ? s.held : { ...s.held, [channel.id]: channel },
         opened: s.opened?.id === channel.id ? channel : s.opened,
+        preview: s.preview?.channelId === channel.id ? { ...s.preview, channel } : s.preview,
         ...placed,
       });
     },
@@ -136,7 +141,12 @@ export function createChannelsSlice(set: SliceSet<ChannelsSlice>, get: SliceGet<
     channelsOpenPreview: (channelId) => {
       const s = get().channels;
       const serial = (s.preview?.serial ?? 0) + 1;
-      patch({ preview: { channelId, serial, channel: channelById(s, channelId) ?? null } });
+      const at = positionOf(s.pages, channelId);
+      patch({ preview: { channelId, serial, opened: serial, at, channel: channelById(s, channelId) ?? null } });
+    },
+    channelsStepPreview: (row, at) => {
+      const preview = get().channels.preview;
+      if (preview !== null) patch({ preview: { ...preview, channelId: row.id, serial: preview.serial + 1, at, channel: row } });
     },
     channelsClosePreview: () => patch({ preview: null }),
     channelsReset: () => set({ channels: NO_CHANNELS }),

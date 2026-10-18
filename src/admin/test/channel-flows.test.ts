@@ -32,6 +32,7 @@ function fake(overrides: Partial<ChannelsService> = {}): { service: ChannelsServ
     rebuild: unexpected("rebuild"),
     revert: unexpected("revert"),
     setEnabled: unexpected("setEnabled"),
+    setStatus: unexpected("setStatus"),
     ...overrides,
   };
   return { service, calls };
@@ -145,6 +146,57 @@ describe("the channel flows", () => {
     await flows.revert("s");
     const reverted = state().channels.items.find((item) => item.id === "s");
     assert.deepEqual([reverted?.kind === "stream" && reverted.editedFields, notice()], [[], "Reverted Stream s."]);
+  });
+
+  it("enable and disable one row with a PATCH of enabled only, and the row and the Preview's copy follow", async () => {
+    hold(stream("s"));
+    state().channelsOpenPreview("s");
+    const sent: unknown[] = [];
+    const flows = flowsOf(
+      fake({
+        update: async (id, patch) => {
+          sent.push(patch);
+          return stream(id, { name: "Stream s", enabled: false, published: false });
+        },
+      }).service,
+    );
+    const result = await flows.setEnabled("s", false);
+    assert.deepEqual([result.ok, sent, notice()], [true, [{ enabled: false }], "Saved Stream s."]);
+    assert.equal(state().channels.items[0]?.enabled, false);
+    assert.equal(state().channels.preview?.channel?.enabled, false);
+    assert.equal((await flows.setEnabled("gone", true)).ok, false);
+  });
+
+  it("mark a stream channel live or dead: the answered row, with the verdict and its time, replaces the held one", async () => {
+    hold(stream("s"));
+    state().channelsOpenPreview("s");
+    const sent: string[] = [];
+    const flows = flowsOf(
+      fake({
+        setStatus: async (id, status) => {
+          sent.push(`${id}:${status}`);
+          return stream(id, { name: "Stream s", status, checkedAt: 77 });
+        },
+      }).service,
+    );
+    assert.equal((await flows.mark("s", "dead")).ok, true);
+    assert.deepEqual([sent, notice()], [["s:dead"], "Marked Stream s dead."]);
+    const row = state().channels.items[0];
+    assert.deepEqual([row?.kind === "stream" && row.status, row?.kind === "stream" && row.checkedAt], ["dead", 77]);
+    const window = state().channels.preview?.channel;
+    assert.equal(window?.kind === "stream" && window.status, "dead");
+  });
+
+  it("say a refused or unreachable mark once and keep the row as it was", async () => {
+    hold(stream("s"));
+    const refused = flowsOf(fake({ setStatus: async () => Promise.reject(refuse("channel.not_stream")) }).service);
+    const result = await refused.mark("s", "live");
+    assert.deepEqual([result.ok, notice()], [false, "Server sentence."]);
+    const row = state().channels.items[0];
+    assert.equal(row?.kind === "stream" && row.status, undefined, "the row is as it was");
+    const down = flowsOf(fake({ setStatus: async () => Promise.reject(refuse("backend.unreachable", undefined, 0)) }).service);
+    await down.mark("s", "live");
+    assert.equal(state().channels.unreachable, true);
   });
 
   it("drop an answer that arrives after the session changed", async () => {

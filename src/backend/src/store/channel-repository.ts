@@ -41,7 +41,8 @@ export function createChannelRepository(db: DatabaseSync) {
       logo_file = CASE WHEN logo_url IS ? THEN logo_file ELSE NULL END,
       logo_checked_at = CASE WHEN logo_url IS ? THEN logo_checked_at ELSE NULL END
     WHERE id = ?`);
-  const clearVideos = db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
+  const setVerdict = db.prepare("UPDATE channels SET status = ?, checked_at = ? WHERE id = ? AND kind = 'stream'");
+  const clearVideos =db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
   const addVideo = db.prepare("INSERT INTO channel_videos (channel_id, position, path) VALUES (?, ?, ?)");
   const remove = db.prepare("DELETE FROM channels WHERE id = ?");
   const stats = createChannelStats(db);
@@ -103,6 +104,9 @@ export function createChannelRepository(db: DatabaseSync) {
       );
       writeVideos(c);
     },
+    /** A hand-set verdict on one stream row's own address: `status` and `checked_at` only, no revision (admin-only). */
+    setVerdict: (id: string, status: "live" | "dead", at: number): boolean =>
+      Number(setVerdict.run(status, at, id).changes) > 0,
     remove(id: string): boolean {
       return Number(remove.run(id).changes) > 0;
     },

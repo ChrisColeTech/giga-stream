@@ -6,6 +6,7 @@ import { CHANNEL_BODY_LIMIT_BYTES } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
 import { ChannelBulkSchema } from "../types/channel-bulk.js";
 import { ChannelInputSchema, ChannelPatchSchema } from "../types/channel-input.js";
+import { ChannelStatusSchema } from "../types/channel-status.js";
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
@@ -52,6 +53,13 @@ export function registerChannels(app: FastifyInstance, services: Services): void
     const principal = signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     return ok(reply, await services.channels.remove(channelId, actorOf(request, principal)));
+  });
+
+  app.put("/api/channels/:channelId/status", async (request, reply) => {
+    const principal = signedIn(services, request);
+    const { channelId } = parseInput(ChannelParams, request.params);
+    const { status } = parseInput(ChannelStatusSchema, request.body, ERRORS.channelInvalid);
+    return ok(reply, services.channels.setStatus(channelId, status, actorOf(request, principal), baseOf(request)));
   });
 
   app.post("/api/channels/:channelId/revert", async (request, reply) => {

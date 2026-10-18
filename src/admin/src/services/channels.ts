@@ -10,6 +10,7 @@ import {
   type ChannelList,
   type ChannelPage,
   type ChannelSwitched,
+  type ChannelVerdict,
 } from "./schemas/channel-schema";
 import type { RecordService } from "./service-types";
 
@@ -26,6 +27,8 @@ export interface ChannelsService extends RecordService<AdminChannel, string, Cha
   rebuild: (id: string) => Promise<AdminChannel>;
   /** `POST /channels/:id/revert`: a synced stream channel, its edits cleared. */
   revert: (id: string) => Promise<AdminChannel>;
+  /** `PUT /api/channels/:id/status` (`36` section 8.1): a hand-set live or dead verdict on a stream channel; answers the row. */
+  setStatus: (id: string, status: ChannelVerdict) => Promise<AdminChannel>;
   /** `PATCH /api/channels` `{ enabled, ids }`: ONE call for up to 5,000 stream ids (no chunking); live-kind and unknown
    *  ids are skipped by the backend and counted. */
   setEnabled: (ids: readonly string[], enabled: boolean) => Promise<ChannelSwitched>;
@@ -72,5 +75,6 @@ export const channels: ChannelsService = {
   remove: (id) => request(path(id), DeletedChannelSchema, { method: "DELETE" }),
   rebuild: (id) => request(path(id, "/rebuild"), ChannelSchema, { method: "POST" }),
   revert: (id) => request(path(id, "/revert"), ChannelSchema, { method: "POST" }),
+  setStatus: (id, status) => request(path(id, "/status"), ChannelSchema, { method: "PUT", body: { status } }),
   setEnabled: (ids, enabled) => request("/api/channels", ChannelSwitchedSchema, { method: "PATCH", body: { enabled, ids } }),
 };

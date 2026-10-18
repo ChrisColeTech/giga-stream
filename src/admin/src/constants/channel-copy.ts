@@ -85,7 +85,8 @@ export const channelPreparing = (name: string): string => `${name} is preparing.
 export const channelCreated = (name: string): string => `Created ${name}.`;
 export const channelSaved = (name: string): string => `Saved ${name}.`;
 export const channelDeleted = (name: string): string => `Deleted ${name}.`;
-export const channelReverted = (name: string): string => `Reverted ${name}.`;
+export const channelMarked = (name: string, verdict: "live" | "dead"): string => `Marked ${name} ${verdict}.`;
+export const channelReverted =(name: string): string => `Reverted ${name}.`;
 export const unreadableChannels = (count: number): string =>
   `${count} ${count === 1 ? "channel" : "channels"} could not be read.`;
 export const selectionCapped = (ticked: number, total: number): string =>
