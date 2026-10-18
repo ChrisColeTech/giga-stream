@@ -62,19 +62,18 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
       assert.equal(store.accounts.findByUsername("OWNER@example.test")?.account.id, "acct_a", "found without case");
       assert.equal(store.accounts.find("acct_a")?.passwordHash, "scrypt$hash-a");
       assert.equal(store.accounts.find("acct_a")?.account.securityQuestionSet, true);
-      assert.deepEqual(store.resetAttempts.find("dev@example.test"), { failed: 2, lockedUntil: null });
     } finally {
       store.close();
     }
 
     const db = new DatabaseSync(file, { readOnly: true });
     try {
-      // 019 is followed by 020 (deleted titles), 021 and 022 (the playlist model), so the schema ends at 22.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 22 });
+      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) and 023 (no lockout), so the schema ends at 23.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 23 });
       const columns = (table: string): string[] => db.prepare(`PRAGMA table_info(${table})`).all().map((r) => String(r.name));
       assert.equal(columns("admin_accounts").some((c) => c.startsWith("email")), false);
       assert.equal(columns("audit_log").includes("actor_email"), false);
-      assert.deepEqual(columns("reset_attempts"), ["username_key", "failed", "locked_until"]);
+      assert.deepEqual(columns("reset_attempts"), [], "023 drops the reset attempts table");
       const audit = db.prepare("SELECT actor_username, detail FROM audit_log ORDER BY id").all().map((r) => ({ ...r }));
       assert.deepEqual(audit, [
         { actor_username: "Owner@Example.test", detail: '{"username":"dev@example.test"}' },

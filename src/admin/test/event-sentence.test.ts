@@ -75,8 +75,6 @@ describe("the record actions", () => {
     assert.deepEqual([set.area, set.tone, set.sentence], ["Session", "info", `${ADA} set a security question`]);
     const failed = eventFromAudit(entry("auth.reset_failed", { detail: { username: "eve", answer: "Rex" } }));
     assert.deepEqual([failed.tone, failed.sentence], ["warn", "Password reset failed for eve"]);
-    const locked = eventFromAudit(entry("auth.reset_locked", { detail: { username: "eve" } }));
-    assert.equal(locked.sentence, "Password reset locked for eve after five wrong answers");
     const done = eventFromAudit(entry("auth.reset_completed", { actorUsername: ADA, detail: { username: ADA } }));
     assert.deepEqual([done.tone, done.sentence], ["info", `${ADA} reset a password`]);
   });

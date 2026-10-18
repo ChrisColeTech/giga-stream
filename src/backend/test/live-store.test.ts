@@ -76,8 +76,8 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
     store.close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
     try {
-      // The schema is at the newest migration (022, the playlist model), not at 008.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 22 });
+      // The schema is at the newest migration (023, no lockout), not at 008.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 23 });
     } finally {
       db.close();
     }

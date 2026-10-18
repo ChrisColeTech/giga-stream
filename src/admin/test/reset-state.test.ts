@@ -4,7 +4,6 @@ import {
   RESET_DONE_NOTICE,
   RESET_DONE_TITLE,
   RESET_INVALID,
-  RESET_RATE_LIMITED,
   RESET_UNREACHABLE,
   RESET_WEAK,
 } from "@/constants/reset-copy";
@@ -47,11 +46,9 @@ describe("the reset views", () => {
     );
   });
 
-  it("stays on the username view with the rate-limit or unreachable sentence on a card", () => {
-    const limited = run(asking, { type: "started", username: "ada", result: { ok: false, refusal: "rate_limited" } });
-    assert.deepEqual([limited.view, limited.busy, limited.notice?.sentence], ["reset-username", false, RESET_RATE_LIMITED]);
+  it("stays on the username view with the unreachable sentence on a card", () => {
     const down = run(asking, { type: "started", username: "ada", result: { ok: false, refusal: "unreachable" } });
-    assert.equal(down.notice?.sentence, RESET_UNREACHABLE);
+    assert.deepEqual([down.view, down.busy, down.notice?.sentence], ["reset-username", false, RESET_UNREACHABLE]);
     assert.equal(run(down, { type: "submit" }).notice, null, "a new try clears the card");
   });
 
@@ -81,11 +78,9 @@ describe("the reset views", () => {
     assert.deepEqual(refused.error, { field: "newPassword", sentence: RESET_WEAK });
   });
 
-  it("puts a rate limit or an unreachable backend on the card, with no field error", () => {
-    const limited = run(waiting, { type: "finished", result: { ok: false, refusal: "rate_limited" } });
-    assert.deepEqual([limited.notice?.sentence, limited.error, limited.view], [RESET_RATE_LIMITED, null, "reset-answer"]);
+  it("puts an unreachable backend on the card, with no field error", () => {
     const down = run(waiting, { type: "finished", result: { ok: false, refusal: "unreachable" } });
-    assert.equal(down.notice?.sentence, RESET_UNREACHABLE);
+    assert.deepEqual([down.notice?.sentence, down.error, down.view], [RESET_UNREACHABLE, null, "reset-answer"]);
   });
 
   it("clears the last refusal on the next submit, and takes a client refusal only when idle", () => {

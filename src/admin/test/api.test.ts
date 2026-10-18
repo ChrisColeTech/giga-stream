@@ -95,7 +95,7 @@ describe("the bearer", () => {
 
 describe("the sentences", () => {
   const DOCUMENTED = [
-    "auth.unauthorized", "auth.invalid_credentials", "auth.refresh_invalid", "auth.rate_limited", "auth.locked",
+    "auth.unauthorized", "auth.invalid_credentials", "auth.refresh_invalid",
     "auth.reset_invalid", "account.not_found", "account.invalid", "account.username_taken", "account.last_admin", "account_state.invalid",
     "channel.not_found", "channel.invalid", "channel.taken","path.invalid", "media.not_found",
     "range.unsatisfiable", "provider.not_found", "provider.invalid", "title.not_found", "title.invalid",
@@ -113,8 +113,8 @@ describe("the sentences", () => {
   });
 
   it("shows the table's sentence when the backend sends none of its own", async () => {
-    const api = createSessionApi(rig(scripted(() => json({ ok: false, error: { code: "auth.locked", message: " " } }, 429)).fetch, TOKENS).deps);
+    const api = createSessionApi(rig(scripted(() => json({ ok: false, error: { code: "account.last_admin", message: " " } }, 409)).fetch, TOKENS).deps);
     const error = await refusal(api.request("/api/x", Item));
-    assert.equal(error.message, ERROR_SENTENCES["auth.locked"]);
+    assert.equal(error.message, ERROR_SENTENCES["account.last_admin"]);
   });
 });

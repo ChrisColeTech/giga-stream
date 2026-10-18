@@ -52,7 +52,7 @@ function inFolder(work: (dataDir: string) => void): void {
   }
 }
 
-test("018 applies on a 017 database: version 19 after 019, the existing account has no question, the attempt table exists", () => {
+test("018 applies on a 017 database: the existing account has no question, the attempt table is gone after 023", () => {
   inFolder((dataDir) => {
     const file = database017(dataDir);
     const store = createStore(file);
@@ -62,12 +62,10 @@ test("018 applies on a 017 database: version 19 after 019, the existing account 
       [null, null, false],
     );
     assert.equal(stored?.passwordHash, "scrypt$hash-a");
-    assert.equal(store.resetAttempts.find("boss@example.test"), undefined);
     store.close();
     readOnly(file, (db) => {
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 22 });
-      const columns = db.prepare("PRAGMA table_info(reset_attempts)").all().map((row) => String(row.name));
-      assert.deepEqual(columns, ["username_key", "failed", "locked_until"]);
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 23 });
+      assert.deepEqual(db.prepare("PRAGMA table_info(reset_attempts)").all(), [], "023 drops the attempt table");
     });
   });
 });
@@ -88,11 +86,11 @@ test("a migrated database opens again, and a newer one than the newest migration
     const file = database017(dataDir);
     createStore(file).close();
     createStore(file).close();
-    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 22);
-    // A 017 program sees an 018 database exactly as this program sees a 023 one: newer than its newest migration.
+    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 23);
+    // A 017 program sees an 018 database exactly as this program sees a 024 one: newer than its newest migration.
     const db = new DatabaseSync(file);
     try {
-      db.exec("PRAGMA user_version = 23");
+      db.exec("PRAGMA user_version = 24");
     } finally {
       db.close();
     }

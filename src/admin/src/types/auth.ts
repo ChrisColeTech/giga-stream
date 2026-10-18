@@ -26,8 +26,8 @@ export interface SessionTokens {
   readonly refreshExpiresAt: number;
 }
 
-/** Why a sign-in was refused: `auth.invalid_credentials`, `auth.locked`, `auth.rate_limited`, `backend.unreachable`. */
-export type RefusalKind = "invalid" | "locked" | "rate_limited" | "unreachable";
+/** Why a sign-in was refused: `auth.invalid_credentials`, `backend.unreachable`. */
+export type RefusalKind = "invalid" | "unreachable";
 
 export type AuthResult =
   | { readonly ok: true; readonly session: AuthSession }
@@ -37,13 +37,13 @@ export type AuthResult =
  *  or why it could not be asked (`40` section 4.3). */
 export type ResetStartResult =
   | { readonly ok: true; readonly question: string }
-  | { readonly ok: false; readonly refusal: "rate_limited" | "unreachable" };
+  | { readonly ok: false; readonly refusal: "unreachable" };
 
-/** `POST /api/auth/reset`: `invalid` is `auth.reset_invalid` (a wrong answer, a lock, no account: one sentence for all),
+/** `POST /api/auth/reset`: `invalid` is `auth.reset_invalid` (a wrong answer, no account: one sentence for all),
  *  `weak` a `422` on the new password. */
 export type ResetResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly refusal: "invalid" | "weak" | "rate_limited" | "unreachable" };
+  | { readonly ok: false; readonly refusal: "invalid" | "weak" | "unreachable" };
 
 export interface AuthPort {
   /** Never rejects: every failure is a refusal. */

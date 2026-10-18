@@ -22,8 +22,6 @@ export const PASSWORD_CHANGED_NOTICE = "Password changed. Sign in again.";
 
 export const REFUSAL_SENTENCES: Readonly<Record<RefusalKind, string>> = {
   invalid: "The username or password is wrong.",
-  locked: "This account is locked for a while after failed sign-ins.",
-  rate_limited: "Too many sign-in attempts; wait a minute.",
   unreachable: "The admin backend cannot be reached.",
 };
 

@@ -32,7 +32,6 @@ export const ANSWER_TIP = "Answers are not case sensitive; extra spaces do not c
 export const RESET_INVALID = ERROR_SENTENCES["auth.reset_invalid"] ?? "";
 export const RESET_WEAK = "That password is not valid.";
 export const RESET_PASSWORD_LONG = "Password must be at most 256 characters.";
-export const RESET_RATE_LIMITED = REFUSAL_SENTENCES.rate_limited;
 export const RESET_UNREACHABLE = REFUSAL_SENTENCES.unreachable;
 export const RESET_FAILED_TITLE = "Reset not done";
 

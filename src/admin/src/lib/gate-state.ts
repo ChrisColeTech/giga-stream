@@ -4,7 +4,7 @@ import type { AuthResult, RefusalKind } from "@/types/auth";
 /* The gate's state and its one transition function (`34` section 3). Pure: the hook awaits the port, the store applies the
  * result, and this decides what the gate becomes. */
 
-export type RefusedPhase = "refused" | "locked" | "unreachable";
+export type RefusedPhase = "refused" | "unreachable";
 
 export type GateState =
   | { readonly phase: "idle"; readonly notice: string | null }
@@ -18,11 +18,9 @@ export type GateEvent =
 
 export const GATE_START: GateState = { phase: "idle", notice: null };
 
-/** The phase a refusal puts the gate in: a wrong pair is `refused`; a lock or a rate limit is `locked`. */
+/** The phase a refusal puts the gate in: a wrong pair is `refused`; an unreachable backend is `unreachable`. */
 export function phaseFor(kind: RefusalKind): RefusedPhase {
-  if (kind === "invalid") return "refused";
-  if (kind === "unreachable") return "unreachable";
-  return "locked";
+  return kind === "invalid" ? "refused" : "unreachable";
 }
 
 /** The next gate state. A submit while submitting, and an answer when nothing is waiting for one (a sign-out raced it),
@@ -42,7 +40,7 @@ export function nextGate(state: GateState, event: GateEvent): GateState {
 
 /** The sentence to show under the Password row, or null. */
 export function gateError(state: GateState): string | null {
-  return state.phase === "refused" || state.phase === "locked" || state.phase === "unreachable" ? state.sentence : null;
+  return state.phase === "refused" || state.phase === "unreachable" ? state.sentence : null;
 }
 
 /** The notice card's sentence, or null. */

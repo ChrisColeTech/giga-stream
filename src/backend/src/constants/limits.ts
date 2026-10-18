@@ -32,10 +32,6 @@ export const JWT_SECRET_MIN = 32;
 export const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
 export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const REFRESH_TOKEN_BYTES = 32;
-export const SIGN_IN_ATTEMPTS_PER_WINDOW = 10;
-export const SIGN_IN_WINDOW_MS = 60 * 1000;
-export const LOCKOUT_FAILURES = 5;
-export const LOCKOUT_MS = 15 * 60 * 1000;
 
 // The audit log (section 7.13).
 export const AUDIT_PAGE_DEFAULT = 50;

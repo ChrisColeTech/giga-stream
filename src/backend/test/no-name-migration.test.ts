@@ -52,11 +52,10 @@ test("021 drops the account name and keeps every account, hash, session and secu
       assert.equal(rows.some((a) => "name" in a.account), false);
       const boss = store.accounts.findByUsername("BOSS");
       assert.deepEqual(
-        [boss?.passwordHash, boss?.sessionVersion, boss?.failedSignIns, boss?.securityQuestion, boss?.securityAnswerHash],
-        ["scrypt$hash-a", 4, 2, 5, "scrypt$answer"],
+        [boss?.passwordHash, boss?.sessionVersion, boss?.securityQuestion, boss?.securityAnswerHash],
+        ["scrypt$hash-a", 4, 5, "scrypt$answer"],
       );
       assert.equal(boss?.account.securityQuestionSet, true);
-      assert.equal(store.accounts.findByUsername("ed")?.lockedUntil, 99);
       assert.equal(store.refreshTokens.findByHash("hash-1")?.accountId, "acct_a");
       store.accounts.insert({ id: "acct_c", username: "New", passwordHash: "scrypt$c", disabled: false }, 10);
       assert.equal(store.accounts.count(), 3);
@@ -67,7 +66,7 @@ test("021 drops the account name and keeps every account, hash, session and secu
     try {
       const columns = db.prepare("PRAGMA table_info(admin_accounts)").all().map((r) => String(r.name));
       assert.equal(columns.includes("name"), false);
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 22 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 23 });
       assert.equal(Object.values(db.prepare("SELECT COUNT(*) AS n FROM admin_ui_state").get() ?? {})[0], 1);
     } finally {
       db.close();

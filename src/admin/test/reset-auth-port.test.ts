@@ -22,9 +22,8 @@ describe("reset-start", () => {
     assert.equal(call?.headers.authorization, undefined, "the token-free layer, even when a session exists");
   });
 
-  it("refuses with rate_limited, and with unreachable for anything else", async () => {
+  it("refuses with unreachable for every failure", async () => {
     const cases: Array<[Handler, string]> = [
-      [() => failure(429, "auth.rate_limited", "x"), "rate_limited"],
       [() => failure(500, "internal.failure", "x"), "unreachable"],
       [() => failure(422, "account.invalid", "x"), "unreachable"],
       [() => Promise.reject(new TypeError("down")), "unreachable"],
@@ -47,11 +46,10 @@ describe("reset", () => {
     assert.equal(call?.headers.authorization, undefined);
   });
 
-  it("maps each refusal: reset_invalid, a 422 as weak, a rate limit, a transport failure", async () => {
+  it("maps each refusal: reset_invalid, a 422 as weak, a transport failure", async () => {
     const cases: Array<[Handler, string]> = [
       [() => failure(401, "auth.reset_invalid", "x"), "invalid"],
       [() => failure(422, "account.invalid", "x"), "weak"],
-      [() => failure(429, "auth.rate_limited", "x"), "rate_limited"],
       [() => failure(503, "internal.failure", "x"), "unreachable"],
       [() => Promise.reject(new TypeError("down")), "unreachable"],
     ];
@@ -87,7 +85,7 @@ describe("resetRefusalFor", () => {
   it("is pure over the error", () => {
     assert.equal(resetRefusalFor(new ApiError("auth.reset_invalid", "x", 401)), "invalid");
     assert.equal(resetRefusalFor(new ApiError("account.invalid", "x", 422)), "weak");
-    assert.equal(resetRefusalFor(new ApiError("auth.rate_limited", "x", 429)), "rate_limited");
+    assert.equal(resetRefusalFor(new ApiError("auth.rate_limited", "x", 429)), "unreachable", "a stale code is not special");
     assert.equal(resetRefusalFor(new Error("x")), "unreachable");
   });
 });

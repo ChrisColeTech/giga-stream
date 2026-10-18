@@ -74,9 +74,7 @@ describe("the gate, refused", () => {
     assert.ok(!html.includes("Signing in"));
   });
 
-  it("shows a lock and an unreachable backend the same way", () => {
-    gateAt({ phase: "locked", sentence: "This account is locked for a while after failed sign-ins." });
-    assert.ok(form().includes("This account is locked for a while after failed sign-ins."));
+  it("shows an unreachable backend the same way", () => {
     gateAt({ phase: "unreachable", sentence: "The admin backend cannot be reached." });
     assert.ok(form().includes("The admin backend cannot be reached."));
   });

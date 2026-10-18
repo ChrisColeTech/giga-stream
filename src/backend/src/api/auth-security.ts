@@ -23,7 +23,7 @@ export function registerAuthSecurity(app: FastifyInstance, services: Services): 
 
   app.post("/api/auth/reset-start", async (request, reply) => {
     const { username } = parseInput(ResetStartSchema, request.body, ERRORS.accountInvalid);
-    return ok(reply, services.securityQuestions.start(username, actorOf(request)));
+    return ok(reply, services.securityQuestions.start(username));
   });
 
   app.post("/api/auth/reset", async (request, reply) => {

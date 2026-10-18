@@ -18,9 +18,8 @@ describe("the reset's words, word for word", () => {
 
   it("uses the backend's own sentences for the refusals", () => {
     assert.equal(copy.RESET_INVALID, "That answer is not right, or the reset is not available for this username.");
-    assert.equal(copy.RESET_RATE_LIMITED, "Too many sign-in attempts; wait a minute.");
     assert.equal(copy.RESET_UNREACHABLE, "The admin backend cannot be reached.");
-    assert.equal(copy.RESET_RATE_LIMITED, REFUSAL_SENTENCES.rate_limited);
+    assert.equal(copy.RESET_UNREACHABLE, REFUSAL_SENTENCES.unreachable);
     assert.equal(copy.RESET_PASSWORD_LONG, "Password must be at most 256 characters.");
   });
 

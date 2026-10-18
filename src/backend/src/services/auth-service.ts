@@ -3,8 +3,6 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { AppError, ERRORS } from "../constants/errors.js";
 import {
   ACCESS_TOKEN_TTL_MS,
-  LOCKOUT_FAILURES,
-  LOCKOUT_MS,
   REFRESH_TOKEN_BYTES,
   REFRESH_TOKEN_TTL_MS,
 } from "../constants/limits.js";
@@ -14,7 +12,6 @@ import type { AdminAccount, Principal, Session } from "../types/account.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { AUDIENCE, ISSUER, signAccessToken, verifyAccessToken } from "./jwt.js";
 import { decoyHash, hashPassword, verifyPassword } from "./password.js";
-import type { SignInLimiter } from "./sign-in-limiter.js";
 
 const BEARER = /^Bearer\s+(\S+)$/i;
 const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
@@ -23,11 +20,10 @@ const sha256 = (value: string): string => createHash("sha256").update(value).dig
 export function createAuthService(deps: {
   store: Store;
   audit: AuditService;
-  limiter: SignInLimiter;
   secret: string;
   now: () => number;
 }) {
-  const { store, audit, limiter, secret, now } = deps;
+  const { store, audit, secret, now } = deps;
 
   function issueSession(stored: StoredAccount): Session {
     const at = now();
@@ -61,16 +57,9 @@ export function createAuthService(deps: {
     revokeAll,
 
     async login(username: string, password: string, actor: Actor): Promise<Session> {
-      if (!limiter.allow(actor.address ?? "unknown")) throw new AppError(ERRORS.authRateLimited);
       const stored = store.accounts.findByUsername(username.trim());
-      if (stored?.lockedUntil && stored.lockedUntil > now()) throw new AppError(ERRORS.authLocked);
       const matches = await verifyPassword(password, stored?.passwordHash ?? (await decoyHash));
       if (!stored || !matches || stored.account.disabled) {
-        if (stored && !matches) {
-          const failures = stored.failedSignIns + 1;
-          const locked = failures >= LOCKOUT_FAILURES;
-          store.accounts.recordFailure(stored.account.id, locked ? 0 : failures, locked ? now() + LOCKOUT_MS : null);
-        }
         audit.record(actor, { action: "auth.login_failed", detail: { username: username.trim().slice(0, 254) } });
         throw new AppError(ERRORS.authInvalidCredentials);
       }

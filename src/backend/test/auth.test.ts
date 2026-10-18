@@ -116,25 +116,11 @@ test("changing the password needs the current one and ends every session", async
   await signIn(t.app, ADMIN_USERNAME, "a-brand-new-password");
 });
 
-test("five wrong passwords lock the account for 15 minutes", async () => {
+test("no number of wrong passwords or attempts from one address blocks the right password", async () => {
   const t = await makeApp();
-  for (let n = 0; n < 5; n += 1) {
-    await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: "wrong-password" }, undefined, `10.0.0.${n}`);
+  for (let n = 0; n < 25; n += 1) {
+    const wrong = await send(t.app, "POST", "/api/auth/login", { username: n % 2 ? ADMIN_USERNAME : `x${n}@example.test`, password: "wrong-password" }, undefined, "10.9.9.9");
+    assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"], "a wrong pair is always invalid");
   }
-  const locked = await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.0.1.1");
-  assert.deepEqual([locked.status, code(locked)], [429, "auth.locked"]);
-  t.clock.advance(15 * 60 * 1000 + 1000);
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.0.1.1")).status, 200);
-});
-
-test("more than ten sign-in attempts a minute from one address are refused", async () => {
-  const t = await makeApp();
-  for (let n = 0; n < 10; n += 1) {
-    await send(t.app, "POST", "/api/auth/login", { username:`x${n}@example.test`, password: "whatever-password" }, undefined, "10.9.9.9");
-  }
-  const limited = await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.9.9.9");
-  assert.deepEqual([limited.status, code(limited)], [429, "auth.rate_limited"]);
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.8.8.8")).status, 200);
-  t.clock.advance(61 * 1000);
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.9.9.9")).status, 200);
+  assert.equal((await send(t.app, "POST", "/api/auth/login", { username: ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.9.9.9")).status, 200);
 });

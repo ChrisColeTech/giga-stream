@@ -28,11 +28,9 @@ describe("login", () => {
     assert.equal(backend.calls[0]?.url, "/api/auth/login");
   });
 
-  it("refuses with the gate's kinds: invalid, locked, rate_limited and unreachable", async () => {
+  it("refuses with the gate's kinds: invalid and unreachable", async () => {
     const kinds: Array<[() => Response | Promise<Response>, string]> = [
       [() => failure(401, "auth.invalid_credentials", "x"), "invalid"],
-      [() => failure(429, "auth.locked", "x"), "locked"],
-      [() => failure(429, "auth.rate_limited", "x"), "rate_limited"],
       [() => failure(500, "internal.failure", "x"), "unreachable"],
       [() => Promise.reject(new TypeError("down")), "unreachable"],
       [() => new Response("nope", { status: 200 }), "unreachable"],
@@ -186,8 +184,6 @@ describe("the refusal mapping", () => {
   it("maps the backend's codes to the gate's kinds", () => {
     const table: Array<[string, number | undefined, string]> = [
       ["auth.invalid_credentials", 401, "invalid"],
-      ["auth.locked", 429, "locked"],
-      ["auth.rate_limited", 429, "rate_limited"],
       ["backend.unreachable", undefined, "unreachable"],
       ["backend.bad_response", 200, "unreachable"],
       ["backend.not_connected", undefined, "unreachable"],
