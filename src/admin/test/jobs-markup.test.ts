@@ -3,7 +3,11 @@ import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { CatalogRows } from "@/components/jobs/CatalogRows";
 import { JobScheduleGroup } from "@/components/jobs/JobScheduleGroup";
+import { JobDetailsGroup } from "@/components/jobs/JobDetailsGroup";
 import { NewJobForm } from "@/components/jobs/NewJobForm";
+import { ADD_PLAYLIST_FIRST, NO_PLAYLISTS, PLAYLISTS_UNREAD } from "@/constants/job-copy";
+import { createReason } from "@/lib/job-checks";
+import { EMPTY_NEW_JOB, draftOf } from "@/lib/job-draft";
 import { JobsPage } from "@/pages/JobsPage";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
@@ -55,9 +59,48 @@ describe("the New job form", () => {
     assert.ok(html.includes('aria-label="Create. Name is required."'));
   });
 
-  it("draws the Playlist row as a shimmer with no playlist to choose: no invented option", () => {
+  it("draws the Playlist row as a shimmer while the playlists are loading: no invented option", () => {
+    for (const start of [false, true]) {
+      if (start) state().jobsStartLoad();
+      const html = renderLive(createElement(NewJobForm));
+      assert.ok(html.includes("animate-skel-shimmer") && !html.includes("<option") && !html.includes(NO_PLAYLISTS));
+    }
+  });
+
+  it("says `No playlists yet.` with an `Add a playlist` link once the read answered with none", () => {
+    state().jobsPlaylistsLoaded([]);
     const html = renderLive(createElement(NewJobForm));
-    assert.ok(html.includes("animate-skel-shimmer") && !html.includes("<option"));
+    assert.ok(html.includes(NO_PLAYLISTS) && html.includes(">Add a playlist</button>"));
+    assert.ok(!html.includes("animate-skel-shimmer") && !html.includes("<option"));
+    assert.ok(html.includes('aria-label="Create. Name is required."'));
+  });
+
+  it("gives the Create reason `Add a playlist first.` once named and there are no playlists", () => {
+    state().jobsPlaylistsLoaded([]);
+    assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N" }, "", undefined, true), ADD_PLAYLIST_FIRST);
+    assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N" }, "", undefined), "Playlist is required.");
+    assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N" }, "1", undefined, false), undefined);
+    assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N", type: "catalog" }, "", undefined, true), undefined);
+  });
+
+  it("says the playlists could not be read when that read failed, not a shimmer", () => {
+    state().jobsPlaylistsLoaded(null);
+    const html = renderLive(createElement(NewJobForm));
+    assert.ok(html.includes(PLAYLISTS_UNREAD) && !html.includes("animate-skel-shimmer"));
+    assert.ok(!html.includes(NO_PLAYLISTS) && !html.includes("<option"));
+  });
+
+  it("the workspace Details Playlist row has the same three states", () => {
+    const props = { job: job(1), draft: draftOf(job(1)), errors: {}, playlists: [], onChange: () => undefined };
+    const details = (): string => renderLive(createElement(JobDetailsGroup, props));
+    assert.ok(details().includes("animate-skel-shimmer"));
+    state().jobsPlaylistsLoaded([]);
+    assert.ok(details().includes(NO_PLAYLISTS) && details().includes(">Add a playlist</button>"));
+    state().jobsPlaylistsLoaded(null);
+    assert.ok(details().includes(PLAYLISTS_UNREAD));
+    state().jobsPlaylistsLoaded([playlist(1)]);
+    const html = renderLive(createElement(JobDetailsGroup, { ...props, playlists: [playlist(1)] }));
+    assert.ok(html.includes('aria-label="Playlist"') && html.includes(">List 1</option>"));
   });
 
   it("offers Playlist and Catalog as the Type; a catalog job's rows are Scope and Kind", () => {

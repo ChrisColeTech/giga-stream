@@ -22,7 +22,8 @@ const TYPES = [
 /** `New job` (`38` section 4.2): Name first, then Type (Playlist / Catalog, the row switcher), then the type's own
  *  rows: Playlist (a select of the playlist records) for a playlist job, or Scope and Kind for a catalog job. The rows
  *  a Type does not use are not rendered and leave the required list. `Create` is disabled with `Name is required.`, then
- *  `Playlist is required.` (no playlist to choose), `Saving.` or the unreachable sentence. A catalog job's pages are
+ *  `Add a playlist first.` (none exist; `Playlist is required.` when the read has not answered), `Saving.` or the
+ *  unreachable sentence. A catalog job's pages are
  *  left to the backend's default. On success the form empties. */
 export function NewJobForm() {
   const form = useRecordForm({ initial: EMPTY_NEW_JOB, same: sameNewJob });
@@ -31,7 +32,8 @@ export function NewJobForm() {
   const playlists = useAppStore((state) => state.jobs.playlists);
   const playlistId = chosenPlaylist(form.draft.playlistId, playlists);
   const busy = saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined;
-  const reason = createReason(form.draft, playlistId, busy);
+  const none = useAppStore((state) => state.jobs.playlistsStatus === "ready" && state.jobs.playlists.length === 0);
+  const reason = createReason(form.draft, playlistId, busy, none);
 
   const create = async (): Promise<void> => {
     if (reason !== undefined) return;

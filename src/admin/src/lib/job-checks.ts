@@ -1,4 +1,11 @@
-import { NAME_LENGTH, NAME_MAX, PAGES_MAX, PAGES_MIN, PLAYLIST_REQUIRED } from "@/constants/job-copy";
+import {
+  ADD_PLAYLIST_FIRST,
+  NAME_LENGTH,
+  NAME_MAX,
+  PAGES_MAX,
+  PAGES_MIN,
+  PLAYLIST_REQUIRED,
+} from "@/constants/job-copy";
 import { required, schedule, wholeNumber, type Refusal } from "./field-checks";
 import type { JobDraft, NewJobDraft } from "./job-draft";
 
@@ -25,12 +32,17 @@ export const scheduleRefusal = (value: string): Refusal => required("Interval", 
 export const pagesRefusal = (value: string): Refusal =>
   required("Pages", value) ?? wholeNumber("Pages", value, PAGES_MIN, PAGES_MAX);
 
-/** Why `Create` is disabled, in the form's order, or undefined: the Name, then a playlist job's Playlist (none to
- *  choose while the list is empty or unread), then the busy or unreachable reason. */
-export function createReason(draft: NewJobDraft, playlistId: string, busy: string | undefined): string | undefined {
-  return (
-    required("Name", draft.name) ?? (draft.type === "playlist" && playlistId === "" ? PLAYLIST_REQUIRED : null) ?? busy
-  );
+/** Why `Create` is disabled, in the form's order, or undefined: the Name, then a playlist job's Playlist (`Add a
+ *  playlist first.` when the read answered with none, else `Playlist is required.`), then the busy or unreachable
+ *  reason. */
+export function createReason(
+  draft: NewJobDraft,
+  playlistId: string,
+  busy: string | undefined,
+  noPlaylists = false,
+): string | undefined {
+  const missing = noPlaylists ? ADD_PLAYLIST_FIRST : PLAYLIST_REQUIRED;
+  return required("Name", draft.name) ?? (draft.type === "playlist" && playlistId === "" ? missing : null) ?? busy;
 }
 
 export function firstCreateRefusal(draft: NewJobDraft): JobRefusal | null {
