@@ -50,7 +50,7 @@ function version28(dir: string): string {
     channel.run("raw", "Raw", "https://s.example/raw.m3u8", "stream", null, null, null, null, null);
     channel.run("air", "On air", null, "live", "loop", 0, '["360p","720p"]', null, null);
     db.exec("INSERT INTO channel_videos (channel_id, position, path) VALUES ('air', 0, '/v/a.mp4')");
-    db.exec(`INSERT INTO audit_log (at, actor_email, action, subject, detail)
+    db.exec(`INSERT INTO audit_log (at, actor_username, action, subject, detail)
       VALUES (5, 'boss@example.test', 'channel.status.set', 'on', '{"name":"On","from":null,"to":"dead"}')`);
   } finally {
     db.close();
