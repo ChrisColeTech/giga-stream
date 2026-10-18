@@ -6,6 +6,7 @@ import { SHELL_KEYS } from "@/constants/shell-keys";
 import { TAB_ORDER } from "@/constants/tabs";
 import { runShellAction } from "@/lib/shell-actions";
 import { useAppStore } from "@/store/app-store";
+import { signInForTest } from "./support/store";
 
 const IDLE: ShellKeyContext = { windowOpen: false, drawerOpen: false };
 const press = (key: string, extra: Partial<KeyPress> = {}): KeyPress => ({
@@ -25,6 +26,7 @@ const state = () => useAppStore.getState();
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true);
+  signInForTest();
 });
 
 describe("the admin's key map", () => {

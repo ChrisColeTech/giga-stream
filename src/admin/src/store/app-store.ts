@@ -7,7 +7,7 @@ import type { EventArea } from "@/types/events";
 import type { OverlayId } from "@/types/overlays";
 import { auditSlice, type AuditSlice } from "./audit-slice";
 import { panesSlice, type PanesSlice } from "./panes-slice";
-import { sessionSlice, startingEvents, type SessionSlice } from "./session-slice";
+import { sessionSlice, type SessionSlice } from "./session-slice";
 import { workSlice, type WorkSlice } from "./work-slice";
 import { workspaceSlice, type WorkspaceSlice } from "./workspace-slice";
 
@@ -36,7 +36,6 @@ export const useAppStore = create<AppState>()((set, get) => {
     ...createChromeSlice<AdminKinds>(set, get, {
       defaults: APPEARANCE_DEFAULTS,
       defaultArea: "Connection",
-      events: startingEvents(session.signedIn),
     }),
     ...workspaceSlice(set, get),
     ...panesSlice(set, get),

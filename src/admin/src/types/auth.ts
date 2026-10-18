@@ -10,6 +10,16 @@ export interface SessionActor {
 /** What a sign-in hands the store. Wave 7 widens it with the tokens of `29` section 5 (held in memory only). */
 export interface AuthSession {
   readonly actor: SessionActor;
+  readonly tokens: SessionTokens;
+}
+
+/** The session's tokens, held in memory only (never storage): expiries are unix milliseconds. The refresh token is
+ *  single-use, so a refresh replaces the whole object. */
+export interface SessionTokens {
+  readonly accessToken: string;
+  readonly accessExpiresAt: number;
+  readonly refreshToken: string;
+  readonly refreshExpiresAt: number;
 }
 
 /** Why a sign-in was refused: `auth.invalid_credentials`, `auth.locked`, `auth.rate_limited`, `backend.unreachable`. */

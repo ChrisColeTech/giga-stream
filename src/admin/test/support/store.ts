@@ -14,6 +14,15 @@ export function resetStore(): void {
   useAppStore.setState(PRISTINE, true);
 }
 
+/** A signed-in session for the tests that draw the signed-in shell: the store starts signed out, as a reload does. */
+export function signInForTest(): void {
+  useAppStore.setState({
+    signedIn: true,
+    actor: { email: "ada@example.test", name: "Ada" },
+    tokens: { accessToken: "a", accessExpiresAt: 9e12, refreshToken: "r", refreshExpiresAt: 9e12 },
+  });
+}
+
 export function renderLive(element: ReactElement): string {
   Object.assign(INITIAL, useAppStore.getState());
   try {

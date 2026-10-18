@@ -15,7 +15,7 @@ import {
 } from "@/constants/record-copy";
 import { TABS } from "@/constants/tabs";
 import { useAppStore } from "@/store/app-store";
-import { renderLive, resetStore } from "./support/store";
+import { renderLive, resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
 const count = (html: string, needle: string) => html.split(needle).length - 1;
@@ -26,6 +26,7 @@ const tab = (html: string, label: string): string =>
 
 beforeEach(() => {
   resetStore();
+  signInForTest();
 });
 
 describe("the titlebar", () => {
@@ -121,14 +122,18 @@ describe("the statusbar", () => {
 
 describe("the events drawer", () => {
   it("holds the audit rows and the page's, with `Load older` at the top, closed and hidden from the tab order", () => {
+    state().logEvent({ tone: "info", area: "Session", sentence: "ada@example.test signed in" });
+    state().logEvent({ tone: "warn", area: "Session", sentence: "Sign-in failed for eve@example.test" });
+    useAppStore.setState({ olderCursor: 3 });
     const html = renderLive(createElement(AdminEventsDrawer));
-    assert.ok(html.includes("14 events"));
+    assert.ok(html.includes("2 events"));
     assert.ok(html.indexOf("Load older") < html.indexOf("ada@example.test signed in"));
     assert.ok(html.includes('aria-hidden="true"') && html.includes("inert"));
     assert.ok(html.includes("Sign-in failed for eve@example.test"));
   });
 
   it("empties to five shimmer lines on Clear, with no sentence, and Clear disabled", () => {
+    state().logEvent({ tone: "info", area: "Session", sentence: "one" });
     state().clearEvents();
     const html = renderLive(createElement(AdminEventsDrawer));
     assert.ok(html.includes("0 events"));
@@ -136,11 +141,10 @@ describe("the events drawer", () => {
     assert.ok(html.includes("The log is empty."));
   });
 
-  it("disables `Load older` with `No older events.` once every older page is in", () => {
-    state().loadOlder();
-    state().loadOlder();
+  it("disables `Load older` with `No older events.` when there is no older page", () => {
+    state().logEvent({ tone: "info", area: "Session", sentence: "one" });
     const html = renderLive(createElement(AdminEventsDrawer));
-    assert.ok(html.includes("22 events"));
+    assert.ok(html.includes("1 events") || html.includes("1 event"));
     assert.ok(html.includes('title="No older events."'));
   });
 

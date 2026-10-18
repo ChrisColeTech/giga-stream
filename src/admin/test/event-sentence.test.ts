@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { OLDER_AUDIT, PAGE_EVENTS, RECENT_AUDIT, initialEvents } from "@/fixtures/audit";
 import { eventFromAudit } from "@/lib/event-sentence";
 import type { AuditEntry } from "@/types/admin-audit";
 
@@ -92,23 +91,3 @@ describe("the record actions", () => {
   });
 });
 
-describe("the fixture history", () => {
-  it("turns every audit entry into a sentence, newest recent entry last, with unique ids", () => {
-    const all = [...OLDER_AUDIT, ...RECENT_AUDIT];
-    assert.equal(new Set(all.map((item) => item.id)).size, all.length);
-    for (const item of all) assert.ok(eventFromAudit(item).sentence.length > 0, item.action);
-    const times = RECENT_AUDIT.map((item) => item.at);
-    assert.deepEqual(times, times.toSorted((a, b) => a - b));
-    assert.ok((OLDER_AUDIT.at(-1)?.at ?? 0) < (RECENT_AUDIT[0]?.at ?? 0), "the older rows precede the recent ones");
-  });
-
-  it("starts the drawer with the recent rows and the page's own, in time order, none of them a secret", () => {
-    const rows = initialEvents();
-    assert.equal(rows.length, RECENT_AUDIT.length + PAGE_EVENTS.length);
-    const times = rows.map((row) => row.at);
-    assert.deepEqual(times, times.toSorted((a, b) => a - b));
-    assert.equal(rows[0]?.area, "Connection");
-    assert.ok(rows.some((row) => row.tone === "error") && rows.some((row) => row.tone === "warn"));
-    assert.ok(!/password|token/i.test(JSON.stringify(rows)));
-  });
-});

@@ -8,16 +8,16 @@ import { SessionSection } from "@/components/settings/SessionSection";
 import { SignInForm } from "@/components/session/SignInForm";
 import { RESTORE_AT_DEFAULTS, SETTINGS_LABELS, ZOOM_AT_MIN } from "@/constants/settings-sections";
 import { SIGN_IN_REASON } from "@/constants/sign-in-copy";
-import { ABOUT_FACTS } from "@/fixtures/session";
 import { SignInPage } from "@/pages/SignInPage";
 import { useAppStore } from "@/store/app-store";
-import { renderLive, resetStore } from "./support/store";
+import { renderLive, resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
 const render = (component: FunctionComponent): string => renderLive(createElement(component));
 
 beforeEach(() => {
   resetStore();
+  signInForTest();
 });
 
 describe("Appearance", () => {
@@ -66,14 +66,14 @@ describe("Session", () => {
 });
 
 describe("About", () => {
-  it("lists Version, Backend version, Backend revision, Address, Runtime and TMDB with the fixture facts", () => {
+  it("lists Version, Backend version, Backend revision, Address, Runtime and TMDB, the backend's facts as dashes", () => {
     const html = render(AboutSection);
     const order = ["Version", "Backend version", "Backend revision", "Address", "Runtime", "TMDB"].map((label) =>
       html.indexOf(`>${label}</span>`),
     );
     assert.deepEqual([...order].sort((a, b) => a - b), order);
     assert.ok(order.every((place) => place > 0));
-    assert.ok(html.includes(ABOUT_FACTS.backendRevision) && html.includes("configured") && html.includes("Browser"));
+    assert.ok(html.includes("0.1.0") && html.includes("Browser") && !html.includes("configured"));
   });
 });
 
