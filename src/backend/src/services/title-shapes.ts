@@ -161,6 +161,27 @@ export function rowsOf(kind: Kind, values: unknown[], now: number): Record<strin
   return values.map((value) => rowOf(kind, asRecord(value), now)).filter((row) => row !== undefined);
 }
 
+/** The OMDb block of docs/11 section 7.2: only the fields the product shows, `Plot` kept raw. */
+export function omdbBlockOf(record: Record<string, unknown>, now: number): Record<string, unknown> {
+  return {
+    fetchedAt: now,
+    rated: str(record.Rated),
+    metascore: str(record.Metascore),
+    imdbRating: str(record.imdbRating),
+    imdbVotes: str(record.imdbVotes),
+    ratings: listOf(record.Ratings)
+      .map((r) => ({ source: str(asRecord(r).Source) ?? "", score: str(asRecord(r).Value) ?? "" }))
+      .filter((r) => r.source !== ""),
+    awards: str(record.Awards),
+    boxOffice: str(record.BoxOffice),
+    director: str(record.Director),
+    writer: str(record.Writer),
+    language: str(record.Language),
+    country: str(record.Country),
+    plot: str(record.Plot),
+  };
+}
+
 /** Validate a stored output row, or safely reshape a legacy raw TMDB list row. */
 export function storedRowOf(
   kind: Kind, tmdbId: number, payload: unknown, readAt: number,

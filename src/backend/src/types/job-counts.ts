@@ -25,13 +25,15 @@ export const PlaylistCountsSchema = z
   .strict();
 export type PlaylistCounts = z.infer<typeof PlaylistCountsSchema>;
 
-/** The Library fill (docs/47 section 3.1): rows walked, titles given their detail, seasons given their episodes this run.
- *  A result stored before the details phase has neither count; it reads as zero. */
+/** The Library fill (docs/47 section 3.1): rows walked, titles given their detail, seasons given their episodes and titles
+ *  given an OMDb block this run. A result stored before the details phase (or before OMDb came back) lacks those counts;
+ *  they read as zero. */
 export const CatalogCountsSchema = z
   .object({
     titles: count,
     detailed: count.default(0),
     seasons: count.default(0),
+    enriched: count.default(0),
     stale: count,
     stopped: z.boolean().optional(),
   })
