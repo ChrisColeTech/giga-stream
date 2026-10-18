@@ -27,7 +27,7 @@ export interface LibraryData {
   /** Requests the next page; answers whether one really was requested. */
   readonly loadMore: () => boolean;
   readonly refresh: () => void;
-  /** Continue watching and the collections have answered (the Rows view groups only once they have). */
+  /** Continue watching and the collections have answered (the Rows view plans its shelves only once they have). */
   readonly sideReady: boolean;
   /** The query key and refresh serial the held page was read for; null before any page. */
   readonly pageFor: { readonly queryKey: string | null; readonly serial: number | null };
