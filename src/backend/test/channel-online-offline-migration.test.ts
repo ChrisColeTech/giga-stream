@@ -26,32 +26,35 @@ const rows = (db: DatabaseSync, sql: string): Array<Record<string, unknown>> => 
 function version28(dir: string): string {
   const file = path.join(dir, "admin.db");
   const db = new DatabaseSync(file);
-  db.exec("PRAGMA foreign_keys = ON");
-  for (const name of readdirSync(MIGRATIONS).sort()) {
-    const version = Number(name.slice(0, 3));
-    if (version > 28) continue;
-    db.exec(readFileSync(path.join(MIGRATIONS, name), "utf-8"));
-    db.exec(`PRAGMA user_version = ${version}`);
+  try {
+    db.exec("PRAGMA foreign_keys = ON");
+    for (const name of readdirSync(MIGRATIONS).sort()) {
+      const version = Number(name.slice(0, 3));
+      if (version > 28) continue;
+      db.exec(readFileSync(path.join(MIGRATIONS, name), "utf-8"));
+      db.exec(`PRAGMA user_version = ${version}`);
+    }
+    db.exec(`INSERT INTO playlists (id, name, kind, file_name, enabled, created_at) VALUES (1, 'one', 'file', 'one.m3u', 1, 1);
+      INSERT INTO playlists (id, name, kind, url, host, enabled, created_at) VALUES (2, 'two', 'url', 'https://h.example/x.m3u', 'h.example', 1, 1);
+      INSERT INTO playlists (id, name, kind, file_name, enabled, created_at) VALUES (3, 'three', 'file', 'three.m3u', 1, 1)`);
+    const job = db.prepare(`INSERT INTO sync_jobs (id, name, type, enabled, schedule, config, playlist_id,
+      last_run_at, last_result, last_counts, created_at) VALUES (?, ?, ?, 1, '24h', '{}', ?, ?, ?, ?, 1)`);
+    job.run(1, null, "playlist", 1, 100, "ok", PLAYLIST_COUNTS);
+    job.run(2, null, "playlist", 2, 200, "ok", '{"code":"internal.failure"}'); // a failed run: no verdict keys, untouched
+    job.run(3, "Fill", "catalog", null, 300, "ok", '{"titles":7,"stale":0}'); // a catalog run: untouched
+    job.run(4, null, "playlist", 3, null, null, null); // never run: stays NULL
+    const channel = db.prepare(`INSERT INTO channels (id, name, category, stream_url, revision, created_at, kind,
+      live_mode, live_captions, live_variants, enabled, status, checked_at) VALUES (?, ?, 'News', ?, 1, 1, ?, ?, ?, ?, 1, ?, ?)`);
+    channel.run("on", "On", "https://s.example/on.m3u8", "stream", null, null, null, "live", 10);
+    channel.run("off", "Off", "https://s.example/off.m3u8", "stream", null, null, null, "dead", 20);
+    channel.run("raw", "Raw", "https://s.example/raw.m3u8", "stream", null, null, null, null, null);
+    channel.run("air", "On air", null, "live", "loop", 0, '["360p","720p"]', null, null);
+    db.exec("INSERT INTO channel_videos (channel_id, position, path) VALUES ('air', 0, '/v/a.mp4')");
+    db.exec(`INSERT INTO audit_log (at, actor_email, action, subject, detail)
+      VALUES (5, 'boss@example.test', 'channel.status.set', 'on', '{"name":"On","from":null,"to":"dead"}')`);
+  } finally {
+    db.close();
   }
-  db.exec(`INSERT INTO playlists (id, name, kind, file_name, enabled, created_at) VALUES (1, 'one', 'file', 'one.m3u', 1, 1);
-    INSERT INTO playlists (id, name, kind, url, host, enabled, created_at) VALUES (2, 'two', 'url', 'https://h.example/x.m3u', 'h.example', 1, 1);
-    INSERT INTO playlists (id, name, kind, file_name, enabled, created_at) VALUES (3, 'three', 'file', 'three.m3u', 1, 1)`);
-  const job = db.prepare(`INSERT INTO sync_jobs (id, name, type, enabled, schedule, config, playlist_id,
-    last_run_at, last_result, last_counts, created_at) VALUES (?, ?, ?, 1, '24h', '{}', ?, ?, ?, ?, 1)`);
-  job.run(1, null, "playlist", 1, 100, "ok", PLAYLIST_COUNTS);
-  job.run(2, null, "playlist", 2, 200, "ok", '{"code":"internal.failure"}'); // a failed run: no verdict keys, untouched
-  job.run(3, "Fill", "catalog", null, 300, "ok", '{"titles":7,"stale":0}'); // a catalog run: untouched
-  job.run(4, null, "playlist", 3, null, null, null); // never run: stays NULL
-  const channel = db.prepare(`INSERT INTO channels (id, name, category, stream_url, revision, created_at, kind,
-    live_mode, live_captions, live_variants, enabled, status, checked_at) VALUES (?, ?, 'News', ?, 1, 1, ?, ?, ?, ?, 1, ?, ?)`);
-  channel.run("on", "On", "https://s.example/on.m3u8", "stream", null, null, null, "live", 10);
-  channel.run("off", "Off", "https://s.example/off.m3u8", "stream", null, null, null, "dead", 20);
-  channel.run("raw", "Raw", "https://s.example/raw.m3u8", "stream", null, null, null, null, null);
-  channel.run("air", "On air", null, "live", "loop", 0, '["360p","720p"]', null, null);
-  db.exec("INSERT INTO channel_videos (channel_id, position, path) VALUES ('air', 0, '/v/a.mp4')");
-  db.exec(`INSERT INTO audit_log (at, actor_email, action, subject, detail)
-    VALUES (5, 'boss@example.test', 'channel.status.set', 'on', '{"name":"On","from":null,"to":"dead"}')`);
-  db.close();
   return file;
 }
 

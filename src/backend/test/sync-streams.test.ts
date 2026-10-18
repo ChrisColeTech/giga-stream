@@ -85,7 +85,7 @@ test("a channel whose address changed mid-run keeps no verdict for the old addre
   assert.equal(edited.status, 200);
   gate.release();
   await run;
-  assert.deepEqual(await statusOf(s), { a: "unchecked", b: "live" }, "the old address's verdict matched no row");
+  assert.deepEqual(await statusOf(s), { a: "unchecked", b: "online" }, "the old address's verdict matched no row");
 });
 
 test("the probe budget ends the check: the rest stay unchecked and a second run finishes them", async () => {
