@@ -61,7 +61,7 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
   );
 
   return (
-    <ListGroup id="ch-list" icon={Radio} title="Channels" strip={strip} all={all}>
+    <ListGroup id="ch-list" icon={Radio} title="Channels" strip={strip} all={all} fill>
       <ChannelRows />
     </ListGroup>
   );
