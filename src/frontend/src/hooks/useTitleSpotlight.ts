@@ -67,6 +67,13 @@ export function useTitleSpotlight(active: boolean): TitleSpotlight {
   }, [active]);
   useEffect(() => () => session.current?.cancel(), []);
 
+  /* The statusbar's bar reads the store (`50` section 2.3): the spotlight is busy exactly while its search runs, and
+     the flag clears on results, failure, dismissal and unmount alike. */
+  useEffect(() => {
+    useAppStore.getState().setActivity("search", state.searching);
+    return () => useAppStore.getState().setActivity("search", false);
+  }, [state.searching]);
+
   const paused = useCallback(
     () => latest.current.info !== null || useAppStore.getState().overlay === "title-info", [],
   );

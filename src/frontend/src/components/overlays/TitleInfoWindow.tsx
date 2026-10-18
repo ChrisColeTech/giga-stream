@@ -17,7 +17,8 @@ import { useAppStore } from "@/store/app-store";
 import type { TitleDetail } from "@/types/title";
 import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 
-const SPEC = workSpec("title-info", "Title information", { width: 640, body: 480 });
+/** The window's opening size (`50` section 2.7): bigger than the pre-`50` 640x480, still under the 80% cap. */
+export const TITLE_INFO_SPEC = workSpec("title-info", "Title information", { width: 880, body: 620 });
 
 export function TitleInfoWindow() {
   const closeOverlay = useAppStore((state) => state.closeOverlay);
@@ -47,7 +48,7 @@ export function TitleInfoWindow() {
   const { playable, reason: unavailable } = titlePlay(item?.kind, detail);
 
   return (
-    <ChildWindow spec={SPEC} onClose={closeOverlay}>
+    <ChildWindow spec={TITLE_INFO_SPEC} onClose={closeOverlay}>
       {/* The strip sits directly under the header and above the scroller: only the body scrolls, nothing is at the foot. */}
       <Actions pinned left={<>
         <Button variant="ghost" aria-pressed={item?.favorite === true} disabled={item === undefined}

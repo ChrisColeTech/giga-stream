@@ -42,8 +42,9 @@ export function useLibraryData(
   const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
-  const [acceptedQueryKey, setAcceptedQueryKey] = useState<string | null>(null);
-  const [acceptedSerial, setAcceptedSerial] = useState<number | null>(null);
+  const [accepted, setAccepted] = useState<{ readonly queryKey: string | null; readonly serial: number | null }>({
+    queryKey: null, serial: null,
+  });
   const [sideReady, setSideReady] = useState(false);
   const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
@@ -66,18 +67,15 @@ export function useLibraryData(
       (answer) => {
         pageRef.current = answer;
         setPage(answer);
-        setAcceptedQueryKey(libraryQueryKey(useAppStore.getState().libraryQuery));
-        setAcceptedSerial(readSerial.current);
-        firstPagePending.current = false;
-        pagesLoaded.current = 1;
+        setAccepted({ queryKey: libraryQueryKey(useAppStore.getState().libraryQuery), serial: readSerial.current });
+        firstPagePending.current = false; pagesLoaded.current = 1;
         setLoading(false);
         const store = useAppStore.getState();
         store.rememberLibraryItems(answer.items);
         acceptCount(store.libraryQuery, answer);
       },
       (error) => {
-        firstPagePending.current = false;
-        setLoading(false);
+        firstPagePending.current = false; setLoading(false);
         useAppStore.getState().say(sentence(error), "warn");
       },
     );
@@ -127,10 +125,9 @@ export function useLibraryData(
     firstPagePending.current = true;
     pageRequest.current?.abort();
     setPaging(false);
-    /* The loaded list goes: the grid draws its first-page skeletons until the new first page lands, and nothing can
-       chain pages toward a stale position (no cursor, so no pager). */
-    pageRef.current = null;
-    setPage(null);
+    /* The grid draws its first-page skeletons until the new first page lands, and nothing chains pages toward a
+       stale position (no cursor, so no pager). */
+    pageRef.current = null; setPage(null);
     setLoading(true);
     if (debounce) session.current?.search(query);
     else session.current?.readNow(query);
@@ -139,7 +136,7 @@ export function useLibraryData(
   const loadMore = (): boolean => {
     const cursor = page?.nextCursor;
     const key = libraryQueryKey(query);
-    if (firstPagePending.current || !canLoadLibraryPage(acceptedQueryKey, key, loading, paging, cursor)) return false;
+    if (firstPagePending.current || !canLoadLibraryPage(accepted.queryKey, key, loading, paging, cursor)) return false;
     const generation = queryGeneration.current;
     const controller = new AbortController();
     pageRequest.current?.abort();
@@ -187,12 +184,17 @@ export function useLibraryData(
     return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };
   }, [showContinue]);
 
+  /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
+  useEffect(() => {
+    useAppStore.getState().setActivity("library", loading || paging);
+    return () => useAppStore.getState().setActivity("library", false);
+  }, [loading, paging]);
+
   const source = collectionOf(query.source) === null ? continuing : page?.items ?? [];
   const filtered = source.filter((item) => item.progress?.state === "watching" && matchesQuery({
     ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
-  const hasMore = canLoadLibraryPage(acceptedQueryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
-  const pageFor = { queryKey: acceptedQueryKey, serial: acceptedSerial };
+  const hasMore = canLoadLibraryPage(accepted.queryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
+  const pageFor = { queryKey: accepted.queryKey, serial: accepted.serial };
   const refresh = (): void => { void syncLibrary(readSideData); };
-  return { page, continuing: filtered, loading, paging, hasMore, loadMore, refresh, sideReady, pageFor };
-}
+  return { page, continuing: filtered, loading, paging, hasMore, loadMore, refresh, sideReady, pageFor };}

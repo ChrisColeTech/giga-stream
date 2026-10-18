@@ -30,7 +30,6 @@ function run(id: ShellAction): boolean {
   if (id === "search") return focusFirstShown("[data-search]");
   if (id === "zoom-reset") {
     state.setZoom(ZOOM_RESET);
-    state.say("Zoom reset to 100%.");
     return true;
   }
   state.toggleEvents();

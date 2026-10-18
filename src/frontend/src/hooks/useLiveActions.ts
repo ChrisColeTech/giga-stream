@@ -98,9 +98,7 @@ export function useLiveActions(active: boolean): LiveActions {
       )
         .then((answer) => {
           if (refreshRequest.current !== controller) return;
-          const store = useAppStore.getState();
-          store.setChannels(answer);
-          store.say("Channels refreshed.");
+          useAppStore.getState().setChannels(answer);
         })
         .catch((error: unknown) => {
           if (!aborted(error)) useAppStore.getState().say(error instanceof Error ? error.message : "Channels could not be refreshed.", "warn");

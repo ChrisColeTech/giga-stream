@@ -34,9 +34,11 @@ describe("the spotlight window", () => {
     assert.ok(bar.includes("rounded-2xl") && bar.includes("w-[760px]") && bar.includes("top-[22%]"));
   });
 
-  it("is not a modal: no scrim, no dialog semantics, no header, no close button, nothing dimmed", () => {
+  it("is not a modal: the window carries no scrim of its own, no dialog semantics, no header, no close button", () => {
     for (const markup of [draw(OPEN), draw(LISTED), draw(WAITING)]) {
-      assert.ok(!markup.includes("data-spotlight-scrim") && !markup.includes("bg-scrim"));
+      const windowTag = /<div[^>]*data-spotlight="[^"]*"[^>]*>/.exec(markup)?.[0] ?? "";
+      assert.ok(!windowTag.includes("bg-scrim"), "the window itself is not washed");
+      assert.ok(!markup.includes("data-spotlight-scrim"));
       assert.ok(!markup.includes('role="dialog"') && !markup.includes("aria-modal"));
       assert.ok(!/<h[1-6][\s>]/.test(markup) && !markup.includes("Close"));
       assert.ok(!markup.includes("opacity-60"), "the window is never dimmed under Title information");
@@ -44,17 +46,28 @@ describe("the spotlight window", () => {
     }
   });
 
-  it("has an invisible aria-hidden click-catcher below the window: no fill, tint or blur", () => {
+  it("its catcher wears the family backdrop: the one scrim, nothing else drawn", () => {
     for (const markup of [draw(OPEN), draw(LISTED), draw(WAITING)]) {
       const catcher = /<div[^>]*data-spotlight-catcher[^>]*>/.exec(markup)?.[0] ?? "";
       assert.ok(catcher.includes("fixed") && catcher.includes("inset-0") && catcher.includes('aria-hidden="true"'));
-      assert.ok(!/\b(bg-|opacity|blur|backdrop|shadow|border)/.test(catcher), "nothing visible");
+      assert.ok(catcher.includes("bg-scrim"), "the family backdrop (`50` section 2.6)");
+      assert.ok(!/\b(opacity|blur|backdrop|shadow|border)/.test(catcher), "the scrim is the catcher's only wash");
       const layer = (html: string): number => Number(/z-(\d+)/.exec(html)?.[1]);
       const windowTag = /<div[^>]*data-spotlight="[^"]*"[^>]*>/.exec(markup)?.[0] ?? "";
       assert.ok(layer(catcher) < layer(windowTag), "the catcher sits below the window");
       assert.ok(layer(windowTag) < 48, "Title information's scrim (z-48) still washes over both");
       assert.ok(markup.indexOf("data-spotlight-catcher") < markup.indexOf(windowTag));
     }
+  });
+
+  it("the backdrop is bg-scrim at z-46 under the panel's z-47 (`50` section 2.6)", () => {
+    const markup = draw(OPEN);
+    const layer = (html: string): number => Number(/z-(\d+)/.exec(html)?.[1]);
+    const catcher = /<div[^>]*data-spotlight-catcher[^>]*>/.exec(markup)?.[0] ?? "";
+    const windowTag = /<div[^>]*data-spotlight="[^"]*"[^>]*>/.exec(markup)?.[0] ?? "";
+    assert.equal(layer(catcher), 46);
+    assert.equal(layer(windowTag), 47);
+    assert.ok(catcher.includes("bg-scrim") && !windowTag.includes("bg-scrim"));
   });
 
   it("closes on a press, ignores it while paused, and the press and click go no further", () => {

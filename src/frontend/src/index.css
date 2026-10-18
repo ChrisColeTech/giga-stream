@@ -6,13 +6,6 @@
 @import "../../shared/ui/src/styles/fonts.css";
 @import "../../shared/ui/src/styles/tokens.css";
 
-/* ============ the interface's delta (docs/27 section 1) ============
- * Theatre's spotlight (owner, 2026-10-17): theme-independent, so it reads on the black stage in every
- * theme; workspace.css mixes its outer stops down from this one value. */
-@theme {
-  --color-spot: rgba(255, 255, 255, 0.045);
-}
-
 /* ============ theatre (owner, 2026-10-17) ============
  * Theatre mode is a token remap, not per-component rules (02 §14: retheming means editing tokens): the
  * shell tone goes black — the surfaces, pane fills, input backgrounds and every hairline and border, which

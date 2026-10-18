@@ -6,11 +6,15 @@ export interface PlaybackSlice {
   playback: PlaybackPrefs;
   playerItem: PlayerTab | null;
   playerMedia: PlayerMediaState;
+  /** Whether the hosted playback sits paused (`50` section 2.4): the statusbar's Stop reads it. Transient — the
+   *  saved settings never carry it; a freshly opened item starts paused. */
+  playerPaused: boolean;
   setPlayback: (change: Partial<PlaybackPrefs>) => void;
   setPlayerItem: (item: PlayerTab | null) => void;
   setPlayerSources: (sources: PlayerMediaState["sources"], activeSourceId: string | null) => void;
   setPlayerSource: (id: string) => void;
   setPlayerStage: (stage: StageState) => void;
+  setPlayerPaused: (paused: boolean) => void;
 }
 
 interface Host extends PlaybackSlice {
@@ -36,6 +40,7 @@ export function playbackSlice(set: Set, get: Get): PlaybackSlice {
     },
     playerItem: null,
     playerMedia: { sources: [], activeSourceId: null, stage: { kind: "idle" } },
+    playerPaused: true,
     setPlayback: (change) =>
       set({ playback: { ...get().playback, ...change }, settingsRevision: get().settingsRevision + 1 }),
     setPlayerItem: (playerItem) => set({ playerItem }),
@@ -43,5 +48,6 @@ export function playbackSlice(set: Set, get: Get): PlaybackSlice {
       set({ playerMedia: { sources, activeSourceId, stage: sources.length > 0 ? { kind: "loading" } : { kind: "idle" } } }),
     setPlayerSource: (activeSourceId) => set({ playerMedia: { ...get().playerMedia, activeSourceId, stage: { kind: "loading" } } }),
     setPlayerStage: (stage) => set({ playerMedia: { ...get().playerMedia, stage } }),
+    setPlayerPaused: (playerPaused) => set({ playerPaused }),
   };
 }

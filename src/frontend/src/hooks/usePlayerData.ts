@@ -136,10 +136,16 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     return () => controller.abort();
   }, [playingRequest]);
 
-  if (loaded.key !== key) return tab === null ? EMPTY : {
-    ...EMPTY,
-    basePending: true,
-    relatedPending: tab.ref.kind !== "local",
-  };
-  return loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
+  /* The statusbar's bar reads the store (`50` section 2.3): the video is busy while any of this hook's pendings run
+     or the stage is loading, and the flag clears on rest, failure and unmount alike. */
+  const stageLoading = useAppStore((state) => state.playerMedia.stage.kind === "loading");
+  const view: LoadedPlayerData = loaded.key !== key
+    ? (tab === null ? EMPTY : { ...EMPTY, basePending: true, relatedPending: tab.ref.kind !== "local" })
+    : loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
+  const pending = view.basePending || view.seasonPending || view.playingPending || view.relatedPending;
+  useEffect(() => {
+    useAppStore.getState().setActivity("video", pending || stageLoading);
+    return () => useAppStore.getState().setActivity("video", false);
+  }, [pending, stageLoading]);
+  return view;
 }

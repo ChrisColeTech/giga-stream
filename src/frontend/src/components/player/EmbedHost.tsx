@@ -1,7 +1,7 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { mountEmbedLifecycle } from "@/lib/embed-lifecycle";
 import type { EmbedPlaybackEvent } from "@/lib/embed-messages";
-import { embedFramePolicy } from "@/lib/embed-policy";
+import { embedFramePolicy, stopEmbed, type StoppableFrame } from "@/lib/embed-policy";
 import { embedUrl } from "@/lib/embed-url";
 import { hostOf } from "@/lib/event-host";
 import { clearPlayerPolicy, setPlayerPolicy } from "@/services/player-policy";
@@ -18,11 +18,19 @@ export interface EmbedHostProps {
   readonly onReady: () => void;
 }
 
+/** Stop's embed action (`50` section 2.4): blank the frame through the embed policy — a provider iframe cannot be
+ *  paused from outside. */
+export function blankForStop(frame: StoppableFrame | null | undefined): void {
+  if (frame !== null && frame !== undefined) stopEmbed(frame);
+}
+
 /** Both runtimes omit iframe sandbox; Electron additionally installs the named main-process policy. Hijack refusals
  *  and dialog no-ops are decided by that policy and arrive as guard reports, so this host never logs them itself. */
 export function EmbedHost(props: EmbedHostProps) {
   const playback = useRef(props.onPlayback);
   playback.current = props.onPlayback;
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const stopRequest = useAppStore((state) => state.stopRequest);
   const policy = embedFramePolicy();
   const address = embedUrl(props.source, props.positionMs, props.subtitleLanguage);
   const loadedSentence = `The provider's player loaded (${hostOf(props.source.origin) ?? props.source.name}).`;
@@ -39,6 +47,7 @@ export function EmbedHost(props: EmbedHostProps) {
   }, [loadedSentence, props.onReady, props.source.name]);
 
   const mount = useCallback((frame: HTMLIFrameElement | null) => {
+    frameRef.current = frame;
     if (frame === null) return undefined;
     if (props.electron && !setPlayerPolicy({
       origin: props.source.origin,
@@ -56,6 +65,12 @@ export function EmbedHost(props: EmbedHostProps) {
     frame.src = address;
     return dispose;
   }, [address, props.electron, props.source]);
+
+  /* Stop (`50` section 2.4): the serial's change blanks the frame; reopening the source plays again. */
+  useEffect(() => {
+    if (stopRequest === 0) return;
+    blankForStop(frameRef.current);
+  }, [stopRequest]);
 
   return (
     <>

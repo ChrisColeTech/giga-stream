@@ -17,8 +17,6 @@ export function useAppHydration(): void {
         store.applySnapshot(snapshot);
         if (snapshot.unreadable.length > 0) {
           store.say(`Some saved state could not be read: ${snapshot.unreadable.join(", ")}.`, "warn");
-        } else {
-          store.say("State restored.");
         }
         revealSettled();
       })

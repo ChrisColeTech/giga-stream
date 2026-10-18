@@ -24,6 +24,10 @@ export interface LiveSlice {
   setChannelCategory: (category: string) => void;
   selectChannel: (id: string | null) => void;
   playChannel: (id: string, streamUrl: string, userInitiated: boolean) => void;
+  /** Stop (`50` section 2.4): the whole live state returns to rest — the playing markers clear, the stage goes back
+   *  to its idle note, and no stale failure sentence survives. `retry` reads the markers, so it answers nothing
+   *  after a stop; playing the channel again sets everything through `playChannel`. */
+  stopLive: () => void;
   setLiveStage: (stage: StreamStageState, reason?: string) => void;
   setLiveStreamFacts: (facts: StreamFacts) => void;
 }
@@ -67,6 +71,7 @@ export function liveSlice(set: Set): LiveSlice {
         liveStage: "loading",
         liveStreamError: null,
       })),
+    stopLive: () => set({ playingChannelId: null, playingStreamUrl: null, liveStage: "idle", liveStreamError: null }),
     setLiveStage: (liveStage, reason) => set({ liveStage, liveStreamError: reason ?? null }),
     setLiveStreamFacts: (liveStreamFacts) => set({ liveStreamFacts }),
   };
