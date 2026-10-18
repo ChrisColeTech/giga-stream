@@ -164,16 +164,16 @@ describe("the shell", () => {
 
   it("holds 900 x 640 and scrolls inside a smaller window", () => {
     const html = renderLive(createElement(AppShell));
-    assert.ok(html.startsWith('<div class="h-full w-full overflow-auto">'));
+    assert.ok(html.includes('<div class="h-full w-full overflow-auto">'));
     assert.ok(html.includes("min-width:900px") && html.includes("min-height:640px"));
   });
 
-  it("shows the sign-in page in place of the tab pages while signed out, the chrome still in place", () => {
+  it("shows the gate in place of the tab pages while signed out, with the chrome gone (`34` section 4)", () => {
     state().signOut();
     const html = renderLive(createElement(AppShell));
     assert.ok(html.includes('aria-label="Sign in"'));
     for (const item of TABS) assert.equal(count(html, `<section aria-label="${item.label}"`), 0, item.label);
-    assert.ok(html.includes(">ADMIN<") && html.includes("<footer") && html.includes("<header"));
+    assert.ok(!html.includes(">ADMIN<") && !html.includes("<footer") && !html.includes("<header"));
   });
 
   it("never asks the network for anything", () => {

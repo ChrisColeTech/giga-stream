@@ -19,9 +19,10 @@ beforeEach(() => {
 });
 
 describe("the gate, idle", () => {
-  it("is a region of the shell, not a modal, with the brand column beside the form", () => {
+  it("is a full-window wall with a drag strip, and the brand column beside the form", () => {
     const html = page();
-    assert.ok(html.includes('role="region"') && !html.includes("aria-modal"));
+    assert.ok(html.includes('role="dialog"') && html.includes('aria-modal="true"'));
+    assert.ok(html.includes("fixed inset-0") && html.includes("[-webkit-app-region:drag]"));
     assert.ok(html.indexOf("Run the channels.") < html.indexOf('aria-label="Sign in"'));
     assert.ok(html.includes("STREAM ADMIN"));
   });
