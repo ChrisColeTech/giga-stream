@@ -58,13 +58,15 @@ test("an invalid field is account.invalid, naming the field; a role is no longer
   const t = await makeApp();
   const token = await adminToken(t);
   for (const [body, field] of [
-    [{ ...second, password: "short" }, "password"],
+    [{ ...second, password: "" }, "password"],
+    [{ ...second, password: "x".repeat(257) }, "password"],
     [{ ...second, email: "not-an-email" }, "email"],
     [{ ...second, role: "owner" }, "role"],
   ] as const) {
     const answer = await send(t.app, "POST", "/api/admin-accounts", body, token);
     assert.deepEqual([answer.status, code(answer), pick(answer.body, "error.details.field")], [422, "account.invalid", field]);
   }
+  assert.equal((await send(t.app, "POST", "/api/admin-accounts", { ...second, password: "x" }, token)).status, 201);
 });
 
 test("the last enabled account cannot be disabled or deleted", async () => {

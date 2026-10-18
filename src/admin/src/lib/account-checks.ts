@@ -8,7 +8,7 @@ import {
   EMAIL_SHAPE,
   NAME_LENGTH,
   PASSWORD_LONG,
-  PASSWORD_SHORT,
+  PASSWORD_REQUIRED,
   SAVING_REASON,
   UNREACHABLE_REASON,
 } from "@/constants/account-copy";
@@ -33,8 +33,6 @@ export function nameLength(value: string): Refusal {
 
 /** Never trimmed: a space is part of a password. */
 export function passwordLength(value: string): Refusal {
-  if (value === "") return null;
-  if (value.length < PASSWORD_MIN) return PASSWORD_SHORT;
   return value.length > PASSWORD_MAX ? PASSWORD_LONG : null;
 }
 
@@ -43,7 +41,7 @@ export interface FieldRefusal {
   readonly sentence: string;
 }
 
-const passwordRequired = (value: string): Refusal => (value === "" ? "Password is required." : null);
+const passwordRequired = (value: string): Refusal => (value.length < PASSWORD_MIN ? PASSWORD_REQUIRED : null);
 
 /** Why `Create` is disabled, in the form's order, or undefined. Busy and unreachable come after the required fields. */
 export function createReason(draft: NewAccountDraft, busy: boolean, unreachable: boolean): string | undefined {

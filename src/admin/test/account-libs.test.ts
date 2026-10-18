@@ -83,8 +83,7 @@ describe("the field checks", () => {
     }
     assert.equal(nameLength("x".repeat(80)), null);
     assert.equal(nameLength("x".repeat(81)), "Name must be 1 to 80 characters.");
-    assert.equal(passwordLength("x".repeat(11)), "Password must be at least 12 characters.");
-    assert.equal(passwordLength("x".repeat(12)), null);
+    assert.equal(passwordLength("x"), null);
     assert.equal(passwordLength("x".repeat(256)), null);
     assert.equal(passwordLength("x".repeat(257)), "Password must be at most 256 characters.");
     assert.equal(passwordLength(" ".repeat(12)), null, "whitespace is kept, never trimmed");

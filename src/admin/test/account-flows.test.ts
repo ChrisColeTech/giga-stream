@@ -142,10 +142,10 @@ describe("set password", () => {
     assert.deepEqual(state().gate, { phase: "idle", notice: "Password changed. Sign in again." });
   });
 
-  it("refuses a short password under the field and a server refusal under it too", async () => {
+  it("refuses a too-long password under the field and a server refusal under it too", async () => {
     loaded();
     const { flows, calls } = rig({ update: async () => Promise.reject(refuse("account.invalid", 422, "password")) });
-    const short = await flows.setPassword("a", "short");
+    const short = await flows.setPassword("a", "x".repeat(257));
     assert.deepEqual([short.ok, !short.ok && short.field], [false, "password"]);
     assert.deepEqual(calls, []);
     const refused = await flows.setPassword("a", PASSWORD);

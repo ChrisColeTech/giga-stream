@@ -91,7 +91,7 @@ through `Win32_Process.Create` as `07` section 4 shows, keeping the PID. Do not 
 1. Start the stack as usual (`npm run dev`); open the admin in its backend window or at `http://127.0.0.1:5172/admin/`.
 2. Sign in with the existing account's email and password. A wrong try shows `The email or password is wrong.`; five wrong ones lock that account for 15 minutes, so do not guess.
 3. Press `Ctrl+6` (Accounts). The list shows your own row, state `enabled`, last sign-in a time; its `Delete` is disabled (the last enabled account).
-4. Under **New account** type the new person's name, email and a password of at least 12 characters (in that order); `Create` is disabled with `Name is required.` and its siblings until all three are filled. Press `Create`.
+4. Under **New account** type the new person's name, email and a password of 1 to 256 characters (in that order); `Create` is disabled with `Name is required.` and its siblings until all three are filled. Press `Create`.
 5. The row appears; the notice says `Created <email>.`; the Events drawer (statusbar `Events`) shows `<you> created account <email>`.
 6. Optional: open a second admin window, sign in as the new account, and see it in the same list. To give someone a new password later: open the row, `New password`, `Set new password` (it signs that account out everywhere).
 
@@ -215,8 +215,8 @@ puts a refusal under its row. Both are consumed unchanged by every tab; their si
 
 ### 5.9 Field checks (`lib/account-checks.ts`, with `constants/account-limits.ts` mirroring `03` 7.11)
 
-`lib/field-checks.ts` is frozen; the account rules live in `lib/account-checks.ts` using its primitives: `emailAddress` (`name@host.tld`, at most 254), `nameLength` (1 to 80 after trim), `passwordLength` (12 to 256, never trimmed). Sentences: `Email must look like name@example.com.`, `Name must be 1 to 80 characters.`,
-`Password must be at least 12 characters.`. The backend's own sentence for a bad field (`The password is not valid.`) is only the fallback.
+`lib/field-checks.ts` is frozen; the account rules live in `lib/account-checks.ts` using its primitives: `emailAddress` (`name@host.tld`, at most 254), `nameLength` (1 to 80 after trim), `passwordLength` (1 to 256, never trimmed; an empty one is `Password is required.`). Sentences: `Email must look like name@example.com.`, `Name must be 1 to 80 characters.`,
+`Password must be at most 256 characters.`. The backend's own sentence for a bad field (`The password is not valid.`) is only the fallback.
 
 ### 5.10 Bulk actions on the ticked accounts (the mechanism is `39` section 6)
 
@@ -369,6 +369,6 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 
 ## 13. Done when
 
-The owner signs in to the real admin with their existing account, opens Accounts, creates an account with an email, a name and a password of at least 12 characters, sees it listed and audited, and the new person can sign in; a disabled or re-passworded account is returned to the gate on its next request;
+The owner signs in to the real admin with their existing account, opens Accounts, creates an account with an email, a name and a password of 1 to 256 characters, sees it listed and audited, and the new person can sign in; a disabled or re-passworded account is returned to the gate on its next request;
 the last enabled account cannot be deleted or disabled; a token expiring refreshes once without a visible blip; every request but login and refresh carries the bearer; nothing is written to the browser; the Events drawer shows the real audit log; the shared record pieces and the slice and stale registries exist for
 the parallel waves; the gate, the admin and shared-http tests pass; the coordinator's section 11 drives pass on the temporary backend; the owner's data was never touched by verification.

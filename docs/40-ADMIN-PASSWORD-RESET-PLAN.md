@@ -56,7 +56,7 @@ The enumeration rule: **an answer never differs by whether the email is an accou
 - Answer `200 { question: "<the question text>" }` for **every** email: the account's real question when it has one and is enabled; the decoy otherwise (unknown email, account with no question, disabled account). The disabled case uses the real question, which is shape-identical to a decoy, so nothing is revealed.
 - Passes through the per-address sign-in limiter (`429 auth.rate_limited`, "Too many sign-in attempts; wait a minute."). It writes nothing.
 
-**`POST /api/auth/reset`** (public; body `{ email, answer, newPassword }`, strict; `newPassword` 12 to 256 characters, `answer` 1 to 200 characters before normalisation)
+**`POST /api/auth/reset`** (public; body `{ email, answer, newPassword }`, strict; `newPassword` 1 to 256 characters, `answer` 1 to 200 characters before normalisation)
 
 Order of checks (the first two are the same for every email, so they reveal nothing):
 
@@ -148,7 +148,7 @@ Views in the same full-window wall (`SignInPage`): `signin` -> `reset-email` -> 
 Copy (`constants/reset-copy.ts`):
 - Heading `Reset your password`; verbs `Continue`, `Reset password`, `Back to sign in`.
 - The generic reason, always shown on `reset-answer`: `If this account has no security question, it cannot be reset here. A signed-in admin can set one under Settings > Account.`
-- Refusals: `That answer is not right, or the reset is not available for this email.` under Answer (`auth.reset_invalid`); `Password must be at least 12 characters.` under New password (the client check first, then the backend's `422`); `Too many sign-in attempts; wait a minute.` on the notice (`rate_limited`); `The admin backend cannot be reached.` on the notice (`unreachable`).
+- Refusals: `That answer is not right, or the reset is not available for this email.` under Answer (`auth.reset_invalid`); `Password is required.` or `Password must be at most 256 characters.` under New password (the client check first, then the backend's `422`); `Too many sign-in attempts; wait a minute.` on the notice (`rate_limited`); `The admin backend cannot be reached.` on the notice (`unreachable`).
 - Success: back to `signin` with the notice `Password reset. Sign in with the new password.` (`GateNotice`, title `Password reset`).
 - Focus: Email on `reset-email`; Answer on `reset-answer`; after a refusal focus goes back to Answer (the answer is cleared on a refusal, the new password is cleared too; the question stays). The password fields use `autoComplete="new-password"`; the answer uses `autoComplete="off"`. Escape does nothing (a gate has no cancel).
 - No placeholder text, no `aria-disabled`, the only filled button is the primary of each view.
