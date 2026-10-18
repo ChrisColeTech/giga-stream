@@ -80,7 +80,7 @@ describe("the flows", () => {
     assert.equal((await flows.loadDeleted()).ok, true);
     assert.deepEqual([state().titles.deleted.status, state().titles.deleted.items.map((one) => one.id)], ["ready", ["movie-603"]]);
     assert.equal((await flows.restore("movie-603")).ok, true);
-    assert.equal(state().notice?.sentence, "Restored The Matrix. It returns on the next browse or sync.");
+    assert.equal(state().events.at(-1)?.sentence, "Restored The Matrix. It returns on the next browse or sync.");
     assert.deepEqual([state().titles.deleted.items, calls.at(-1)], [[], "restore:movie-603"]);
   });
 
@@ -88,7 +88,7 @@ describe("the flows", () => {
     const { flows } = rig({ listDeleted: async () => [gone("tv-1399")] });
     await flows.loadDeleted();
     await flows.restore("tv-1399");
-    assert.equal(state().notice?.sentence, "Restored tv-1399. It returns on the next browse or sync.");
+    assert.equal(state().events.at(-1)?.sentence, "Restored tv-1399. It returns on the next browse or sync.");
   });
 
   it("a restore that finds nothing says why and reads the list again", async () => {

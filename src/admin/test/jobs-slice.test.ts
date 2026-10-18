@@ -59,7 +59,7 @@ describe("the jobs slice and the statusbar's N syncing", () => {
     await flows.load();
     assert.equal(syncing(), 0);
     await flows.run(2);
-    assert.deepEqual([syncing(), state().notice?.sentence], [1, "Started Job 2."]);
+    assert.deepEqual([syncing(), state().events.at(-1)?.sentence], [1, "Started Job 2."]);
     await flows.refresh();
     assert.equal(syncing(), 0, "a Refresh that reads running: false ends the count; nothing polls");
     await flows.run(1);

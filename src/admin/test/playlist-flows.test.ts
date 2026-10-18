@@ -41,7 +41,8 @@ function rig(script: Partial<PlaylistsService> = {}, jobScript: Partial<JobsServ
   const flows = createPlaylistFlows({ service, jobs, store: () => state(), audit });
   return { flows, calls, reloads };
 }
-const notice = (): string => state().notice?.sentence ?? "";
+/* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
+const lastEvent = (): string => state().events.at(-1)?.sentence ?? "";
 const everything = (): string => JSON.stringify({ ...state(), tokens: null });
 
 beforeEach(() => {
@@ -62,7 +63,7 @@ describe("the playlist flows", () => {
     const result = await flows.importPlaylist(FILE);
     assert.equal(result.ok, true);
     assert.deepEqual(calls, ["file:us.m3u"]);
-    assert.equal(notice(), "Imported us.m3u: 3 channels, all disabled. Enable them on the Channels tab.");
+    assert.equal(lastEvent(), "Imported us.m3u: 3 channels, all disabled. Enable them on the Channels tab.");
     assert.deepEqual([state().stale.channels, state().stale.jobs], [true, true]);
     assert.deepEqual(state().playlists.items.map((item) => item.id), [3], "the playlist alone, not the import's extra keys");
     assert.equal("imported" in (state().playlists.items[0] ?? {}), false);
@@ -74,14 +75,14 @@ describe("the playlist flows", () => {
     const result = await flows.importPlaylist(WEB);
     assert.equal(result.ok, true);
     assert.deepEqual(calls, ["create"]);
-    assert.match(notice(), /^Imported iptv\.example\.test: 3 channels, all disabled\./);
+    assert.match(lastEvent(), /^Imported iptv\.example\.test: 3 channels, all disabled\./);
     assert.ok(!everything().includes("hunter2"));
   });
 
   it("import the same file again: says what changed instead of claiming every channel is new", async () => {
     const { flows } = rig({ importFile: async () => imported("us.m3u", false, { created: 0, updated: 0 }) });
     await flows.importPlaylist(FILE);
-    assert.equal(notice(), "Imported us.m3u again: 0 created, 0 updated.");
+    assert.equal(lastEvent(), "Imported us.m3u again: 0 created, 0 updated.");
   });
 
   it("refuses with no file chosen under File, and a non-http(s) address under Address, before sending", async () => {
@@ -123,7 +124,7 @@ describe("the playlist flows", () => {
     const saved = await flows.save(1, { ...draftOf(row(1)), address: SECRET });
     assert.equal(saved.ok, true);
     assert.deepEqual(calls.filter((call) => call.startsWith("update")), ["update:1"]);
-    assert.equal(notice(), "Saved List 1.");
+    assert.equal(lastEvent(), "Saved List 1.");
     assert.equal(state().stale.channels, true, "a playlist's enabled switch changes what players read");
     assert.ok(!everything().includes("hunter2"));
   });
@@ -133,7 +134,7 @@ describe("the playlist flows", () => {
     await flows.load();
     state().openWorkspace("playlists", "1");
     await flows.remove(1);
-    assert.equal(notice(), "Deleted List 1 and 7 channels.");
+    assert.equal(lastEvent(), "Deleted List 1 and 7 channels.");
     assert.deepEqual([state().stale.jobs, state().stale.channels], [true, true]);
     assert.equal(state().workspaces.playlists, null);
     assert.deepEqual(state().playlists.items.map((item) => item.id), [2]);

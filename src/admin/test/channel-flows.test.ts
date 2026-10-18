@@ -13,6 +13,8 @@ import { resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
 const notice = (): string | undefined => state().notice?.sentence;
+/* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
+const lastEvent = (): string | undefined => state().events.at(-1)?.sentence;
 const refuse = (code: string, field?: string, status = 422) => new ApiError(code, "Server sentence.", status, { field });
 
 /** A service whose every method is a script; a call records its route. */
@@ -55,13 +57,13 @@ describe("the channel flows", () => {
     const result = await flows.create({ ...EMPTY_NEW_CHANNEL, name: "Drive News", folder: "D:\\v" });
     assert.equal(result.ok, true);
     assert.deepEqual([state().channels.live.map((item) => item.id), state().channels.total], [["live-1"], 1]);
-    assert.equal(notice(), "Drive News is preparing.");
+    assert.equal(lastEvent(), "Drive News is preparing.");
   });
 
   it("create a stream channel: `Created <name>.`", async () => {
     const flows = flowsOf(fake({ create: async () => stream("ch_1", { name: "Talk" }) }).service);
     await flows.create({ ...EMPTY_NEW_CHANNEL, kind: "stream", name: "Talk", streamUrl: "https://a.b/c" });
-    assert.equal(notice(), "Created Talk.");
+    assert.equal(lastEvent(), "Created Talk.");
   });
 
   it("refuse a bad value before any call, under its row", async () => {
@@ -99,12 +101,12 @@ describe("the channel flows", () => {
     assert.deepEqual(await flows.save("a", liveDraft(saved)), { ok: true, value: null });
     assert.deepEqual(calls, []);
     await flows.save("a", { ...liveDraft(saved), name: "New" });
-    assert.equal(notice(), "Saved New.");
+    assert.equal(lastEvent(), "Saved New.");
     const now = state().channels.items[0];
     assert.ok(now?.kind === "live");
     assert.equal(now.name, "New");
     await flows.save("a", { ...liveDraft(now), mode: "encode" });
-    assert.equal(notice(), "New is preparing.");
+    assert.equal(lastEvent(), "New is preparing.");
     assert.deepEqual(sent, [{ name: "New" }, { mode: "encode" }]);
   });
 
@@ -129,7 +131,7 @@ describe("the channel flows", () => {
     });
     await flowsOf(service).remove("a");
     assert.deepEqual([state().channels.items.map((item) => item.id), state().workspaces.channels], [["b"], null]);
-    assert.equal(notice(), "Deleted Channel a.");
+    assert.equal(lastEvent(), "Deleted Channel a.");
     await flowsOf(service).remove("b");
     assert.deepEqual(state().channels.items, []);
   });
@@ -143,10 +145,10 @@ describe("the channel flows", () => {
       }).service,
     );
     await flows.rebuild("a");
-    assert.equal(notice(), "Channel a is preparing.");
+    assert.equal(lastEvent(), "Channel a is preparing.");
     await flows.revert("s");
     const reverted = state().channels.items.find((item) => item.id === "s");
-    assert.deepEqual([reverted?.kind === "stream" && reverted.editedFields, notice()], [[], "Reverted Stream s."]);
+    assert.deepEqual([reverted?.kind === "stream" && reverted.editedFields, lastEvent()], [[], "Reverted Stream s."]);
   });
 
   it("enable and disable one row with a PATCH of enabled only, and the row and the Preview's copy follow", async () => {
@@ -162,7 +164,7 @@ describe("the channel flows", () => {
       }).service,
     );
     const result = await flows.setEnabled("s", false);
-    assert.deepEqual([result.ok, sent, notice()], [true, [{ enabled: false }], "Saved Stream s."]);
+    assert.deepEqual([result.ok, sent, lastEvent()], [true, [{ enabled: false }], "Saved Stream s."]);
     assert.equal(state().channels.items[0]?.enabled, false);
     assert.equal(state().channels.preview?.channel?.enabled, false);
     assert.equal((await flows.setEnabled("gone", true)).ok, false);
@@ -181,7 +183,7 @@ describe("the channel flows", () => {
       }).service,
     );
     assert.equal((await flows.mark("s", "dead")).ok, true);
-    assert.deepEqual([sent, notice()], [["s:dead"], "Marked Stream s dead."]);
+    assert.deepEqual([sent, lastEvent()], [["s:dead"], "Marked Stream s dead."]);
     const row = state().channels.items[0];
     assert.deepEqual([row?.kind === "stream" && row.status, row?.kind === "stream" && row.checkedAt], ["dead", 77]);
     const window = state().channels.preview?.channel;

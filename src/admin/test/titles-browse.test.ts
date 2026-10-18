@@ -184,7 +184,7 @@ describe("the add through the real service", () => {
       async (calls) => {
         view()(row("movie-1")).onOpen();
         assert.equal(state().workspaces.titles, null);
-        assert.equal(state().notice?.sentence, "T movie-1: Not stored yet. Add it to open it.");
+        assert.equal(state().events.at(-1)?.sentence, "T movie-1: Not stored yet. Add it to open it.");
         view()(row("movie-3", { deleted: true })).onOpen();
         assert.equal(state().workspaces.titles, null);
         assert.equal(calls.length, 0, "no GET /api/titles/:id for an unstored row");

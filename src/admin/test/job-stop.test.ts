@@ -133,7 +133,7 @@ describe("the Stop flow", () => {
     const flows = flowsWith(async (id) => job(id, { running: true }));
     const result = await flows.stop(2);
     assert.equal(result.ok, true);
-    assert.equal(state().notice?.sentence, "Stopping Job 2.");
+    assert.equal(state().events.at(-1)?.sentence, "Stopping Job 2.");
     assert.equal(state().jobs.items.find((item) => item.id === 2)?.running, true);
   });
 

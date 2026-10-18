@@ -73,7 +73,7 @@ describe("the statusbar's Stop", () => {
     const { run, reloads } = stopper(async (id) => (called.push(id), job(id)));
     await run();
     assert.deepEqual(called.sort(), [1, 2]);
-    assert.deepEqual([state().notice?.sentence, reloads.length], ["Stopping 2 syncs.", 1]);
+    assert.deepEqual([state().events.at(-1)?.sentence, reloads.length], ["Stopping 2 syncs.", 1]);
   });
 
   it("words a refusal honestly, counts one that had just ended as no failure, and does nothing when nothing runs", async () => {

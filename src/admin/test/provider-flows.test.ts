@@ -22,6 +22,8 @@ const provider = (id: number, extra: Partial<AdminProvider> = {}): AdminProvider
 const refuse = (code: string, status: number, field?: string) =>
   new ApiError(code, `sentence for ${code}`, status, field === undefined ? {} : { field });
 const notice = (): string => state().notice?.sentence ?? "";
+/* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
+const lastEvent = (): string => state().events.at(-1)?.sentence ?? "";
 
 type Script = Partial<ProvidersService>;
 
@@ -84,7 +86,7 @@ describe("create", () => {
     const result = await flows.create({ ...EMPTY_NEW_PROVIDER, name: "New", source: "new", family: "stream" });
     assert.equal(result.ok, true);
     assert.ok(state().providers.items.some((p) => p.name === "New"));
-    assert.equal(notice(), "Created New.");
+    assert.equal(lastEvent(), "Created New.");
     assert.deepEqual(reloads, [10]);
   });
 
@@ -114,7 +116,7 @@ describe("save and remove", () => {
     const result = await flows.save(1, { ...draftOfProvider(provider(1)), enabled: false, startParam: "t" });
     assert.ok(result.ok && result.value?.name === "saved");
     assert.deepEqual(calls, ['update:1:{"enabled":false,"startParam":"t"}']);
-    assert.equal(notice(), "Saved saved.");
+    assert.equal(lastEvent(), "Saved saved.");
   });
 
   it("closes the workspace and re-reads when the provider is gone", async () => {
@@ -132,7 +134,7 @@ describe("save and remove", () => {
     const { flows } = rig();
     await flows.remove(2);
     assert.deepEqual([state().providers.items.map((p) => p.id), state().workspaces.providers], [[1], null]);
-    assert.equal(notice(), "Deleted P2.");
+    assert.equal(lastEvent(), "Deleted P2.");
   });
 
   it("drops a save answered after sign-out", async () => {

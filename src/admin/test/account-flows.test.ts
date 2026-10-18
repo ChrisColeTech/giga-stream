@@ -36,6 +36,8 @@ function rig(script: Script = {}) {
 }
 const loaded = (): void => state().accountsLoaded([ME, account("a"), account("b", true)]);
 const notice = (): string => state().notice?.sentence ?? "";
+/* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
+const lastEvent = (): string => state().events.at(-1)?.sentence ?? "";
 
 beforeEach(() => {
   resetStore();
@@ -48,7 +50,7 @@ describe("create", () => {
     const result = await flows.create({username: "new@x.test", password: PASSWORD });
     assert.equal(result.ok, true);
     assert.ok(state().accounts.items.some((item) => item.username === "new@x.test"));
-    assert.equal(notice(), "Created new@x.test.");
+    assert.equal(lastEvent(), "Created new@x.test.");
     assert.deepEqual(reloads, [10]);
   });
 
@@ -83,7 +85,7 @@ describe("save", () => {
     const result = await flows.save(7, { username: "ada@new.test", enabled: true });
     assert.equal(result.ok, true);
     assert.deepEqual(state().actor, { id: 7, username: "ada@new.test" });
-    assert.equal(notice(), "Saved ada@new.test.");
+    assert.equal(lastEvent(), "Saved ada@new.test.");
     assert.equal(state().signedIn, true);
   });
 
@@ -99,7 +101,7 @@ describe("save", () => {
     loaded();
     const { flows, reloads } = rig();
     await flows.save("a", {username: "a@x.test", enabled: false });
-    assert.equal(notice(), "Saved a@x.test; it is signed out everywhere.");
+    assert.equal(lastEvent(), "Saved a@x.test; it is signed out everywhere.");
     assert.deepEqual(reloads, [10]);
   });
 
@@ -129,7 +131,7 @@ describe("set password", () => {
     const { flows } = rig();
     const result = await flows.setPassword("a", PASSWORD);
     assert.equal(result.ok, true);
-    assert.equal(notice(), "Password set; a@x.test is signed out everywhere.");
+    assert.equal(lastEvent(), "Password set; a@x.test is signed out everywhere.");
     const everything = JSON.stringify([state().notice, state().events, state().accounts, state().gate]);
     assert.ok(!everything.includes(PASSWORD));
   });
@@ -160,7 +162,7 @@ describe("remove", () => {
     const { flows, reloads } = rig();
     await flows.remove("a");
     assert.ok(!state().accounts.items.some((item) => item.id === "a"));
-    assert.equal(notice(), "Deleted a@x.test.");
+    assert.equal(lastEvent(), "Deleted a@x.test.");
     assert.deepEqual(reloads, [10]);
   });
 
