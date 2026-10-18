@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { LIVE_MODES, VARIANT_NAMES } from "../constants/live-media.js";
 import type { ChannelRecord, LiveRecord, StreamRecord } from "../types/channel.js";
+import { createChannelPage } from "./channel-page.js";
 
 const ChannelRow = z.object({
   id: z.string(),
@@ -50,6 +51,7 @@ export function createChannelRepository(db: DatabaseSync) {
   const countOf = db.prepare("SELECT COUNT(*) AS n FROM channels WHERE playlist_id = ?");
   const detach = db.prepare("UPDATE channels SET source = NULL, playlist_id = NULL, revision = ? WHERE playlist_id = ?");
   const liveByNumber = db.prepare("SELECT id FROM channels WHERE kind = 'live' AND number = ?");
+  const liveIds = db.prepare("SELECT id FROM channels WHERE kind = 'live' ORDER BY id");
   const videosOf = db.prepare("SELECT path FROM channel_videos WHERE channel_id = ? ORDER BY position");
   const insert = db.prepare(`
     INSERT INTO channels (${COLUMNS}, created_at)
@@ -114,6 +116,10 @@ export function createChannelRepository(db: DatabaseSync) {
 
   return {
     list: (): ChannelRecord[] => all.all().map(toRecord),
+    /** One page in a total, stable order, and the count the filters keep (docs/41 section 3.1). */
+    page: createChannelPage(db, COLUMNS, toRecord),
+    /** The ids of the live rows (a handful): the paged read asks the engine for their state. */
+    liveIds: (): string[] => liveIds.all().map((row) => IdRow.parse(row).id),
     /** The stream rows the playlist sync owns (docs/03 section 7.2c): the ones that carry a `source`. */
     listSynced: (): StreamRecord[] =>
       all.all().map(toRecord).filter((c): c is StreamRecord => c.kind === "stream" && c.source !== null),
