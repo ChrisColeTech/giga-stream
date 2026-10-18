@@ -1,0 +1,64 @@
+import { User } from "lucide-react";
+import { Input } from "@giga/ui/controls/Input";
+import { Toggle } from "@giga/ui/controls/Toggle";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Tooltip } from "@giga/ui/form/Tooltip";
+import { ENABLED_TIP, LAST_SIGN_IN_TIP } from "@/constants/account-copy";
+import type { AccountDraft } from "@/lib/account-draft";
+import { formatWhen } from "@/lib/format-when";
+import type { FormErrors } from "@/lib/record-form";
+import type { AdminAccount } from "@/types/admin-account";
+
+export interface AccountDetailsGroupProps {
+  readonly account: AdminAccount;
+  readonly draft: AccountDraft;
+  readonly errors: FormErrors;
+  readonly onChange: (patch: Partial<AccountDraft>) => void;
+  /** Why the Enabled switch cannot be turned off (the last enabled account); undefined when it can. */
+  readonly lockReason: string | undefined;
+}
+
+/** `Details`: Name, Email, the Enabled switch (the inverse of the stored `disabled`) and the last sign-in, read only. Name
+ *  first on every form. The switch is disabled with its reason while this is the last enabled account. */
+export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason }: AccountDetailsGroupProps) {
+  const toggle = (
+    <Toggle
+      checked={draft.enabled}
+      aria-label="Enabled"
+      disabled={lockReason !== undefined}
+      onChange={(enabled) => onChange({ enabled })}
+    />
+  );
+  return (
+    <Group id="ac-details" icon={User} title="Details">
+      {(["name", "email"] as const).map((key) => (
+        <Row key={key} label={key === "name" ? "Name" : "Email"} error={errors[key]}>
+          <Input
+            type={key === "email" ? "email" : "text"}
+            value={draft[key]}
+            className={FIELD_CONTROL}
+            aria-label={key === "name" ? "Name" : "Email"}
+            aria-invalid={errors[key] !== undefined}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => onChange({ [key]: event.target.value })}
+          />
+        </Row>
+      ))}
+      <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
+        {lockReason === undefined ? (
+          toggle
+        ) : (
+          <Tooltip text={lockReason} focusable label={`Enabled. ${lockReason}`}>
+            {toggle}
+          </Tooltip>
+        )}
+      </Row>
+      <Row label="Last sign-in" tip={LAST_SIGN_IN_TIP}>
+        <span className="flex h-9 items-center font-mono text-sm text-muted">{formatWhen(account.lastSignInAt)}</span>
+      </Row>
+    </Group>
+  );
+}

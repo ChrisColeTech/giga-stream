@@ -11,7 +11,8 @@ fixtures; each tab's New form, list and workspaces arrive wave by wave (`docs/28
 - Production: `npm run build` writes `dist/`; the backend serves it at `/admin/` (`ADMIN_DIST`), and its own Electron
   window opens it.
 - Scripts: `npm run dev`, `build`, `typecheck`, `lint`, `test`, `preview` (port 5272).
-- Address switch while the data is fixtures: `?signedin=0` opens on the sign-in page.
+- Sign-in is real (`POST /api/auth/login`); the app always starts at the sign-in gate, and the tokens live in memory only.
+  The Accounts tab and the Events drawer (the audit log) run on real data; the other tabs follow (`docs/39`).
 - Plans: `docs/28-ADMIN-VISUAL-PARITY-PLAN.md` (the pages, from fixtures), then `docs/29-ADMIN-BACKEND-WIRING-PLAN.md`
   (wire it to the backend). The shared library is `docs/27`. The product plan is `docs/26`.
 - Rules: `docs/01`.
