@@ -21,21 +21,30 @@ admin backend and, for Browse TMDB, the admin app.
    is REMOVED from every public read. (b) **Browse TMDB** is a deliberate admin tool (the Titles tab's `Stored | Browse TMDB` view:
    find titles TMDB has that are not stored yet): it stays, as its own **admin-only** TMDB route that reads TMDB, shows TMDB's
    answer and **writes nothing**. Adding a title from it is an explicit action.
-2. **The Library fill gets a details phase** (this version) and, in a later wave, an **episodes phase**.
+2. **The Library fill syncs titles, details AND season/episode info in the one discovery job** (owner, 2026-10-18: "no need to
+   split the same sync work out across phases"): discover walk -> `details` -> `episodes`, all in this wave.
 3. **Recommendations are computed from the store**, not asked of TMDB.
 
 ## 3. Backend
 
 ### 3.1 Library fill phases (`title-sync.ts`, `44` 3.1)
 
-`discover` walk (as today) -> **`details`** -> (later wave) `episodes`.
+`discover` walk (as today) -> **`details`** -> **`episodes`** (one job, one run, one progress bar).
 - **`details`:** every stored title whose payload is `shape: "list"` (and, on later runs, a `detail` older than `TITLE_FRESH_MS`),
   not deleted and not disabled, ordered by popularity DESC then id, gets ONE detail call (`/movie/{id}` or `/tv/{id}` with
   `append_to_response=credits,external_ids`, the existing `detailOf` mapping) written as the title's detail payload (edited fields
   of a manual-edited title are never overwritten, as today). **No OMDb call** in the sync (its 1,000-a-day budget stays for
   on-demand enrichment by an admin action, if kept; the plan does not depend on OMDb). Progress phase `details` with `done/total`
-  (total = the titles still needing detail when the phase starts); weights: `movies`/`tv` walk 0-30%, `details` 30-100% (the admin
-  copies the weights from the backend answer, `44` 3.1). Counts: `{ titles, detailed, stale }`.
+  (total = the titles still needing detail when the phase starts); weights (fixed, so the bar never goes backwards): `movies`/`tv` walk
+  0-10%, `details` 10-50%, `episodes` 50-100% (the admin copies the weights from the backend, `44` 3.1). Counts: `{ titles,
+  detailed, seasons, stale }`.
+- **`episodes`:** for every stored, enabled, not-deleted `tv` title that has a detail payload, every season (the detail's `seasons`
+  list; season 0 specials skipped) whose episodes are not stored (or whose stored episodes are older than `TITLE_FRESH_MS`) gets ONE
+  call (`/tv/{id}/season/{n}`, the existing episode mapping of `title-reads.seasons()`) written into that title's payload
+  (`seasons[n].episodes`) in its own short transaction; ordered by the title's popularity DESC, then season. Same rules as details:
+  resumable by query, Stop between calls, per-season failures recorded with a three-strike skip, bounded backoff, no OMDb,
+  progress `episodes` done/total (total = the seasons still needing episodes when the phase starts). First full run: roughly 20,000
+  calls at about 5/s is one to two hours; later runs fetch only new or stale seasons.
 - **Resumable:** Stop then Run again continues with the titles still list-only (the query, not a cursor). A run that fails keeps
   what was written. Per-title failures (a TMDB 404 for a removed title) mark that title `detail_failed_at` and continue; a title
   failing 3 runs in a row is skipped until its payload changes. A `429`/5xx uses the client's bounded backoff.
@@ -46,8 +55,8 @@ admin backend and, for Browse TMDB, the admin app.
 
 - `GET /api/titles/:titleId` returns the stored payload (list or detail shape); `404 title.not_found` when it is not stored. It
   never calls TMDB and never writes.
-- `GET /api/titles/:titleId/seasons/:season` returns the stored episodes of that season (`{ episodes: [] }` while the episodes phase
-  has not run; the season counts come from the detail).
+- `GET /api/titles/:titleId/seasons/:season` returns the stored episodes of that season (`{ episodes: [] }` only for a season the
+  sync has not reached yet; the season counts come from the detail).
 - `GET /api/titles/:titleId/recommendations` is computed from the store: same kind, at least one shared genre, popularity DESC,
   excluding the title itself, top 12.
 - `GET /api/titles/genres?kind=` returns the stored genre dictionary (kept in the store by the sync from TMDB's `/genre/{kind}/list`
@@ -93,7 +102,7 @@ phases; fill-through removed), `11` (TMDB use), `44` 3.1 (phases and weights), `
 |---|---|
 | **B1 backend** | the details phase and counts/progress; public reads store-only; recommendations from the store; stored genre dictionary; the admin TMDB routes; deletion of public browse/search; migration `026` (if used); tests (fake TMDB that fails the test on any call from a public read; details phase: resumable, Stop, per-title failure, edited title untouched, ordering by popularity, progress monotonic; admin TMDB routes write nothing; recommendations; 404 for a title not stored) |
 | **A1 admin** | Browse TMDB on the new routes, the `stored`/`deleted` word, the details words |
-| **B2 backend (later)** | the `episodes` phase (one call per season of stored series; resumable; progress); `seasons` reads then return real episodes |
+| *(B2 folded into B1, owner 2026-10-18)* | the `episodes` phase is part of B1 |
 
 Acceptance: a public `GET /api/titles/:id` of a stored list-only title returns after one Library fill without any TMDB call;
 `Browse TMDB` still pages TMDB and writes nothing (the store row count is unchanged); the Library fill shows `details` progress and
@@ -101,4 +110,4 @@ Stop/Run continues; the fileserver sync (`46`) is unaffected.
 
 ## 7. Not built
 
-OMDb enrichment inside the sync; a detail refresh scheduler other than the Library fill job; a TMDB webhook; episodes (B2).
+OMDb enrichment inside the sync; a detail refresh scheduler other than the Library fill job; a TMDB webhook.
