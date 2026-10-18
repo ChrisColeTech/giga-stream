@@ -3,6 +3,7 @@ import type { BulkIconKey } from "./bulk-icons";
 /** The tooltip each bulk verb wears at rest (LoRA Trainer's `GalleryToolbar` titles: what the verb does to the
  *  selection). A disabled verb's reason replaces it. */
 export const BULK_TIPS: Readonly<Record<BulkIconKey, string>> = {
+  add: "Add the ticked titles to the store",
   enable: "Enable the ticked rows",
   disable: "Disable the ticked rows",
   rebuild: "Rebuild the ticked rows from their sources",

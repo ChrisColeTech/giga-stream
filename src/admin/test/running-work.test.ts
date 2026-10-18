@@ -34,7 +34,7 @@ describe("the statusbar's running work", () => {
     assert.equal(view.percent, 57);
     assert.equal(view.tooltip, "Checking streams 1,204 of 2,598 · 57%");
     assert.deepEqual([view.stoppable, view.stopText], [true, STOP_SYNCING]);
-    assert.equal(workView(NO_WORK, live([2, "checking", 1, 10], [1, "tv", 50, 100])).percent, 75);
+    assert.equal(workView(NO_WORK, live([2, "checking", 1, 10], [1, "details", 50, 100])).percent, 55);
   });
 
   it("joins both with a middle dot; a job running makes Stop available", () => {

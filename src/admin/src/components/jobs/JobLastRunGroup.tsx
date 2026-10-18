@@ -8,10 +8,12 @@ import { StateWord } from "@/components/records/StateWord";
 import { LOADING_REASON } from "@/constants/account-copy";
 import {
   COUNTS_TIP,
+  DETAILS_TIP,
   JOB_SOURCE_TIP,
   OUTCOME_TIP,
   REFUSED_TIP,
   RUN_STATE_TIP,
+  SEASONS_TIP,
   STALE_TIP,
   TITLES_TIP,
   WHEN_TIP,
@@ -105,6 +107,12 @@ export function JobLastRunGroup({ job, loading, onRefresh }: JobLastRunGroupProp
         <>
           <Row label="Titles" tip={TITLES_TIP}>
             {fact(catalog?.titles)}
+          </Row>
+          <Row label="Details" tip={DETAILS_TIP}>
+            {fact(catalog?.detailed)}
+          </Row>
+          <Row label="Seasons" tip={SEASONS_TIP}>
+            {fact(catalog?.seasons)}
           </Row>
           <Row label="Stale" tip={STALE_TIP}>
             {fact(catalog?.stale)}

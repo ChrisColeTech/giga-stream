@@ -9,6 +9,7 @@ const PHASE_WORDS: Readonly<Record<string, string>> = {
   checking: "Checking streams",
   movies: "Walking movies",
   tv: "Walking series",
+  details: "Fetching details",
 };
 const PAGE_PHASES: ReadonlySet<string> = new Set(["movies", "tv", "list"]);
 const FALLBACK_WORD = "Walking titles";

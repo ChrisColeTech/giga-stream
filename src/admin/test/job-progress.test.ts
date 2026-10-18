@@ -25,11 +25,26 @@ describe("fractionOf", () => {
     assert.equal(fractionOf(at("checking", 2598, 2598)), 1);
   });
 
-  it("gives the Library fill a half per kind and any other scope the whole bar", () => {
-    assert.equal(fractionOf(at("movies", 50, 100)), 0.25);
-    assert.equal(fractionOf(at("tv", 0, 100)), 0.5);
-    assert.equal(fractionOf(at("tv", 100, 100)), 1);
+  it("weights the Library fill like the backend: walk 0-10% (a half per kind), details 10-100%, no episodes phase", () => {
+    assert.equal(fractionOf(at("movies", 50, 100)), 0.025);
+    assert.equal(fractionOf(at("movies", 100, 100)), 0.05);
+    assert.equal(fractionOf(at("tv", 0, 100)), 0.05);
+    assert.equal(fractionOf(at("tv", 100, 100)), 0.1);
+    assert.equal(fractionOf(at("details", 0, 10923)), 0.1);
+    assert.ok(Math.abs(fractionOf(at("details", 5000, 10000)) - 0.55) < 1e-12);
+    assert.equal(fractionOf(at("details", 10923, 10923)), 1);
+    assert.equal(fractionOf(at("details", 5, 0)), 0.1);
+    assert.equal(percentOf(at("details", 5000, 10000)), 55);
+  });
+
+  it("gives any other scope (one catalog list) the whole bar", () => {
     assert.equal(fractionOf(at("list", 3, 4)), 0.75);
+  });
+
+  it("never goes backwards across the Library fill's phases", () => {
+    const steps = [at("movies", 100, 100), at("tv", 0, 100), at("tv", 100, 100), at("details", 0, 50), at("details", 50, 50)];
+    const values = steps.map(fractionOf);
+    assert.deepEqual([...values].sort((a, b) => a - b), values);
   });
 
   it("reads a phase's lower bound while its total is unknown, and clamps a done past its total", () => {
@@ -45,6 +60,8 @@ describe("the words", () => {
     assert.equal(progressWords(at("checking", 1204, 2598)), "Checking streams 1,204 of 2,598");
     assert.equal(progressWords(at("movies", 12, 100)), "Walking movies 12 of 100 pages");
     assert.equal(progressWords(at("tv", 3, 100)), "Walking series 3 of 100 pages");
+    assert.equal(progressWords(at("details", 1204, 10923)), "Fetching details 1,204 of 10,923");
+    assert.equal(progressWords(at("details", 0, 0)), "Fetching details");
     assert.equal(progressWords(at("logos", 40, 312)), "Caching logos 40 of 312");
     assert.equal(progressWords(at("list", 2, 5)), "Walking titles 2 of 5 pages");
     assert.equal(progressWords(at("reading", 0, 0)), "Reading the playlist");

@@ -23,33 +23,41 @@ beforeEach(() => {
 });
 
 describe("the titles service reads", () => {
-  it("browses with kind, sort, page and includeDisabled, with the bearer; an unreadable row is counted", async () => {
+  it("browses TMDB on the admin route with kind, sort and page, with the bearer; an unreadable row is counted", async () => {
     await withBackend(
-      () => success(listAnswer([row("movie-1"), { id: 5 }, row("custom-x", { state: "manual", enabled: false })])),
+      () => success(listAnswer([row("movie-1", { stored: true, deleted: false }), { id: 5 }, row("tv-2", { deleted: true })])),
       async (calls) => {
         const list = await titles.list({ kind: "all", sort: "az", page: 2 });
-        assert.ok(calls[0]?.url.startsWith("/api/titles?"));
+        assert.ok(calls[0]?.url.startsWith("/api/admin/tmdb/titles?"));
         const params = query(calls[0]?.url);
-        assert.deepEqual(
-          [params.get("kind"), params.get("sort"), params.get("page"), params.get("includeDisabled")],
-          ["all", "az", "2", "true"],
-        );
+        assert.deepEqual([params.get("kind"), params.get("sort"), params.get("page")], ["all", "az", "2"]);
         assert.equal(calls[0]?.headers["authorization"], "Bearer a");
-        const read = [list.items.map((i) => i.id), list.unreadable, list.totalPages];
-        assert.deepEqual(read, [["movie-1", "custom-x"], 1, 7]);
+        const read = [list.items.map((i) => [i.id, i.stored, i.deleted]), list.unreadable, list.totalPages];
+        assert.deepEqual(read, [[["movie-1", true, false], ["tv-2", undefined, true]], 1, 7]);
       },
     );
   });
 
-  it("searches one kind with q, page and includeDisabled", async () => {
+  it("searches TMDB on the admin route with q, kind and page", async () => {
     await withBackend(
       () => success(listAnswer([row("tv-9", { kind: "tv" })])),
       async (calls) => {
         await titles.search({ q: "the matrix", kind: "tv", page: 1 });
-        assert.ok(calls[0]?.url.startsWith("/api/titles/search?"));
+        assert.ok(calls[0]?.url.startsWith("/api/admin/tmdb/search?"));
         const params = query(calls[0]?.url);
-        const read = [params.get("q"), params.get("kind"), params.get("includeDisabled")];
-        assert.deepEqual(read, ["the matrix", "tv", "true"]);
+        assert.deepEqual([params.get("q"), params.get("kind"), params.get("page")], ["the matrix", "tv", "1"]);
+      },
+    );
+  });
+
+  it("adds a TMDB title with POST /api/titles/from-tmdb { id }", async () => {
+    await withBackend(
+      () => success(row("movie-603", { plot: "P" })),
+      async (calls) => {
+        const added = await titles.addFromTmdb("movie-603");
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/titles/from-tmdb"]);
+        assert.deepEqual(calls[0]?.body, { id: "movie-603" });
+        assert.equal(added.id, "movie-603");
       },
     );
   });

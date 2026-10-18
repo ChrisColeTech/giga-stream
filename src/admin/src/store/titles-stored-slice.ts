@@ -69,6 +69,8 @@ export interface TitlesStoredSlice {
   storedPageFailed: (key: string, page: number, unreachable: boolean) => void;
   /** Every page goes (the first and the visible ones are read again); the total and the counts stay. */
   storedInvalidate: () => void;
+  /** The stored titles changed elsewhere (a Browse TMDB add): the list is read again the next time `Stored` is shown. */
+  storedMarkStale: () => void;
   storedPatch: (row: AdminTitleRow) => void;
   storedRemove: (id: string) => void;
   storedTick: (row: AdminTitleRow, on: boolean) => void;
@@ -115,6 +117,7 @@ export function createTitlesStoredSlice(
       patch({ status: now().paged.total === null ? "failed" : "ready", unreachable, paged: failPage(now().paged, page) });
     },
     storedInvalidate: () => patch({ paged: dropPages(now().paged) }),
+    storedMarkStale: () => patch({ status: "idle" }),
     storedPatch: (row) => {
       const picked = now().picked[row.id] === undefined ? now().picked : { ...now().picked, [row.id]: row };
       patch({ paged: patchRow(now().paged, row), picked });

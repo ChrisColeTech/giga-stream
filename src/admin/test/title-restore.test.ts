@@ -37,6 +37,7 @@ function rig(script: Partial<TitlesService> = {}) {
     list: async () => ({ items: [], page: 1, totalPages: 1, totalResults: 0, unreadable: 0 }),
     search: async () => Promise.reject(new Error("unused")),
     detail: async () => Promise.reject(new Error("unused")),
+    addFromTmdb: async () => Promise.reject(new Error("unused")),
     create: async () => Promise.reject(new Error("unused")),
     update: async () => Promise.reject(new Error("unused")),
     remove: async (id) => (calls.push(`remove:${id}`), { id }),

@@ -31,9 +31,9 @@ describe("the statusbar while jobs run", () => {
     assert.ok(html.includes('title="Checking streams 1,204 of 2,598 · 57%"'), "the tooltip");
     assert.ok(html.includes(">2 syncing</span>"));
     assert.ok(stopButton(html).includes(`title="${STOP_SYNCING}"`) && !stopButton(html).includes('disabled=""'));
-    state().jobProgressUpdate(at(1, "movies", 13, 100));
+    state().jobProgressUpdate(at(1, "details", 500, 1000));
     const next = renderLive(createElement(AdminStatusbar));
-    assert.ok(next.includes("width:6%") && next.includes("Walking movies 13 of 100 pages"), "the bar follows the latest");
+    assert.ok(next.includes("width:55%") && next.includes("Fetching details 500 of 1,000"), "the bar follows the latest");
   });
 
   it("is an empty track with Stop disabled `Nothing is running.` when no job runs", () => {
