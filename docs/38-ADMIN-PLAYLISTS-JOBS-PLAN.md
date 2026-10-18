@@ -68,6 +68,8 @@ so the reasons are known before the press. `Delete` marks `jobs` and `channels` 
 
 ### 3.4 The cross-tab read
 
+> **Note (`41`).** The channel list below is a paged read, not the whole list: `GET /api/admin-channels?source=<host>&limit=100`, windowed above 100 rows (`41` 5.4). Playlists, Jobs and their lists stay plain (tens of rows, `41` section 2).
+
 The channel list is `channels.list()` of `36` (`GET /api/admin-channels`, filtered by `source === host`; the backend's channel answer carries `source` but not the playlist
 id). The worker calls only the **service interface** (`ChannelsService.list`), never `36`'s slice or components. Until `36` lands that call refuses as not connected; the Status
 group then shows its shimmer lines and the notice says so - a visible refusal, not an invented list. This row is accepted after `36` is merged.
