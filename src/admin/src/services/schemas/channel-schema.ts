@@ -85,3 +85,7 @@ export const ChannelSwitchedSchema = z.object({
   skipped: z.number().int().min(0),
 });
 export type ChannelSwitched = z.infer<typeof ChannelSwitchedSchema>;
+
+/** `PUT /api/channels/:id/status` (`36` section 8.1): the body is `{ status }`, the answer the channel row. */
+export const ChannelVerdictSchema = z.enum(["live", "dead"]);
+export type ChannelVerdict = z.infer<typeof ChannelVerdictSchema>;

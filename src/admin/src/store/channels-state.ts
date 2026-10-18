@@ -8,7 +8,12 @@ export type ChannelsStatus = "idle" | "loading" | "ready" | "failed";
 
 export interface ChannelPreview {
   readonly channelId: string;
+  /** Raised by every request: the open and each step of the walk. A new serial detaches the player and attaches again. */
   readonly serial: number;
+  /** The serial of the open itself: a step keeps it, so the window stays mounted at its place and size. */
+  readonly opened: number;
+  /** The channel's place among the rows the list shows (0-based), or null when the list does not hold it. */
+  readonly at: number | null;
   /** The row as the list held it when Preview was pressed: the window's own read drops the list's pages, and a long
    *  list reads only the rows it shows, so the window may have no other copy until the pages come back. */
   readonly channel: AdminChannel | null;

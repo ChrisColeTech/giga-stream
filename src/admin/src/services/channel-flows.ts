@@ -2,13 +2,14 @@ import {
   CHANNEL_GONE,
   channelCreated,
   channelDeleted,
+  channelMarked,
   channelPreparing,
   channelReverted,
   channelSaved,
 } from "@/constants/channel-copy";
 import { createBody, isEmptyBody, patchBody, type NewChannelDraft } from "@/lib/channel-body";
 import { checkChannel, newChannelRefusal } from "@/lib/channel-check";
-import { rebuilds, type ChannelDraft } from "@/lib/channel-draft";
+import { draftOf, rebuilds, type ChannelDraft } from "@/lib/channel-draft";
 import { channelById } from "@/lib/channel-list";
 import { isSynced } from "@/lib/channel-rows";
 import type { AdminChannel } from "@/types/admin-channel";
@@ -24,6 +25,7 @@ import {
   type FlowResult,
 } from "./channel-flow-support";
 import { createChannelReads, type ChannelReads } from "./channel-reads";
+import type { ChannelVerdict } from "./schemas/channel-schema";
 
 export type { FlowResult } from "./channel-flow-support";
 
@@ -35,6 +37,10 @@ export interface ChannelFlows extends ChannelReads {
   remove: (id: string) => Promise<FlowResult>;
   rebuild: (id: string) => Promise<FlowResult>;
   revert: (id: string) => Promise<FlowResult>;
+  /** The single-row Enable / Disable (a `PATCH { enabled }` through `save`: its notice, its audit). */
+  setEnabled: (id: string, enabled: boolean) => Promise<FlowResult<AdminChannel | null>>;
+  /** `Mark live` / `Mark dead` on a stream channel (`36` section 8.1): the row answers with the verdict and the time. */
+  mark: (id: string, verdict: ChannelVerdict) => Promise<FlowResult>;
 }
 
 const BAD_ANSWER = "backend.bad_response";
@@ -138,6 +144,15 @@ export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
   const rebuild = (id: string) => answered(id, () => service.rebuild(id), (channel) => channelPreparing(channel.name));
   const revert = (id: string) => answered(id, () => service.revert(id), (channel) => channelReverted(channel.name));
 
+  const mark = (id: string, verdict: ChannelVerdict) =>
+    answered(id, () => service.setStatus(id, verdict), (channel) => channelMarked(channel.name, verdict));
+
+  async function setEnabled(id: string, enabled: boolean): Promise<FlowResult<AdminChannel | null>> {
+    const held = channelById(store().channels, id);
+    if (held === undefined) return rejected(store(), CHANNEL_GONE);
+    return save(id, { ...draftOf(held), enabled });
+  }
+
   async function answered(id: string, call: () => Promise<AdminChannel>, say: (channel: AdminChannel) => string) {
     const result = await write(id, call, (answer) => settled(answer, say(answer)));
     return result.ok ? done(undefined) : result;
@@ -150,5 +165,7 @@ export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
     remove,
     rebuild,
     revert,
+    setEnabled,
+    mark,
   };
 }
