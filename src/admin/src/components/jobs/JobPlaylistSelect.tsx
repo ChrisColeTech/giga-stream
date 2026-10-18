@@ -1,8 +1,10 @@
+import { InlineLink } from "@giga/ui/controls/InlineLink";
 import { Select } from "@giga/ui/controls/Select";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
-import { DISABLED_MARK } from "@/constants/job-copy";
+import { ADD_A_PLAYLIST, DISABLED_MARK, NO_PLAYLISTS, PLAYLISTS_UNREAD } from "@/constants/job-copy";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
+import { useAppStore } from "@/store/app-store";
 
 export interface JobPlaylistSelectProps {
   readonly playlists: readonly AdminPlaylist[];
@@ -12,14 +14,30 @@ export interface JobPlaylistSelectProps {
   readonly invalid?: boolean;
 }
 
-/** The Playlist row's control: a select of the playlist records, read through the playlists service. A disabled
- *  playlist is listed but marked `disabled` (its job refuses to run, with the backend's reason). With no playlist to
- *  choose (none yet, or the read failed) the row is a shimmer line: no invented option. */
+/** The Playlist row's control, in three states by the playlists read: still loading, a shimmer line; failed, the
+ *  failure sentence; answered with none, `No playlists yet.` and a link to the Playlists tab; otherwise a select of the
+ *  playlist records. A disabled playlist is listed but marked (its job refuses to run, with the backend's reason). */
 export function JobPlaylistSelect({ playlists, value, onChange, invalid = false }: JobPlaylistSelectProps) {
+  const status = useAppStore((state) => state.jobs.playlistsStatus);
+  const requestTab = useAppStore((state) => state.requestTab);
   if (playlists.length === 0) {
+    if (status === "idle" || status === "loading") {
+      return (
+        <span className="flex h-9 w-full items-center" aria-hidden>
+          <span className={SHIMMER} style={{ width: "44%" }} />
+        </span>
+      );
+    }
     return (
-      <span className="flex h-9 w-full items-center" aria-hidden>
-        <span className={SHIMMER} style={{ width: "44%" }} />
+      <span className="flex h-9 w-full items-center gap-1.5 text-sm text-muted">
+        {status === "failed" ? (
+          PLAYLISTS_UNREAD
+        ) : (
+          <>
+            {NO_PLAYLISTS}
+            <InlineLink onClick={() => requestTab("playlists")}>{ADD_A_PLAYLIST}</InlineLink>
+          </>
+        )}
       </span>
     );
   }
