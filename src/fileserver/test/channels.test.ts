@@ -6,7 +6,7 @@ import { makeApp, pick, pointAt, send, startBackend } from "./app-fixture.js";
 // The one real backend this file shares, booted once and closed after the file.
 const backend = await startBackend();
 
-test("a refresh fills the live view from the real backend and answers the seeded channels", async () => {
+test("a refresh fills the cache from the real backend and answers the seeded channels in its order", async () => {
   const t = await makeApp();
   await pointAt(t, backend.url);
 
@@ -15,13 +15,18 @@ test("a refresh fills the live view from the real backend and answers the seeded
   assert.equal(pick(refresh.body, "data.revision"), 4, "four seeded channels, each raising the revision");
   const items = pick(refresh.body, "data.items") as Array<Record<string, unknown>>;
   assert.equal(items.length, 4);
-  assert.equal(items[0]?.id, "fx-news", "ordered by number, then name (docs/03 section 3.4)");
-  assert.equal(items[0]?.number, "1");
+  const published = (await (await fetch(`${backend.url}/api/channels`)).json()) as { data: { items: Array<{ id: string }> } };
+  assert.deepEqual(
+    items.map((channel) => channel.id),
+    published.data.items.map((channel) => channel.id),
+    "the cache keeps the backend's order (docs/03 section 3.4)",
+  );
+  assert.ok(items.some((channel) => channel.id === "fx-news" && channel.number === "1"));
   for (const channel of items) {
-    // The verdict is a fact of this environment: the streaming test server may or may not be running
-    // (docs/03 section 5.2). What the contract promises is that a probe ran and its answer rides along.
-    assert.ok(channel.status === "live" || channel.status === "offline", `the probe gave a verdict: ${channel.status}`);
-    assert.ok(typeof channel.checkedAt === "number", "the answer carries the probe round's times");
+    // Nothing probes streams any more: no verdict, no probe time (docs/46 section D.2). `status` is the
+    // temporary wire word the interface's schema still requires; wave W4 removes both ends.
+    assert.equal(channel.status, "unknown");
+    assert.equal(channel.checkedAt, undefined);
   }
   const categories = pick(refresh.body, "data.categories") as Array<Record<string, unknown>>;
   assert.equal(categories.length, 4, "one category per seeded channel");
@@ -47,7 +52,7 @@ test("q and category narrow the answer while the categories still count the whol
   await t.dispose();
 });
 
-test("the last channel round-trips through the live view", async () => {
+test("the last channel round-trips through the cached channels", async () => {
   const t = await makeApp();
   await pointAt(t, backend.url);
   await send(t.app, "POST", "/api/channels/refresh");

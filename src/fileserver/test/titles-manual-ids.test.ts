@@ -41,7 +41,7 @@ function manualSeam(seen: string[]): typeof fetch {
 
 async function manualApp(seen: string[]): Promise<{ app: FastifyInstance; close: () => Promise<void> }> {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-titles-manual-"));
-  const app = await buildApp({ dataDir, adminFetch: manualSeam(seen), logger: false });
+  const app = await buildApp({ dataDir, adminFetch: manualSeam(seen), logger: false, syncOnStart: false });
   return { app, close: async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); } };
 }
 

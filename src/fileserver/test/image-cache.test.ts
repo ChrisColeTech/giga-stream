@@ -143,19 +143,22 @@ test("the live view answers each channel's logo through the image cache", async 
       items: [
         { id: "c1", name: "News", category: "News", revision: 3, streamUrl: "http://127.0.0.1:9/one.m3u8", logoUrl: good },
         { id: "c2", name: "Docs", category: "Fact", revision: 3, streamUrl: "http://127.0.0.1:9/two.m3u8", logoUrl: refused },
+        {
+          id: "c3", name: "Cached", category: "Fact", revision: 3, streamUrl: "http://127.0.0.1:9/three.m3u8",
+          logoUrl: refused, cachedLogoUrl: "/logos/c/three.png",
+        },
       ],
       revision: 9,
     },
   };
   const adminFetch = (async () =>
     new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
-  const probeFetch = (async () => new Response("no", { status: 404 })) as typeof fetch;
   const fetched: string[] = [];
   const imageFetch = (async (input: string | URL | Request) => {
     fetched.push(String(input instanceof Request ? input.url : input));
     return new Response(new Uint8Array([7, 7]), { status: 200, headers: { "content-type": "image/png" } });
   }) as typeof fetch;
-  const app = await buildApp({ dataDir, adminFetch, probeFetch, imageFetch, logger: false });
+  const app = await buildApp({ dataDir, adminFetch, imageFetch, logger: false, syncOnStart: false });
   try {
     await app.inject({
       method: "PATCH",
@@ -166,12 +169,17 @@ test("the live view answers each channel's logo through the image cache", async 
 
     // A channel's logo answers as a /api/images/<id> address; a source that fails the address
     // rule is left as it is (docs/03 section 3.11), and the state answer carries the same view.
-    // The live view orders by number then name (03 section 3.4), so each row is found by its id.
+    // The cache keeps the backend's order (03 section 3.4); each row is still found by its id.
     const channels = JSON.parse((await app.inject({ method: "GET", url: "/api/channels" })).body);
     const channelOf = (items: Array<{ id: string; logoUrl?: string }>, id: string) =>
       items.find((one) => one.id === id);
     assert.equal(channelOf(channels.data.items, "c1")?.logoUrl, `/api/images/${imageIdOf(good)}`);
     assert.equal(channelOf(channels.data.items, "c2")?.logoUrl, refused);
+    // The backend's own cached copy wins over the playlist's logo and is stored as an absolute address.
+    assert.equal(
+      channelOf(channels.data.items, "c3")?.logoUrl,
+      `/api/images/${imageIdOf("http://127.0.0.1:4747/logos/c/three.png")}`,
+    );
     const state = JSON.parse((await app.inject({ method: "GET", url: "/api/state" })).body);
     assert.equal(channelOf(state.data.channels.items, "c1")?.logoUrl, `/api/images/${imageIdOf(good)}`);
 

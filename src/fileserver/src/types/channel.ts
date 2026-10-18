@@ -1,5 +1,11 @@
 /** Live channel DTOs (docs/03 section 3.4). The stream address reaches the player as published. */
-export type ChannelStatus = "live" | "offline" | "unknown";
+
+/**
+ * TEMPORARY wire compatibility (docs/46 section D.2): the desktop no longer checks streams, but the interface's
+ * schema still requires a `status`. Every row says `unknown` until wave W4 removes this field and the schema's
+ * together.
+ */
+export const LEGACY_CHANNEL_STATUS = "unknown" as const;
 
 export interface ChannelSummary {
   id: string;
@@ -10,17 +16,15 @@ export interface ChannelSummary {
   revision: number;
   /** The HLS address exactly as the admin backend has it; the player loads it. */
   streamUrl: string;
-  /** The probe verdict (docs/03 section 5.2); `unknown` until the first probe. */
-  status: ChannelStatus;
-  /** Epoch ms of the last probe. */
-  checkedAt?: number;
+  /** See `LEGACY_CHANNEL_STATUS`; removed in W4. */
+  status: typeof LEGACY_CHANNEL_STATUS;
 }
 
 export interface ChannelList {
-  /** Ordered by number, then name (docs/03 section 3.4). */
+  /** In the backend's order (docs/03 section 3.4). */
   items: ChannelSummary[];
-  /** Counted over the whole view, whatever `q` and `category` narrow. */
+  /** Counted over every cached channel, whatever `q` and `category` narrow. */
   categories: Array<{ value: string; count: number }>;
-  /** The backend revision the list was read at. */
+  /** The backend revision the cache was last synced at. */
   revision: number;
 }

@@ -106,7 +106,7 @@ function titlesSeam(overrides: Record<string, unknown> = {}): typeof fetch {
 
 async function seamApp(overrides: Record<string, unknown> = {}): Promise<{ app: FastifyInstance; close: () => Promise<void> }> {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-titles-"));
-  const app = await buildApp({ dataDir, adminFetch: titlesSeam(overrides), logger: false });
+  const app = await buildApp({ dataDir, adminFetch: titlesSeam(overrides), logger: false, syncOnStart: false });
   return { app, close: async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); } };
 }
 

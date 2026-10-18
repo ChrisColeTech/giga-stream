@@ -52,7 +52,7 @@ async function pagesOf(app: FastifyInstance): Promise<string[][]> {
 
 test("pages the backend thinned are topped up: every page but the last holds at least a page, none twice", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-deleted-"));
-  const app = await buildApp({ dataDir, adminFetch: backend, logger: false });
+  const app = await buildApp({ dataDir, adminFetch: backend, logger: false, syncOnStart: false });
   try {
     const pages = await pagesOf(app);
     assert.ok(pages.length > 1);

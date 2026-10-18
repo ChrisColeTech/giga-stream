@@ -14,6 +14,7 @@ import { createShellStateRepository } from "../store/shell-state-repository.js";
 import { createWatchRepository } from "../store/watch-repository.js";
 import { createAdminClient } from "./admin-client.js";
 import { createAdminTitles } from "./admin-titles.js";
+import { createBackendCache } from "./backend-cache-setup.js";
 import {
   createCollectionService,
   type CollectionService,
@@ -30,7 +31,6 @@ import { createPosterFetchService, type PosterFetchService } from "./poster-fetc
 import { createScanService, type FolderScanner, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
-import { createStreamProbe } from "./stream-probe.js";
 import { createTitleSession } from "./title-session.js";
 import { createTitlesService } from "./titles-service.js";
 import { createFavoritesService, createWatchService, type FavoritesService, type WatchService } from "./watch-service.js";
@@ -40,11 +40,9 @@ export interface ServiceOptions {
   allowInsecureAdmin: boolean;
   /** The admin address before one is saved (config: the backend's port for this mode). */
   defaultAdminUrl: string;
-  liveViewTtlMs: number;
   now: () => number;
-  /** Test seams: the fetches the admin client, the probe and the image cache use, and the folder scanner. */
+  /** Test seams: the fetches the admin client and the image cache use, and the folder scanner. */
   adminFetch?: typeof fetch;
-  probeFetch?: typeof fetch;
   imageFetch?: typeof fetch; scan?: FolderScanner;
   /** Electron lane: the native folder picker lives only here (docs/03 section 3.8). */
   openFolderPicker?: () => Promise<{ path: string } | "cancelled">;
@@ -78,12 +76,11 @@ export function createAppServices(options: ServiceOptions) {
     return rewriteImageUrl(source) ?? source;
   };
   const admin = createAdminClient({ fetch: options.adminFetch });
+  const { cache, channels: cachedChannels } = createBackendCache({ database, admin, adminUrl, now: options.now });
   const live: LiveChannelsService = createLiveChannelsService({
-    admin,
-    probe: createStreamProbe({ fetch: options.probeFetch }),
+    cache,
+    channels: cachedChannels,
     adminUrl,
-    ttlMs: options.liveViewTtlMs,
-    now: options.now,
     rewriteImageUrl: rewrite,
   });
   const titlesAdmin = createAdminTitles({ fetch: options.adminFetch });
@@ -172,6 +169,7 @@ export function createAppServices(options: ServiceOptions) {
     settings: settings as SettingsService,
     shell: shell as ShellStateService,
     channelState,
+    cache,
     live,
     jobs,
     images,
@@ -184,6 +182,8 @@ export function createAppServices(options: ServiceOptions) {
     titles,
     library,
     async close(): Promise<void> {
+      // The cache first: abort its syncs and wait for them, so none writes to a closed database.
+      await cache.close();
       await jobs.close();
       database.close();
     },

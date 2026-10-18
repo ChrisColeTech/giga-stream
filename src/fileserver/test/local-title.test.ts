@@ -39,11 +39,14 @@ test("migration and the read boundary keep legacy local titles nonempty and path
   await first.dispose();
 
   const old = new DatabaseSync(dbFile);
+  // Back to a version 4 file: the cache tables of migration 006 are not there yet either.
+  old.exec("DROP TABLE cached_title_genres; DROP TABLE cached_titles; DROP TABLE cached_genres;");
+  old.exec("DROP TABLE cached_channels; DROP TABLE cache_state;");
   old.exec("PRAGMA user_version = 4");
   old.close();
   const restarted = await makeApp({ dataDir });
   const migrated = new DatabaseSync(dbFile);
-  assert.equal((migrated.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, 5);
+  assert.equal((migrated.prepare("PRAGMA user_version").get() as { user_version: number }).user_version, 6);
   assert.equal(
     (migrated.prepare("SELECT title FROM local_files WHERE id = ?").get(fileId) as { title: string }).title,
     "Legacy Feature.mkv",

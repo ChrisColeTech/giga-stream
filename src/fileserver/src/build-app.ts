@@ -39,6 +39,8 @@ function isServed(pathName: string): boolean {
 export interface BuildOptions extends Partial<ServiceOptions> {
   webDist?: string;
   logger?: boolean;
+  /** Check the backend cache at launch, detached (docs/46 section C). Defaults to true; tests turn it off. */
+  syncOnStart?: boolean;
 }
 
 /**
@@ -57,10 +59,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     dataDir: overrides.dataDir ?? config.dataDir,
     allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
     defaultAdminUrl: overrides.defaultAdminUrl ?? config.defaultAdminUrl,
-    liveViewTtlMs: overrides.liveViewTtlMs ?? config.liveViewTtlMs,
     now: overrides.now ?? Date.now,
     ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),
-    ...(overrides.probeFetch !== undefined && { probeFetch: overrides.probeFetch }),
     ...(overrides.imageFetch !== undefined && { imageFetch: overrides.imageFetch }),
     ...(overrides.scan !== undefined && { scan: overrides.scan }),
     ...(overrides.openFolderPicker !== undefined && { openFolderPicker: overrides.openFolderPicker }),
@@ -70,6 +70,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   app.addHook("onClose", async () => {
     await services.close();
   });
+  if (overrides.syncOnStart ?? true) services.cache.start();
 
   // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file
   // answers index.html when the dist has one; everything else stays the JSON 404 envelope.

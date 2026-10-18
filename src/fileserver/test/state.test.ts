@@ -1,13 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { makeApp, pick, pointAt, send, startBackend } from "./app-fixture.js";
+import { makeApp, pick, pointAt, send, startBackend, syncChannels } from "./app-fixture.js";
 
 const backend = await startBackend();
 
 test("the state answer is the complete picture in one request (docs/03 section 4)", async () => {
   const t = await makeApp();
   await pointAt(t, backend.url);
+  await syncChannels(t);
 
   const state = await send(t.app, "GET", "/api/state");
   assert.equal(state.status, 200);
@@ -15,7 +16,8 @@ test("the state answer is the complete picture in one request (docs/03 section 4
   assert.deepEqual(pick(state.body, "data.host"), { runtime: "browser" }, "the gateway runs without Electron");
   assert.equal(pick(state.body, "data.settings.adminUrl"), backend.url);
   assert.deepEqual(pick(state.body, "data.shell"), { activeSurface: "library", paneVisibility: {}, paneSizes: {} });
-  assert.equal(pick(state.body, "data.backend.connected"), true, "the read itself filled the live view");
+  assert.equal(pick(state.body, "data.backend.connected"), true, "the last sync of the cache succeeded");
+  assert.equal(typeof pick(state.body, "data.backend.readAt"), "number");
   assert.ok(Number(pick(state.body, "data.backend.revision")) >= 4);
   assert.equal(pick(state.body, "data.channels.items.length"), 4);
   assert.deepEqual(pick(state.body, "data.collections"), [], "nothing was made yet");
@@ -40,7 +42,7 @@ test("a collection and its settled jobs show up fresh in the state answer", asyn
 test("the state answer's parts stand alone: a settings patch changes the settings and nothing else", async () => {
   const t = await makeApp();
   await pointAt(t, backend.url);
-  await send(t.app, "GET", "/api/state");
+  await syncChannels(t);
 
   await send(t.app, "PATCH", "/api/settings", { uiZoom: 2 });
   const state = await send(t.app, "GET", "/api/state");
@@ -76,9 +78,9 @@ test("healthz answers the fileserver's own state and its view of the backend", a
   await pointAt(t, backend.url);
   const before = await send(t.app, "GET", "/healthz");
   assert.equal(pick(before.body, "data.role"), "fileserver");
-  assert.equal(pick(before.body, "data.backend"), "down", "no read has happened yet");
+  assert.equal(pick(before.body, "data.backend"), "down", "nothing has been synced yet");
 
-  await send(t.app, "GET", "/api/state");
+  await syncChannels(t);
   const after = await send(t.app, "GET", "/healthz");
   assert.equal(pick(after.body, "data.backend"), "up");
   await t.dispose();

@@ -40,17 +40,28 @@ after(async () => {
   for (const created of apps) await created.dispose();
 });
 
-/** The real fileserver on a fresh temporary data folder, or on `options.dataDir` for restart tests. */
+/**
+ * The real fileserver on a fresh temporary data folder, or on `options.dataDir` for restart tests. The backend
+ * cache does not sync at launch (`syncOnStart` false) unless a test asks; `adminFetch` injects the backend.
+ */
 export async function makeApp(
-  options: { dataDir?: string; probeFetch?: typeof fetch; webDist?: string; scan?: FolderScanner } = {},
+  options: {
+    dataDir?: string;
+    adminFetch?: typeof fetch;
+    syncOnStart?: boolean;
+    clock?: ReturnType<typeof testClock>;
+    webDist?: string;
+    scan?: FolderScanner;
+  } = {},
 ): Promise<FileserverApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-fileserver-test-"));
-  const clock = testClock();
+  const clock = options.clock ?? testClock();
   const app = await buildApp({
     dataDir,
     now: clock.now,
     logger: false,
-    ...(options.probeFetch !== undefined && { probeFetch: options.probeFetch }),
+    syncOnStart: options.syncOnStart ?? false,
+    ...(options.adminFetch !== undefined && { adminFetch: options.adminFetch }),
     ...(options.webDist !== undefined && { webDist: options.webDist }),
     // No test probes real files through the app: the stand-in scanner never spawns ffprobe (see fake-scan.ts).
     scan: options.scan ?? fakeScan,
@@ -226,4 +237,12 @@ export async function backendToken(backendUrl: string): Promise<string> {
 /** Points the fileserver's `adminUrl` setting at an address (`03` section 3.2). */
 export async function pointAt(app: FileserverApp, backendUrl: string): Promise<void> {
   await send(app.app, "PATCH", "/api/settings", { adminUrl: backendUrl });
+}
+
+/**
+ * Runs a channels sync now through the app's own forced refresh (it joins a run in flight), and answers it.
+ * With an injected `adminFetch` this is the helper that fills the cache without a launch sync.
+ */
+export function syncChannels(app: FileserverApp): Promise<Answer> {
+  return send(app.app, "POST", "/api/channels/refresh");
 }
