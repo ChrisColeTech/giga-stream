@@ -27,10 +27,6 @@ statusbar count. Out of scope: Channels, Titles (read-only cross-references only
 
 ## 3. Playlists
 
-### 3.0 Ids (owner, final: EVERYTHING)
-
-A playlist's and a job's primary key is already a generated, never-reused integer from its `AUTOINCREMENT` sequence (`014-playlists-jobs.sql`), in creation order. Migration `018` leaves their tables alone (they already satisfy the rule), and it does not renumber them: a renumber would break `channels.playlist_id` and the `playlistId` inside every playlist job's config. Their API `id` is that number, and the Id row and column show it (as `idNumber`, which repeats it). Nothing else in this plan changes.
-
 ### 3.1 Routes (`29` 9.4)
 
 | Method | Route | Body | Answer |
@@ -47,7 +43,7 @@ never put in an event, a notice, a log or a URL, and cleared from the form after
 ### 3.2 Index
 
 `NewPlaylistForm` (`NewRecordGroup`, `plus`, `pl-`): **Name** (first, and **optional**: owner, 2026-10-17; left empty the backend names the playlist after its host), **Address** (`type=password`, `autoComplete="off"`, `spellCheck` off). `Create` is disabled with `Address is
-required.`; Name never gates it. The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `id` (the generated `id`, mono), `name`, `host`, `channels`, `last synced`,
+required.`; Name never gates it. The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `name`, `host`, `channels`, `last synced`,
 `state` (`enabled` / `disabled`, dimmed); `Delete` is an `ArmedButton` whose rest title says `The channels it created stay,
 as hand-made rows that no sync touches.`; its notice on success reads `Deleted <name>; <released> channels kept.`.
 
@@ -65,7 +61,7 @@ so the reasons are known before the press. `Delete` marks `jobs` and `channels` 
 ### 3.3 Workspace (rail `‹ Playlists`, `Details`, `Status`; toolbar `Discard changes`, `Save`, `Jobs →`)
 
 - **Details** (`file-text`): Name (first, optional), **Address** (a read-only mono field showing `masked`, with a ghost `Replace` in `trailing`: `Replace` unlocks the field as an empty
-  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`), then read-only **Id** (the generated `id`, last).
+  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`).
   One `Save` sends only changed fields; an unlocked, empty address is not a change.
 - **Status** (`activity`, read-only): Host, **Channels** (the admin channels whose `source === host`, each a link that calls `requestTab("channels", id)`), Last synced
   (`lastSyncedAt`, local time or `never`), Outcome (`lastOutcome`). There is **no sync button here** - syncing is a Jobs matter (`26` 4.9c).
@@ -99,7 +95,7 @@ workspace's Last run `Refresh`). **No polling.** The refusals are `409 sync.busy
 `NewJobForm` (`NewRecordGroup`, `plus`, `jb-`): **Name** (first), **Type** (`Segmented` Playlist / Catalog - the row switcher), then **Playlist** (`Select` of the playlist records,
 read from `playlists.list()`; disabled playlists are listed but marked `disabled` and refuse with the backend's reason) for a playlist job, or **Scope** (`Segmented` Trending /
 Popular) and **Kind** (`Segmented` Movies / Series) for a catalog job; the rows a Type does not use are not rendered and leave the required list. `Create` is disabled with
-`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `id` (the generated `id`, mono), `name`, `type`, `target` (the playlist name,
+`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `name`, `type`, `target` (the playlist name,
 or scope + kind), `schedule`, `last run`, `outcome`, `state` (`idle`, `running` with the pulsing bar, `failed`, `disabled`: `jobState`); ticks arm the toolbar; `Delete` is an `ArmedButton`
 (deleting a job changes nothing it created).
 
@@ -113,7 +109,7 @@ notice and the rest continue. It is disabled, in this priority order, with: `Tic
 
 ### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Run`, `Last run`; toolbar `Discard changes`, `Save`, `Channels →` for a playlist job or `Titles →` for a catalog job)
 
-- **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog), then read-only **Id** (the generated `id`, last).
+- **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog).
 - **Schedule** (`clock`): Interval (text; the page checks `^[1-9]\d*[mh]$|^off$` by `lib/field-checks.ts` `schedule`, a bad value is the `Row`'s `error` and the notice; the backend normalises it
   and answers `422 job.invalid` field `schedule` otherwise). The tip lists `6h`, `30m`, `24h`, `off`.
 - **Run** (`play`): a playlist job has **Dry run** and **Prune** (`Toggle`s; the Prune tip says it deletes synced channels whose entry vanished, and that edited ones are kept) and `Run job`;
@@ -201,7 +197,6 @@ Temporary backend (`39` 9) with `ALLOW_LOOPBACK_STREAMS` and a local test playli
 | 3 | `29` 9.4: delete answers `{ id, released }` | `RecordService.remove` types `{ id }`; widened here |
 | 4 | `28` 7.3: a playlist's Name is required | `PlaylistInputSchema` has `name` optional (the host is the default); decided (owner, 2026-10-17): optional, but still the first row |
 | 5 | `29` 9.5 / 18 B4: refusal examples and created ids may be absent | landed in the backend (`refusalExamples`, `createdIds`), but `JobSchema.lastCounts` is a loose record: read defensively |
-| 9 | `29` 5 and 9.4 give playlists and jobs an integer `id` with no sequence statement | the `AUTOINCREMENT` id is the generated number, never reused and in creation order (3.0); nothing is renumbered |
 | 8 | `28` 7.2 / `29` 9.5: `Run job` is the only toolbar verb on ticked rows | superseded (owner, 2026-10-17): `Enable`, `Disable`, `Delete` and, on Playlists, `Sync now` (the playlist's own job); `Run job` uses the shared bulk runner |
 | 6 | `29` 9.4: a playlist's channels are found by `source === host` | the backend's channel answer has `source` but no playlist id, so the match is by host (two playlists on one host share channels) |
 | 7 | `28` Wave 5: `job-schedule-field` accepts `6h`, `30m`, `24h`, `off` | `field-checks.schedule` accepts any `<n>m` / `<n>h` and `off`; the backend normalises |
