@@ -447,7 +447,9 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 Opened by the type strip's **Search titles** button. **The model is macOS Spotlight** (owner, 2026-10-18: "spotlight still
 isn't correct"; the reference is `docs/reference/macos-spotlight/`, from Apple's help for macOS 26 and 12.0, images
 `mchlp1008-12.0/02-*.png` and `mchlp1008-26/02-*.png`). **It is NOT a modal**: **NO scrim and no dimming of anything** (the
-Library behind it stays at full brightness, as the desktop does behind Spotlight), no `role="dialog"`, no title bar, no
+Library behind it stays at full brightness, as the desktop does behind Spotlight); **an invisible full-window click-catcher sits
+behind the window** (owner, 2026-10-18: "needs a backdrop that i can click to dismiss it"): it is fully transparent, shows nothing,
+and a press on it closes the search and goes no further (the click does not reach the Library underneath), no `role="dialog"`, no title bar, no
 close button, no header text. It is **one borderless rounded window floating over the app**, horizontally centred about
 22% from the top, 760px wide (at most the window width minus the gutters), `rounded-2xl`, the family's hairline border and a
 soft large shadow. **Its first row is the search field**: a leading magnifier glyph and a large borderless input (22px
