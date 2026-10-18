@@ -1,5 +1,5 @@
 import { MonitorPlay, Tv } from "lucide-react";
-import { Button } from "@giga/ui/controls/Button";
+import { Button, type ButtonProps } from "@giga/ui/controls/Button";
 import { Brand } from "@giga/ui/shell/Brand";
 import { Titlebar as TitlebarBar } from "@giga/ui/shell/Titlebar";
 import type { PaneToggleProps } from "@giga/ui/shell/PaneToggle";
@@ -17,6 +17,26 @@ const SIDE_LABEL: Readonly<Record<PaneSide, string>> = { left: "left pane", bott
  * the toggles stayed live and pressing one rearranged a workspace nobody could see. A popup covers nothing. */
 const SLEEPING_TABS = "Close the open window to switch surfaces.";
 const SLEEPING_REASON = "Close the open window to change the panes.";
+
+/** The Theatre button's props (`50` section 2.5), pure so the sleeping carriage is testable without a DOM. Asleep,
+ *  the tabs' sleeping wording rides the family `reason`: Button then renders the button natively disabled inside
+ *  the focusable tooltip group labelled "Theatre mode. <reason>" — a native `title` on a disabled button is never
+ *  shown by the browser, which is why the family carries a sleeping control's reason on the wrapper. The button
+ *  reads unselected whatever Theatre is doing behind the window. Awake, the button keeps its own title. */
+export function theatreButtonProps(asleep: boolean, theatre: boolean, onToggle: () => void): ButtonProps {
+  return {
+    size: "sm",
+    variant: "ghost",
+    reason: asleep ? SLEEPING_TABS : undefined,
+    title: asleep
+      ? undefined
+      : theatre ? "Theatre mode is on. Press to leave it; reopen panes with their toggles." : "Theatre mode",
+    "aria-label": "Theatre mode",
+    "aria-pressed": theatre && !asleep,
+    on: theatre && !asleep,
+    onClick: onToggle,
+  };
+}
 
 /** The interface's titlebar: the store decides what each control says and does; the shared bar draws it. */
 export function Titlebar() {
@@ -42,22 +62,10 @@ export function Titlebar() {
   };
 
   /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Giga Cut's Export slot, beside the pane toggles. Asleep
-   * under an open window like every other titlebar control (`50` section 2.5): disabled with the tabs' sleeping
-   * wording, and reading unselected whatever Theatre is doing behind the window. */
+   * under an open window like every other titlebar control (`50` section 2.5) — the props carry it. */
   const asleep = settingsOpen;
   const theatreButton = (
-    <Button
-      size="sm"
-      variant="ghost"
-      disabled={asleep}
-      title={asleep
-        ? SLEEPING_TABS
-        : theatre ? "Theatre mode is on. Press to leave it; reopen panes with their toggles." : "Theatre mode"}
-      aria-label="Theatre mode"
-      aria-pressed={theatre && !asleep}
-      on={theatre && !asleep}
-      onClick={toggleTheatre}
-    >
+    <Button {...theatreButtonProps(asleep, theatre, toggleTheatre)}>
       <MonitorPlay aria-hidden /> Theatre
     </Button>
   );
