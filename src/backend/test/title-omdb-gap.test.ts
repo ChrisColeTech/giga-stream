@@ -76,6 +76,18 @@ test("a rating gap is filled from imdbRating", async () => {
   assert.equal(await read(f, "movie-1010", "rating"), 8.7);
 });
 
+test("a nulled field reads back as absent or empty, never as a missing title", async () => {
+  const { f } = await setup([]);
+  await run(f);
+  const patch = await f.api("PATCH", "/api/titles/movie-1010", { genres: null, plot: null, rating: null });
+  assert.equal(patch.status, 200);
+  const shown = await f.api("GET", "/api/titles/movie-1010");
+  assert.equal(shown.status, 200);
+  assert.deepEqual(["genres", "plot", "rating", "title"].map((k) => pick(shown.body, `data.${k}`)), [[], undefined, undefined, "movie 1010"]);
+  const stored = await f.api("GET", "/api/titles/stored?limit=10");
+  assert.equal(stored.status, 200);
+});
+
 test("an admin-edited field is untouched: emptied genres stay empty while the empty plot beside them is filled", async () => {
   const { omdb, f } = await setup([[1010, ["overview"]]]);
   omdb.state.limitAfter = 0; // the first run: OMDb refuses, the gap stays

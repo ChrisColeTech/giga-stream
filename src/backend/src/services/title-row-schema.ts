@@ -6,7 +6,7 @@ export const StoredTitleSchema = z.object({
   tmdbId: z.number().int().positive(),
   kind: z.enum(["movie", "tv"]),
   title: z.string().trim().min(1),
-  genres: z.array(z.string()),
+  genres: z.array(z.string()).default([]), // an admin may clear the field (`genres: null`): it reads back empty
   shape: z.enum(["list", "detail"]),
   year: z.number().int().optional(),
   rating: z.number().min(0).max(10).optional(),
