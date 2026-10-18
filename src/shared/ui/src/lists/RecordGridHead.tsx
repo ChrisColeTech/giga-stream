@@ -4,7 +4,7 @@ import { Checkbox } from "../controls/Checkbox";
 import { cn } from "../lib/cn";
 import type { GridShape } from "./record-grid-layout";
 import { ariaSort, type SortState } from "./record-grid-sort";
-import { useSelectAll } from "./useSelectAll";
+import { useSelectAll } from "./use-select-all";
 
 export interface GridHeading {
   readonly key: string;

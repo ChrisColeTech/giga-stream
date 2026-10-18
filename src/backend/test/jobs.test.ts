@@ -67,12 +67,11 @@ test("the environment seeds the playlists and jobs on the first start only; the 
     const token = (await signIn(first.app)).access;
     const jobs = itemsOf((await send(first.app, "GET", "/api/jobs", undefined, token)).body);
     assert.deepEqual(jobs.map((j) => [j.type, j.enabled, j.schedule]), [
-      ["playlist", true, "6h"], ["catalog", true, "12h"], ["catalog", true, "12h"], ["catalog", true, "12h"], ["catalog", true, "12h"],
+      ["playlist", true, "6h"], ["catalog", true, "12h"],
     ]);
     assert.deepEqual(jobs[0]?.config, { playlistId: 1, dryRun: false, prune: false });
     assert.deepEqual(jobs.slice(1).map((j) => j.config), [
-      { scope: "trending", kind: "movie", pages: 5 }, { scope: "trending", kind: "tv", pages: 5 },
-      { scope: "popular", kind: "movie", pages: 5 }, { scope: "popular", kind: "tv", pages: 5 },
+      { scope: "discover", pages: 100 },
     ]);
     const playlists = itemsOf((await send(first.app, "GET", "/api/playlists", undefined, token)).body);
     assert.deepEqual(playlists.map((p) => [p.host, p.enabled]), [["cdn.example", true]]);
@@ -91,15 +90,19 @@ test("the environment seeds the playlists and jobs on the first start only; the 
     assert.deepEqual(itemsOf((await send(second.app, "GET", "/api/playlists", undefined, again)).body).length, 0);
     await second.dispose();
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    try {
+      rmSync(dataDir, { recursive: true, force: true });
+    } catch {
+      // Windows can hold the SQLite file open briefly after dispose; the temp dir is cleaned up on reboot.
+    }
   }
 });
 
-test("with nothing in the environment the seed makes the four catalog jobs, off", async () => {
+test("with nothing in the environment the seed makes the library fill job, off", async () => {
   const { t, token } = await setup();
   const jobs = itemsOf((await send(t.app, "GET", "/api/jobs", undefined, token)).body);
   assert.deepEqual(jobs.map((j) => [j.name, j.enabled, j.schedule]), [
-    ["Trending movies", false, "off"], ["Trending series", false, "off"], ["Popular movies", false, "off"], ["Popular series", false, "off"],
+    ["Library fill", false, "off"],
   ]);
 });
 
@@ -124,7 +127,7 @@ test("a job is created, read, changed and deleted; every refusal names its field
   assert.deepEqual(await refusal(catalogBody({ type: "radio" })), bad("type"));
   assert.deepEqual(await refusal(catalogBody({ schedule: "soon" })), bad("schedule"));
   assert.deepEqual(await refusal(catalogBody({ config: { scope: "newest", kind: "movie" } })), bad("config.scope"));
-  assert.deepEqual(await refusal(catalogBody({ config: { scope: "trending", kind: "movie", pages: 99 } })), bad("config.pages"));
+  assert.deepEqual(await refusal(catalogBody({ config: { scope: "trending", kind: "movie", pages: 501 } })), bad("config.pages"));
   assert.deepEqual(await refusal(catalogBody({ colour: "red" })), bad("colour"));
   assert.deepEqual(await refusal({ type: "playlist", name: "x", config: { playlistId: 9 } }), bad("config.playlistId"));
   assert.deepEqual(await refusal({ type: "playlist", name: "", config: { playlistId: 1 } }), bad("name"));
@@ -212,6 +215,6 @@ test("running a catalog job starts it and keeps its outcome and the titles it pu
     await new Promise((resolve) => setTimeout(resolve, 15));
   }
   const done = await read();
-  assert.deepEqual([done.lastOutcome, pick(done, "lastCounts.titles"), done.running], ["ok", 1, false]);
-  assert.ok(tmdb.calls.includes("/trending/movie/week"));
+  assert.deepEqual([done.lastOutcome, pick(done, "lastCounts.titles"), done.running], ["ok", 2, false]);
+  assert.ok(tmdb.calls.includes("/discover/movie"));
 });

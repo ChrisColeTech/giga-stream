@@ -92,7 +92,7 @@ test("a catalog job is scheduled only when TMDB has a token; turning it off leav
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
   await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, schedule: "150ms", config: { pages: 1 } }, token);
-  await until(() => tmdb.calls.includes("/trending/movie/week"), "the scheduled catalog run");
+  await until(() => tmdb.calls.includes("/discover/movie") && tmdb.calls.includes("/discover/tv"), "the scheduled catalog run");
   assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.schedule"), "150ms");
   await send(t.app, "PATCH", "/api/jobs/1", { enabled: false }, token);
   await nap(150);

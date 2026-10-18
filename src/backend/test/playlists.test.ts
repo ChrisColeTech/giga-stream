@@ -128,7 +128,7 @@ test("deleting a playlist keeps its channels as hand-made rows that no sync touc
   assert.equal(String(pick(hand.body, "data.id")).startsWith("ch_"), true);
   const jobs = itemsOf((await send(t.app, "GET", "/api/jobs", undefined, token)).body);
   assert.deepEqual(jobs.filter((j) => j.type === "playlist"), [], "its jobs went with it; the catalog jobs stay");
-  assert.equal(jobs.length, 4);
+  assert.equal(jobs.length, 1);
   assert.equal((await send(t.app, "GET", "/api/playlists/1", undefined, token)).status, 404);
 
   // The same address listed again makes new rows: the released ones are hand-made now.
