@@ -1,0 +1,79 @@
+import { FileText, Link } from "lucide-react";
+import { Button } from "@giga/ui/controls/Button";
+import { Input } from "@giga/ui/controls/Input";
+import { Toggle } from "@giga/ui/controls/Toggle";
+import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { Group } from "@giga/ui/form/Group";
+import { Row } from "@giga/ui/form/Row";
+import { Tooltip } from "@giga/ui/form/Tooltip";
+import { ADDRESS_TIP, ENABLED_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
+import { replaceReason, startReplace, type PlaylistDraft } from "@/lib/playlist-draft";
+import type { FormErrors } from "@/lib/record-form";
+import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
+
+export interface PlaylistDetailsGroupProps {
+  readonly playlist: AdminPlaylist;
+  readonly draft: PlaylistDraft;
+  readonly errors: FormErrors;
+  readonly onChange: (patch: Partial<PlaylistDraft>) => void;
+}
+
+/** `Details` (`38` section 3.3): Name (first, optional), Address, Enabled. The Address shows the backend's `masked`,
+ *  read-only and mono, with a ghost `Replace` at the row's end. `Replace` unlocks it as an EMPTY password field (never
+ *  prefilled: the address is never shown back) and disables itself with `Type the new value, then Save.`; left empty,
+ *  nothing is sent. Masking is display only: the stored address changes only when a new one is saved. */
+export function PlaylistDetailsGroup({ playlist, draft, errors, onChange }: PlaylistDetailsGroupProps) {
+  const locked = !draft.replacing;
+  const reason = replaceReason(draft);
+  const replace = (
+    <Button variant="ghost" reason={reason} onClick={() => onChange(startReplace(draft))}>
+      <Link aria-hidden /> Replace
+    </Button>
+  );
+  return (
+    <Group id="pw-details" icon={FileText} title="Details">
+      <Row label="Name" error={errors["name"]}>
+        <Input
+          type="text"
+          value={draft.name}
+          className={FIELD_CONTROL}
+          aria-label="Name"
+          aria-invalid={errors["name"] !== undefined}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => onChange({ name: event.target.value })}
+        />
+      </Row>
+      <Row
+        label="Address"
+        tip={ADDRESS_TIP}
+        error={errors["address"]}
+        trailing={reason === undefined ? <Tooltip text={REPLACE_TITLE}>{replace}</Tooltip> : replace}
+      >
+        {locked ? (
+          <Input
+            type="text"
+            value={playlist.masked}
+            readOnly
+            className={`${FIELD_CONTROL} font-mono text-faint`}
+            aria-label="Address"
+          />
+        ) : (
+          <Input
+            type="password"
+            value={draft.address}
+            className={FIELD_CONTROL}
+            aria-label="Address"
+            aria-invalid={errors["address"] !== undefined}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => onChange({ address: event.target.value })}
+          />
+        )}
+      </Row>
+      <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
+        <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
+      </Row>
+    </Group>
+  );
+}

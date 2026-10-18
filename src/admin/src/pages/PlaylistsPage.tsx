@@ -1,16 +1,18 @@
 import { TabPage, type PageProps } from "@/components/chrome/TabPage";
-import { IndexSkeleton } from "@/components/records/IndexSkeleton";
-import { IndexToolbar } from "@/components/records/IndexToolbar";
-import { INDEX_FRAMES } from "@/constants/index-frames";
+import { PlaylistWorkspace } from "@/components/playlists/PlaylistWorkspace";
+import { PlaylistsIndex } from "@/components/playlists/PlaylistsIndex";
+import { usePlaylistsLoad } from "@/hooks/usePlaylistsLoad";
+import { useAppStore } from "@/store/app-store";
 
-const FRAME = INDEX_FRAMES.playlists;
-
-/** Playlists. Wave 2 draws its index skeleton; the New form, the grid and the workspace arrive in Wave 5. */
+/** Playlists: the index (bulk toolbar, `New playlist`, the list) or, when a row is open, that playlist's workspace. The
+ *  page is the only reader of `workspaces.playlists`. It loads the playlists when first shown in a session and when
+ *  another tab's write marked them stale. */
 export function PlaylistsPage({ active }: PageProps) {
+  const openId = useAppStore((state) => state.workspaces.playlists);
+  usePlaylistsLoad(active);
   return (
     <TabPage active={active} label="Playlists">
-      <IndexToolbar frame={FRAME} />
-      <IndexSkeleton frame={FRAME} />
+      {openId === null ? <PlaylistsIndex /> : <PlaylistWorkspace id={openId} active={active} />}
     </TabPage>
   );
 }
