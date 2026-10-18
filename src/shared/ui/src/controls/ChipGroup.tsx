@@ -1,6 +1,6 @@
 import { cn } from "../lib/cn";
 import { lockedByMin, minReason } from "./chip-rules";
-import { PILL_CHIP, PILL_FIELD_CHIP, PILL_FIELD_ROW, PILL_ROW } from "./pill-classes";
+import { PILL_CHIP, PILL_ROW } from "./pill-classes";
 
 export interface ChipOption {
   readonly value: string;
@@ -17,8 +17,6 @@ export interface ChipGroupProps {
   readonly min?: number;
   /** The locked chips' reason; the rule in a sentence unless a caller words it. */
   readonly minText?: string;
-  /** The form's field size: 36px chips at the body size, equal, spanning the row (the same as `Segmented`'s). */
-  readonly field?: boolean;
   readonly disabled?: boolean;
   readonly "aria-label": string;
   readonly className?: string;
@@ -34,13 +32,12 @@ export function ChipGroup({
   onToggle,
   min = 0,
   minText,
-  field = false,
   disabled = false,
   className,
   ...rest
 }: ChipGroupProps) {
   return (
-    <div role="group" className={cn(field ? PILL_FIELD_ROW : PILL_ROW, className)} {...rest}>
+    <div role="group" className={cn(PILL_ROW, className)} {...rest}>
       {options.map((option) => {
         const on = selected.has(option.value);
         const locked = lockedByMin(on, selected.size, min);
@@ -52,7 +49,7 @@ export function ChipGroup({
             data-active={on ? "" : undefined}
             disabled={disabled || option.disabled === true || locked}
             title={locked ? (minText ?? minReason(min)) : option.title}
-            className={cn(PILL_CHIP, field ? PILL_FIELD_CHIP : "h-7 px-3 text-xs")}
+            className={cn(PILL_CHIP, "h-7 px-3 text-xs")}
             onClick={() => onToggle(option.value)}
           >
             {option.label}

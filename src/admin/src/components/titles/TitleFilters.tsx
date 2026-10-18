@@ -56,7 +56,6 @@ export function TitleFilters({ view, onType, onSearch, onKind, onSort }: TitleFi
       </Row>
       <Row label="Kind" tip={KIND_FILTER_TIP}>
         <ChipGroup
-          field
           min={1}
           aria-label="Kind filter"
           options={KIND_CHIPS}
@@ -67,7 +66,7 @@ export function TitleFilters({ view, onType, onSearch, onKind, onSort }: TitleFi
         />
       </Row>
       <Row label="Sort" tip={SORT_TIP}>
-        <Segmented field aria-label="Sort" options={SORT_OPTIONS} value={view.sort} onChange={onSort} />
+        <Segmented aria-label="Sort" options={SORT_OPTIONS} value={view.sort} onChange={onSort} />
       </Row>
     </>
   );

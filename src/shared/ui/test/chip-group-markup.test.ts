@@ -11,7 +11,7 @@ const OPTIONS = [
   { value: "1080p", label: "1080p" },
 ];
 
-function render(selected: string[], extra: { min?: number; field?: boolean; disabled?: boolean; minText?: string } = {}) {
+function render(selected: string[], extra: { min?: number; disabled?: boolean; minText?: string } = {}) {
   return renderToStaticMarkup(
     createElement(ChipGroup, {
       options: OPTIONS,
@@ -40,10 +40,10 @@ test("each chip is its own pressed toggle: any of them can be lit", () => {
   assert.equal(count(html, 'data-active=""'), 2);
 });
 
-test("the field size is 36px chips, equal, spanning the row", () => {
-  const html = render(["720p"], { field: true });
-  assert.equal(count(html, "h-9 px-3 text-sm"), 3);
-  assert.ok(html.includes("grid w-full min-w-0 flex-1 auto-cols-fr grid-flow-col gap-1.5"));
+test("the chips are never field-sized bars: no 36px chips, no row-spanning grid", () => {
+  const html = render(["720p"]);
+  assert.equal(count(html, "h-9"), 0);
+  assert.ok(!html.includes("w-full") && !html.includes("auto-cols-fr"));
 });
 
 test("with no min nothing is locked", () => {

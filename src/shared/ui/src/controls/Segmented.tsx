@@ -1,5 +1,5 @@
 import { cn } from '../lib/cn'
-import { PILL_CHIP, PILL_EQUAL_ROW, PILL_FIELD_CHIP, PILL_FIELD_ROW, PILL_ROW } from './pill-classes'
+import { PILL_CHIP, PILL_EQUAL_ROW, PILL_ROW } from './pill-classes'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -25,9 +25,6 @@ interface SegmentedProps<T extends string> {
   dense?: boolean
   /** Every chip the width of the widest (owner, 2026-09-05: labels with counts made the chips "all different widths"). */
   equal?: boolean
-  /** The form's field size (docs/27 step 2a): 36px chips at the body size, equal segments spanning the row, for a one-of
-   *  choice in a labelled form row. Same pills; only the size and the span differ. */
-  field?: boolean
   className?: string
 }
 
@@ -41,8 +38,6 @@ interface SegmentedProps<T extends string> {
  * chip to the widest so a row never re-flows as counts change. */
 const ROW = PILL_ROW
 const EQUAL_ROW = PILL_EQUAL_ROW
-const FIELD_ROW = PILL_FIELD_ROW
-const FIELD_CHIP = PILL_FIELD_CHIP
 const CHIP = PILL_CHIP
 
 /** Chips share a rail's full width equally — never ragged. */
@@ -55,12 +50,11 @@ export function Segmented<T extends string>({
   onChange,
   dense = false,
   equal = false,
-  field = false,
   className,
   ...rest
 }: SegmentedProps<T>) {
-  const row = field ? FIELD_ROW : equal ? EQUAL_ROW : ROW
-  const size = field ? FIELD_CHIP : dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs'
+  const row = equal ? EQUAL_ROW : ROW
+  const size = dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs'
   return (
     <div role="group" className={cn(row, className)} {...rest}>
       {options.map((option) => (

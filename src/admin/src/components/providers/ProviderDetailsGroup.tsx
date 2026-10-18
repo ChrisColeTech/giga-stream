@@ -35,7 +35,6 @@ export function ProviderDetailsGroup({ draft, created, errors, onChange }: Provi
       <ProviderTextRow label="Name" value={draft.name} error={errors["name"]} onChange={(name) => onChange({ name })} />
       <Row label="Family" tip={FAMILY_TIP} error={errors["family"]}>
         <Segmented
-          field
           aria-label="Family"
           options={FAMILY_OPTIONS}
           value={draft.family}

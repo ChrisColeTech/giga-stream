@@ -47,7 +47,6 @@ export function NewTitleForm() {
       </Row>
       <Row label="Kind" tip={KIND_NEW_TIP}>
         <Segmented
-          field
           aria-label="Kind"
           options={KIND_OPTIONS}
           value={form.draft.kind}

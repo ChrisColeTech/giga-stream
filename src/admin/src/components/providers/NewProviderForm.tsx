@@ -53,7 +53,6 @@ export function NewProviderForm() {
       {text("name", "Name")}
       <Row label="Family" tip={FAMILY_TIP}>
         <Segmented
-          field
           aria-label="Family"
           options={FAMILY_OPTIONS}
           value={form.draft.family}

@@ -61,13 +61,7 @@ export function NewJobForm() {
         />
       </Row>
       <Row label="Type" tip={TYPE_TIP}>
-        <Segmented
-          field
-          options={TYPES}
-          value={form.draft.type}
-          aria-label="Type"
-          onChange={(type) => form.set({ type })}
-        />
+        <Segmented options={TYPES} value={form.draft.type} aria-label="Type" onChange={(type) => form.set({ type })} />
       </Row>
       {form.draft.type === "playlist" ? (
         <Row label="Playlist" tip={PLAYLIST_TIP} error={form.errors["playlistId"]}>
