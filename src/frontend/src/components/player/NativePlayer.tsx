@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { objectFitOf } from "@/lib/live-picture";
 import { applyOpeningPosition, attemptPlayerPlay } from "@/lib/player-opening";
+import { stableAddressOf } from "@/lib/player-sources";
 import { StreamPlayerController } from "@/services/stream-player";
 import { useAppStore } from "@/store/app-store";
 import type { PictureFit } from "@/types/settings";
@@ -28,7 +29,11 @@ const positionOf = (media: HTMLVideoElement): [number, number | undefined] => [
 ];
 
 const isHls = (url: string): boolean => /\.m3u8(?:$|[?#])/i.test(url);
-export const nativeAttachmentKey = (url: string, retry: number): string => `${url}\u0000${retry}`;
+/** The attachment effect's key, on the address's STABLE part (`50` section 2.4's re-drive): a re-answer of the same
+ *  media whose play address only re-minted its query must not re-run the effect — its cleanup is the teardown
+ *  (`pause` + `removeAttribute("src")` + `load()`), which would drop the playing element's position. A genuinely
+ *  different address (path, host, quality) still re-attaches, and a Retry still does (the retry serial). */
+export const nativeAttachmentKey = (url: string, retry: number): string => `${stableAddressOf(url)}\u0000${retry}`;
 
 /** Stop's native action (`50` section 2.4): pause in place — the position stays for Resume, the source is never
  *  cleared. */

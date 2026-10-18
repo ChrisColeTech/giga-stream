@@ -28,10 +28,23 @@ export function selectedPlayerSource(
   return sources.find((source) => source.id === activeId) ?? sources[0];
 }
 
-/** Whether two source lists carry the same media: same ids, kinds, names and addresses (a provider by its id), in
- *  order. A re-read that answers the same sources recomputes the list into new objects; the stage must not treat
- *  that as a change (`50` section 2.4's stop fix): the write would force the stage back to `loading`, which no
- *  media event then advances while the mounted element keeps playing. */
+/** The address's stable part: scheme, host, port and path — the query and fragment dropped. A play address's query
+ *  is the per-request part (a token or signature the source re-mints per answer, the re-drive's finding): it must
+ *  not read as a different media, while a different path, host, port or scheme is a genuine change. */
+export function stableAddressOf(url: string): string {
+  const end = url.search(/[?#]/u);
+  return end === -1 ? url : url.slice(0, end);
+}
+
+export function sameAddress(left: string, right: string): boolean {
+  return stableAddressOf(left) === stableAddressOf(right);
+}
+
+/** Whether two source lists carry the same media: same ids, kinds, names and stable addresses (a provider by its
+ *  id), in order. A re-read that answers the same sources recomputes the list into new objects — with the play
+ *  address's query re-minted; the stage must not treat that as a change: the write would force the stage back to
+ *  `loading` and re-point the selection, and the mounted element would be torn down and reloaded at its opening
+ *  position. A genuinely different address still reads as a change. */
 export function sameSources(left: readonly PlayerSource[], right: readonly PlayerSource[]): boolean {
   return left.length === right.length && left.every((source, at) => {
     const other = right[at];
@@ -39,7 +52,7 @@ export function sameSources(left: readonly PlayerSource[], right: readonly Playe
       return false;
     }
     return source.kind === "embed"
-      ? other.kind === "embed" && source.embed.providerId === other.embed.providerId
-      : other.kind === "stream" && source.url === other.url;
+      ? other.kind === "embed" && sameAddress(source.embed.url, other.embed.url)
+      : other.kind === "stream" && sameAddress(source.url, other.url);
   });
 }
