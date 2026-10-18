@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { LIBRARY_PAGE_SIZE, FACET_YEARS } from "../constants/library.js";
+import type { TitleKind } from "../services/admin-titles.js";
 import type { LibraryItem } from "../types/library.js";
 import { AppError } from "./app-error.js";
 
@@ -17,13 +18,21 @@ export interface LibraryQuery {
   cursor?: string;
 }
 
-/** The opaque paging cursor (03 section 3.5): offsets and pages only, never a local path. */
+/** The opaque paging cursor (03 section 3.5): offsets only, never a local path. Local files first, then cached titles. */
 export interface LibraryCursor {
   localOffset: number;
-  titlePage: number;
+  titleOffset: number;
 }
 
-const CursorSchema = z.object({ localOffset: z.number().int().min(0), titlePage: z.number().int().min(0) });
+const CursorSchema = z.object({
+  localOffset: z.number().int().min(0),
+  titleOffset: z.number().int().min(0).default(0),
+});
+
+/** The title kinds a `type` asks for: both for `all`, none for `local`. */
+export function titleKindsOf(type: LibraryQuery["type"]): TitleKind[] {
+  return type === "movie" || type === "tv" ? [type] : type === "all" ? ["movie", "tv"] : [];
+}
 
 const invalidCursor = (): AppError => new AppError("library.invalid", 422, "That library page marker is not usable.");
 
@@ -121,7 +130,7 @@ export function pageOf(
   const page = items.slice(offset, offset + LIBRARY_PAGE_SIZE);
   const next =
     offset + page.length < items.length
-      ? encodeCursor({ localOffset: offset + page.length, titlePage: cursor?.titlePage ?? 0 })
+      ? encodeCursor({ localOffset: offset + page.length, titleOffset: 0 })
       : undefined;
   return { items: page, ...(next !== undefined && { nextCursor: next }) };
 }

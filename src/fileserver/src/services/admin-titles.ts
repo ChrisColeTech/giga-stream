@@ -49,22 +49,6 @@ export interface BackendEpisode {
   sources?: TitleSource[];
 }
 
-/** The shape of every list the backend answers (docs/03 section 7.4). */
-export interface TitlePage {
-  items: BackendTitle[];
-  page: number;
-  totalPages: number;
-  totalResults: number;
-  /** Rows of this page the backend left out (deleted or disabled titles). */
-  skipped?: number;
-}
-
-/** One entry of TMDB's genre list (docs/03 section 7.4). */
-export interface BackendGenre {
-  id: number;
-  name: string;
-}
-
 /** One source as the backend fills it (docs/03 section 7.5): the shape every answer must carry. */
 const SourceSchema = z.object({
   providerId: z.number(),
@@ -95,15 +79,6 @@ const TitleSchema = z.object({
   streamUrl: z.string().optional(),
   sources: SourcesSchema,
 });
-const PageSchema = z.object({
-  items: z.array(TitleSchema),
-  page: z.number(),
-  totalPages: z.number(),
-  totalResults: z.number(),
-  /** Rows of this page the backend left out (deleted or disabled titles); absent from an older backend. */
-  skipped: z.number().int().min(0).optional(),
-});
-const GenresSchema = z.array(z.object({ id: z.number(), name: z.string() }));
 const SeasonSchema = z.object({
   episodes: z.array(
     z.object({
@@ -122,28 +97,17 @@ const RecommendationsSchema = z.object({ items: z.array(TitleSchema) });
 
 const titleNotFound = { code: "title.not_found", message: "There is no such title.", status: 404 } as const;
 
+/**
+ * The live title reads that remain (docs/46 section A): a detail (it carries the Player's sources), a season's
+ * episodes and the recommendations. The browse, search and genre routes are not here: the library reads the cache.
+ */
 export interface AdminTitles {
-  /** `GET /api/titles` — one kind's page in the chosen sort, narrowed by genre and year (7.4). */
-  titles(
-    baseUrl: string,
-    query: { kind: TitleKind; sort: TitleSort; genre?: string; year?: number; page: number },
-  ): Promise<AdminResult<TitlePage>>;
-  /** `GET /api/titles/search` — TMDB's search, people left out. */
-  titleSearch(baseUrl: string, q: string, kind: TitleKind, page: number): Promise<AdminResult<TitlePage>>;
-  /** `GET /api/titles/genres` — TMDB's genre names for one kind. */
-  titleGenres(baseUrl: string, kind: TitleKind): Promise<AdminResult<BackendGenre[]>>;
   /** `GET /api/titles/:titleId` — the detail payload. */
   titleDetail(baseUrl: string, titleId: string): Promise<AdminResult<BackendTitle>>;
   /** `GET /api/titles/:titleId/seasons/:season` — the season's episodes. */
   titleSeason(baseUrl: string, titleId: string, season: number): Promise<AdminResult<{ episodes: BackendEpisode[] }>>;
   /** `GET /api/titles/:titleId/recommendations` — TMDB's recommendations, first page. */
   titleRecommendations(baseUrl: string, titleId: string): Promise<AdminResult<{ items: BackendTitle[] }>>;
-}
-
-function withQuery(baseUrl: string, path: string, params: Record<string, string | number | undefined>): string {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) if (value !== undefined) query.set(key, String(value));
-  return `${baseUrl}${path}?${query.toString()}`;
 }
 
 /**
@@ -166,20 +130,6 @@ export function createAdminTitles(options: { fetch?: typeof fetch } = {}): Admin
   }
 
   return {
-    titles: (baseUrl, query) =>
-      get(
-        withQuery(baseUrl, "/api/titles", {
-          kind: query.kind,
-          sort: query.sort,
-          genre: query.genre,
-          year: query.year,
-          page: query.page,
-        }),
-        PageSchema,
-      ),
-    titleSearch: (baseUrl, q, kind, page) =>
-      get(withQuery(baseUrl, "/api/titles/search", { q, kind, page }), PageSchema),
-    titleGenres: (baseUrl, kind) => get(withQuery(baseUrl, "/api/titles/genres", { kind }), GenresSchema),
     titleDetail: (baseUrl, titleId) => get(`${baseUrl}/api/titles/${encodeURIComponent(titleId)}`, TitleSchema),
     titleSeason: (baseUrl, titleId, season) =>
       get(`${baseUrl}/api/titles/${encodeURIComponent(titleId)}/seasons/${season}`, SeasonSchema),

@@ -22,7 +22,7 @@ const LibraryQuerySchema = z.object({
   cursor: z.string().min(1).max(500).optional(),
 });
 
-/** `GET /api/library` and `GET /api/library/continue` (docs/03 section 3.5). */
+/** `GET /api/library`, `GET /api/library/continue` and `POST /api/library/refresh` (docs/03 sections 3.5 and 5.1). */
 export function registerLibraryRoutes(app: FastifyInstance, services: AppServices): void {
   app.get("/api/library", async (request) => {
     const parsed = parseInput(LibraryQuerySchema, request.query);
@@ -41,4 +41,7 @@ export function registerLibraryRoutes(app: FastifyInstance, services: AppService
   });
 
   app.get("/api/library/continue", async () => okEnvelope(await services.library.continuePage()));
+
+  // Forced and awaited: it joins a sync in flight, and answers 503/502 with the cache still serving (docs/03 5.1).
+  app.post("/api/library/refresh", async () => okEnvelope(await services.library.refresh()));
 }
