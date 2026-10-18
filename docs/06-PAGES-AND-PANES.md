@@ -444,17 +444,25 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 
 ### 4.6 Search titles (the spotlight popup; owner, 2026-10-18)
 
-Opened by the type strip's **Search titles** button. **It is NOT a modal** (owner, 2026-10-18, twice: "it looks like a search
-modal", then "the spotlight search still opens a modal"): no scrim over the app, no centred card, no `role="dialog"`, no
-focus trap, no title bar, no close button. It is a **non-modal search flyout anchored to the button**: a floating panel
-directly below the type strip, its right edge aligned to the Search button, 560px wide (at most the window width minus the
-gutters), `rounded-xl`, the family's hairline border and a soft shadow, with `role="combobox"` on its field and
-`role="listbox"` on its rows. The Library underneath stays fully interactive and visible (nothing dims, no scrim, scrolling
-and clicking the grid work); it closes on `Escape`, on a press outside it, or on focus leaving it. Its first row is the
-search field itself (a borderless 40px input, 14px text, a leading search glyph, no field box, no visible label), and a
-hairline under it separates the results. A work window (Title information) opens over it as any window does without
-closing it; while that window is open the flyout ignores outside presses and Escape and returns focus to the row's Info
-when the window closes. It searches the catalog's **titles, movies and series**, by
+Opened by the type strip's **Search titles** button. **The model is macOS Spotlight** (owner, 2026-10-18: "spotlight still
+isn't correct"; the reference is `docs/reference/macos-spotlight/`, from Apple's help for macOS 26 and 12.0, images
+`mchlp1008-12.0/02-*.png` and `mchlp1008-26/02-*.png`). **It is NOT a modal**: **NO scrim and no dimming of anything** (the
+Library behind it stays at full brightness, as the desktop does behind Spotlight), no `role="dialog"`, no title bar, no
+close button, no header text. It is **one borderless rounded window floating over the app**, horizontally centred about
+22% from the top, 760px wide (at most the window width minus the gutters), `rounded-2xl`, the family's hairline border and a
+soft large shadow. **Its first row is the search field**: a leading magnifier glyph and a large borderless input (22px
+text, about 64px tall, no field box, no visible label, no placeholder text), exactly as Spotlight's bar. **With nothing
+typed the window is only that bar** (the compact Spotlight pill). Once there is a query a hairline separates the field from
+the results area, which is **two columns**, as macOS 12's window: **left**, the results list (about 320px) grouped under
+small grey category headers (`Movies`, `Series`), compact flat rows with a small poster thumbnail (28x42, or the title's
+colour), the title in the primary text and `year` in dim mono, the **focused row filled with the accent and a trailing
+chevron** (Spotlight's blue top hit); **right**, the **preview pane** of the focused row (the title's poster or backdrop,
+its title, `year · Movie|Series`, genres, rating and the first lines of the overview; informational only: no buttons in it,
+because Play and Info live on the rows, one home per control). The window grows to fit the results (at most about 440px of
+results area, then the list scrolls inside) and collapses back to the bar when the query is cleared. It closes on `Escape`,
+on a press outside it, or on focus leaving it (as Spotlight dismisses); it is not draggable. A work window (Title
+information) opens over it as any window does without closing it; while that window is open the search ignores outside
+presses and Escape and returns focus to the row's Info when the window closes. It searches the catalog's **titles, movies and series**, by
 title, through the Library's own read (`GET /api/library?view=all&type=all&q=`, the backend's title search); local
 files are not results.
 

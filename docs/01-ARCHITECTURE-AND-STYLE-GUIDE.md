@@ -529,7 +529,8 @@ operational utility. Only one popup or work window is open at a time. A popup is
 focus returns to its opener only if it still exists.
 
 Exception (owner, 2026-10-18): Library's **Search titles** flyout (`06` section 4.6) is a NON-modal panel anchored to its
-button (no scrim, no dialog role, the Library stays interactive) that a work window may stack over. A result row's **Info** opens Title information above the spotlight without closing it: the
+window modelled on macOS Spotlight (no scrim and no dimming, no dialog role; one floating bar that grows a results list and a
+preview pane) that a work window may stack over. A result row's **Info** opens Title information above the spotlight without closing it: the
 window's scrim washes over the spotlight, and while the window is open the spotlight ignores outside presses, focus
 leaving it and Escape. Closing Title information (its `X`, `Escape`) returns to the spotlight with its query, results
 and focused row intact, and focus goes back to the row's Info. This is the only stack: the spotlight never opens over a
