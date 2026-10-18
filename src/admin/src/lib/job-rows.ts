@@ -1,5 +1,6 @@
 import type { AdminJob, CatalogJobConfig, PlaylistJobConfig } from "@/services/schemas/job-schema";
 import { formatWhen } from "./format-when";
+import { percentOf } from "./job-fraction";
 import { scheduleLabel } from "./job-schedule";
 import { jobState, type RowState } from "./row-state";
 import { runWords } from "./run-words";
@@ -24,8 +25,15 @@ export const lastRunFailed = (job: AdminJob): boolean => job.lastRunAt !== undef
 /** The last run was stopped (`43` section 3.4a): the row reads `stopped` and the workspace offers `Resume`. */
 export const lastRunStopped = (job: AdminJob): boolean => job.lastRunAt !== undefined && job.lastResult === "stopped";
 
+/** The state word; a running job that has progress reads `running 46%` (the row's `data-st` stays `running`). */
 export const stateOfJob = (job: AdminJob): RowState =>
-  jobState({ enabled: job.enabled, running: job.running, failed: lastRunFailed(job), stopped: lastRunStopped(job) });
+  jobState({
+    enabled: job.enabled,
+    running: job.running,
+    failed: lastRunFailed(job),
+    stopped: lastRunStopped(job),
+    ...(job.progress !== undefined && { percent: percentOf(job.progress) }),
+  });
 
 const KIND_WORD: Readonly<Record<NonNullable<CatalogJobConfig["kind"]>, string>> = { movie: "movies", tv: "series" };
 

@@ -1,4 +1,5 @@
 import { pruneIds, upsertById, withTick, withoutId } from "@/lib/playlist-rows";
+import type { JobProgress } from "@/services/schemas/job-event-schema";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import type { SliceGet, SliceSet } from "./slices/slice-host";
@@ -47,7 +48,12 @@ export interface JobsSlice {
   jobsTickAll: (on: boolean) => void;
   jobsSetTicked: (ids: readonly number[]) => void;
   jobsMarkUnreachable: (unreachable: boolean) => void;
+  /** The stream's running jobs: each loaded job wears its progress (the row's `running 46%`), the others none. */
+  jobsApplyProgress: (running: readonly JobProgress[]) => void;
 }
+
+const samePart = (a: JobProgress | undefined, b: JobProgress | undefined): boolean =>
+  a === b || (a !== undefined && b !== undefined && a.phase === b.phase && a.done === b.done && a.total === b.total);
 
 export function createJobsSlice(set: SliceSet<JobsSlice>, get: SliceGet<JobsSlice>): JobsSlice {
   const patch = (next: Partial<JobsState>): void => set({ jobs: { ...get().jobs, ...next } });
@@ -69,5 +75,14 @@ export function createJobsSlice(set: SliceSet<JobsSlice>, get: SliceGet<JobsSlic
     jobsTickAll: (on) => patch({ ticked: on ? get().jobs.items.map((item) => item.id) : [] }),
     jobsSetTicked: (ids) => patch({ ticked: pruneIds(ids, get().jobs.items) }),
     jobsMarkUnreachable: (unreachable) => patch({ unreachable }),
+    jobsApplyProgress: (running) => {
+      const next = get().jobs.items.map((job) => {
+        const progress = running.find((one) => one.jobId === job.id);
+        if (samePart(job.progress, progress)) return job;
+        const { progress: _old, ...rest } = job;
+        return progress === undefined ? rest : { ...rest, progress };
+      });
+      if (next.some((job, at) => job !== get().jobs.items[at])) patch({ items: next });
+    },
   };
 }

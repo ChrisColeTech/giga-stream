@@ -47,13 +47,11 @@ beforeEach(() => {
 });
 
 describe("the jobs slice and the statusbar's N syncing", () => {
-  it("counts the running rows after a load, and the statusbar reads `2 syncing` over the pulsing bar", async () => {
+  it("counts the running rows after a load into work.syncing, which the statusbar does not read (the stream does)", async () => {
     await flowsWith().load();
     assert.equal(syncing(), 2);
-    assert.deepEqual([workView(state().work).readout, workView(state().work).stopReason], [
-      "2 syncing",
-      "A sync cannot be cancelled.",
-    ]);
+    const view = workView(state().work, state().jobProgress.live);
+    assert.deepEqual([view.readout, view.stoppable], [undefined, false]);
   });
 
   it("follows every write: a catalog run started, a refresh that reads it finished, a running job deleted", async () => {

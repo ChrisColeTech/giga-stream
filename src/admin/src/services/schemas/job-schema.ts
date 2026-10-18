@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { JobProgressSchema } from "./job-event-schema";
 import { lastCounts, lastResult } from "./run-counts-schema";
 
 /* `JobView` (`03` section 7.2c, `43` section 3.1): a playlist job is part of its playlist - it names the playlist and its
@@ -23,6 +24,8 @@ export const JobSchema = z.object({
   playlistId: z.number().optional(),
   playlistName: z.string().optional(),
   running: z.boolean(),
+  /** A running job's latest progress (`44` section 3.3); the stream keeps it current. Unreadable reads as absent. */
+  progress: JobProgressSchema.optional().catch(undefined),
   lastRunAt: z.number().optional(),
   lastResult,
   lastCounts,

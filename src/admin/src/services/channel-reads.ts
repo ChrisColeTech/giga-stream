@@ -66,6 +66,7 @@ export function createChannelReads({ service, store }: ChannelFlowDeps): Channel
   const load = async (): Promise<FlowResult> => (store().channels.status === "loading" ? done(undefined) : first());
 
   async function refresh(): Promise<FlowResult> {
+    store().jobEventsReopen();
     const total = store().channels.total;
     store().channelsInvalidate();
     if (total !== null && total > WINDOW_MIN_ROWS) {

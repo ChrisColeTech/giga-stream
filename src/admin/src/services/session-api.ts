@@ -28,9 +28,14 @@ export interface SessionApiDeps {
 
 export type CallOptions = Pick<RequestOptions<EventArea>, "method" | "body" | "form" | "signal" | "area">;
 
+export type StreamOptions = Pick<RequestOptions<EventArea>, "signal" | "quiet" | "area">;
+
 export interface SessionApi {
   /** A signed-in call: the bearer, the proactive refresh, one retry after a refresh on a 401. */
   request: <T>(path: string, schema: z.ZodType<T>, options?: CallOptions) => Promise<T>;
+  /** A signed-in GET whose body is read as a stream (`44` section 4), with the same refresh and retry as `request`. The
+   *  body is the caller's to read and cancel; `signal` ends it. */
+  stream: (path: string, options?: StreamOptions) => Promise<ReadableStream<Uint8Array>>;
   /** `POST /api/auth/login`: no token. */
   login: (username: string, password: string) => Promise<BackendSession>;
   /** `POST /api/auth/reset-start`: no token. Rejects with an `ApiError`; the auth port turns it into a refusal. */
@@ -89,13 +94,14 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
       throw error;
     });
 
-  async function request<T>(path: string, schema: z.ZodType<T>, options: CallOptions = {}): Promise<T> {
+  /** Any signed-in call: the proactive refresh, then `call`, then ONE retry of `call` after a refresh on a 401. */
+  async function signedIn<T>(call: () => Promise<T>): Promise<T> {
     const first = deps.tokens();
     if (first === null) throw unauthorized();
     if (first.accessExpiresAt - deps.now() < REFRESH_SKEW_MS) await settle();
     const used = deps.tokens()?.accessToken;
     try {
-      return await authed.api(path, schema, options);
+      return await call();
     } catch (error: unknown) {
       if (!isUnauthorized(error)) throw error;
       /* A request that met the same expiry earlier may already have refreshed: then only the retry is owed. */
@@ -103,12 +109,19 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
       else if (deps.tokens() === null) throw error;
     }
     try {
-      return await authed.api(path, schema, options);
+      return await call();
     } catch (error: unknown) {
       if (isUnauthorized(error)) deps.end(SESSION_ENDED_NOTICE);
       throw error;
     }
   }
+
+  const request = <T>(path: string, schema: z.ZodType<T>, options: CallOptions = {}): Promise<T> =>
+    signedIn(() => authed.api(path, schema, options));
+
+  /** A streamed body, signed in like any call; `quiet` keeps a successful open out of the Events drawer. */
+  const stream = (path: string, options: StreamOptions = {}): Promise<ReadableStream<Uint8Array>> =>
+    signedIn(() => authed.apiStream(path, options));
 
   /** The one on-load probe: the same promise for every caller, so a double mount sends one refresh. */
   let probe: Promise<BackendSession | null> | null = null;
@@ -122,6 +135,7 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
 
   return {
     request,
+    stream,
     restore,
     login: (username, password) =>
       open.api("/api/auth/login", SessionSchema, { method: "POST", body: { username, password } }),

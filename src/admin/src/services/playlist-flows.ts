@@ -28,7 +28,8 @@ import type { AdminPlaylist } from "./schemas/playlist-schema";
 export type PlaylistStore = Pick<
   AppState,
   | "serial" | "signedIn" | "playlists" | "workspaces" | "playlistsStartLoad" | "playlistsLoaded"
-  | "playlistsLoadFailed" | "playlistUpsert" | "playlistRemove" | "playlistsMarkUnreachable" | "closeWorkspace" | "markStale" | "say"
+  | "playlistsLoadFailed" | "playlistUpsert" | "playlistRemove" | "playlistsMarkUnreachable" | "closeWorkspace"
+  | "markStale" | "say" | "jobEventsReopen"
 >;
 
 export interface PlaylistFlowDeps {
@@ -190,6 +191,7 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
   };
 
   const refresh = async (): Promise<PlaylistResult> => {
+    store().jobEventsReopen();
     const [result] = await Promise.all([load(), audit.reload(AUDIT_PAGE)]);
     return result;
   };

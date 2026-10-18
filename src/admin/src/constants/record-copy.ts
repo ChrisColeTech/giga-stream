@@ -24,10 +24,11 @@ export const NO_BOTTOM_PANE = "The admin has no bottom pane.";
 export const SLEEPING_TABS = "Close the open window to switch tabs.";
 export const SLEEPING_PANES = "Close the open window to change the panes.";
 
-/** Why Stop is never available (`26` section 4.2; `28` section 7.1): no route stops a build or a sync. */
-export const STOP_IDLE = "Nothing to stop";
+/** The statusbar's Stop (`28` section 7.1, `44` section 4): it stops every running job (`Stop syncing`); no route stops a
+ *  channel build, and with nothing running it is disabled. */
+export const STOP_IDLE = "Nothing is running.";
 export const STOP_BUILD = "A channel build cannot be cancelled; change or delete the channel.";
-export const STOP_SYNC = "A sync cannot be cancelled.";
+export const STOP_SYNCING = "Stop syncing";
 
 /** A key's notice. */
 export const ZOOM_RESET_NOTICE = "Zoom reset to 100%.";

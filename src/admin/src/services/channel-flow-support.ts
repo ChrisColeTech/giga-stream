@@ -29,6 +29,7 @@ export type ChannelStore = Pick<
   | "closeWorkspace"
   | "markStale"
   | "say"
+  | "jobEventsReopen"
 >;
 
 export interface ChannelFlowDeps {
