@@ -31,6 +31,6 @@ export function useJobActions(): JobActions {
       setBusy((keys) => keys.filter((one) => one !== key));
     }
   }, []);
-  const writes = busy.filter((key) => key !== "refresh" && !key.startsWith("run:"));
+  const writes = busy.filter((key) => key !== "refresh" && !key.startsWith("run:") && !key.startsWith("stop:"));
   return { flows, saving: writes.length > 0, isBusy: (key) => busy.includes(key), track };
 }

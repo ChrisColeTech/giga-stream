@@ -29,6 +29,7 @@ function flowsWith(script: Partial<JobsService> = {}) {
     update: async (id, patch) => job(id, { enabled: patch["enabled"] !== false }),
     remove: async (id) => ({ id }),
     run: async (id) => job(id, { running: true }),
+    stop: async (id) => job(id, { running: true }),
     ...script,
   };
   return createJobFlows({

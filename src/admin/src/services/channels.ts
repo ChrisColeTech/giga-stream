@@ -5,9 +5,11 @@ import {
   ChannelListLenientSchema,
   ChannelPageLenientSchema,
   ChannelSchema,
+  ChannelSwitchedSchema,
   DeletedChannelSchema,
   type ChannelList,
   type ChannelPage,
+  type ChannelSwitched,
 } from "./schemas/channel-schema";
 import type { RecordService } from "./service-types";
 
@@ -24,6 +26,9 @@ export interface ChannelsService extends RecordService<AdminChannel, string, Cha
   rebuild: (id: string) => Promise<AdminChannel>;
   /** `POST /channels/:id/revert`: a synced stream channel, its edits cleared. */
   revert: (id: string) => Promise<AdminChannel>;
+  /** `PATCH /api/channels` `{ enabled, ids }`: ONE call for up to 5,000 stream ids (no chunking); live-kind and unknown
+   *  ids are skipped by the backend and counted. */
+  setEnabled: (ids: readonly string[], enabled: boolean) => Promise<ChannelSwitched>;
 }
 
 const path = (id: string, rest = ""): string => `/api/channels/${encodeURIComponent(id)}${rest}`;
@@ -67,4 +72,5 @@ export const channels: ChannelsService = {
   remove: (id) => request(path(id), DeletedChannelSchema, { method: "DELETE" }),
   rebuild: (id) => request(path(id, "/rebuild"), ChannelSchema, { method: "POST" }),
   revert: (id) => request(path(id, "/revert"), ChannelSchema, { method: "POST" }),
+  setEnabled: (ids, enabled) => request("/api/channels", ChannelSwitchedSchema, { method: "PATCH", body: { enabled, ids } }),
 };

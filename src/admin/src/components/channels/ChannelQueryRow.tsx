@@ -17,6 +17,8 @@ import {
   SORT_OPTIONS,
   STATE_LABEL,
   STATE_OPTIONS,
+  STATUS_LABEL,
+  STATUS_OPTIONS,
   type QueryOption,
 } from "@/constants/channel-query-copy";
 import {
@@ -39,12 +41,12 @@ export interface ChannelQueryRowProps {
 
 /** The controls of the Channels list's first row, in the shared `QuerySearch` and `QuerySelect` (LoRA Studio
  *  `LibraryToolbar`): the search field taking the row's width (it runs on Enter, never as you type), a Sort select with
- *  its direction, then a select for each filter (Kind, State, Origin, Playlist, Enabled). */
+ *  its direction, then a select for each filter (Kind, State, Origin, Playlist, Stream status, Enabled). */
 export function ChannelQueryRow({ query, onQuery, playlists, reason }: ChannelQueryRowProps) {
   const [typed, setTyped] = useState(query.q);
   useEffect(() => setTyped(query.q), [query.q]);
   const pick =
-    <K extends "kind" | "origin" | "enabled" | "state">(field: K) =>
+    <K extends "kind" | "origin" | "enabled" | "state" | "status">(field: K) =>
     (value: ChannelQuery[K]): void =>
       onQuery(withFilter(query, field, value));
   const Direction = query.dir === "asc" ? ArrowUp : ArrowDown;
@@ -85,6 +87,7 @@ export function ChannelQueryRow({ query, onQuery, playlists, reason }: ChannelQu
         reason={reason}
         onChange={(playlist) => onQuery(withPlaylist(query, playlist))}
       />
+      <QuerySelect label={STATUS_LABEL} value={query.status} options={STATUS_OPTIONS} reason={reason} onChange={pick("status")} />
       <QuerySelect label={ENABLED_LABEL} value={query.enabled} options={ENABLED_OPTIONS} reason={reason} onChange={pick("enabled")} />
     </>
   );

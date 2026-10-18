@@ -18,8 +18,9 @@ const catalog = (id: number, extra: Partial<AdminJob> = {}): AdminJob => catalog
 const ITEMS = [job(1), job(2, { enabled: false }), job(3, { running: true }), job(4), catalog(5), catalog(6, { running: true })];
 const context = (ticked: number[], busy = false) => ({ items: ITEMS, ticked, playlists: [], busy, unreachable: false });
 
-function service(run: JobsService["run"]): JobsService {
+function service(run: JobsService["run"], stop: JobsService["stop"] = async (id) => job(id, { running: true })): JobsService {
   return {
+    stop,
     list: async () => ({ items: [], unreadable: 0 }),
     create: async () => job(9),
     update: async (id, patch) => job(id, { enabled: patch["enabled"] === true }),

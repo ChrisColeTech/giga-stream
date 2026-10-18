@@ -33,9 +33,17 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
     const html = firstRow();
     const at = (needle: string): number => html.indexOf(needle);
     assert.ok(html.startsWith('role="search"') && at('role="search"') < at('aria-label="Channels table"'));
-    const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Playlist"', 'aria-label="Enabled"', 'title="Refresh channels"'];
+    const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Playlist"', 'aria-label="Stream status"', 'aria-label="Enabled"', 'title="Refresh channels"'];
     assert.ok(order.every((needle, i) => at(needle) > (i === 0 ? -1 : at(order[i - 1] ?? ""))), order.map(at).join());
-    assert.equal(count(html, "<select"), 6);
+    assert.equal(count(html, "<select"), 7);
+  });
+
+  it("has the Stream status select beside Playlist: Any status, Live, Dead, Not checked", () => {
+    const html = firstRow();
+    const from = html.indexOf('aria-label="Stream status"');
+    const select = html.slice(from, html.indexOf("</select>", from));
+    assert.deepEqual([...select.matchAll(/>([A-Za-z ]+)<\/option>/g)].map((m) => m[1]), ["Any status", "Live", "Dead", "Not checked"]);
+    assert.ok(select.includes('<option value="all" selected="">Any status</option>') && select.includes('value="unchecked"'));
   });
 
   it("is a search with a leading icon that runs on Enter, and a sort SELECT (Name, Category, Kind, Playlist) with a direction", () => {
@@ -80,8 +88,8 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
         }),
       );
     const waiting = row("Working.");
-    assert.equal(count(waiting, 'disabled=""'), 8, "search, sort, five filters and the direction are natively disabled");
-    assert.equal(count(waiting, 'title="Working."'), 13, "the search, and each select and the span a disabled select hovers through");
+    assert.equal(count(waiting, 'disabled=""'), 9, "search, sort, six filters and the direction are natively disabled");
+    assert.equal(count(waiting, 'title="Working."'), 15, "the search, and each select and the span a disabled select hovers through");
     assert.ok(!row().includes('disabled=""'));
   });
 });

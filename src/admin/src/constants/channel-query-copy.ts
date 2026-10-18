@@ -1,4 +1,6 @@
-import type { EnabledFilter, KindFilter, LiveStateFilter, OriginFilter, ChannelSortKey } from "@/lib/channel-query";
+import type {
+  EnabledFilter, KindFilter, LiveStateFilter, OriginFilter, ChannelSortKey, StatusFilter,
+} from "@/lib/channel-query";
 
 /* The Channels list's first-row controls (`41` section 6, LoRA Studio `LibraryToolbar`): one search field, a Sort select
  * and a select for each filter. Each filter's first option is "all", worded as what it lets through; no chip rows. */
@@ -14,6 +16,7 @@ export const SORT_LABEL = "Sort by";
 export const KIND_LABEL = "Kind";
 export const STATE_LABEL = "State";
 export const ORIGIN_LABEL = "Origin";
+export const STATUS_LABEL = "Stream status";
 export const ENABLED_LABEL = "Enabled";
 export const PLAYLIST_LABEL = "Playlist";
 /** The most playlist names the Playlist select lists (the one chosen is always listed). */
@@ -41,6 +44,13 @@ export const STATE_OPTIONS: readonly QueryOption<LiveStateFilter>[] = [
   { value: "restarting", label: "Restarting" },
   { value: "stopped", label: "Stopped" },
   { value: "failed", label: "Failed" },
+];
+
+export const STATUS_OPTIONS: readonly QueryOption<StatusFilter>[] = [
+  { value: "all", label: "Any status" },
+  { value: "live", label: "Live" },
+  { value: "dead", label: "Dead" },
+  { value: "unchecked", label: "Not checked" },
 ];
 
 export const ORIGIN_OPTIONS: readonly QueryOption<OriginFilter>[] = [

@@ -11,7 +11,8 @@ import { useJobActions } from "@/hooks/useJobActions";
 import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, sameJobDraft } from "@/lib/job-draft";
-import { workspaceRunReason } from "@/lib/job-run-gate";
+import { workspaceRunReason, workspaceStopReason } from "@/lib/job-run-gate";
+import { lastRunStopped } from "@/lib/job-rows";
 import { idOf } from "@/lib/playlist-rows";
 import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
 import type { AdminJob } from "@/services/schemas/job-schema";
@@ -33,6 +34,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(JOB_SECTION_KEYS, JOB_SECTION_KEYS[0] ?? "jw-details");
   const runKey = `run:${job.id}`;
+  const stopKey = `stop:${job.id}`;
 
   useFollowRecord(form, job, draftOf, sameJobDraft);
 
@@ -81,7 +83,13 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
             />
           </div>
           <div ref={spy.bind("jw-run")}>
-            <JobRunGroup reason={runReason} onRun={() => track(runKey, () => flows.run(job.id))} />
+            <JobRunGroup
+              reason={runReason}
+              stopReason={workspaceStopReason(job, isBusy(stopKey))}
+              resume={lastRunStopped(job) && !job.running}
+              onRun={() => track(runKey, () => flows.run(job.id))}
+              onStop={() => track(stopKey, () => flows.stop(job.id))}
+            />
           </div>
           <div ref={spy.bind("jw-last")}>
             <JobLastRunGroup job={job} loading={loading} onRefresh={() => void track("refresh", flows.refresh)} />

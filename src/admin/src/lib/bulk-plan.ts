@@ -73,11 +73,19 @@ export interface BulkWords {
 /** The one sentence for the notice line: `Disabled 2 accounts; 1 failed; 1 skipped.` A warning when anything failed or was
  *  skipped with nothing done. */
 export function bulkSummary<Id>(words: BulkWords, outcome: BulkOutcome<Id>): { sentence: string; tone: EventTone } {
-  const count = outcome.done.length;
-  const parts = [`${words.past} ${count} ${count === 1 ? words.noun : words.nouns}`];
-  if (outcome.failed.length > 0) parts.push(`${outcome.failed.length} failed`);
-  if (outcome.refused.length > 0) parts.push(`${outcome.refused.length} skipped`);
-  const trouble = outcome.failed.length > 0 || (count === 0 && outcome.refused.length > 0);
+  return bulkCountsSummary(words, { done: outcome.done.length, failed: outcome.failed.length, skipped: outcome.refused.length });
+}
+
+/** The same sentence from counts alone: a one-call bulk write (`PATCH /api/channels`) answers numbers, not rows. */
+export function bulkCountsSummary(
+  words: BulkWords,
+  counts: { readonly done: number; readonly failed: number; readonly skipped: number },
+): { sentence: string; tone: EventTone } {
+  const { done: count, failed, skipped } = counts;
+  const parts = [`${words.past} ${count.toLocaleString("en-US")} ${count === 1 ? words.noun : words.nouns}`];
+  if (failed > 0) parts.push(`${failed.toLocaleString("en-US")} failed`);
+  if (skipped > 0) parts.push(`${skipped.toLocaleString("en-US")} skipped`);
+  const trouble = failed > 0 || (count === 0 && skipped > 0);
   return { sentence: `${parts.join("; ")}.`, tone: trouble ? "warn" : "info" };
 }
 

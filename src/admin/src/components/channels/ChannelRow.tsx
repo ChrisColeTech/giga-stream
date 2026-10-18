@@ -42,6 +42,7 @@ export function ChannelRow({ row, ticked, deleteReason, onTick, onOpen, onDelete
       <span className={CELL_TEXT}>{row.category}</span>
       <span className={CELL_TEXT}>{row.kind}</span>
       <StateWord state={row.state} />
+      {row.stream === null ? <span aria-hidden /> : <StateWord state={row.stream} />}
       <span className={CELL_TEXT}>{row.mode}</span>
       <span className={CELL_TEXT}>{row.nowPlaying}</span>
     </RecordGridRow>

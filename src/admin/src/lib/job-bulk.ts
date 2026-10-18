@@ -1,6 +1,6 @@
 import { ALREADY_DISABLED, ALREADY_ENABLED, UNREACHABLE_REASON } from "@/constants/account-copy";
 import {
-  DELETE_RUNNING, EVERY_JOB_DISABLED, EVERY_JOB_ENABLED, PLAYLIST_JOB_OWNED, WORKING_REASON,
+  DELETE_RUNNING, EVERY_JOB_DISABLED, EVERY_JOB_ENABLED, PLAYLIST_JOB_OWNED, THAT_NOT_RUNNING, WORKING_REASON,
 } from "@/constants/job-copy";
 import { TICK_JOB_FIRST } from "@/constants/record-copy";
 import type { AdminJob } from "@/services/schemas/job-schema";
@@ -13,22 +13,25 @@ import { tickedOf } from "./playlist-rows";
  * the shared runner takes the ticked jobs one after another. It is all or nothing: the gate refuses the press when any
  * ticked job cannot run. Enable and Disable skip a job already so; Delete skips a running job. */
 
-export type JobBulkVerb = "run" | "enable" | "disable" | "delete";
+export type JobBulkVerb = "run" | "stop" | "enable" | "disable" | "delete";
 
-/** The selection toolbar's order (`01` section 9): `Run job` first, as Playlists' `Sync now`, then Enable and Disable,
- *  and the armed `Delete` last (LoRA Trainer `GalleryToolbar.tsx`: the destructive verb ends the cluster). */
-export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["run", "enable", "disable", "delete"];
+/** The selection toolbar's order (`01` section 9): `Run job` first, as Playlists' `Sync now`, `Stop` beside it, then
+ *  Enable and Disable, and the armed `Delete` last (LoRA Trainer `GalleryToolbar.tsx`: the destructive verb ends the
+ *  cluster). */
+export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["run", "stop", "enable", "disable", "delete"];
 
 const words = (past: string): BulkWords => ({ past, noun: "job", nouns: "jobs" });
 
 export const JOB_BULK_WORDS: Readonly<Record<JobBulkVerb, BulkWords>> = {
   run: words("Ran"),
+  stop: words("Stopped"),
   enable: words("Enabled"),
   disable: words("Disabled"),
   delete: words("Deleted"),
 };
 
 function skip(verb: JobBulkVerb, job: AdminJob): string | null {
+  if (verb === "stop") return job.running ? null : THAT_NOT_RUNNING;
   if (verb === "enable") return job.enabled ? ALREADY_ENABLED : null;
   if (verb === "disable") return job.enabled ? null : ALREADY_DISABLED;
   if (verb === "delete") return job.type === "playlist" ? PLAYLIST_JOB_OWNED : job.running ? DELETE_RUNNING : null;

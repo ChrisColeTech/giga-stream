@@ -8,7 +8,8 @@ export const BULK_TIPS: Readonly<Record<BulkIconKey, string>> = {
   rebuild: "Rebuild the ticked rows from their sources",
   sync: "Sync the ticked rows now",
   run: "Run the ticked rows now",
-  revert: "Revert the ticked rows to the synced values",
+  stop: "Stop the ticked jobs that are running",
+  revert:"Revert the ticked rows to the synced values",
   restore: "Restore the ticked rows",
   delete: "Delete the ticked rows permanently",
 };

@@ -1,18 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_ICONS } from "@/constants/bulk-icons";
-import { bulkDeleteQuestion, DELETE_SYNCED_TIP } from "@/constants/channel-copy";
+import { BULK_TIPS } from "@/constants/bulk-tips";
+import { bulkDeleteQuestion, DELETE_SYNCED_TIP, TOO_MANY_TO_SWITCH } from "@/constants/channel-copy";
 import { bulkSummary, type BulkOutcome } from "@/lib/bulk-plan";
 import {
   CHANNEL_BULK_LABELS,
   CHANNEL_BULK_VERBS,
   CHANNEL_BULK_WORDS,
   channelBulkReason,
+  overSwitchLimit,
   planChannelBulk,
 } from "@/lib/channel-bulk";
 import { heldTicked } from "@/lib/channel-list";
 import { isSynced } from "@/lib/channel-rows";
 import { createChannelBulkCall } from "@/services/channel-bulk";
+import { createChannelSwitch } from "@/services/channel-switch";
 import { channels } from "@/services/channels";
 import { useAppStore } from "@/store/app-store";
 import { useBulkAction } from "./useBulkAction";
@@ -25,8 +28,9 @@ export interface ChannelBulk {
   readonly working: boolean;
 }
 
-/** The Channels table strip's bulk verbs over the ticked rows (`36` section 5.3): Enable, Disable, Rebuild and an armed Delete,
- *  through the shared runner, one single-channel call per row, one summary, one re-read at the end; the rows that finished
+/** The Channels table strip's bulk verbs over the ticked rows (`36` section 5.3): Enable, Disable, Rebuild and an armed Delete.
+ *  Enable and Disable make ONE `PATCH /api/channels` for the ticked stream rows (`services/channel-switch.ts`); Rebuild and
+ *  Delete go through the shared runner, one single-channel call per row. One summary, one re-read at the end; the rows that finished
  *  are unticked, failed and skipped rows stay ticked. Deleting synced rows says that the next sync adds them again. */
 export function useChannelBulk(): ChannelBulk {
   const flows = useChannelFlows();
@@ -35,6 +39,12 @@ export function useChannelBulk(): ChannelBulk {
   const ticked = useAppStore((state) => state.channels.ticked);
   const unreachable = useAppStore((state) => state.channels.unreachable);
   const call = useMemo(() => createChannelBulkCall({ service: channels, store: () => useAppStore.getState() }), []);
+  const [switchBusy, setSwitchBusy] = useState(false);
+  const switchTicked = useMemo(
+    () => createChannelSwitch({ service: channels, store: () => useAppStore.getState(), reread: flows.refresh }),
+    [flows],
+  );
+  const working = bulk.running || switchBusy;
   const items = useMemo(() => heldTicked(held, ticked), [held, ticked]);
 
   const verbs = CHANNEL_BULK_VERBS.map((verb): StripVerb => {
@@ -43,7 +53,20 @@ export function useChannelBulk(): ChannelBulk {
       const channel = held[row.id];
       return channel !== undefined && isSynced(channel);
     });
+    const switching = verb === "enable" || verb === "disable";
+    const reason =
+      channelBulkReason(verb, plan, ticked.length, { working, unreachable }) ??
+      (switching && overSwitchLimit(plan, items) ? TOO_MANY_TO_SWITCH : undefined);
     const press = async (): Promise<void> => {
+      if (switching) {
+        setSwitchBusy(true);
+        try {
+          await switchTicked(verb === "enable", plan);
+        } finally {
+          setSwitchBusy(false);
+        }
+        return;
+      }
       const seen: { outcome: BulkOutcome<string> | null } = { outcome: null };
       await bulk.run({
         words: CHANNEL_BULK_WORDS[verb],
@@ -67,10 +90,11 @@ export function useChannelBulk(): ChannelBulk {
       id: verb,
       label: CHANNEL_BULK_LABELS[verb],
       icon: BULK_ICONS[verb],
-      reason: channelBulkReason(verb, plan, ticked.length, { working: bulk.running, unreachable }),
+      tip: BULK_TIPS[verb],
+      reason,
       ...(verb === "delete" && { question: bulkDeleteQuestion(plan.runnable.length) }),
       onPress: () => void press(),
     };
   });
-  return { verbs, working: bulk.running };
+  return { verbs, working };
 }

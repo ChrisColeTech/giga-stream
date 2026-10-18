@@ -5,9 +5,9 @@ import type { GridLayout } from "@giga/ui/lists/record-grid-layout";
  *  rows line up; below the minimum width the list scrolls sideways inside its own group, never the page. The end track
  *  fits the armed question for a long name (`Delete Fixture Entertainment?`). */
 export const CHANNEL_GRID: GridLayout = {
-  tracks: ["minmax(9rem,1.4fr)", "7rem", "4rem", "6rem", "4.5rem", "minmax(8rem,1.2fr)"],
+  tracks: ["minmax(9rem,1.4fr)", "7rem", "4rem", "6rem", "6rem", "4.5rem", "minmax(8rem,1.2fr)"],
   end: "15rem",
-  minWidth: "62rem",
+  minWidth: "69rem",
 };
 
 export const CHANNEL_HEADINGS: readonly GridHeading[] = [
@@ -15,6 +15,7 @@ export const CHANNEL_HEADINGS: readonly GridHeading[] = [
   { key: "category", label: "category", sortable: true },
   { key: "kind", label: "kind", sortable: true },
   { key: "state", label: "state" },
+  { key: "stream", label: "stream" },
   { key: "mode", label: "mode" },
   { key: "now-playing", label: "now playing" },
 ];

@@ -42,5 +42,6 @@ export function runWords(result: RunResult | undefined, counts: RunCounts | unde
     return `Failed: ${code === undefined ? "no reason recorded" : (ERROR_SENTENCES[code] ?? code)}`;
   }
   const said = counts === undefined ? [] : parts(counts);
-  return `${PREFIX[result ?? "ok"]}: ${said.length === 0 ? "nothing changed" : said.join(", ")}.`;
+  const wasStopped = counts !== undefined && "stopped" in counts && counts.stopped === true;
+  return `${PREFIX[wasStopped ? "stopped" : (result ?? "ok")]}: ${said.length === 0 ? "nothing changed" : said.join(", ")}.`;
 }

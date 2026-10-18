@@ -11,6 +11,7 @@ import {
 } from "@/lib/playlist-flow-result";
 import { findById } from "@/lib/playlist-rows";
 import type { AppState } from "@/store/app-store";
+import { createStopFlow } from "./job-stop-flow";
 import type { JobsService } from "./jobs";
 import type { PlaylistsService } from "./playlists";
 import type { AdminJob } from "./schemas/job-schema";
@@ -42,6 +43,8 @@ export interface JobFlows {
   remove: (id: number) => Promise<JobResult>;
   /** `Run job` on one job: STARTED, not awaited. The result is read on Refresh. A refusal sits under `run`. */
   run: (id: number) => Promise<JobResult>;
+  /** `Stop` on one running job: the notice `Stopping <name>.`; the result is read on Refresh. */
+  stop: (id: number) => Promise<JobResult>;
   /** One bulk verb's single-record call: null on success, the failure's sentence otherwise. */
   bulkCall: (verb: JobBulkVerb) => (item: BulkItem<number>) => Promise<string | null>;
 }
@@ -176,6 +179,7 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
     try {
       if (verb === "delete") drop((await service.remove(item.id)).id);
       else if (verb === "run") upsert(await service.run(item.id));
+      else if (verb === "stop") upsert(await service.stop(item.id));
       else upsert(await service.update(item.id, { enabled: verb === "enable" }));
       return null;
     } catch (error: unknown) {
@@ -189,5 +193,7 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
     return result;
   };
 
-  return { load, refresh, create, save, remove, run, bulkCall };
+  const stop = createStopFlow({ service, store, alive, upsert, failed, gone, audit });
+
+  return { load, refresh, create, save, remove, run, stop, bulkCall };
 }

@@ -31,6 +31,7 @@ function fake(overrides: Partial<ChannelsService> = {}): { service: ChannelsServ
     remove: unexpected("remove"),
     rebuild: unexpected("rebuild"),
     revert: unexpected("revert"),
+    setEnabled: unexpected("setEnabled"),
     ...overrides,
   };
   return { service, calls };
