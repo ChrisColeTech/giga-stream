@@ -17,6 +17,7 @@ import { registerLiveStreams } from "./api/live-streams.js";
 import { registerJobs } from "./api/jobs.js";
 import { registerPlaylists } from "./api/playlists.js";
 import { registerProviders } from "./api/providers.js";
+import { registerAdminTmdb } from "./api/admin-tmdb.js";
 import { registerTitles } from "./api/titles.js";
 import { bootstrapUsername } from "./bootstrap-username.js";
 import { config, type Config } from "./config.js";
@@ -65,6 +66,7 @@ export async function buildApp(
       jwtSecret: settings.JWT_SECRET,
       tmdbToken: settings.TMDB_READ_TOKEN,
       tmdbBase: settings.TMDB_BASE,
+      tmdbMinGapMs: settings.TMDB_MIN_GAP_MS,
       omdbKey: settings.OMDB_API_KEY,
       omdbBase: settings.OMDB_BASE,
       omdbDailyLimit: settings.OMDB_DAILY_LIMIT,
@@ -141,6 +143,7 @@ export async function buildApp(
     registerLiveFaults(app, ready);
     registerProviders(app, ready);
     registerTitles(app, ready);
+    registerAdminTmdb(app, ready);
     registerPlaylists(app, ready);
     registerJobs(app, ready);
     registerAdminStatic(app, ready);

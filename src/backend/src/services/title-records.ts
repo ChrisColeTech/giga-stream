@@ -8,7 +8,9 @@ import type { SeasonInput, TitleInput, TitlePatch } from "../types/title-input.j
 import { addressRefusal, isAcceptedAddress } from "./address-rule.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { viewOf } from "./title-overlay.js";
-import { type Kind, asRecord, mapTitle404, parseTitleId, str } from "./title-shapes.js";
+import type { DetailFetch } from "./title-detail-fetch.js";
+import type { TitleDeleted } from "./title-deleted.js";
+import { asRecord, mapTitle404, parseTitleId, str } from "./title-shapes.js";
 
 const MANUAL_PREFIX = "custom-";
 export const isManualId = (titleId: string): boolean => titleId.startsWith(MANUAL_PREFIX);
@@ -32,10 +34,11 @@ const seasonsOf = (seasons: SeasonInput[]): unknown[] =>
 export function createTitleRecords(deps: {
   store: Store;
   audit: AuditService;
-  ensureTitle: (kind: Kind, tmdbId: number, force?: boolean) => Promise<Record<string, unknown>>;
+  fetchDetail: DetailFetch;
+  deleted: TitleDeleted;
   now: () => number;
 }) {
-  const { store, audit, ensureTitle, now } = deps;
+  const { store, audit, fetchDetail, deleted, now } = deps;
 
   function checkAddresses(values: Record<string, unknown>): void {
     for (const field of ["posterUrl", "backdropUrl", "streamUrl"] as const) {
@@ -63,20 +66,26 @@ export function createTitleRecords(deps: {
     return row;
   };
 
-  /** A synced title that is not stored yet (listed from TMDB, never opened) is fetched once so it can be edited. */
-  async function foundOrFetch(titleId: string): Promise<StoredTitle> {
-    const row = store.titles.findById(titleId);
-    if (row !== undefined || isManualId(titleId)) return found(titleId);
-    const [kind, tmdbId] = parseTitleId(titleId);
-    try {
-      await ensureTitle(kind, tmdbId);
-    } catch (error) {
-      return mapTitle404(error, titleId);
-    }
-    return found(titleId);
-  }
-
   return {
+    /**
+     * The explicit add (docs/47 section 3.3): ONE title's detail is fetched from TMDB and stored, from the admin's
+     * Browse TMDB. `409 title.taken` when it is already stored or was deleted (restore it instead).
+     */
+    async addFromTmdb(titleId: string, actor: Actor): Promise<Record<string, unknown>> {
+      const [kind, tmdbId] = parseTitleId(titleId);
+      if (store.titles.find(kind, tmdbId) !== undefined || deleted.isDeleted(kind, tmdbId)) {
+        throw new AppError(ERRORS.titleTaken, { titleId, deleted: deleted.isDeleted(kind, tmdbId) });
+      }
+      try {
+        await fetchDetail(kind, tmdbId, { force: true });
+      } catch (error) {
+        return mapTitle404(error, titleId);
+      }
+      const saved = found(titleId);
+      audit.record(actor, { action: "title.created", subject: titleId, detail: { title: nameOf(saved), kind, source: "tmdb" } });
+      return viewOf(saved);
+    },
+
     create(input: TitleInput, actor: Actor): Record<string, unknown> {
       const { kind, tmdbId, seasons, ...fields } = input;
       checkAddresses({ ...fields, seasons });
@@ -91,7 +100,7 @@ export function createTitleRecords(deps: {
     },
 
     async update(titleId: string, patch: TitlePatch, actor: Actor): Promise<Record<string, unknown>> {
-      const row = await foundOrFetch(titleId);
+      const row = found(titleId);
       if (row.origin === "tmdb" && patch.tmdbId !== undefined) {
         throw invalid("tmdbId", "A title from TMDB keeps its TMDB id.");
       }
@@ -143,7 +152,7 @@ export function createTitleRecords(deps: {
       if (row.origin === "manual" || row.tmdbId === null) throw new AppError(ERRORS.titleManual, { titleId });
       store.titles.clearEdits(titleId);
       try {
-        await ensureTitle(row.kind, row.tmdbId, true);
+        await fetchDetail(row.kind, row.tmdbId, { force: true });
       } catch (error) {
         // The refetch failed: the edits were not given up.
         store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId, enabled: row.enabled });

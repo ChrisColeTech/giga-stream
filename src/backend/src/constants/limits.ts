@@ -117,9 +117,23 @@ export const EVENT_SUBSCRIBERS_MAX = 8;
 /** The share of a playlist run's bar that the logo phase fills; the stream check fills the rest. */
 export const PLAYLIST_LOGOS_SHARE = 0.2;
 
+// The Library fill's phases (docs/47 section 3.1): fixed shares of one bar - the walk 0-10% (movies, then series, a half
+// each), `details` 10-100% (a series' seasons ride its detail calls).
+export const LIBRARY_WALK_SHARE = 0.1;
+/** A title (or season) whose fetch failed this many runs in a row is skipped until its payload changes. */
+export const TITLE_DETAIL_MAX_FAILURES = 3;
+/** The recommendations a title answers with (docs/47 section 3.2). */
+export const RECOMMENDATIONS_MAX = 12;
+
 // The TMDB client (docs/03 section 7.6, docs/44 section 3.2).
-/** About 4.8 requests a second. */
-export const TMDB_MIN_GAP_MS = 210;
+/** The client's pace (docs/47 section 3.1): TMDB documents a ceiling of about 40 a second. */
+export const TMDB_REQUESTS_PER_SECOND = 20;
+/** A 429 halves the pace for the rest of the run, never below this. */
+export const TMDB_MIN_REQUESTS_PER_SECOND = 2;
+/** The pause between two requests at the full pace. */
+export const TMDB_MIN_GAP_MS = 1000 / TMDB_REQUESTS_PER_SECOND;
+/** TMDB's ceiling on appended items (`append_to_response`) in one request. */
+export const TMDB_APPEND_MAX = 20;
 /** A 429 or 5xx is retried after this times the attempt number, at most `TMDB_RETRIES` times. */
 export const TMDB_BACKOFF_MS = 2_500;
 export const TMDB_RETRIES = 3;

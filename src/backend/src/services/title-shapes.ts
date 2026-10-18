@@ -3,7 +3,6 @@ import { StoredTitleSchema } from "./title-row-schema.js";
 
 /** Freshness (docs/03 sections 7.6, 7.6b): days for titles, hours for lists and popularity. */
 export const TITLE_FRESH_MS = 3 * 24 * 60 * 60 * 1000;
-export const LIST_FRESH_MS = 8 * 60 * 60 * 1000;
 export const DEFAULT_SYNC_PAGES = 5;
 export const MAX_SYNC_PAGES = 25;
 /** The discover walk's per-kind page caps (docs/03 section 7.6b): 500 pages ≈ 10,000 titles per kind, TMDB's own limit. */
@@ -173,25 +172,4 @@ export function storedRowOf(
   }
   if (num(record.id) !== tmdbId) return undefined;
   return rowOf(kind, record, readAt);
-}
-
-/** The OMDb block of docs/11 section 7.2: only the fields the product shows, `Plot` kept raw. */
-export function omdbBlockOf(record: Record<string, unknown>, now: number): Record<string, unknown> {
-  return {
-    fetchedAt: now,
-    rated: str(record.Rated),
-    metascore: str(record.Metascore),
-    imdbRating: str(record.imdbRating),
-    imdbVotes: str(record.imdbVotes),
-    ratings: listOf(record.Ratings)
-      .map((r) => ({ source: str(asRecord(r).Source) ?? "", score: str(asRecord(r).Value) ?? "" }))
-      .filter((r) => r.source !== ""),
-    awards: str(record.Awards),
-    boxOffice: str(record.BoxOffice),
-    director: str(record.Director),
-    writer: str(record.Writer),
-    language: str(record.Language),
-    country: str(record.Country),
-    plot: str(record.Plot),
-  };
 }

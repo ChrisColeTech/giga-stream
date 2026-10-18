@@ -22,13 +22,15 @@ function registry() {
   return { clock, progress, events, sent };
 }
 
-test("the phase weights: reading 0, logos 0 to 20%, checking 20 to 100%, movies then series a half each", () => {
+test("the phase weights: reading 0, logos 0 to 20%, checking 20 to 100%, the Library fill's walk 0-10%, details 10-100%", () => {
   const at = (phase: string, done: number, total: number): number => Math.round(fractionOf({ phase, done, total }) * 1000) / 1000;
   assert.deepEqual([at("reading", 0, 0), at("reading", 5, 9)], [0, 0]);
   assert.deepEqual([at("logos", 0, 0), at("logos", 5, 10), at("logos", 10, 10)], [0, 0.1, 0.2], "before its total is known: the lower bound");
   assert.deepEqual([at("checking", 0, 0), at("checking", 0, 40), at("checking", 20, 40), at("checking", 40, 40)], [0.2, 0.2, 0.6, 1]);
-  assert.deepEqual([at("movies", 25, 100), at("movies", 100, 100), at("tv", 0, 100), at("tv", 50, 100), at("tv", 100, 100)], [0.125, 0.5, 0.5, 0.75, 1]);
-  assert.deepEqual([at("list", 3, 4), at("movies", 9, 3)], [0.75, 0.5], "any other phase fills the whole bar; a share never passes 1");
+  assert.deepEqual([at("movies", 50, 100), at("movies", 100, 100), at("tv", 0, 100), at("tv", 50, 100), at("tv", 100, 100)], [0.025, 0.05, 0.05, 0.075, 0.1],
+    "the walk is 0 to 10%, a half each");
+  assert.deepEqual([at("details", 0, 0), at("details", 50, 100), at("details", 100, 100)], [0.1, 0.55, 1], "details: 10 to 100%");
+  assert.deepEqual([at("list", 3, 4), at("movies", 9, 3)], [0.75, 0.05], "any other phase fills the whole bar; a share never passes 1");
 });
 
 test("the registry holds the latest value and forgets it when the run finishes", () => {

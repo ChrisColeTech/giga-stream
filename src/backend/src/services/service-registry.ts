@@ -36,6 +36,7 @@ export interface ServiceOptions {
   jwtSecret: string;
   tmdbToken: string;
   tmdbBase?: string;
+  tmdbMinGapMs?: number;
   omdbKey: string;
   omdbBase?: string;
   omdbDailyLimit?: number;
@@ -69,7 +70,7 @@ export function createServices(store: Store, options: ServiceOptions) {
   const securityQuestions = createSecurityQuestionService({
     store, audit, revokeAll: auth.revokeAll, secret: options.jwtSecret, now,
   });
-  const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now });
+  const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now, minGapMs: options.tmdbMinGapMs });
   const omdb = createOmdbClient({ key: options.omdbKey, base: options.omdbBase, dailyLimit: options.omdbDailyLimit, now });
   const streams = createStreamTemplates({
     movieTemplate: options.movieStreamTemplate,

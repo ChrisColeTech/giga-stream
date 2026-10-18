@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { itemsOf } from "./live-channel-kit.js";
-import { makeApp, pick, send, signIn } from "./test-app.js";
+import { pick, send } from "./test-app.js";
 import { field, syncAll, titleApp } from "./title-edit-kit.js";
-import { actionsOf, pagedTmdb } from "./title-soft-delete-kit.js";
+import { actionsOf } from "./title-soft-delete-kit.js";
 
 const HOME = { kind: "movie", title: "Home Movie", year: 2020, genres: ["Drama"], rating: 7.5, plot: "Our holiday." };
 
-test("a deleted synced title is recorded, and a re-sync and a re-browse do not bring it back", async () => {
+test("a deleted synced title is recorded, and a re-sync does not bring it back", async () => {
   const h = await titleApp();
   const { t, token } = h;
   await syncAll(h);
@@ -19,10 +19,6 @@ test("a deleted synced title is recorded, and a re-sync and a re-browse do not b
 
   h.tmdb.calls.length = 0;
   await syncAll(h);
-  const browse = await send(t.app, "GET", "/api/titles?kind=movie");
-  assert.deepEqual([browse.status, itemsOf(browse.body).length, field(browse, "skipped")], [200, 0, 1]);
-  const search = await send(t.app, "GET", "/api/titles/search?kind=movie&q=matrix");
-  assert.deepEqual([itemsOf(search.body).length, field(search, "skipped")], [0, 1]);
   assert.ok(!h.tmdb.calls.includes("/movie/603"), "the sync did not fetch it");
   const status = await send(t.app, "GET", "/api/titles/sync", undefined, token);
   assert.equal(pick(status.body, "data.titles"), 1, "only the series is stored: the deleted movie was not stored again");
@@ -47,8 +43,7 @@ test("the deleted list names the title and the time; a restore lets it return on
   assert.deepEqual([restored.status, field(restored, "id")], [200, "movie-603"]);
   assert.deepEqual(pick((await send(t.app, "GET", "/api/titles/deleted", undefined, token)).body, "data.items"), []);
   assert.equal((await send(t.app, "DELETE", "/api/titles/deleted/movie-603", undefined, token)).status, 404, "already restored");
-  const browse = await send(t.app, "GET", "/api/titles?kind=movie");
-  assert.deepEqual(itemsOf(browse.body).map((i) => i.title), ["The Matrix"]);
+  assert.equal((await send(t.app, "GET", "/api/titles/movie-603")).status, 404, "restoring stores nothing: the next sync does");
   await syncAll(h);
   assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.titles"), 2, "the Library fill walks both kinds: the restored movie and the series");
   assert.equal((await send(t.app, "GET", "/api/titles/movie-603")).status, 200);
@@ -82,22 +77,13 @@ test("the deleted routes need a sign-in and are never cached", async () => {
   assert.equal(list.headers["cache-control"], "no-store");
 });
 
-test("paging stays full: a page the deleted titles thin says how many it left out, and the list holds its place", async () => {
-  const tmdb = await pagedTmdb();
-  const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
-  const token = (await signIn(t.app)).access;
-  const titles = async (page: number) => {
-    const answer = await send(t.app, "GET", `/api/titles?kind=movie&sort=az&page=${page}`);
-    return { names: itemsOf(answer.body).map((i) => i.title), skipped: field(answer, "skipped"), pages: field(answer, "totalPages") };
-  };
-  assert.deepEqual(await titles(1), { names: ["A1", "A2", "A3"], skipped: 0, pages: 3 });
-  for (const id of ["movie-101", "movie-102"]) await send(t.app, "DELETE", `/api/titles/${id}`, undefined, token);
-  // The page keeps its place (page 2 is still TMDB's page 2) and says it was thinned, so a reader refills from the next.
-  assert.deepEqual(await titles(1), { names: ["A3"], skipped: 2, pages: 3 }, "from the stored list");
-  assert.deepEqual(await titles(2), { names: ["B1", "B2", "B3"], skipped: 0, pages: 3 });
-  const before = tmdb.calls.filter((c) => c === "/discover/movie").length;
-  await titles(1);
-  assert.equal(tmdb.calls.filter((c) => c === "/discover/movie").length, before, "the stored list still serves page 1");
-  await send(t.app, "DELETE", "/api/titles/deleted/movie-101", undefined, token);
-  assert.deepEqual((await titles(1)).names, ["A1", "A3"], "restored: back on the next browse");
+test("a deleted title is out of Browse TMDB's way: its row says deleted, and the public reads and the catalog skip it", async () => {
+  const h = await titleApp();
+  const { t, token } = h;
+  await syncAll(h);
+  await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token);
+  const browse = await send(t.app, "GET", "/api/admin/tmdb/titles?kind=movie", undefined, token);
+  assert.deepEqual([field(browse, "items.0.deleted"), field(browse, "items.0.stored")], [true, false]);
+  assert.deepEqual(itemsOf((await send(t.app, "GET", "/api/titles/catalog")).body).map((i) => i.id), ["tv-1399"]);
+  assert.equal((await send(t.app, "GET", "/api/titles/movie-603")).status, 404);
 });

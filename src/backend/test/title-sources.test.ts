@@ -4,7 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { makeApp, pick, send, signIn } from "./test-app.js";
-import { stubTmdb, tmdbOn } from "./title-stubs.js";
+import { fillLibrary, stubTmdb, tmdbOn } from "./title-stubs.js";
 import type { Config } from "../src/config.js";
 
 const MOVIE_TEMPLATE = "https://streams.example/movie/{tmdbId}/index.m3u8";
@@ -45,6 +45,7 @@ async function appWithProviders(config: Partial<Config> = {}) {
     assert.equal(created.status, 201, `${entry.source} is created`);
   }
   deactivate(t, "sleepy");
+  await fillLibrary(t);
   return t;
 }
 
@@ -98,27 +99,31 @@ test("an inactive provider stops yielding sources at once", async () => {
 test("a title with no sources carries no sources key at all", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) }); // no providers seeded
+  await fillLibrary(t);
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   const data = pick(detail.body, "data") as Record<string, unknown>;
   assert.equal(Object.hasOwn(data, "sources"), false);
   await t.dispose();
 });
 
-test("a series detail and a browse page never carry sources", async () => {
+test("a series detail, a recommendation and a catalog row never carry sources", async () => {
   const t = await appWithProviders();
   const series = await send(t.app, "GET", "/api/titles/tv-1399");
   const seriesData = pick(series.body, "data") as Record<string, unknown>;
   assert.equal(Object.hasOwn(seriesData, "sources"), false);
 
-  const page = await send(t.app, "GET", "/api/titles?kind=movie&sort=trending&page=1");
-  const row = pick(page.body, "data.items.0") as Record<string, unknown>;
+  const catalog = await send(t.app, "GET", "/api/titles/catalog");
+  const row = pick(catalog.body, "data.items.0") as Record<string, unknown>;
   assert.equal(Object.hasOwn(row, "sources"), false);
+  const related = (pick((await send(t.app, "GET", "/api/titles/movie-603/recommendations")).body, "data.items") as unknown[]);
+  assert.ok(related.every((item) => !Object.hasOwn(item as Record<string, unknown>, "sources")));
   await t.dispose();
 });
 
 test("a set movie template fills the detail's streamUrl", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: MOVIE_TEMPLATE } });
+  await fillLibrary(t);
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   assert.equal(pick(detail.body, "data.streamUrl"), "https://streams.example/movie/603/index.m3u8");
   await t.dispose();
@@ -127,6 +132,7 @@ test("a set movie template fills the detail's streamUrl", async () => {
 test("a set episode template fills each episode's streamUrl", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: { ...tmdbOn(tmdb), EPISODE_STREAM_TEMPLATE: EPISODE_TEMPLATE } });
+  await fillLibrary(t);
   const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
   assert.equal(pick(season.body, "data.episodes.0.streamUrl"), "https://streams.example/tv/1399/1/1/index.m3u8");
   await t.dispose();
@@ -135,6 +141,7 @@ test("a set episode template fills each episode's streamUrl", async () => {
 test("a template that is not set answers no streamUrl key", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) });
+  await fillLibrary(t);
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   const data = pick(detail.body, "data") as Record<string, unknown>;
   assert.equal(Object.hasOwn(data, "streamUrl"), false);
@@ -147,11 +154,13 @@ test("a template that is not set answers no streamUrl key", async () => {
 test("a plain http template fills the dev stream; one with credentials or another scheme is omitted", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: HTTP_TEMPLATE } });
+  await fillLibrary(t);
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   assert.equal(pick(detail.body, "data.streamUrl"), HTTP_TEMPLATE);
   await t.dispose();
   for (const bad of ["http://u:p@127.0.0.1:8091/{tmdbId}.m3u8", "ftp://streams.example/{tmdbId}.m3u8"]) {
     const other = await makeApp({ config: { ...tmdbOn(tmdb), MOVIE_STREAM_TEMPLATE: bad } });
+    await fillLibrary(other);
     const data = pick((await send(other.app, "GET", "/api/titles/movie-603")).body, "data") as Record<string, unknown>;
     assert.equal(Object.hasOwn(data, "streamUrl"), false, bad);
     await other.dispose();

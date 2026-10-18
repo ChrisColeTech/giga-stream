@@ -25,7 +25,17 @@ export const PlaylistCountsSchema = z
   .strict();
 export type PlaylistCounts = z.infer<typeof PlaylistCountsSchema>;
 
-export const CatalogCountsSchema = z.object({ titles: count, stale: count, stopped: z.boolean().optional() }).strict();
+/** The Library fill (docs/47 section 3.1): rows walked, titles given their detail, seasons given their episodes this run.
+ *  A result stored before the details phase has neither count; it reads as zero. */
+export const CatalogCountsSchema = z
+  .object({
+    titles: count,
+    detailed: count.default(0),
+    seasons: count.default(0),
+    stale: count,
+    stopped: z.boolean().optional(),
+  })
+  .strict();
 export type CatalogCounts = z.infer<typeof CatalogCountsSchema>;
 
 /** A failed run of either kind: the `AppError` code, or `internal.failure` for anything unexpected. */

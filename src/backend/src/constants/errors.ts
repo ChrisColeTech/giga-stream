@@ -25,6 +25,7 @@ export const ERRORS = {
   jobDisabled: { code: "job.disabled", status: 422, message: "That job cannot run now." },
   titleInvalid: { code: "title.invalid", status: 422, message: "That title is not valid." },
   titleManual: { code: "title.manual", status: 409, message: "A title made by hand has no TMDB copy to go back to." },
+  titleTaken: { code: "title.taken", status: 409, message: "That title is already stored or was deleted." },
   providerNotFound: { code: "provider.not_found", status: 404, message: "That provider does not exist." },
   providerInvalid: { code: "provider.invalid", status: 422, message: "That provider is not valid." },
   titleNotFound: { code: "title.not_found", status: 404, message: "That title does not exist." },
