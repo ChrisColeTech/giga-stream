@@ -11,6 +11,8 @@ export interface AdminAccount {
   createdAt: number;
   updatedAt: number;
   lastSignInAt?: number;
+  /** Whether the account has set a security question (docs/40 section 3.2); read-only, never the question. */
+  securityQuestionSet: boolean;
 }
 
 /** Who is making a request, as their access token and the account now say. */

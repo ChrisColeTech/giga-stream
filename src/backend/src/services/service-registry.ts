@@ -14,6 +14,7 @@ import { createOmdbClient } from "./omdb-client.js";
 import { createPlaylistService } from "./playlist-service.js";
 import { createPlaylistSyncService } from "./playlist-sync-service.js";
 import { createProviderService } from "./provider-service.js";
+import { createSecurityQuestionService } from "./security-question-service.js";
 import { createSignInLimiter } from "./sign-in-limiter.js";
 import { createStreamTemplates } from "./stream-templates.js";
 import { createSyncScheduler } from "./sync-scheduler.js";
@@ -56,7 +57,12 @@ export interface ServiceOptions {
 export function createServices(store: Store, options: ServiceOptions) {
   const { now } = options;
   const audit = createAuditService(store, now);
-  const auth = createAuthService({ store, audit, limiter: createSignInLimiter(now), secret: options.jwtSecret, now });
+  // One per-address limiter for sign-in and the two reset routes (docs/40 section 2.4).
+  const limiter = createSignInLimiter(now);
+  const auth = createAuthService({ store, audit, limiter, secret: options.jwtSecret, now });
+  const securityQuestions = createSecurityQuestionService({
+    store, audit, limiter, revokeAll: auth.revokeAll, secret: options.jwtSecret, now,
+  });
   const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now });
   const omdb = createOmdbClient({ key: options.omdbKey, base: options.omdbBase, dailyLimit: options.omdbDailyLimit, now });
   const logos = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours, fetchImpl: options.fetchImpl, now });
@@ -103,6 +109,7 @@ export function createServices(store: Store, options: ServiceOptions) {
   return {
     audit,
     auth,
+    securityQuestions,
     tmdb,
     omdb,
     live,
