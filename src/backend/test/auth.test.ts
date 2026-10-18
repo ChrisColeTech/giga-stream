@@ -13,7 +13,7 @@ test("sign-in answers a session, and the access token reaches /api/auth/me", asy
   assert.equal(login.headers["cache-control"], "no-store");
   assert.equal(pick(login.body, "data.account.username"), ADMIN_USERNAME);
   assert.equal(pick(login.body, "data.account.role"), undefined);
-  assert.equal(pick(login.body, "data.accessExpiresAt"), t.clock.now() + 15 * 60 * 1000);
+  assert.equal(pick(login.body, "data.accessExpiresAt"), t.clock.now() + 30 * 24 * 60 * 60 * 1000);
   assert.equal(JSON.stringify(login.body).includes("password"), false, "no hash or password is ever answered");
   const me = await send(t.app, "GET", "/api/auth/me", undefined, String(pick(login.body, "data.accessToken")));
   assert.equal(pick(me.body, "data.username"), ADMIN_USERNAME);
@@ -33,6 +33,8 @@ test("an access token stops working when it expires", async () => {
   const { access } = await signIn(t.app);
   assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, access)).status, 200);
   t.clock.advance(15 * 60 * 1000 + 1000);
+  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, access)).status, 200, "no 15-minute timeout any more");
+  t.clock.advance(30 * 24 * 60 * 60 * 1000);
   const late = await send(t.app, "GET", "/api/auth/me", undefined, access);
   assert.deepEqual([late.status, code(late)], [401, "auth.unauthorized"]);
 });
@@ -92,11 +94,15 @@ test("logout ends that session only", async () => {
   assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: two.refresh })).status, 200);
 });
 
-test("a refresh token expires after 30 days", async () => {
+test("a refresh token expires after 365 days, not 30", async () => {
   const t = await makeApp();
   const { refresh } = await signIn(t.app);
-  t.clock.advance(30 * 24 * 60 * 60 * 1000 + 1000);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh })).status, 401);
+  t.clock.advance(31 * 24 * 60 * 60 * 1000);
+  const rotated = await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh });
+  assert.equal(rotated.status, 200);
+  t.clock.advance(365 * 24 * 60 * 60 * 1000 + 1000);
+  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: String(pick(rotated.body, "data.refreshToken")) })).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh })).status, 401, "the used one stays dead");
 });
 
 test("changing the password needs the current one and ends every session", async () => {

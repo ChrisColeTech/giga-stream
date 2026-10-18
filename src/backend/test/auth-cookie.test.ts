@@ -24,7 +24,7 @@ test("login sets the refresh token as an httpOnly SameSite=Strict cookie scoped 
   const cookie = setCookie(answer);
   for (const flag of FLAGS) assert.ok(cookie.includes(flag), `${flag} in ${cookie}`);
   assert.equal(valueOf(cookie), pick(answer.body, "data.refreshToken"));
-  assert.ok(cookie.includes(`Max-Age=${30 * 24 * 60 * 60}`));
+  assert.ok(cookie.includes(`Max-Age=${365 * 24 * 60 * 60}`));
   assert.equal(cookie.includes("Secure"), false);
   assert.equal(cookie.includes(String(pick(answer.body, "data.accessToken"))), false, "the access token is never in the cookie");
 });
