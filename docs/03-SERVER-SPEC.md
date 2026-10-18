@@ -746,7 +746,7 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
 - **Import.** `POST /api/playlists/import` takes `multipart/form-data` with exactly one `file` part (at most 8 MiB; a
   second file part or a truncated one is `400 request.invalid`); the playlist's name and `fileName` come from the
   sanitized filename (basename, NFKD with diacritics stripped, lowercase, runs of anything but `a-z0-9._-` become `-`,
-  must end `.m3u`; the same `fileName` updates the same playlist in place). `POST /api/playlists` with
+  must end `.m3u` or `.m3u8`; the same `fileName` updates the same playlist in place). `POST /api/playlists` with
   `{ url, name?, enabled? }` is the **web-address import**: it fetches the address once through the guarded fetch (7.3;
   15 s, 8 MiB hard cap, never a silent truncation). Both **read and parse first and write nothing until they succeed**:
   not an M3U (`#EXTM3U` as the first non-empty line, or an `#EXTINF` in the first 20 lines) is `422 playlist.invalid`; an
@@ -1169,7 +1169,7 @@ The admin backend also owns these (not in the fileserver): `channel.taken`, `fau
 `job.not_found` is the backend's missing sync job and the fileserver's missing scan job: two meanings, one code. The
 backend also answers `job.not_running` (409, `POST /api/jobs/:id/stop` on an idle job) and `playlist.taken` (409, a
 duplicate name, web address or file name); `playlist.busy` is retired (one run at a time per playlist is `sync.busy`);
-`channel.imported` is retired in favour of `playlist.imported`.
+`channel.imported` stays only for the live server's folder import (`10`); a playlist import is `playlist.imported`.
 
 | Status | Used for |
 |---|---|

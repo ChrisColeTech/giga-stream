@@ -270,7 +270,8 @@ should be crud for titles and playlists."* So there are two new record types: a 
   `created_at`. A playlist job is created and deleted with its playlist; `POST /api/jobs` creates catalog jobs only and
   `DELETE /api/jobs/:id` on a playlist job is `422 job.invalid`. A disabled **job** stops only the scheduled run; a
   manual run is refused (`422 job.disabled`) only for a disabled **playlist**. A playlist job's
-  config is `playlistId` only (no dry run, no prune: plan `43`), created with the playlist, and it caches the channels'
+  config is `{}` (its playlist is the `playlist_id` column; the wire view adds `playlistId` and `playlistName`; no dry run,
+  no prune: plan `43`), created with the playlist, and it caches the channels'
   images and checks each stream (`03` 7.2c); `POST /api/jobs/:id/stop` stops a playlist job and `run` resumes it; a
   catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
   (`movie` or `tv`, unused by `discover`) and `pages` (each kind's cap; up to 500 for discover). Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE

@@ -136,7 +136,7 @@ file whose `file_name` exists updates that playlist), the channel plan and write
 (counts and host). A fetch failure or a non-M3U body creates nothing (`503 playlist.unreachable` / `422 playlist.invalid`).
 The `UNIQUE` columns close the concurrent-import case: the loser is `409 playlist.taken`. After the commit the service calls
 `onChange` so the new job arms. The file name rule: basename, NFKD with diacritics stripped, lowercase, runs of anything but
-`a-z0-9._-` become `-`, must end `.m3u`, an all-non-ASCII stem is `422 playlist.invalid` (field `file`); the client file name is
+`a-z0-9._-` become `-`, must end `.m3u` or `.m3u8`, an all-non-ASCII stem is `422 playlist.invalid` (field `file`); the client file name is
 never a path (nothing is stored). M3U detection: `#EXTM3U` as the first non-empty line (after a BOM), or an `#EXTINF` within
 the first 20 lines (an HTML page that merely mentions the word fails).
 
