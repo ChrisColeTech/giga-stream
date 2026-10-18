@@ -1,15 +1,18 @@
-// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018 to 021 follow, so the version reads 21), a
+// Migration 017 (docs/29 section 18, B1): it lands on a 016 database (018 to 022 follow, so the version reads 22), a
 // current database opens, and a database from a newer program is refused by the existing rule.
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 
 import { AppError, ERRORS } from "../src/constants/errors.js";
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
 import { createStore } from "../src/store/store.js";
+
+const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "store", "migrations");
 
 function versionOf(file: string): number {
   const db = new DatabaseSync(file);
@@ -41,36 +44,32 @@ function reshape(file: string, sql: string[], version: number): void {
   }
 }
 
-/** Undoes migration 021 (no account name): the column comes back, empty. */
-const UNDO_021 = ["ALTER TABLE admin_accounts ADD COLUMN name TEXT NOT NULL DEFAULT ''"];
+/** A database as it was at `version`: the numbered migrations up to it, run in order (022 rebuilds tables, so it is not undone). */
+function databaseAt(file: string, version: number): void {
+  const db = new DatabaseSync(file);
+  try {
+    for (const name of readdirSync(MIGRATIONS).sort()) {
+      const number = Number(name.slice(0, 3));
+      if (number > version) continue;
+      db.exec(readFileSync(path.join(MIGRATIONS, name), "utf-8"));
+      db.exec(`PRAGMA user_version = ${number}`);
+    }
+  } finally {
+    db.close();
+  }
+}
 
-/** Undoes migration 019 (username), so a database can be set back to an older version. */
-const UNDO_019 = [
-  "ALTER TABLE admin_accounts RENAME COLUMN username TO email",
-  "ALTER TABLE admin_accounts RENAME COLUMN username_key TO email_key",
-  "ALTER TABLE audit_log RENAME COLUMN actor_username TO actor_email",
-  "ALTER TABLE reset_attempts RENAME COLUMN username_key TO email_key",
-];
-
-/** Undoes migration 018 (security questions), so a database can be set back to an older version. */
-const UNDO_018 = [
-  "DROP TABLE reset_attempts",
-  "ALTER TABLE admin_accounts DROP COLUMN security_answer_hash",
-  "ALTER TABLE admin_accounts DROP COLUMN security_question",
-];
-
-test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 21", () => {
+test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 22", () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-ui-state-migration-"));
   const file = path.join(dataDir, DATABASE_FILE_NAME);
   try {
-    createStore(file).close();
-    assert.equal(versionOf(file), 21);
-    reshape(file, ["DROP TABLE deleted_titles", ...UNDO_021, ...UNDO_019, ...UNDO_018, "DROP TABLE admin_ui_state"], 16);
+    databaseAt(file, 16);
+    assert.equal(versionOf(file), 16);
     assert.equal(tableExists(file, "admin_ui_state"), false);
 
     createStore(file).close();
 
-    assert.equal(versionOf(file), 21);
+    assert.equal(versionOf(file), 22);
     assert.equal(tableExists(file, "admin_ui_state"), true);
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
@@ -83,9 +82,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     createStore(file).close();
     createStore(file).close();
-    assert.equal(versionOf(file), 21);
+    assert.equal(versionOf(file), 22);
 
-    reshape(file, [], 22);
+    reshape(file, [], 23);
     assert.throws(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,
