@@ -6,6 +6,7 @@ import { AdminStatusbar } from "@/components/chrome/AdminStatusbar";
 import { AdminTitlebar } from "@/components/chrome/AdminTitlebar";
 import { AppShell } from "@/components/chrome/AppShell";
 import {
+  NO_BOTTOM_PANE,
   NO_LEFT_PANE,
   NO_RIGHT_PANE,
   SLEEPING_PANES,
@@ -48,9 +49,13 @@ describe("the titlebar", () => {
     assert.ok(!tab(html, "Channels").includes('data-active=""'));
   });
 
-  it("disables the rail toggle on an index and the right toggle always, each with its reason", () => {
+  it("disables the rail toggle on an index and the bottom and right toggles always, each with its reason", () => {
     const html = renderLive(createElement(AdminTitlebar));
-    for (const [label, reason] of [["Toggle left pane", NO_LEFT_PANE], ["Toggle right pane", NO_RIGHT_PANE]] as const) {
+    for (const [label, reason] of [
+      ["Toggle left pane", NO_LEFT_PANE],
+      ["Toggle bottom pane", NO_BOTTOM_PANE],
+      ["Toggle right pane", NO_RIGHT_PANE],
+    ] as const) {
       assert.ok(toggle(html, label).includes('disabled=""'), label);
       assert.ok(html.includes(`<span class="inline-flex" title="${reason}">`), reason);
     }
@@ -65,20 +70,20 @@ describe("the titlebar", () => {
     assert.ok(shut.includes('aria-pressed="false"'));
   });
 
-  it("puts the Events toggle in the bottom toggle's place, lit while the drawer is open", () => {
-    const closed = toggle(renderLive(createElement(AdminTitlebar)), "Toggle the events band");
-    assert.ok(closed.includes('aria-pressed="false"') && !closed.includes('disabled=""'));
+  it("keeps the bottom toggle disabled and unlit even while the Events drawer is open", () => {
     state().toggleEvents();
-    assert.ok(toggle(renderLive(createElement(AdminTitlebar)), "Toggle the events band").includes('aria-pressed="true"'));
+    const bottom = toggle(renderLive(createElement(AdminTitlebar)), "Toggle bottom pane");
+    assert.ok(bottom.includes('disabled=""') && bottom.includes('aria-pressed="false"'));
   });
 
   it("puts the tabs and the toggles to sleep under a window, with the reason on the track", () => {
+    state().openWorkspace("channels", "ch-1");
     state().openOverlay("settings");
     const html = renderLive(createElement(AdminTitlebar));
     assert.ok(html.includes(`title="${SLEEPING_TABS}"`));
     assert.equal(count(html, ">Channels</button>") + count(html, ">Accounts</button>"), 2);
     assert.ok(tab(html, "Titles").includes('disabled=""'));
-    assert.ok(toggle(html, "Toggle the events band").includes('disabled=""'));
+    assert.ok(toggle(html, "Toggle left pane").includes('disabled=""'));
     assert.ok(html.includes(`title="${SLEEPING_PANES}"`));
   });
 

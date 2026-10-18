@@ -3,7 +3,7 @@ import type { PaneToggleProps } from "@giga/ui/shell/PaneToggle";
 import { Brand } from "@giga/ui/shell/Brand";
 import { Titlebar } from "@giga/ui/shell/Titlebar";
 import {
-  EVENTS_TOGGLE_NAME,
+  NO_BOTTOM_PANE,
   NO_LEFT_PANE,
   NO_RIGHT_PANE,
   SLEEPING_PANES,
@@ -18,14 +18,12 @@ import type { Tab } from "@/types/shell";
 const PILL_ITEMS = TABS.map((tab) => ({ id: tab.id, label: tab.label, title: tab.hint }));
 
 /** The admin's titlebar: the library bar with its brand tagged `ADMIN`, the six-tab pill, the rail toggle (a workspace's
- *  rail, so disabled on an index), the Events toggle in the bottom toggle's place, and the right toggle, always disabled
- *  (`28` section 7.1). A modal window puts the tabs and the toggles to sleep; signed out, the tabs sleep with `Sign in
- *  first`. A toggle never leaves its place: disabled, with its reason. */
+ *  rail, so disabled on an index), and the bottom and right toggles, always disabled: the admin has neither pane, and
+ *  Events opens from the statusbar alone (`28` section 7.1). A modal window puts the tabs and the left toggle to sleep;
+ *  signed out, the tabs sleep with `Sign in first`. A toggle never leaves its place: disabled, with its reason. */
 export function AdminTitlebar() {
   const tab = useTab();
   const signedIn = useAppStore((state) => state.signedIn);
-  const eventsOpen = useAppStore((state) => state.eventsOpen);
-  const toggleEvents = useAppStore((state) => state.toggleEvents);
   const togglePane = useAppStore((state) => state.togglePane);
   const setTab = useAppStore((state) => state.setTab);
   const asleep = useWorkSurfaceOpen();
@@ -38,13 +36,7 @@ export function AdminTitlebar() {
     reason: !hasRail ? NO_LEFT_PANE : asleep ? SLEEPING_PANES : undefined,
     onToggle: () => togglePane("left"),
   };
-  const bottom: PaneToggleProps = {
-    side: "bottom",
-    name: EVENTS_TOGGLE_NAME,
-    lit: eventsOpen && !asleep,
-    reason: asleep ? SLEEPING_PANES : undefined,
-    onToggle: toggleEvents,
-  };
+  const bottom: PaneToggleProps = { side: "bottom", lit: false, reason: NO_BOTTOM_PANE, onToggle: () => undefined };
   const right: PaneToggleProps = { side: "right", lit: false, reason: NO_RIGHT_PANE, onToggle: () => undefined };
 
   return (

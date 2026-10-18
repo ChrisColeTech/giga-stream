@@ -14,10 +14,11 @@ export const NOTHING_CHANGED = "Nothing has changed.";
 
 export const LAST_ACCOUNT = "The last enabled account cannot be deleted.";
 
-/** The titlebar's pane toggles (`28` section 7.1): the rail exists on a workspace only; the admin has no right pane. */
+/** The titlebar's pane toggles (`28` section 7.1): the rail exists on a workspace only; the admin has no right or bottom
+ *  pane (Events opens from the statusbar alone). */
 export const NO_LEFT_PANE = "This page has no left pane.";
 export const NO_RIGHT_PANE = "The admin has no right pane.";
-export const EVENTS_TOGGLE_NAME = "the events band";
+export const NO_BOTTOM_PANE = "The admin has no bottom pane.";
 
 /** A modal window puts the tabs and the pane toggles to sleep (`28` Appendix A, row 7). */
 export const SLEEPING_TABS = "Close the open window to switch tabs.";
