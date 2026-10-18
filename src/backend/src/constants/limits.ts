@@ -54,6 +54,10 @@ export const SOURCE_HOST_MAX = 253;
 // The sync settings (docs/26 section 3.11).
 export const PLAYLISTS_MAX = 20;
 
+// The guarded outbound function (docs/43 section 3.8).
+export const SAFE_FETCH_USER_AGENT = "GigaStream/1.0 (+playlist-fetch)";
+export const SAFE_FETCH_MAX_REDIRECTS = 3;
+
 // The playlist sync (docs/03 section 7.2c).
 export const PLAYLIST_FETCH_TIMEOUT_MS = 15_000;
 export const TVG_ID_MAX = 128;
