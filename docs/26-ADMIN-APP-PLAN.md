@@ -43,7 +43,7 @@ to `~/.giga-stream-admin`, with `admin.db` inside it.
   (TMDB); `/api/playlist-sync`.
 - **Channels are stored stream-address rows:** `id` (`ch_<uuid>`), `name`, `category` (free text), `number` (TEXT),
   `logo_url`, `stream_url`, `revision`, and for playlist-synced rows `tvg_id` and `source`.
-- **Auth:** HS256 JWT valid 15 minutes, a rotating refresh token (no sign-in rate limit and no lockout, owner 2026-10-18). Every change
+- **Auth:** HS256 JWT valid 30 days and a rotating refresh token valid 365 days (owner 2026-10-18: no session timeout) (no sign-in rate limit and no lockout, owner 2026-10-18). Every change
   writes an audit entry. `api/guard.ts` `signedIn(services, request)` gates writes. There are no roles (D22): every signed-in admin is equal.
 - **Network policy** (`network-policy.ts`): refuses to listen off loopback over plain http unless
   `TLS_CERT_FILE`/`TLS_KEY_FILE`, `TRUST_PROXY` or `ALLOW_INSECURE_HTTP` is set. No-store routes: `/api/auth`,
@@ -313,7 +313,7 @@ should be crud for titles and playlists."* So there are two new record types: a 
   backend's own `/admin/` page and answers the preload's IPC (the native folder picker for `Choose`, the window-overlay
   colours for the caption buttons). Started as a plain server (`npm start`) the backend stays headless and serves the same
   pages to a browser, where `Choose` is not available (a typed path only). **The backend app closes to the tray** (owner,
-  2026-10-17: "backend server should close to tray"): the window's close button hides the window and the backend, with
+  2026-10-17: "backend server should close to tray"): the window's close button AND its minimize button (owner, 2026-10-18: "make sure the admin console minimizes to tray") hide the window to the tray (it leaves the taskbar) and the backend, with
   every live channel it is running, keeps running; a tray icon (tooltip `Giga Stream Admin` and the backend's address)
   opens the window again on a click, and its menu has `Open Giga Stream Admin` and `Quit`; only `Quit` stops the backend
   and exits (when the app only attached to an already running backend, `Quit` stops nothing but itself). A second launch

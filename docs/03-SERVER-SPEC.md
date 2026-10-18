@@ -1117,13 +1117,13 @@ interface Session {
 ```
 
 - **The access token** is a JWT signed with HS256 and `JWT_SECRET` (at least 32 characters; the backend
-  refuses to start without one). It lives 15 minutes and carries `iss` and `aud` (`giga-stream-admin`),
+  refuses to start without one). It lives 30 days (owner, 2026-10-18: no visible session timeout; it was 15 minutes) and carries `iss` and `aud` (`giga-stream-admin`),
   `sub` (the account id), `ver` (the account's session version), `iat` and `exp`. A token with any
   other algorithm, issuer or audience, a bad signature, or an expired time is refused.
 - **Every request is checked against the account** as it is now: a disabled or deleted account, or a
   `ver` that no longer matches, is refused. That is how a revocation takes effect at once.
-- **The refresh token** is 32 random bytes, stored only as a SHA-256 hash, valid for 30 days and used
-  once: refreshing replaces it. Presenting a refresh token that was already used revokes every session of
+- **The refresh token** is 32 random bytes, stored only as a SHA-256 hash, valid for 365 days (each refresh issues a new
+  one, so an account in use never times out) and used once: refreshing replaces it. Presenting a refresh token that was already used revokes every session of
   that account, since only a copied token is used twice.
 - **No limits.** There is no sign-in rate limit and no lockout (owner, 2026-10-18: a single-owner tool). An unknown
   username and a wrong password give the same answer (`401 auth.invalid_credentials`).
