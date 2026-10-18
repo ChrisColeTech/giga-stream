@@ -43,7 +43,7 @@ never put in an event, a notice, a log or a URL, and cleared from the form after
 ### 3.2 Index
 
 `NewPlaylistForm` (`NewRecordGroup`, `plus`, `pl-`): **Name** (first, and **optional**: owner, 2026-10-17; left empty the backend names the playlist after its host), **Address** (`type=password`, `autoComplete="off"`, `spellCheck` off). `Create` is disabled with `Address is
-required.`; Name never gates it. The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `id` (the integer `id`, mono), `name`, `host`, `channels`, `last synced`,
+required.`; Name never gates it. The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `name`, `host`, `channels`, `last synced`,
 `state` (`enabled` / `disabled`, dimmed); `Delete` is an `ArmedButton` whose rest title says `The channels it created stay,
 as hand-made rows that no sync touches.`; its notice on success reads `Deleted <name>; <released> channels kept.`.
 
@@ -61,7 +61,7 @@ so the reasons are known before the press. `Delete` marks `jobs` and `channels` 
 ### 3.3 Workspace (rail `‹ Playlists`, `Details`, `Status`; toolbar `Discard changes`, `Save`, `Jobs →`)
 
 - **Details** (`file-text`): Name (first, optional), **Address** (a read-only mono field showing `masked`, with a ghost `Replace` in `trailing`: `Replace` unlocks the field as an empty
-  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`), then read-only **Id** (the integer `id`, last).
+  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`).
   One `Save` sends only changed fields; an unlocked, empty address is not a change.
 - **Status** (`activity`, read-only): Host, **Channels** (the admin channels whose `source === host`, each a link that calls `requestTab("channels", id)`), Last synced
   (`lastSyncedAt`, local time or `never`), Outcome (`lastOutcome`). There is **no sync button here** - syncing is a Jobs matter (`26` 4.9c).
@@ -95,7 +95,7 @@ workspace's Last run `Refresh`). **No polling.** The refusals are `409 sync.busy
 `NewJobForm` (`NewRecordGroup`, `plus`, `jb-`): **Name** (first), **Type** (`Segmented` Playlist / Catalog - the row switcher), then **Playlist** (`Select` of the playlist records,
 read from `playlists.list()`; disabled playlists are listed but marked `disabled` and refuse with the backend's reason) for a playlist job, or **Scope** (`Segmented` Trending /
 Popular) and **Kind** (`Segmented` Movies / Series) for a catalog job; the rows a Type does not use are not rendered and leave the required list. `Create` is disabled with
-`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `id` (the integer `id`, mono), `name`, `type`, `target` (the playlist name,
+`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `name`, `type`, `target` (the playlist name,
 or scope + kind), `schedule`, `last run`, `outcome`, `state` (`idle`, `running` with the pulsing bar, `failed`, `disabled`: `jobState`); ticks arm the toolbar; `Delete` is an `ArmedButton`
 (deleting a job changes nothing it created).
 
@@ -109,7 +109,7 @@ notice and the rest continue. It is disabled, in this priority order, with: `Tic
 
 ### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Run`, `Last run`; toolbar `Discard changes`, `Save`, `Channels →` for a playlist job or `Titles →` for a catalog job)
 
-- **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog), then read-only **Id** (the integer `id`, last).
+- **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog).
 - **Schedule** (`clock`): Interval (text; the page checks `^[1-9]\d*[mh]$|^off$` by `lib/field-checks.ts` `schedule`, a bad value is the `Row`'s `error` and the notice; the backend normalises it
   and answers `422 job.invalid` field `schedule` otherwise). The tip lists `6h`, `30m`, `24h`, `off`.
 - **Run** (`play`): a playlist job has **Dry run** and **Prune** (`Toggle`s; the Prune tip says it deletes synced channels whose entry vanished, and that edited ones are kept) and `Run job`;
