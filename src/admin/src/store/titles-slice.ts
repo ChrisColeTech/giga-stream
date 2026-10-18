@@ -65,12 +65,11 @@ export interface TitlesSlice {
   /** A read failed: the rows stay only when they belong to the view being read; otherwise the skeleton draws. */
   titlesLoadFailed: (view: TitleView, unreachable: boolean) => void;
   titleUpsert: (title: AdminTitleRow) => void;
+  /** A title was deleted from the store. Its Browse TMDB row stays when TMDB has the title (a synced one) and reads
+   *  `deleted` (dimmed), as the next read of TMDB would show it; a hand-made title has no TMDB row, so its row goes. */
   titleRemove: (id: string) => void;
   /** A Browse TMDB row was added to the store: it reads `stored` (and dims) without reading TMDB again. */
   titleMarkStored: (id: string) => void;
-  /** A synced title was deleted from the store: its Browse TMDB row stays and reads `deleted` (dimmed), as the next read of
-   *  TMDB would show it. The row is not removed: TMDB still has the title. */
-  titleMarkDeleted: (id: string) => void;
   titleTick: (id: string, on: boolean) => void;
   titlesTickAll: (on: boolean) => void;
   titlesSetTicked: (ids: readonly string[]) => void;
@@ -112,13 +111,14 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
       patch({ status: "failed", unreachable, ...(keep ? {} : { shown: null, ...withItems([]) }) });
     },
     titleUpsert: (title) => patch(withItems(upsertTitle(now().items, title))),
-    titleRemove: (id) => patch(withItems(withoutTitle(now().items, id))),
+    titleRemove: (id) => {
+      const row = now().items.find((item) => item.id === id);
+      if (row === undefined || row.state === "manual") return patch(withItems(withoutTitle(now().items, id)));
+      const deleted = { ...row, stored: false, deleted: true };
+      patch({ items: now().items.map((item) => (item.id === id ? deleted : item)) });
+    },
     titleMarkStored: (id) =>
       patch({ items: now().items.map((item) => (item.id === id ? { ...item, stored: true } : item)) }),
-    titleMarkDeleted: (id) =>
-      patch({
-        items: now().items.map((item) => (item.id === id ? { ...item, stored: false, deleted: true } : item)),
-      }),
     titleTick: (id, on) => {
       const rest = now().ticked.filter((one) => one !== id);
       patch({ ticked: on ? [...rest, id] : rest });

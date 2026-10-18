@@ -47,7 +47,11 @@ describe("the titles slice", () => {
     assert.deepEqual(state().titles.items.map((t) => t.title), ["custom-1", "a", "B2"]);
     state().titlesTickAll(true);
     state().titleRemove("a");
-    assert.deepEqual(state().titles.ticked, ["custom-1", "b"]);
+    const a = state().titles.items.find((t) => t.id === "a");
+    assert.deepEqual([a?.deleted, a?.stored], [true, false], "a synced title's Browse row stays, reading deleted");
+    state().titleRemove("custom-1");
+    assert.deepEqual(state().titles.items.map((t) => t.id), ["a", "b"], "a hand-made title has no TMDB row");
+    assert.deepEqual(state().titles.ticked, ["a", "b"]);
   });
 
   it("keeps a detail only for the workspace that asked", () => {

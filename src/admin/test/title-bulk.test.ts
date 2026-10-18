@@ -98,7 +98,9 @@ describe("a Delete run through the shared runner", () => {
       "Deleted 3 titles; 3 were synced and stay deleted until restored under Deleted titles; 1 failed.",
     );
     const left = state().titles.items.map((t) => t.id);
-    assert.deepEqual([rereads, state().titles.ticked, left], [1, ["movie-2"], ["movie-2"]]);
+    assert.deepEqual([rereads, state().titles.ticked, left], [1, ["movie-2"], ["movie-1", "movie-2", "movie-3"]]);
+    const deleted = state().titles.items.filter((t) => t.deleted === true).map((t) => t.id);
+    assert.deepEqual(deleted, ["movie-1", "movie-3"], "the deleted synced titles' Browse rows stay, reading deleted");
   });
 
   it("words a delete with no synced title plainly, and one synced title in the singular", () => {
