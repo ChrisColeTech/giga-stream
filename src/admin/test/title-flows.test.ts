@@ -8,6 +8,7 @@ import { createTitleFlows } from "@/services/title-flows";
 import type { TitlesService } from "@/services/titles";
 import { useAppStore } from "@/store/app-store";
 import { resetStore, signInForTest } from "./support/store";
+import { EMPTY_STORED } from "./support/titles-stored-kit";
 
 const state = () => useAppStore.getState();
 const notice = (): string => state().notice?.sentence ?? "";
@@ -39,6 +40,7 @@ function rig(script: Partial<TitlesService> = {}) {
     revert: async (id) => row(id),
     listDeleted: async () => (calls.push("listDeleted"), []),
     restore: async (id) => ({ id }),
+    listStored: EMPTY_STORED,
     ...script,
   };
   const audit = { reload: async () => undefined };

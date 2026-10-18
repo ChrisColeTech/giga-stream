@@ -13,6 +13,7 @@ import { useAppStore } from "@/store/app-store";
 import { success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
 import { resetStore, signInForTest } from "./support/store";
+import { EMPTY_STORED } from "./support/titles-stored-kit";
 
 const state = () => useAppStore.getState();
 const gone = (id: string, title?: string): AdminDeletedTitle => ({
@@ -42,6 +43,7 @@ function rig(script: Partial<TitlesService> = {}) {
     revert: async () => Promise.reject(new Error("unused")),
     listDeleted: async () => (calls.push("listDeleted"), [gone("movie-603", "The Matrix")]),
     restore: async (id) => (calls.push(`restore:${id}`), { id }),
+    listStored: EMPTY_STORED,
     ...script,
   };
   const audit = { reload: async () => undefined };

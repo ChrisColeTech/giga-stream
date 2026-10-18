@@ -80,7 +80,7 @@ describe("a table's actions are its strip's", () => {
     const lists = COMPONENTS.filter((source) => /(?:Accounts|Channels|Providers|Playlists|Jobs)List\.tsx$/.test(source.path));
     assert.equal(lists.length, 5);
     assert.deepEqual(lists.filter((source) => !/<TableStrip\b/.test(source.text)).map((source) => rel(source.path)), []);
-    for (const name of ["titles/TitleListGroup.tsx", "titles/DeletedTitlesGroup.tsx"]) {
+    for (const name of ["titles/TitleStoredList.tsx", "titles/TitleBrowseList.tsx", "titles/DeletedTitlesGroup.tsx"]) {
       assert.ok(/<TableStrip\b/.test(read(join(SRC, "components", name)).text), name);
     }
   });

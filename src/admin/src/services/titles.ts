@@ -1,5 +1,7 @@
 import { queryString, START_VIEW, type BrowseQuery, type SearchQuery } from "@/lib/title-query";
+import { storedParams, type StoredQuery } from "@/lib/title-stored-query";
 import { request } from "./api";
+import { StoredPageLenientSchema, type StoredPage } from "./schemas/title-stored-schema";
 import {
   TitleDeletedSchema,
   TitleDetailSchema,
@@ -30,6 +32,9 @@ export interface TitlesService {
   readonly revert: (id: string) => Promise<AdminTitleDetail>;
   readonly listDeleted: () => Promise<readonly AdminDeletedTitle[]>;
   readonly restore: (id: string) => Promise<{ readonly id: string }>;
+  /** `GET /api/titles/stored` (`docs/41` section 3.2): rows `offset` to `offset + limit` of the stored titles that match
+   *  the query, never TMDB. Read row by row. */
+  readonly listStored: (query: StoredQuery, offset: number, limit?: number) => Promise<StoredPage>;
 }
 
 const path = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
@@ -51,7 +56,19 @@ async function page(url: string): Promise<TitleList> {
   };
 }
 
+async function stored(query: StoredQuery, offset: number, limit?: number): Promise<StoredPage> {
+  const url = `/api/titles/stored?${storedParams(query, offset, limit)}`;
+  const answer = await request(url, StoredPageLenientSchema, { area: "Title" });
+  const items: AdminTitleRow[] = [];
+  for (const row of answer.items) {
+    const parsed = TitleRowSchema.safeParse(row);
+    if (parsed.success) items.push(parsed.data);
+  }
+  return { ...answer, items, unreadable: answer.items.length - items.length };
+}
+
 export const titles: TitlesService = {
+  listStored: stored,
   list: (query = BROWSE_START) => page(`/api/titles?${queryString(query)}`),
   search: (query) => page(`/api/titles/search?${queryString(query)}`),
   detail: (id) => request(`${path(id)}?includeDisabled=true`, TitleDetailSchema, { area: "Title" }),

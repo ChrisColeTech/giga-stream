@@ -3,6 +3,7 @@ import { TITLE_GONE, titleCreated, titleDeleted, titleReverted, titleSaved } fro
 import { isEmptyTitleBody, titleChanges, titleCreateBody } from "@/lib/title-body";
 import { firstCreateRefusal, firstSaveRefusal, type TitleField } from "@/lib/title-checks";
 import type { NewTitleDraft, TitleDraft } from "@/lib/title-draft";
+import { loadedRows } from "@/lib/title-paged";
 import { findTitle, isManualTitle } from "@/lib/title-rows";
 import { DROPPED, codeOf, done, refusalOf, type FlowRefused } from "./provider-flow-support";
 import type { AdminTitleDetail } from "./schemas/title-schema";
@@ -14,6 +15,7 @@ import {
   type TitleResult,
   type TitleStore,
 } from "./title-list-flow";
+import { createTitleStoredFlow, type TitleStoredFlow } from "./title-stored-flow";
 import type { TitlesService } from "./titles";
 
 export type { TitleResult } from "./title-list-flow";
@@ -25,7 +27,7 @@ export interface TitleFlowDeps {
   readonly audit: { readonly reload: (limit?: number) => Promise<void> };
 }
 
-export interface TitleFlows extends TitleListFlow, TitleDeletedFlow {
+export interface TitleFlows extends TitleListFlow, TitleDeletedFlow, TitleStoredFlow {
   /** The list and the audit tail, read together (the list's Refresh). */
   refresh: () => Promise<TitleResult>;
   create: (draft: NewTitleDraft) => Promise<TitleResult>;
@@ -48,7 +50,11 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   const { service, store, audit } = deps;
   const list = createTitleListFlow(deps);
   const deletedFlow = createTitleDeletedFlow(deps);
+  const storedFlow = createTitleStoredFlow(deps);
   const ports = titlePorts(store);
+  /** Reads again the list the tab shows: the stored titles, or the TMDB browse page. */
+  const reload = (): Promise<TitleResult> =>
+    store().titlesStored.mode === "stored" ? storedFlow.loadStored() : list.load();
   const alive = (serial: number): boolean => store().signedIn && store().serial === serial;
   const rejected = (sentence: string, field?: TitleField): FlowRefused<TitleField> => {
     store().say(sentence, "warn", "Title");
@@ -58,7 +64,7 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
     const code = codeOf(error);
     if (code === NOT_FOUND && store().workspaces.titles !== null) store().closeWorkspace("titles");
     const result = refusalOf(ports, error);
-    if (code === NOT_FOUND || code === BAD_ANSWER) void list.load();
+    if (code === NOT_FOUND || code === BAD_ANSWER) void reload();
     return result;
   };
   /** A write's answer: the row in the list, and the open detail with the sources it already had. */
@@ -76,6 +82,7 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
       const title = await service.create(titleCreateBody(draft));
       if (!alive(serial)) return DROPPED;
       store().titleUpsert(title);
+      if (store().titlesStored.status !== "idle") void storedFlow.loadStored(); // a new row's place depends on the sort
       store().say(titleCreated(title.title));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(undefined);
@@ -107,12 +114,17 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   }
 
   async function remove(id: string): Promise<TitleResult> {
-    const title = findTitle(store().titles.items, id) ?? store().titles.detail?.value ?? undefined;
+    const title =
+      findTitle(store().titles.items, id) ??
+      findTitle(loadedRows(store().titlesStored.paged), id) ??
+      store().titles.detail?.value ??
+      undefined;
     const serial = store().serial;
     try {
       await service.remove(id);
       if (!alive(serial)) return DROPPED;
       store().titleRemove(id);
+      if (store().titlesStored.status !== "idle") void storedFlow.loadStored(); // the rows after it moved up one
       if (store().workspaces.titles === id) store().closeWorkspace("titles");
       store().say(titleDeleted(title?.title ?? id));
       void audit.reload(AUDIT_AFTER_WRITE);
@@ -153,9 +165,9 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
   }
 
   const refresh = async (): Promise<TitleResult> => {
-    const [result] = await Promise.all([list.load(), audit.reload(AUDIT_PAGE), deletedFlow.loadDeleted()]);
+    const [result] = await Promise.all([reload(), audit.reload(AUDIT_PAGE), deletedFlow.loadDeleted()]);
     return result;
   };
 
-  return { ...list, ...deletedFlow, refresh, create, save, remove, revert, detail };
+  return { ...list, ...deletedFlow, ...storedFlow, refresh, create, save, remove, revert, detail };
 }

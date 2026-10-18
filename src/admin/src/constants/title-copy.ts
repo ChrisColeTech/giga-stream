@@ -2,7 +2,7 @@
  * notices. Copy lives here, never in a component. */
 
 /** The index's label column: the New form's rows and the list's filter rows. */
-export const TITLES_INDEX_LABELS: readonly string[] = ["Title", "Kind", "Year", "Search", "Sort"];
+export const TITLES_INDEX_LABELS: readonly string[] = ["Title", "Kind", "Year", "Search", "Sort", "View"];
 export const TITLE_WORKSPACE_LABELS: readonly string[] = [
   "Title",
   "Kind",
