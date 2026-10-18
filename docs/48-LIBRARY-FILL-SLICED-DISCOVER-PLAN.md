@@ -23,7 +23,7 @@ admin backend (the walk, constants, the job's request) and one admin copy line.
    a popularity-sorted discover query with the vote floor.
 2. **A slice is over the limit when its page-1 answer has `total_pages` above 500** (`MAX_DISCOVER_PAGES`; 500 pages x 20 rows is the
    10,000 TMDB serves; exactly 500 pages fits). Such a slice is split into two date ranges `[a, mid]` and `[mid + 1 day, b]`
-   (both bounds are inclusive, so the halves do not overlap) and each half is probed in turn, recursively. A single day still above
+   (both bounds are inclusive, so the halves do not overlap) and each half is requested in turn, recursively. A single day still above
    the limit is walked to page 500 and the walk notes it in the run's detail; it never loops. (Today no year needs a split; the
    split keeps the walk correct as TMDB grows.) Assumption to verify: TMDB's primary release date agrees with the year filter.
 3. **Vote floor `DISCOVER_MIN_VOTES` = 50**, a named constant in `constants/limits.ts` (not in the job's config: the strict job
@@ -34,23 +34,23 @@ admin backend (the walk, constants, the job's request) and one admin copy line.
    `PAGES_TIP` is reworded to say it applies to those scopes. No migration.
 5. **Titles with no date are not discovered** (a date filter excludes them); one already stored stays. Titles dated after next
    year are covered by the open later slice; before 1900 by the open earlier slice. The walk never deletes anything.
-6. **Progress stays per kind, exact per kind.** `job-progress.ts` keeps `movies` 0-5% and `tv` 5-10% (`done/total` of the kind).
-   At the start of each kind's phase the walk PROBES: page 1 of every slice of that kind (about 128 year slices + 2 open slices,
-   plus the probes of any split halves). It first reports `done 0, total 0` (the lower bound), then ONE real report with the
-   kind's total (the sum of the slices' `total_pages`, about 1,900 movie pages and about 400 series pages), then walks. The total
-   is never lowered afterwards (a lower total would make the fraction drop and `job-progress.ts` ignores a lower fraction). The
-   probe's page-1 answers are kept (20 rows each) and written as the walk reaches them, so page 1 is not fetched twice. No new
-   phase, no new weight, no new words: the existing `Walking movies N of T pages` and `Walking series ...` stay true. After the
-   walk the bar sits at 10% (about 2 minutes in) while the details phase takes the other 90%.
+6. **No probe pass (owner, 2026-10-18: "no prepass if its not needed").** Each slice is walked directly: page 1 is requested, its
+   `total_pages` is read from that answer, the page is written, and the walk continues to the slice's last page (cap 500). A
+   slice whose page 1 says `total_pages` above 500 is split at that moment (decision 2), before it is walked.
+   **Progress counts slices**, which are known without any call: per kind, `total` = the number of slices (the earlier open slice,
+   one per year 1900 to next year, the later open slice; about 130), `done` = slices finished. A split adds its halves to the total
+   (rare; `job-progress.ts` ignores a momentary dip). `job-progress.ts` keeps `movies` 0-5% and `tv` 5-10%. The admin words for
+   those two phases read in years (`Walking movies, year 12 of 130`), not pages; trending and popular keep pages. After the walk
+   the bar sits at 10% (about 2 minutes in) while the details phase takes the other 90%.
 7. **Counts keep their shape** `{ titles, detailed, seasons, enriched, stale }`. `titles` counts rows seen by the walk (a title
    that appears in two slices at an edge is counted twice; the upsert makes it harmless). No `slices` count.
 8. **Idempotence, stated precisely.** Every write is an upsert by id (`title-store-row.ts`): a payload fresher than 3 days stands
    whole; a stale `detail` payload keeps its shape and refreshes rating and images; a stale list payload is replaced by the thin
    row; admin edits live in `edited_fields` and the upsert never touches them. A second run therefore keeps the same set of ids
    and loses no detail or edit; `fetchedAt` and the popularity score may be rewritten, so "no row changes" is NOT the claim.
-9. **Stop and resume.** There is no checkpoint: Run after Stop walks (and probes) again, about 2 to 3 minutes of calls, and the
-   upserts make it safe. A Stop during the probe stores nothing.
-10. **Cost.** About 2,300 to 2,400 walk pages plus 260 probe calls at `TMDB_REQUESTS_PER_SECOND` 20: about 2 to 3 minutes. The
+9. **Stop and resume.** There is no checkpoint: Run after Stop walks again, about 2 to 3 minutes of calls, and the upserts make it
+   safe. A Stop stores only pages already written whole.
+10. **Cost.** About 2,300 to 2,400 walk pages at `TMDB_REQUESTS_PER_SECOND` 20: about 2 to 3 minutes. The
     details phase grows to about 44,000 titles and about 51,000 calls (series add season appends): about 45 minutes the first time,
     then only new or stale titles. A 429 lowers the pace for the rest of the run (down to 2 a second at the floor), which stretches
     the estimates; the run still completes. OMDb enrichment stays at 1,000 titles a day, so `enriched` stays at about 1,000 per run
@@ -60,11 +60,11 @@ admin backend (the walk, constants, the job's request) and one admin copy line.
 
 - `constants/limits.ts`: `DISCOVER_MIN_VOTES` 50, `DISCOVER_FIRST_YEAR` 1900, `DISCOVER_PAGE_SIZE` 20 (TMDB's page size, assumed).
   `title-shapes.ts` is at the file-size limit: do not add to it.
-- New `services/title-slices.ts`: slice list for a kind and clock, the probe, the split. `services/title-walk.ts` walks the kept
-  answers. `createTitleWalk` gets `now` from `createTitleSync`. `title-sync.ts` is already over its comfortable size: no growth.
-- `title-walk.ts` discover branch: per kind, probe then walk (decision 6); `pages` ignored for `discover`. `describeRequest`
+- New `services/title-slices.ts`: slice list for a kind and clock, and the split. `services/title-walk.ts` walks the slices.
+  `createTitleWalk` gets `now` from `createTitleSync`. `title-sync.ts` is already over its comfortable size: no growth.
+- `title-walk.ts` discover branch: per kind, walk slice by slice (decision 6); `pages` ignored for `discover`. `describeRequest`
   (audit detail) says the sliced walk.
-- Admin: `PAGES_TIP` copy in `constants/job-copy.ts` only.
+- Admin copy only: `PAGES_TIP` in `constants/job-copy.ts`, and the `movies`/`tv` phase words in `lib/progress-words.ts` (years).
 - Docs (coordinator): `03` 7.6b (the walk), `44` 3.1, `47` 3.1/6, `11` (page 500, the year and date-range filters, the 20,001
   cap), `06` Jobs words unchanged.
 
@@ -72,13 +72,12 @@ admin backend (the walk, constants, the job's request) and one admin copy line.
 
 - The fake enforces `page <= 500`, 20 rows a page, inclusive date bounds, and serves a few years plus one slice over 10,000: the
   walk never requests page 501, stores every distinct id of the fake's ground truth exactly once (the id set equals the fake's),
-  and the progress `total` for the kind equals the sum of probed `total_pages`.
+  and the progress `total` for the kind equals the slice count (a split adds its halves).
 - A split slice: halves are inclusive and overlap-free; a boundary day lands in one half; a single day above the limit walks to
   500 and stops.
 - Open slices (before 1900, after next year) are walked; a title with no date is not requested.
 - Re-run: same id set; a detailed title keeps its detail shape; an edited field survives.
-- Stop during the probe stores nothing; Stop mid-walk then Run completes with the full id set; a 429 mid-probe leaves a
-  consistent total; progress is monotonic and ends at the kind's weight; `pages` does not change a discover walk.
+- Stop mid-walk then Run completes with the full id set; a 429 mid-walk keeps the walk consistent; progress is monotonic and ends at the kind's weight; `pages` does not change a discover walk.
 
 ## 5. Acceptance on the real stack
 
