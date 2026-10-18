@@ -9,9 +9,9 @@ workers from colliding, the progress table and the coordinator's acceptance meth
 wire shapes, state persistence) still governs; only their fixture-first wave split is retired.
 
 **Amended 2026-10-17 (owner):** "lets add some bulk actions when we select them. and add a password reset button to the login form. give them a real id number, not derived. optional playlist name is fine, but name should be in
-the same order on each form for consistency." That adds the program rules of section 5.0, the shared bulk piece (section 6), two backend waves and the reset gate (section 7, `40`), and settles four open decisions (section 11).
+the same order on each form for consistency." That adds the program rules of section 5.0, the shared bulk piece (section 6), the backend reset wave and the reset gate (section 7, `40`), and settles open decisions (section 11). The "real id number" request was later withdrawn (below).
 
-**Amended again 2026-10-17 (owner, second round; supersedes the defaults written above where they differ):** (a) "id should be the id number we generate. create a sequence for the tables or something" and, corrected, **every** channel, account and title, synced and manual, gets a generated integer `idNumber` from a per-table sequence, existing rows numbered in creation order in migration `018`; the API keeps its string ids (section 7.1). This round's wording is superseded by (e) below. (b) "bulk delete should apply for manual and auto added": Titles bulk `Delete` covers manual and synced titles; the backend's real behaviour is stated in `37`. (c) "lets do security question instead of email for password reset": the reset is a security question with a hashed answer, with no email, no code and no Electron dialog (`40`, migration `019`). (d) 3a's Id column lands after B2 (section 2). (e) Final (owner, 2026-10-17): EVERYTHING. Every backend table gets a generated integer primary key; the API keeps its string ids as they are; the fileserver changes nothing (section 7.1).
+**Amended again 2026-10-17 (owner, second round; supersedes the defaults written above where they differ):** (a) Ids: **no id changes** (owner, final). No record's id, key or column changes, no id migration, no `Id` column added. The one id item left is inside the Channels wave: the backend assigns a new live channel's id itself, as it already does for stream channels, and the admin never derives one (`36` 3.2). (b) "bulk delete should apply for manual and auto added": Titles bulk `Delete` covers manual and synced titles; the backend's real behaviour is stated in `37`. (c) "lets do security question instead of email for password reset": the reset is a security question with a hashed answer, with no email, no code and no Electron dialog (`40`, migration `018`, the next free number).
 
 ## 1. What has landed (verified in git, 2026-10-17)
 
@@ -26,15 +26,14 @@ the same order on each form for consistency." That adds the program rules of sec
 ## 2. The order and the parallelism
 
 ```text
-backend, independent (cut now):   B2 generated ids (018) --+    B3 security-question reset (019, after B2 merges) --+
-F (landing) --> [B2 landed] --> 3a Accounts (35) --+--> 3b Channels + Preview (36) --+                   |
+backend, independent (cut now):   B3 security-question reset (migration 018) -----------------------------+
+F (landing) --> 3a Accounts (35) --+--> 3b Channels + Preview (36) --+                                      |
                                                    +--> 3c Providers + Titles (37) --+--> 4 Sweep (section 8) --> done
                                                    +--> 3d Playlists + Jobs (38) ----+                   |
                                                    +--> R reset gate (40) (needs 3a and B3) -------------+
 ```
 
-- **B2 first, now.** The backend generates the integer `idNumber` for every channel, account and title from per-table sequences (section 7.1). It touches only `src/backend`, so it runs beside F and **must have landed before 3a is cut**: the Accounts `Id` column and row (`35`) show the generated number, so 3a's Id column lands after B2 and not before. 3b (Channels: no id sent on create, the number shown) and 3c (every title's `Id`) depend on it too.
-  **B3** (security-question password reset, `40`) is also backend-only and independent of B2's tables; it takes migration `019` and so is merged after B2 (the numbers `018` and `019` must follow the order).
+- **B3, the next backend wave, now.** The security-question password reset (`40`) is backend-only, touches only `src/backend`, takes migration `018` (the next free number after `017-admin-ui-state.sql`) and runs beside F and the admin waves. There is no B2 (the id wave was withdrawn).
 - **3a first, alone.** Accounts needs the shared record pieces (`StateWord`, `useRecordForm`), the per-tab slice registry and the stale registry (section 5), and now the **shared bulk piece** (section 6); every
   other wave needs those, so 3a lands them first. 3a also finishes the real session (the actor's id, the serial, the audit service wired).
 - **R (the reset gate view)** is an admin-only wave that runs in parallel with 3b to 3d once 3a and B3 have landed; it owns the gate files, which no tab wave touches.
@@ -52,11 +51,10 @@ F (landing) --> [B2 landed] --> 3a Accounts (35) --+--> 3b Channels + Preview (3
 | 2 | admin shell and record pieces | A | `28` | Wave 1 | Done (visual acceptance of the fixture pages is moot; superseded) | `4aca5f8` |
 | 2a | auth gate and form | A2 | `34` | Wave 2 | Done | `487b934`, `a19845e` |
 | F | foundation: library pieces, request layer, real auth, schemas, service stubs | A | this document | Wave 2a | Landing (merging `admin/channels` into `family-port`) | `6fcbeda`, `4386de2`, `07b60d7` |
-| B2 | backend: EVERY backend table gets a generated integer primary key from its `AUTOINCREMENT` sequence (migration `018` rebuilds the seven tables whose key is a string, numbering existing rows in creation order); the API keeps its string `id` and adds `idNumber` (section 7.1) | B2 | this document, section 7.1 | nothing | Not started | |
-| B3 | backend: password reset by security question (migration `019`: question and answer hash on accounts, the attempt table; `PUT /api/auth/me/security-question`, `reset-start`, `reset`) | B3 | `40` | B2 merged (migration order) | Not started | |
-| 3a | real sign-in finished, the shared record pieces and the **bulk piece**, and the Accounts tab with its bulk verbs | A | `35` | F, B2 | Not started | |
-| 3b | Channels and the Preview window, with bulk verbs | A | `36` | 3a, B2 | Not started | |
-| 3c | Providers and Titles, with bulk verbs | A | `37` | 3a, B2 | Not started | |
+| B3 | backend (the next backend wave): password reset by security question (migration `018`: question and answer hash on accounts, the attempt table; `PUT /api/auth/me/security-question`, `reset-start`, `reset`) | B3 | `40` | nothing | Not started | |
+| 3a | real sign-in finished, the shared record pieces and the **bulk piece**, and the Accounts tab with its bulk verbs | A | `35` | F | Not started | |
+| 3b | Channels and the Preview window, with bulk verbs; the backend assigns a new live channel's id (`36` 3.2) | A | `36` | 3a | Not started | |
+| 3c | Providers and Titles, with bulk verbs | A | `37` | 3a | Not started | |
 | 3d | Playlists and Jobs, with bulk verbs | A | `38` | 3a (and 3b for one acceptance row) | Not started | |
 | R | the reset views in the gate (`Forgot password?`, email, question, answer) and Settings > Account (the security question) | A | `40` | 3a, B3 | Not started | |
 | 4 | sweep: account state, About, README, no-fixtures, accessibility, both sizes, build and serve | A | this document, section 8 | 3a to 3d, R | Not started | |
@@ -70,13 +68,12 @@ Paths under `src/admin/src/` unless marked. A worker edits only its row; anythin
 | Worker | Owns (create and edit) |
 |---|---|
 | 3a | `store/session-slice.ts`, `store/audit-slice.ts`, `store/app-store.ts`, `store/selectors.ts`, `store/slices/*` (all six placeholders, the registry, `stale.ts`), `store/accounts-slice.ts`; `types/auth.ts`, `types/admin-account.ts`; `services/accounts.ts`, `audit.ts`, `account-flows.ts`, `account-password-flow.ts`, `schemas/account-schema.ts`, `schemas/audit-schema.ts`; `components/accounts/*`, `components/session/SessionState.tsx`, `components/records/StateWord.tsx`, `hooks/useRecordForm.ts`, `hooks/useAccountsLoad.ts`, `useAccountActions.ts`, `useAuditTail.ts`; `lib/account-*.ts`, `lib/audit-merge.ts`, `lib/format-when.ts`, `lib/event-sentence.ts`; `components/chrome/AppShell.tsx`, `AdminEventsDrawer.tsx`; `constants/account-*.ts`; `pages/AccountsPage.tsx`; `src/shared/http/src/api-error.ts`, `create-api.ts` |
-| 3b | `store/channels-slice.ts`, `store/slices/channels.ts`; `services/channels.ts`, `channel-flows.ts`, `preview-player.ts`, `schemas/channel-schema.ts`; `components/channels/*`, `components/records/FolderRow.tsx`, `VideoList.tsx`; `components/overlays/OverlayHost.tsx`, `types/overlays.ts`; `hooks/useChannelsLoad.ts`, `useChannelActions.ts`, `usePreviewSession.ts`, `usePreviewPlayer.ts`; `lib/channel-*.ts`, `preview-*.ts`, `video-order.ts`; `constants/channel-*.ts`, `preview-copy.ts`; `pages/ChannelsPage.tsx` |
+| 3b | `store/channels-slice.ts`, `store/slices/channels.ts`; `services/channels.ts`, `channel-flows.ts`, `preview-player.ts`, `schemas/channel-schema.ts`; `components/channels/*`, `components/records/FolderRow.tsx`, `VideoList.tsx`; `components/overlays/OverlayHost.tsx`, `types/overlays.ts`; `hooks/useChannelsLoad.ts`, `useChannelActions.ts`, `usePreviewSession.ts`, `usePreviewPlayer.ts`; `lib/channel-*.ts`, `preview-*.ts`, `video-order.ts`; `constants/channel-*.ts`, `preview-copy.ts`; `pages/ChannelsPage.tsx`; in the backend only `src/backend/src/types/channel-input.ts`, `src/backend/src/services/channel-service.ts` and `src/backend/test/channels.test.ts` (the live-id change, `36` 3.2) |
 | 3c | `store/providers-slice.ts`, `titles-slice.ts`, `store/slices/providers.ts`, `titles.ts`; `services/providers.ts`, `titles.ts`, `provider-flows.ts`, `title-flows.ts`, `schemas/provider-schema.ts`, `title-schema.ts`; `components/providers/*`, `components/titles/*`, `components/records/SeasonList.tsx`; `hooks/useProviders*.ts`, `useTitle*.ts`; `lib/provider-*.ts`, `title-*.ts`, `season-edit.ts`; `constants/provider-*.ts`, `title-*.ts`; `pages/ProvidersPage.tsx`, `TitlesPage.tsx`; library: `src/shared/ui/src/controls/ChipsInput.tsx` and its test |
 | 3d | `store/playlists-slice.ts`, `jobs-slice.ts`, `store/slices/playlists.ts`, `jobs.ts`; `services/playlists.ts`, `jobs.ts`, `playlist-flows.ts`, `job-flows.ts`, `job-run-queue.ts`, `schemas/playlist-schema.ts`, `job-schema.ts`; `components/playlists/*`, `components/jobs/*`; `hooks/usePlaylists*.ts`, `useJob*.ts`; `lib/playlist-*.ts`, `job-*.ts`; `constants/playlist-*.ts`, `job-*.ts`; `pages/PlaylistsPage.tsx`, `JobsPage.tsx` |
 | 4 | `services/health.ts`, `account-state.ts`, `schemas/health-schema.ts`, `account-state-schema.ts`; `store/ui-state-slice.ts`; `hooks/useAccountHydration.ts`, `useShellWriteback.ts`, `useSettingsWriteback.ts`; `components/session/SessionState.tsx` (adds the hooks); `components/settings/*`; `lib/account-state-map.ts`; `lib/event-sentence.ts`; `README.md`; `vite.config.mts`; `src/shared/http` (the root-path option); `test/no-fixtures.test.ts`; any file for the a11y and keyboard pass |
 | 3a (added) | the bulk piece: `lib/bulk-plan.ts`, `lib/bulk-run.ts`, `hooks/useBulkAction.ts`, `components/records/BulkReport.tsx`; the additive edits to `components/records/IndexToolbar.tsx`, `lib/index-verbs.ts`, `store/work-slice.ts`, `lib/running-work.ts`, `components/chrome/AdminStatusbar.tsx` (`N working`) and, in the library, `src/shared/ui/src/shell/ToolbarStrip.tsx` (an armed two-step verb) with its test |
-| B2 | `src/backend/**` for ids: `store/migrations/018-generated-ids.sql`, `store/migrate.ts` (the per-migration foreign-keys flag, the only change there), `store/channel-repository.ts` (channels and `channel_videos`), `store/account-repository.ts`, `store/refresh-token-repository.ts`, `store/ui-state-repository.ts`, `store/title-repository.ts` (`titles` and `title_lists`), `store/playlist-repository.ts` and `store/job-repository.ts` (checked, no change), `services/channel-service.ts` and `types/channel-input.ts` (optional live id), `services/auth-service.ts` (the JWT `sub` stays the API string), `services/title-records.ts`, `services/title-sync.ts`, `services/title-list-cache.ts`, `services/title-reads.ts`, the answer types and views (`idNumber`), `test/id-numbers*.test.ts`. **Not** the fileserver (section 7.1) |
-| B3 | `src/backend/**` for the security-question reset: `store/migrations/019-security-questions.sql` (`reset_attempts` with an integer primary key), `store/reset-attempts-repository.ts`, `store/account-repository.ts` (the two fields), `constants/security-questions.ts`, `services/security-question-service.ts`, `api/auth-security.ts`, `types/account.ts` (schemas, `securityQuestionSet`), `constants/errors.ts` (`auth.reset_invalid`), `services/service-registry.ts`, `app.ts` (register), tests (`40` section 3.4). No Electron, no tray, no sink |
+| B3 | `src/backend/**` for the security-question reset: `store/migrations/018-security-questions.sql`, `store/reset-attempts-repository.ts`, `store/account-repository.ts` (the two fields), `constants/security-questions.ts`, `services/security-question-service.ts`, `api/auth-security.ts`, `types/account.ts` (schemas, `securityQuestionSet`), `constants/errors.ts` (`auth.reset_invalid`), `services/service-registry.ts`, `app.ts` (register), tests (`40` section 3.4). No Electron, no tray, no sink |
 | R | `components/session/*` (gate: `ForgotLink`, `ResetEmailForm`, `ResetAnswerForm`), `pages/SignInPage.tsx`, `lib/gate-state.ts` (untouched), `lib/reset-state.ts`, `constants/sign-in-copy.ts`, `constants/reset-copy.ts`, `constants/security-questions.ts`, `services/auth-port.ts`, `services/security-question.ts`, `types/auth.ts`, `hooks/useReset*.ts`, `lib/auth-errors.ts`, `constants/api-sentences.ts` (the reset sentence), `constants/settings-sections.ts` and `components/settings/SecurityQuestionSection.tsx` (the Settings > Account page: **R owns these; Wave 4 does not touch them**), tests (`40` section 4.5) |
 | coordinator | root `package.json` (`dev`, `kill-ports`, `admin:build`), `scripts/**`, `AGENTS.md`, `docs/**`, every `.env`, the merges |
 
@@ -86,10 +83,10 @@ Paths under `src/admin/src/` unless marked. A worker edits only its row; anythin
 
 ### 5.0 Program rules (owner, 2026-10-17; they bind every tab doc, and amend `28` 7.3 without rewriting it)
 
-1. **Name first.** On every New form and every Details group the order is: the record's **Name** first; then the kind / type / family switch where there is one; then the record's own fields; then the optional ones; then the read-only facts, with **`Id`** last.
+1. **Name first.** On every New form and every Details group the order is: the record's **Name** first; then the kind / type / family switch where there is one; then the record's own fields; then the optional ones; then the read-only facts.
    New account is `Name`, `Email`, `Password`; New channel `Name`, `Kind`, `Number`, `Category`, `Folder` or `Stream address`; New provider `Name`, `Family`, `Source`, `Movie template`; New title `Title` (its name), `Kind`, `Year`; New playlist `Name` (optional, still first), `Address`;
    New job `Name`, `Type`, then its target. `28` 7.3's table lists Email before Name for an account; that line is superseded.
-2. **Every record shows a real id number.** A list has an `id` column (mono, first) and Details a read-only `Id` row (last). **Every backend record shows its generated, never-reused integer**: channels, accounts and every title (synced and manual) show `idNumber` from their sequence (section 7.1); providers, playlists and jobs show their `AUTOINCREMENT` `id`, which is already that sequence and is not renumbered. A synced title's TMDB id is shown in its own row, never as its Id. The admin derives no id.
+2. **Ids do not change** (section 7.1). The admin never derives an id; a new live channel's id is assigned by the backend (`36` 3.2).
 3. **Ticks arm bulk verbs.** Every list's toolbar carries bulk verbs on the ticked rows, through the one shared piece of section 6; a verb that cannot run is disabled with its reason as a tooltip (`Button reason`), never `aria-disabled`.
 
 ### 5.1 The collision plan (shared files)
@@ -104,8 +101,8 @@ The shared surface of the app is the store and a few lists of constants. The pla
 4. **One owner per cross-cutting file:** `OverlayHost.tsx` and `types/overlays.ts` are 3b's (the `preview` flow); `ChipsInput.tsx` is 3c's; `AppShell.tsx`, `AdminEventsDrawer.tsx`, `event-sentence.ts` are 3a's, then 4's; `README.md`, `vite.config.mts`, `OverlayHost` bounds persistence are 4's.
 5. **Tests:** a worker adds new files under `test/` and `test/support/`; it never edits another wave's test or a shared support file (`fake-backend.ts`, `store.ts`); a support need is a new file `test/support/<tab>-*.ts`.
 6. **Services:** a worker may widen its own service interface additively (`run(id, override?)`, `detail`), never `service-types.ts`.
-7. **Merging.** The coordinator merges in landing order (B2, B3, 3a, 3b, 3c, 3d, R, 4; B2 before B3 because of the migration numbers `018` and `019`). Every worker's branch is cut from the same `family-port` commit and never rebases. Expected conflicts: none. If git reports one, the coordinator resolves it only in a registry or test-support file, records it in the merge commit, and sends any conflict inside a worker's own files back to that worker with the exact output (`07` 6.5, step 4). After each merge the coordinator runs `node scripts/check/gate.mjs` before cutting or accepting the next.
-8. **Backend and package files:** only the backend workers B2 and B3 edit `src/backend` (their rows in section 4); no admin worker edits it, and nobody edits root `package.json`, `scripts/**` or any `.env`.
+7. **Merging.** The coordinator merges in landing order (B3, 3a, 3b, 3c, 3d, R, 4). Every worker's branch is cut from the same `family-port` commit and never rebases. Expected conflicts: none. If git reports one, the coordinator resolves it only in a registry or test-support file, records it in the merge commit, and sends any conflict inside a worker's own files back to that worker with the exact output (`07` 6.5, step 4). After each merge the coordinator runs `node scripts/check/gate.mjs` before cutting or accepting the next.
+8. **Backend and package files:** only the backend worker B3 edits `src/backend` (its row in section 4), except the three live-id files the Channels wave changes (`36` 3.2); no other admin worker edits it, and nobody edits root `package.json`, `scripts/**` or any `.env`.
 9. **The shared bulk piece** (section 6) is 3a's and frozen after it lands; 3b to 3d add only their own `lib/<tab>-bulk.ts` and pass it to `useBulkAction`.
 
 ## 6. The shared bulk piece (built by 3a, consumed by 3b to 3d)
@@ -164,62 +161,16 @@ useBulkAction<Item>(opts: {
 
 **Tests (written and run by 3a, `src/admin/test`):** `bulk-plan.test.ts` (reason priority: nothing ticked, all skipped, first skipped reason; a rule that sees earlier plan rows), `bulk-run.test.ts` (strict order; a failure does not stop the rest; progress callbacks; `isCurrent` false aborts and reports `aborted`; never throws; the sentence is the `ApiError` message), `bulk-summary.test.ts` (the sentence for done/failed/skipped combinations), `bulk-report-markup.test.ts` (rows, `Dismiss`, absent when empty), `bulk-work.test.ts` (`working` set and cleared; `N working` readout), `toolbar-armed-markup.test.ts` in `src/shared/ui/test` (rest label, armed label, disarm on blur, reason wrapper unchanged). Each tab adds `<tab>-bulk.test.ts` for its rules.
 
-## 7. Backend waves B2 (real ids) and B3 (password reset)
+## 7. Ids and the backend reset wave
 
-### 7.1 B2 - real id numbers (owner: "give them a real id number, not derived")
+### 7.1 Ids: no change (owner, final)
 
-**What the code has (read, 2026-10-17).** Providers, playlists and jobs have `INTEGER PRIMARY KEY AUTOINCREMENT` ids (never reused). Channels have a `TEXT` id (a stream row `ch_<uuid>`, a live row the kebab-case string the caller sends, required on create);
-accounts `acct_<uuid>`; titles `movie-603` / `tv-1399` for synced rows and `custom-<uuid>` for manual ones. The fileserver and players read the channel's string id (`/live/<id>/master.m3u8`, `/logos/<id>.png`, `channel_videos.channel_id`, `GET /api/channels`).
+No record's id, key or column changes, there is no id migration, and no `Id` column or row is added for it. The one id item is inside the Channels wave (`36` 3.2): the backend assigns a new **live** channel's id on create (`live-<uuid>`), the way it already assigns a stream channel's `ch_<uuid>` (`services/channel-service.ts`); the create body sends no id, the admin never derives one from the Name, and existing ids are untouched.
 
-**Rule (EVERYTHING, final, owner 2026-10-17: "if you arent giving everything ids then dont change the ids").** Every backend table that holds records gets a **generated integer primary key from a sequence** (SQLite `AUTOINCREMENT`: never reused, numbered in creation order for existing rows by migration `018`). The backend's API keeps returning the **existing string ids exactly as they are today**, in the same `id` field: `ch_<uuid>` / `live-<n>` for channels, `acct_<uuid>` for accounts, `movie-603` / `tv-1399` / `custom-<uuid>` for titles. Each record's generated integer is returned as a new field, `idNumber`, and the admin shows it read-only as `Id`. Nothing in the API changes name or type, so **the fileserver changes nothing** (its own database and its reads of `id` are untouched). Providers, playlists, jobs and audit entries already have integer primary keys, so they keep them as they are.
-
-
-**Two title stores (the workers must touch the right one).**
-- **The backend's catalogue (changed by B2)**: the backend `titles` table (`src/backend/src/store/migrations/004-titles.sql`, rebuilt by `009-title-records.sql`), with `origin` `tmdb` or `manual`, and its `store/title-repository.ts`, `title-list-cache.ts`, `title-reads.ts`, `title-sync.ts` and `title-records.ts`. The admin reads it through `/api/titles*`.
-- **The fileserver's cache (not changed)**: the fileserver `titles` table (`src/fileserver/src/store/migrations/001-init.sql`), read by `services/admin-titles.ts` and `titles-service.ts`, and referenced by `watch_entries`, `favorites` and `collection_items`. No migration, no read change. The fileserver's title reads ignore the new `idNumber` field.
-
-**Backend change (worker B2; `src/backend` only; migration `018-generated-ids.sql`, one migration for every table).**
-
-**Which tables, and what each gets** (every backend table, from the migrations; none is left out):
-
-| Table | Today | After 018 |
-|---|---|---|
-| `admin_accounts` | `id TEXT` (`acct_<uuid>`) | `id INTEGER PRIMARY KEY AUTOINCREMENT`; the string moves to `api_id TEXT NOT NULL UNIQUE` |
-| `refresh_tokens` | `id TEXT`, `account_id TEXT` | `id INTEGER PRIMARY KEY AUTOINCREMENT`; `account_id INTEGER REFERENCES admin_accounts (id)` |
-| `admin_ui_state` (`017`) | `account_id TEXT PRIMARY KEY` | `id INTEGER PRIMARY KEY AUTOINCREMENT`; `account_id INTEGER NOT NULL UNIQUE REFERENCES admin_accounts (id)` |
-| `channels` | `id TEXT` (`ch_<uuid>` or the live id) | `id INTEGER PRIMARY KEY AUTOINCREMENT`; the string moves to `api_id TEXT NOT NULL UNIQUE` |
-| `channel_videos` | `channel_id TEXT REFERENCES channels (id)` | `channel_id INTEGER REFERENCES channels (id)`, mapped through `channels.api_id` |
-| `titles` | `id TEXT` (`movie-603`, `tv-1399`, `custom-<uuid>`) | `id INTEGER PRIMARY KEY AUTOINCREMENT`; the string moves to `api_id TEXT NOT NULL UNIQUE` |
-| `title_lists` | `key TEXT PRIMARY KEY` (a browse answer's query key) | `id INTEGER PRIMARY KEY AUTOINCREMENT`; `key TEXT NOT NULL UNIQUE`; `ids` (the JSON list of API title ids) unchanged |
-| `providers`, `playlists`, `sync_jobs`, `audit_log` | `INTEGER PRIMARY KEY AUTOINCREMENT` already | no change |
-| `backend_revision`, `sync_seed` | one-row tables, `id INTEGER PRIMARY KEY CHECK (id = 1)` already | no change |
-| `reset_attempts` (B3, `019`) | new | `id INTEGER PRIMARY KEY AUTOINCREMENT` from the start (`40`) |
-
-**The sequence** is SQLite's own `AUTOINCREMENT` (the `sqlite_sequence` counter, one per table). It never gives a deleted number back, and a new insert takes the next number. No separate counter table exists.
-
-**The mechanics of 018, in one transaction**, using SQLite's documented table-rebuild procedure (create the new table under a temporary name, copy, drop the old one, rename):
-1. The migration runner turns `PRAGMA foreign_keys` **off** before the transaction and runs `PRAGMA foreign_key_check` before the commit (SQLite ignores the pragma inside a transaction; `migrate.ts` gets a per-migration flag for this, the only change to `migrate.ts`). Without it, dropping `channels` would cascade-delete `channel_videos`.
-2. Rebuild each table that changes (`admin_accounts`, `refresh_tokens`, `admin_ui_state`, `channels`, `channel_videos`, `titles`, `title_lists`), **parents first**, copying every row with its new integer `id` taken from the creation order: `INSERT INTO new (id, api_id, ...) SELECT ROW_NUMBER() OVER (ORDER BY created_at, rowid), id, ... FROM old`. `created_at` orders accounts and channels; `titles` and `title_lists` have no creation time, so they are ordered by `rowid` alone (their rowids were assigned in insertion order by the 009 rebuild and every later insert). The explicit ids also set `sqlite_sequence` to the largest number, so the next insert continues above it.
-3. Child rows (`refresh_tokens`, `admin_ui_state`, `channel_videos`) are copied by joining the old string to the parent's `api_id`, so each child points at the parent's integer.
-4. Recreate every index the old tables had (`channels_live_number` on the live number, `titles_tmdb` on `(kind, tmdb_id) WHERE origin = 'tmdb'`, `idx_titles_fetched`, `idx_titles_origin`, the account and token indexes), then `PRAGMA foreign_key_check` must report nothing.
-5. The existing string values become `api_id` unchanged, so every API answer's `id` is byte-identical before and after 018.
-
-**Writes after 018.** Every repository finds a record by `api_id` (the service keeps passing the API string it was given), and a new record takes its integer from the insert:
-- a stream channel, an account, a manual title: the string is generated first (`ch_<uuid>`, `acct_<uuid>`, `custom-<uuid>`), the integer comes from the insert;
-- a **live** channel without a caller id: the row is inserted, its integer read back, and its `api_id` set to `live-<id>` in the same transaction (the string needs the number);
-- a synced title (`movie-603`, `tv-1399`) and every write that updates it: `INSERT ... ON CONFLICT (api_id) DO UPDATE`, which keeps the integer. A title re-created after a delete takes a **new** integer; the Delete tooltips say a synced row returns, now with a new Id.
-
-**What the API returns (unchanged field names).** `id` stays the string the fileserver reads (`ch_…`, `live-…`, `acct_…`, `movie-603`, `custom-…`). New field `idNumber` (number) on every record of every answer (`BackendChannel`, `AdminAccount`, `AdminTitleRow`, providers, playlists, jobs). For providers, playlists and jobs `id` is already that number, so `idNumber` repeats it. JWT `sub` and audit `actorId` / `subject` keep the API string, as they are today.
-- Channel create: `id` becomes **optional** on a live channel (`types/channel-input.ts`); absent, the backend assigns the string id `live-<idNumber>` (kebab-case, within `LIVE_ID_MAX`); a caller-supplied id (scripts, the seeded test channels, tests) is still validated and kept. Stream rows keep `ch_<uuid>`. The admin sends no id.
-- Answers gain `idNumber: number` on `BackendChannel` (admin and public reads), `AdminAccount`, and **every** `AdminTitleRow` (synced and manual; the title list, detail and writes). Additive: the fileserver's channel schema is non-strict (no `.strict()` in `live-view.ts` or `live-channels-service.ts`); B2 checks that the fileserver's title reads ignore the new field, and the gate runs its tests.
-- Tests (`test/id-numbers.test.ts`, `id-numbers-migration.test.ts`; written and run by B2): the migration rebuilds a 017 database: every existing channel, account, title, token, UI-state row and video row survives with the same `api_id`, and children point at the right integer; the integers follow creation order (titles by rowid); `foreign_key_check` is clean; every API answer's `id` is byte-identical before and after; the next insert continues above the largest number; a deleted number is never given again; a live create without an id gets `live-<idNumber>` and one with an id keeps it; a synced title's update keeps its integer and a re-insert after a delete takes a new one; `idNumber` is on every answer of every table (providers, playlists and jobs included); the fileserver's title reads pass a title with the new field; `user_version` is at least 18; the newer-schema rule still refuses an older binary.
-- Effects: `36` (channels: the `Id` row and column show `idNumber`), `35` (accounts), `37` (every title's `Id`, providers' `Id`), `38` (playlists and jobs: `Id` shows the existing integer, no migration change), `29` section 5 (shapes), the fileserver (no table change, no read change).
-
-**The title Id, decided (owner, second round):** every title shows its generated `idNumber` as `Id`, on every title list and in Details, read-only. A synced title's TMDB id is still `tmdbId` and is shown in its own row ("TMDB id"), never as the Id. The earlier judgement "a synced title's Id is its TMDB id" is withdrawn.
 
 ### 7.2 B3 - security-question password reset
 
-`40` is the whole plan (backend worker B3 and the gate view R). It replaces the earlier email and local-code design in full: there is no email, no reset code, no console sink, no Electron dialog and no tray action. B3 adds, in migration `019-security-questions.sql`: a security question (a picklist number) and a scrypt hash of its normalised answer on `admin_accounts`, and a `reset_attempts` table keyed by the normalised email (so an unknown email locks the same way). Routes: `PUT /api/auth/me/security-question` (signed in, own account, current password required), `POST /api/auth/reset-start` (answers the account's question, or a stable decoy question for any other email) and `POST /api/auth/reset` (one `auth.reset_invalid` for every failure; five wrong answers lock the email for 15 minutes; success replaces the password, revokes every session and clears the lockout). B3 does not touch the title or channel stores and is merged after B2 (`019` follows `018`).
+`40` is the whole plan (backend worker B3 and the gate view R). It replaces the earlier email and local-code design in full: there is no email, no reset code, no console sink, no Electron dialog and no tray action. B3 is the next backend wave. It adds, in migration `018-security-questions.sql` (the next free number after `017`): a security question (a picklist number) and a scrypt hash of its normalised answer on `admin_accounts`, and a `reset_attempts` table keyed by the normalised email (so an unknown email locks the same way). Routes: `PUT /api/auth/me/security-question` (signed in, own account, current password required), `POST /api/auth/reset-start` (answers the account's question, or a stable decoy question for any other email) and `POST /api/auth/reset` (one `auth.reset_invalid` for every failure; five wrong answers lock the email for 15 minutes; success replaces the password, revokes every session and clears the lockout). B3 does not touch the title or channel stores.
 
 ## 8. Wave 4 - the sweep (one worker, after 3a to 3d and R)
 
@@ -238,7 +189,7 @@ Exit: the six checks pass, a full pass of all six tabs at both sizes (section 9)
 
 **Automated.** After each merge: `node scripts/check/gate.mjs` (typecheck, lint, rule checker, every program's tests on free ports and temporary `DATA_DIR`s) must print `gate: PASS`.
 
-**The real wire, on a temporary backend.** The coordinator starts a fresh backend per drive, never the owner's: `PORT` a free port (distinct per wave: 8391 for 3a, 8392 for 3b, 8393 for 3c, 8394 for 3d, 8395 for 4, 8396 for B2, 8397 for B3 and R; never 8090, 8091, 8190, 8191, 3001, 5171, 5172, 5271, 5272, 9222, 9223), `DATA_DIR` an empty folder under `%TEMP%`, a throwaway `JWT_SECRET`, a **test bootstrap owner** (`ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD`; the constants of `35` section 3.3), `ADMIN_DIST` the landed tree's `src/admin/dist` built with `npm run build --prefix src/admin`, the variables in the process environment and **no `--env-file`** (the owner's `src/backend/.env` is never loaded: `config.ts` reads `process.env` only and `DATA_DIR` otherwise defaults to the owner's `~\.giga-stream-admin`). It is launched detached through `Win32_Process.Create` (`07` 4) with the PID kept, checked (`GET /healthz`, `admin.db` in the temp folder, the owner's data folder's timestamps unchanged), and stopped by PID. Per wave, extra throwaways: the fixture videos of `scripts/fixtures` for 3b; the backend's local TMDB stub (`TMDB_BASE`) and no token for 3c; `ALLOW_LOOPBACK_STREAMS` with a throwaway static playlist server for 3d.
+**The real wire, on a temporary backend.** The coordinator starts a fresh backend per drive, never the owner's: `PORT` a free port (distinct per wave: 8391 for 3a, 8392 for 3b, 8393 for 3c, 8394 for 3d, 8395 for 4, 8397 for B3 and R; never 8090, 8091, 8190, 8191, 3001, 5171, 5172, 5271, 5272, 9222, 9223), `DATA_DIR` an empty folder under `%TEMP%`, a throwaway `JWT_SECRET`, a **test bootstrap owner** (`ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD`; the constants of `35` section 3.3), `ADMIN_DIST` the landed tree's `src/admin/dist` built with `npm run build --prefix src/admin`, the variables in the process environment and **no `--env-file`** (the owner's `src/backend/.env` is never loaded: `config.ts` reads `process.env` only and `DATA_DIR` otherwise defaults to the owner's `~\.giga-stream-admin`). It is launched detached through `Win32_Process.Create` (`07` 4) with the PID kept, checked (`GET /healthz`, `admin.db` in the temp folder, the owner's data folder's timestamps unchanged), and stopped by PID. Per wave, extra throwaways: the fixture videos of `scripts/fixtures` for 3b; the backend's local TMDB stub (`TMDB_BASE`) and no token for 3c; `ALLOW_LOOPBACK_STREAMS` with a throwaway static playlist server for 3d.
 
 **Visual.** The real built admin in the connected Chrome (`http://127.0.0.1:<port>/admin/`) at **1600 x 1000** and **900 x 640**, dark and light, each touched surface compared with the interface's equivalent screen (the Collections window for the pattern, Settings for the window) and the mockup (`D:\Projects\giga-stream-poc\src\admin-mockup`, served only with the owner's say) for content; measured, not eyeballed: heights (titlebar 40, statusbar 24, toolbar 40, form row 36, grid row 36, drawer 160), one label column per page, the six New forms the same shape. A page-level recorder (a `fetch` wrapper in the page, outside the repository, never writing to the server) proves every `/api` request but login and refresh carries `Authorization`; `localStorage`, `sessionStorage`, cookies and IndexedDB are empty before and after; the console is clean. A skeleton wears no sentence; state is a word, never a dot; a control is wired or disabled with its reason.
 **The Electron windows.** The backend's own window (debug port 9223) and the desktop app's (9222) are looked at on the owner's real stack for UI state only (the gate, the shell, `Choose` opening its dialog and being cancelled); nothing is written to the owner's data and no sign-in is attempted on the owner's backend. The caption strip follows a theme switch. A drive that must write (every create, save and delete) runs on the temporary backend, in Chrome.
@@ -250,16 +201,15 @@ Exit: the six checks pass, a full pass of all six tabs at both sizes (section 9)
 
 | Wave | Worktree | Branch | Cut from |
 |---|---|---|---|
-| B2 | `backend-ids` | `backend/ids` | `family-port` now (backend only) |
-| B3 | `backend-reset` | `backend/reset` | `family-port` after B2 merges |
-| 3a | `admin-accounts` | `admin/accounts` | `family-port` after F and B2 |
+| B3 | `backend-reset` | `backend/reset` | `family-port` now (backend only) |
+| 3a | `admin-accounts` | `admin/accounts` | `family-port` after F |
 | 3b | `admin-channels-tab` | `admin/channels-tab` | `family-port` after 3a |
 | 3c | `admin-providers-titles` | `admin/providers-titles` | `family-port` after 3a |
 | 3d | `admin-playlists-jobs` | `admin/playlists-jobs` | `family-port` after 3a |
 | R | `admin-reset-gate` | `admin/reset-gate` | `family-port` after 3a and B3 |
 | 4 | `admin-sweep` | `admin/sweep` | `family-port` after 3d and R |
 
-The two backend workers follow `07` 6.1 (one worker per real sub-project, the admin backend): B2 and B3 are separate only because they are independent and ordered by migration number; either brief says the same rules apply (tests written AND run, fast, temporary `DATA_DIR`).
+The backend worker B3 follows `07` 6.1 (one worker per real sub-project, the admin backend); its brief says the same rules apply (tests written AND run, fast, temporary `DATA_DIR`).
 
 ## 11. Open decisions for the owner
 
@@ -268,14 +218,13 @@ Settled by the owner's 2026-10-17 answers (struck from the defaults): ticks now 
 | # | Decision | Default taken |
 |---|---|---|
 | 1 | ~~Ticks only select~~ | **settled:** bulk verbs (section 6) |
-| 2 | ~~Channel id derived~~ | **settled:** a real `idNumber` (section 7.1) |
+| 2 | ~~Channel id derived~~ | **settled:** the backend assigns a new live channel's id; no other id changes (section 7.1) |
 | 3 | ~~Playlist Name required~~ | **settled:** optional, still first (section 5.0) |
 | 4 | `07` 6.3 says a worker does not run the suite; this program has workers write AND run their fast tests | run them; amend `07` 6.3 |
 | 5 | ~~No password-reset path~~ | **settled (second round):** a security question with a hashed answer, set while signed in; no email, no code (`40`) |
 | 6 | The stale `PORT=3001` line in `src/backend/.env` | the coordinator backs up and removes it (`35` 3.2) |
 | 7 | `npm run dev` replaces the headless backend with the backend's Electron window (`29` 14) | replace, in Wave 4 |
 | 8 | The sweep's account-state persistence comes last | last: it changes nothing a tab needs to be usable |
-| 9 | ~~A synced title's `Id` is its TMDB id~~ | **settled (second round, owner: "I said a few responses back we should be generating ids"):** every title, synced and manual, shows its generated `idNumber` as `Id`; the TMDB id is its own row (section 7.1) |
 | 10 | Bulk `Delete` on Titles removes manual titles only | **settled (second round, owner: "bulk delete should apply for manual and auto added"):** manual and synced; a synced title comes back on the next catalog sync or browse that lists it; the summary says so (`37`) |
 | 13 | The reset's answers: a fixed picklist of eight questions; a question-less account gets a generic reason; accounts start without a question | as stated (`40` section 7); the owner may overrule |
 | 11 | Bulk `Disable` / `Delete` on Accounts skips the signed-in account and keeps one account enabled | as stated (`35` 5.10) |
@@ -292,11 +241,9 @@ Settled by the owner's 2026-10-17 answers (struck from the defaults): ticks now 
 | 6 | `07` 6.3: workers do not run tests | this program asks them to (decision 4) |
 | 7 | `29` 14 and 22: the `npm run dev` stack change and the check-rules edit are "when this lands" | not applied; they are the coordinator's, in Wave 4 |
 | 8 | `37`/`38`: the foundation's `RecordService` types every `update` as a PATCH-like call | providers save by `PUT`; jobs and playlists widen `run` and `remove` additively |
-| 9 | `28` 7.3: field order is required fields first; an account's New form is `Email`, `Name`, `Password`; `28` 7.2 gives each index a single forward verb | superseded by the rules of 5.0 (Name first, `Id` last, bulk verbs) |
-| 10 | `29` 5: `BackendChannel.id`, `AdminAccount.id` and `AdminTitleRow.id` are the only ids; a live channel's `id` is required on create | each gains `idNumber`; a live create sends no id (7.1) |
+| 9 | `28` 7.3: field order is required fields first; an account's New form is `Email`, `Name`, `Password`; `28` 7.2 gives each index a single forward verb | superseded by the rules of 5.0 (Name first, bulk verbs) |
+| 10 | `29` 9.1: a live channel's `id` is required on create | the backend assigns it when absent; the admin sends none (`36` 3.2) |
 | 11 | `34` 3 / `03` 7.12: no "forgot password" and no reset route; the gate has "no text link" | superseded by `40` (the gate gains `Forgot password?`; the backend gains two routes) |
 | 12 | `01` 6 says no timers | the reset lock is a stored time checked on use; nothing is armed (`40` section 5) |
-| 14 | `29` 18 and `36` 3.2 (earlier drafts): channel and title ids derived from a name, or a title's Id is its TMDB id | superseded (owner): every backend table gets a generated integer primary key; the API keeps its string `id` and adds `idNumber` (7.1) |
-| 15 | `03` 7.9 and `26` 2.1: the backend's tables keyed by string ids (`channels`, `admin_accounts`, `titles`, `refresh_tokens`, `admin_ui_state`, `channel_videos`, `title_lists`) | all seven become integer-keyed in migration `018` (7.1); the string ids move to `api_id` columns |
-| 15 | `01` 4.1 and `03` 7.9: "one owner of each SQLite database" with two title stores | two title stores exist, the backend catalogue (`titles`, backend migrations 004 and 009) and the fileserver cache (`titles`, fileserver migration 001); B2 changes only the first (section 7.1) |
+| 14 | `36` 3.2 (earlier draft): a live channel's id derived from its name | superseded (owner): the backend assigns it (`live-<uuid>`); no other id changes (7.1) |
 | 13 | `ToolbarStrip` verbs are plain buttons | a destructive bulk verb needs the two-step; the strip gains an additive `armed` field (section 6) |
