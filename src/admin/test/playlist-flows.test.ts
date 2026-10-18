@@ -42,7 +42,7 @@ function rig(script: Partial<PlaylistsService> = {}, jobScript: Partial<JobsServ
   return { flows, calls, reloads };
 }
 /* An info sentence is the newest row of the events drawer, never the notice line (`50` section 2.1). */
-const lastEvent = (): string => state().events.at(-1)?.sentence ?? "";
+const lastEvent = (): string | undefined => state().events.at(-1)?.sentence;
 const everything = (): string => JSON.stringify({ ...state(), tokens: null });
 
 beforeEach(() => {
@@ -75,7 +75,7 @@ describe("the playlist flows", () => {
     const result = await flows.importPlaylist(WEB);
     assert.equal(result.ok, true);
     assert.deepEqual(calls, ["create"]);
-    assert.match(lastEvent(), /^Imported iptv\.example\.test: 3 channels, all disabled\./);
+    assert.match(lastEvent() ?? "", /^Imported iptv\.example\.test: 3 channels, all disabled\./);
     assert.ok(!everything().includes("hunter2"));
   });
 
@@ -121,10 +121,11 @@ describe("the playlist flows", () => {
     const bad = await flows.save(1, { ...draftOf(row(1)), address: "ftp://iptv.example.test/a.m3u" });
     assert.deepEqual([bad.ok, !bad.ok && bad.field], [false, "address"], "the address rule refuses it before any call");
     assert.deepEqual(calls.filter((call) => call.startsWith("update")), []);
+    const rows = state().events.length; /* the refused save's warn row is the newest */
     const saved = await flows.save(1, { ...draftOf(row(1)), address: SECRET });
     assert.equal(saved.ok, true);
     assert.deepEqual(calls.filter((call) => call.startsWith("update")), ["update:1"]);
-    assert.equal(lastEvent(), undefined, "a save says nothing (`50` section 2.1)");
+    assert.equal(state().events.length, rows, "a save says nothing: no new events row (`50` section 2.1)");
     assert.equal(state().stale.channels, true, "a playlist's enabled switch changes what players read");
     assert.ok(!everything().includes("hunter2"));
   });

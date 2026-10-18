@@ -135,7 +135,7 @@ describe("the Preview window", () => {
     state().channelsOpenPreview("a");
     const html = renderLive(createElement(PreviewWindow));
     const left = (page: string, closes: 1 | 2): string => {
-      const at = page.indexOf('role="status"');
+      const at = page.indexOf('<span role="status"');
       let end = at;
       for (let rest = closes; rest > 0; rest -= 1) end = page.indexOf("</span>", end) + 7;
       return page.slice(at, end);
@@ -155,7 +155,7 @@ describe("the Preview window", () => {
     state().channelsPageLoaded(queryKey(state().channels.query), 0, [live("a")], 1, 1);
     state().channelsOpenPreview("a");
     const html = renderLive(createElement(PreviewWindow));
-    const at = html.indexOf('role="status"');
+    const at = html.indexOf('<span role="status"');
     const left = html.slice(at, html.indexOf("</span>", at) + 7);
     assert.equal(left, '<span role="status">loading</span>', "no health word, no separator");
     assert.ok(!/online|offline|not checked/.test(left));
