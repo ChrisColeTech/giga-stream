@@ -4,8 +4,11 @@ import type { CatalogJob, JobRecord, PlaylistJob } from "../store/job-repository
 import type { Store } from "../store/store.js";
 import type { RunCounts, RunResult } from "../types/job-counts.js";
 import type { Actor, AuditService } from "./audit-service.js";
+import type { JobFinished, ProgressReport } from "../types/job-progress.js";
+import type { JobProgressRegistry } from "./job-progress.js";
 import type { PlaylistJobBody, RunOutcome } from "./playlist-job.js";
 import type { TitleService } from "./title-service.js";
+import { firstPhase } from "./title-walk.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
 
@@ -30,10 +33,12 @@ export function createJobRunner(deps: {
   now: () => number;
   playlistJob: PlaylistJobBody;
   titles: TitleService;
+  /** Where every run reports its progress (docs/44 section 3.1). */
+  progress: JobProgressRegistry;
   /** Called when a run settles, so the scheduler can arm for the next due job. */
   onSettled: () => void;
 }) {
-  const { store, audit, now, playlistJob, titles, onSettled } = deps;
+  const { store, audit, now, playlistJob, titles, progress, onSettled } = deps;
   const flights = new Map<number, Flight>();
 
   /** Why this job cannot be run by hand, or undefined when it can: its playlist must be enabled (docs/26 3.11). */
@@ -52,11 +57,22 @@ export function createJobRunner(deps: {
     if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), result, counts);
   }
 
-  async function runPlaylist(job: PlaylistJob, actor: Actor, signal: AbortSignal): Promise<void> {
+  /** The end of a run as the stream tells it: the result the job now holds (none when the job is gone or the store closed). */
+  function finishedOf(jobId: number): JobFinished {
+    try {
+      const ended = store.jobs.find(jobId);
+      return { jobId, ...(ended?.lastResult !== undefined && { lastResult: ended.lastResult }),
+        ...(ended?.lastRunAt !== undefined && { lastRunAt: ended.lastRunAt }) };
+    } catch {
+      return { jobId };
+    }
+  }
+
+  async function runPlaylist(job: PlaylistJob, actor: Actor, signal: AbortSignal, report: ProgressReport): Promise<void> {
     const host = store.playlists.find(job.playlistId)?.host;
     let outcome: RunOutcome;
     try {
-      outcome = await playlistJob(job, signal);
+      outcome = await playlistJob(job, signal, report);
     } catch (error) {
       outcome = { result: "failed", counts: { code: codeOf(error) } };
     }
@@ -74,11 +90,17 @@ export function createJobRunner(deps: {
     }
   }
 
-  async function runCatalog(job: CatalogJob, actor: Actor, triggered: "admin" | "system"): Promise<void> {
+  /** A catalog run's typed result becomes the job's: `ok`, `stopped` (the rows seen are kept) or `failed` with a code. */
+  async function runCatalog(
+    job: CatalogJob, actor: Actor, triggered: "admin" | "system", signal: AbortSignal, report: ProgressReport,
+  ): Promise<void> {
     try {
-      const result = await titles.runNow({ scope: job.config.scope, kind: job.config.kind, pages: job.config.pages }, actor, triggered);
-      if (result.outcome === "ok") keep(job, "ok", { titles: result.titles, stale: titles.status().stale });
-      else keep(job, "failed", { code: ERRORS.internalFailure.code });
+      const request = { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages };
+      const done = await titles.runNow(request, actor, triggered, { signal, report });
+      const counts = { titles: done.titles, stale: titles.status().stale };
+      if (done.result === "ok") keep(job, "ok", counts);
+      else if (done.result === "stopped") keep(job, "stopped", { ...counts, stopped: true });
+      else keep(job, "failed", { code: done.code ?? ERRORS.internalFailure.code });
     } catch (error) {
       keep(job, "failed", { code: codeOf(error) });
     }
@@ -89,9 +111,14 @@ export function createJobRunner(deps: {
     if (flights.has(job.id)) throw new AppError(ERRORS.syncBusy, { id: job.id }, "That job is already running.");
     if (job.type === "catalog" && titles.isSyncRunning()) throw new AppError(ERRORS.syncBusy, { id: job.id });
     const abort = new AbortController();
-    const body = job.type === "playlist" ? runPlaylist(job, actor, abort.signal) : runCatalog(job, actor, triggered);
+    const { signal } = abort;
+    const body = job.type === "playlist"
+      ? runPlaylist(job, actor, signal, progress.start(job.id, "reading"))
+      : runCatalog(job, actor, triggered, signal, progress.start(job.id, firstPhase(job.config)));
     const settled = body.catch(() => undefined).finally(() => {
       flights.delete(job.id);
+      // After the flight is gone, so a client that refetches on `finished` reads the job as no longer running.
+      progress.finish(finishedOf(job.id));
       onSettled();
     });
     flights.set(job.id, { abort, settled });

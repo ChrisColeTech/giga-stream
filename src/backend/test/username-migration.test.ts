@@ -68,8 +68,8 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
 
     const db = new DatabaseSync(file, { readOnly: true });
     try {
-      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout) and 024, so the schema ends at 24.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 24 });
+      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout), 024 and 025, so the schema ends at 25.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 25 });
       const columns = (table: string): string[] => db.prepare(`PRAGMA table_info(${table})`).all().map((r) => String(r.name));
       assert.equal(columns("admin_accounts").some((c) => c.startsWith("email")), false);
       assert.equal(columns("audit_log").includes("actor_email"), false);

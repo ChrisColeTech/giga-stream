@@ -38,6 +38,12 @@ export const ERRORS = {
     message: "Another playlist already has that name, web address or file name.",
   },
   jobNotRunning: { code: "job.not_running", status: 409, message: "That job is not running." },
+  jobNoLibraryFill: {
+    code: "job.no_library_fill",
+    status: 409,
+    message: "There is no Library fill job to run; create a catalog job with the discover scope.",
+  },
+  jobEventsBusy: { code: "job.events_busy", status: 429, message: "Too many progress streams are open." },
   playlistUnreachable: { code: "playlist.unreachable", status: 503, message: "A playlist cannot be reached right now." },
   accountNotFound: { code: "account.not_found", status: 404, message: "That account does not exist." },
   accountInvalid: { code: "account.invalid", status: 422, message: "That account is not valid." },

@@ -97,12 +97,13 @@ test("a catalog job is scheduled only when TMDB has a token; turning it off leav
   assert.equal(tmdb.calls.length, stopped, "off clears the timer");
   assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.schedule"), "off");
   tmdb.calls.length = 0;
-  const started = await send(t.app, "POST", "/api/titles/sync", { scope: "trending", kind: "movie", pages: 1 }, token);
+  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, schedule: "off" }, token);
+  const started = await send(t.app, "POST", "/api/titles/sync", undefined, token);
   assert.equal(started.status, 202);
-  await until(() => tmdb.calls.includes("/trending/movie/week"), "the manual sync's TMDB call");
+  await until(() => tmdb.calls.includes("/discover/movie"), "the manual sync's TMDB call");
 });
 
-test("the sync status is the most recent run of its kind, whether a job or a manual call made it", async () => {
+test("the sync status is the most recent run, whether a job or a manual start made it; a failure reads as its code", async () => {
   const tmdb = await mutableTmdb();
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
@@ -114,11 +115,13 @@ test("the sync status is the most recent run of its kind, whether a job or a man
   await settled();
   assert.equal(pick((await send(t.app, "GET", "/api/jobs/1", undefined, token)).body, "data.lastResult"), "ok");
 
-  // A manual run that fails (TMDB has no such title) replaces the job's "ok" in the status, and is reported running.
-  const started = await send(t.app, "POST", "/api/titles/sync", { scope: "titles", ids: ["movie-999"] }, token);
+  // A manual start that fails (TMDB cannot be reached) replaces the job's "ok" in the status, and is reported running.
+  tmdb.fail(true);
+  const started = await send(t.app, "POST", "/api/titles/sync", undefined, token);
   assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
   await settled();
   const after = await status();
-  assert.notEqual(pick(after, "data.lastOutcome"), "ok", "the manual run's outcome, not the job's");
+  assert.equal(pick(after, "data.lastOutcome"), "tmdb.unavailable", "the manual run's outcome, not the job's");
   assert.equal(typeof pick(after, "data.lastRunAt"), "number");
+  assert.deepEqual(pick((await send(t.app, "GET", "/api/jobs/1", undefined, token)).body, "data.lastCounts"), { code: "tmdb.unavailable" });
 });

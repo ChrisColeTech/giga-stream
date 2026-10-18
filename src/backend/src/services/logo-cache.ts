@@ -74,6 +74,8 @@ export function createLogoCache(deps: {
       }
       let cached = 0;
       let failed = 0;
+      let finished = 0;
+      run.report({ phase: "logos", done: 0, total: due.size });
       await Promise.all([...due].map((url) =>
         limiter.run(URL.canParse(url) ? new URL(url).host : "", async () => {
           if (run.signal.aborted || now() >= run.endsAt) return;
@@ -90,7 +92,7 @@ export function createLogoCache(deps: {
             cached += 1;
             store.health.cacheLogo(run.playlistId, url, name, now());
           }
-        }).catch(() => undefined),
+        }).catch(() => undefined).finally(() => run.report({ phase: "logos", done: ++finished, total: due.size })),
       ));
       collect();
       return { cached, failed };

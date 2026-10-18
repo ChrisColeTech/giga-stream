@@ -33,23 +33,8 @@ const DetailQuery = z.object({ includeDisabled: z.enum(["true", "false"]).option
 const TitleParams = z.object({ titleId: z.string().min(3).max(60) });
 const SeasonParams = z.object({ titleId: z.string().min(3).max(60), season: z.coerce.number().int().min(0).max(100) });
 
-const SyncBody = z
-  .object({
-    scope: z.enum(["trending", "popular", "titles"]),
-    kind: z.enum(["movie", "tv"]).optional(),
-    pages: z.coerce.number().int().min(1).max(25).optional(),
-    // Title ids (`movie-603`, `tv-1399`), so a series is fetched as a series (docs/26 section 3.10, rule 6).
-    ids: z.array(z.string().regex(/^(movie|tv)-[1-9]\d{0,9}$/)).min(1).max(500).optional(),
-  })
-  .strict()
-  .refine((v) => v.scope !== "titles" || (v.ids !== undefined && v.kind === undefined && v.pages === undefined), {
-    message: "scope titles takes ids only",
-    path: ["ids"],
-  })
-  .refine((v) => v.scope === "titles" || v.kind !== undefined, {
-    message: "kind is required for trending and popular",
-    path: ["kind"],
-  });
+/** The Library fill takes no settings of its own: they are the job's. */
+const SyncBody = z.object({}).strict();
 
 /** A manual series can run past the default body limit (100 seasons of up to 500 episodes; docs/29 B3). */
 const WRITE = { bodyLimit: CHANNEL_BODY_LIMIT_BYTES };
@@ -91,10 +76,11 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
     return ok(reply, services.titles.status());
   });
 
+  // Starts the Library fill job (docs/44 section 2): the same stoppable run, with progress, as `Run job` on it.
   app.post("/api/titles/sync", async (request, reply) => {
     const principal = signedIn(services, request);
-    const body = parseInput(SyncBody, request.body, ERRORS.syncInvalid);
-    services.titles.startSync(body, actorOf(request, principal));
+    parseInput(SyncBody, request.body ?? {}, ERRORS.syncInvalid);
+    services.jobs.startLibraryFill(actorOf(request, principal));
     return ok(reply, { started: true, ...services.titles.status() }, 202);
   });
 

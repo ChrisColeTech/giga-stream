@@ -6,11 +6,9 @@ import test from "node:test";
 import { later, FOUR_DAYS_MS, field, syncAll, titleApp } from "./title-edit-kit.js";
 import { pick, send } from "./test-app.js";
 
-const SYNC_MOVIES = { scope: "trending", kind: "movie", pages: 1 };
-
 test("an edited plot survives a bulk sync of a stale entry, the healing refetch and a stale read; the rest refreshes", async () => {
   const h = await titleApp();
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   let token = await later(h, 0);
   assert.equal(field(await send(h.t.app, "GET", "/api/titles/movie-603"), "plot"), "TMDB plot v1");
   const patched = await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "My plot", rating: 5 }, token);
@@ -20,16 +18,17 @@ test("an edited plot survives a bulk sync of a stale entry, the healing refetch 
   Object.assign(h.tmdb.state, { title: "The Matrix Reloaded", plot: "TMDB plot v2", rating: 9.1, runtime: 150 });
   token = await later(h, FOUR_DAYS_MS);
 
-  // 1. A bulk sync replaces the stale entry with TMDB's thin row, under the edits.
-  await syncAll(h, SYNC_MOVIES);
-  const browse = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
+  // 1. A bulk sync keeps the stale full detail (docs/44 section 3.5): only the rating, poster and backdrop are refreshed
+  //    onto it, under the edits, and its age stays.
+  await syncAll(h);
+  const stored = await send(h.t.app, "GET", "/api/titles/stored?kind=movie", undefined, await later(h, 0));
   assert.deepEqual(
-    ["title", "rating", "plot", "state"].map((f) => pick(browse.body, `data.items.0.${f}`)),
-    ["The Matrix Reloaded", 5, "My plot", "edited"],
-    "the title (not edited) is TMDB's new one; the rating and plot are the admin's",
+    ["title", "rating", "state"].map((f) => pick(stored.body, `data.items.0.${f}`)),
+    ["The Matrix", 5, "edited"],
+    "the detail stands (the title is not replaced); the rating is the admin's",
   );
 
-  // 2. The read that heals the thin row refetches the detail, under the edits.
+  // 2. The read of the stale detail refetches it, under the edits.
   const healed = await send(h.t.app, "GET", "/api/titles/movie-603");
   assert.deepEqual(
     ["title", "plot", "rating", "runtimeMs", "state"].map((f) => field(healed, f)),
@@ -53,37 +52,36 @@ test("an edited plot survives a bulk sync of a stale entry, the healing refetch 
 
 test("an edit that clears a field stays cleared through a sync", async () => {
   const h = await titleApp();
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   await send(h.t.app, "GET", "/api/titles/movie-603");
   const cleared = await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: null }, h.token);
   assert.equal(field(cleared, "plot"), undefined);
   await later(h, FOUR_DAYS_MS);
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   assert.equal(field(await send(h.t.app, "GET", "/api/titles/movie-603"), "plot"), undefined);
 });
 
-test("the explicit ids scope takes title ids and fetches a series as a series", async () => {
+test("POST /api/titles/sync starts the Library fill, which walks both kinds, and takes no settings of its own", async () => {
   const h = await titleApp();
-  await syncAll(h, { scope: "titles", ids: ["tv-1399", "movie-603"] });
-  assert.ok(h.tmdb.calls.includes("/tv/1399"));
-  assert.equal(h.tmdb.calls.includes("/movie/1399"), false, "a series id is not fetched as a movie");
-  assert.ok(h.tmdb.calls.includes("/movie/603"));
+  await syncAll(h);
+  assert.ok(h.tmdb.calls.includes("/discover/movie") && h.tmdb.calls.includes("/discover/tv"));
+  assert.equal(h.tmdb.calls.some((call) => call.startsWith("/trending/")), false, "the discover walk, not a list");
   const token = await later(h, 0);
-  for (const ids of [[603], ["603"], ["show-1"], ["movie-0"]]) {
-    const refused = await send(h.t.app, "POST", "/api/titles/sync", { scope: "titles", ids }, token);
-    assert.deepEqual([refused.status, pick(refused.body, "error.code")], [422, "sync.invalid"], JSON.stringify(ids));
+  for (const body of [{ scope: "trending", kind: "movie", pages: 1 }, { scope: "titles", ids: ["movie-603"] }, { pages: 3 }]) {
+    const refused = await send(h.t.app, "POST", "/api/titles/sync", body, token);
+    assert.deepEqual([refused.status, pick(refused.body, "error.code")], [422, "sync.invalid"], JSON.stringify(body));
   }
-  assert.equal(field(await send(h.t.app, "GET", "/api/titles/tv-1399"), "title"), "Game of Thrones");
+  assert.equal(field(await send(h.t.app, "GET", "/api/titles?kind=tv"), "items.0.title"), "Game of Thrones");
 });
 
 test("a title made by hand is never touched by a sync, even with a TMDB id of its own", async () => {
   const h = await titleApp();
   const made = await send(h.t.app, "POST", "/api/titles", { kind: "movie", title: "My Matrix", tmdbId: 603, plot: "Mine" }, h.token);
   const id = String(field(made, "id"));
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   await send(h.t.app, "GET", "/api/titles/movie-603");
   await later(h, FOUR_DAYS_MS);
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   const mine = await send(h.t.app, "GET", `/api/titles/${id}`);
   assert.deepEqual([field(mine, "title"), field(mine, "plot"), field(mine, "state")], ["My Matrix", "Mine", "manual"]);
   assert.equal(field(await send(h.t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");
@@ -91,14 +89,14 @@ test("a title made by hand is never touched by a sync, even with a TMDB id of it
 
 test("a deleted synced title stays out of a sync until it is restored, then comes back as a plain synced one", async () => {
   const h = await titleApp();
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, h.token);
   assert.equal((await send(h.t.app, "DELETE", "/api/titles/movie-603", undefined, h.token)).status, 200);
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   const gone = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
   assert.equal(pick(gone.body, "data.items.0.title"), undefined, "still deleted");
   assert.equal((await send(h.t.app, "DELETE", "/api/titles/deleted/movie-603", undefined, h.token)).status, 200);
-  await syncAll(h, SYNC_MOVIES);
+  await syncAll(h);
   const back = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
   assert.deepEqual(["title", "state"].map((f) => pick(back.body, `data.items.0.${f}`)), ["The Matrix", "synced"]);
 });

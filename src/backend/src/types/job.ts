@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { CatalogJobConfig } from "../store/job-repository.js";
 import type { RunCounts, RunResult } from "./job-counts.js";
+import type { JobProgress } from "./job-progress.js";
 
 const SCHEDULE_MAX = 20;
 const name = z.string().trim().min(1).max(120);
@@ -59,6 +60,8 @@ export interface JobView {
   playlistId?: number;
   playlistName?: string;
   running: boolean;
+  /** A running job's latest progress (docs/44 section 3.1); absent when idle. */
+  progress?: JobProgress;
   lastRunAt?: number;
   lastResult?: RunResult;
   lastCounts?: RunCounts;

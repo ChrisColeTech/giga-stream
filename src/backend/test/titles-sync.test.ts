@@ -10,13 +10,17 @@ test("sync is admin-only, single-flight, audited, and reports its outcome in the
   const t = await makeApp({ config: tmdbOn(tmdb) });
   const access = (await signIn(t.app)).access;
 
-  const denied = await send(t.app, "POST", "/api/titles/sync", { scope: "trending", kind: "movie", pages: 1 });
+  const denied = await send(t.app, "POST", "/api/titles/sync");
   assert.equal(denied.status, 401);
 
-  const started = await send(t.app, "POST", "/api/titles/sync", { scope: "trending", kind: "movie", pages: 1 }, access);
-  assert.equal(started.status, 202);
+  // It starts the Library fill job (docs/44): refused while that job is disabled, like `Run job` on it.
+  const off = await send(t.app, "POST", "/api/titles/sync", undefined, access);
+  assert.deepEqual([off.status, pick(off.body, "error.code")], [422, "job.disabled"]);
+  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 2 } }, access);
+  const started = await send(t.app, "POST", "/api/titles/sync", undefined, access);
+  assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
 
-  const busy = await send(t.app, "POST", "/api/titles/sync", { scope: "popular", kind: "tv", pages: 1 }, access);
+  const busy = await send(t.app, "POST", "/api/titles/sync", undefined, access);
   assert.equal(busy.status, 409);
   assert.equal(pick(busy.body, "error.code"), "sync.busy");
 

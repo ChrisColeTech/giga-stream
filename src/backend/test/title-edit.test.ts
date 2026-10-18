@@ -8,7 +8,7 @@ import { pick, send, signIn } from "./test-app.js";
 
 test("the admin's view of an edited synced title lists the edited fields; a public read does not", async () => {
   const h = await titleApp();
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   const token = (await signIn(h.t.app)).access;
   await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "My plot", rating: 5 }, token);
 
@@ -23,7 +23,7 @@ test("the admin's view of an edited synced title lists the edited fields; a publ
 
 test("an edit and a revert of a synced title name it in the audit log", async () => {
   const h = await titleApp();
-  await syncAll(h, { scope: "trending", kind: "movie", pages: 1 });
+  await syncAll(h);
   const token = (await signIn(h.t.app)).access;
   await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "My plot" }, token);
   const reverted = await send(h.t.app, "POST", "/api/titles/movie-603/revert", undefined, token);

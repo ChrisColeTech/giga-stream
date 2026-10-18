@@ -6,8 +6,8 @@ export const TITLE_FRESH_MS = 3 * 24 * 60 * 60 * 1000;
 export const LIST_FRESH_MS = 8 * 60 * 60 * 1000;
 export const DEFAULT_SYNC_PAGES = 5;
 export const MAX_SYNC_PAGES = 25;
-/** The discover walk's per-kind page caps (docs/03 section 7.6b): 500 pages ≈ 10,000 titles per kind. */
-export const DEFAULT_DISCOVER_PAGES = 100;
+/** The discover walk's per-kind page caps (docs/03 section 7.6b): 500 pages ≈ 10,000 titles per kind, TMDB's own limit. */
+export const DEFAULT_DISCOVER_PAGES = 500;
 export const MAX_DISCOVER_PAGES = 500;
 
 export type Kind = "movie" | "tv";
@@ -24,11 +24,9 @@ export interface BrowseQuery {
 }
 
 export interface SyncRequest {
-  scope: "trending" | "popular" | "discover" | "titles";
+  scope: "trending" | "popular" | "discover";
   kind?: Kind;
   pages?: number;
-  /** Title ids (`movie-603`, `tv-1399`): the kind comes with the id (docs/26 section 3.10, rule 6). */
-  ids?: string[];
 }
 
 export interface SyncStatus {

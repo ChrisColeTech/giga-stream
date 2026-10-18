@@ -24,6 +24,7 @@ export interface MatrixState {
 export async function mutableTmdb() {
   const state: MatrixState = { title: "The Matrix", plot: "TMDB plot v1", rating: 8.2, runtime: 136 };
   const calls: string[] = [];
+  let failing = false;
   const listRow = () => ({
     id: 603, title: state.title, release_date: "1999-03-31", vote_average: state.rating, popularity: 90,
     poster_path: "/matrix.jpg", genre_ids: [878],
@@ -38,6 +39,7 @@ export async function mutableTmdb() {
       response.end(JSON.stringify(body));
     };
     const p = url.pathname;
+    if (failing && p.startsWith("/discover/")) return json({ status_message: "refused" }, 400);
     if (p === "/movie/603") {
       return json({
         ...listRow(), overview: state.plot, runtime: state.runtime, genres: [{ id: 878, name: "Science Fiction" }],
@@ -55,7 +57,7 @@ export async function mutableTmdb() {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   servers.push(server);
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  return { base, calls, state };
+  return { base, calls, state, fail: (on: boolean): void => void (failing = on) };
 }
 
 /** An app that talks to the stub TMDB, and an owner's token for it. */
@@ -68,10 +70,13 @@ export async function titleApp(options: { tmdb?: boolean } = {}) {
 
 type Harness = Awaited<ReturnType<typeof titleApp>>;
 
-/** A bulk sync, waited for. */
-export async function syncAll(h: Harness, body: Record<string, unknown>): Promise<void> {
+/** The Library fill, waited for: the seeded job is enabled and set to `pages` pages a kind, then started as `POST /api/titles/sync` does. */
+export async function syncAll(h: Harness, pages = 1): Promise<void> {
   const token = (await signIn(h.t.app)).access;
-  const started = await send(h.t.app, "POST", "/api/titles/sync", body, token);
+  const jobs = pick((await send(h.t.app, "GET", "/api/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
+  const fill = jobs.find((job) => pick(job, "config.scope") === "discover");
+  await send(h.t.app, "PATCH", `/api/jobs/${fill?.id}`, { enabled: true, config: { pages } }, token);
+  const started = await send(h.t.app, "POST", "/api/titles/sync", undefined, token);
   if (started.status !== 202) throw new Error(`sync refused: ${JSON.stringify(started.body)}`);
   await settled(h.t);
 }

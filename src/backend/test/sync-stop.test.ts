@@ -1,5 +1,5 @@
 // Stop and resume (docs/43 section 3.4a): Stop cancels the run and keeps what was written; the same job run again resumes
-// (the order puts the unchecked first, the 7-day window skips the cached logos). Idle 409, catalog 422, shutdown aborts.
+// (the order puts the unchecked first, the 7-day window skips the cached logos). Idle 409, shutdown aborts.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -60,7 +60,7 @@ test("a stopped job is not restarted by the schedule: its last run is the stop t
   assert.equal(job.lastResult, "stopped");
 });
 
-test("Stop needs a session, an existing job that is running, and a playlist job", async () => {
+test("Stop needs a session and an existing job that is running", async () => {
   const net = fakeNet();
   const s = await setupSync(net, [m3uEntry("a", STREAM("a.example", "a"))]);
   const id = await s.id();
@@ -71,7 +71,7 @@ test("Stop needs a session, an existing job that is running, and a playlist job"
   assert.deepEqual([missing.status, pick(missing.body, "error.code")], [404, "job.not_found"]);
   const made = await s.api("POST", "/api/jobs", { type: "catalog", name: "Fill", config: { scope: "trending", kind: "movie" } });
   const catalog = await s.api("POST", `/api/jobs/${pick(made.body, "data.id")}/stop`);
-  assert.deepEqual([catalog.status, pick(catalog.body, "error.code")], [422, "job.invalid"]);
+  assert.deepEqual([catalog.status, pick(catalog.body, "error.code")], [409, "job.not_running"], "a catalog job stops too (docs/44)");
 });
 
 test("shutdown aborts a run in flight and waits for it to settle before the store closes", async () => {
