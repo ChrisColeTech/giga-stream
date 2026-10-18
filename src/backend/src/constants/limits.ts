@@ -45,6 +45,9 @@ export const LIST_PAGE_DEFAULT = 100;
 export const LIST_PAGE_MAX = 200;
 /** No real list is near this; it only keeps a hostile offset from becoming an unbounded scan. */
 export const LIST_OFFSET_MAX = 10_000_000;
+/** The fileserver's catalog read (`GET /api/titles/catalog`, docs/03 section 7.4): a keyset page of enabled titles. */
+export const CATALOG_PAGE_DEFAULT = 100;
+export const CATALOG_PAGE_MAX = 500;
 export const CHANNEL_SEARCH_MAX = 120;
 export const TITLE_SEARCH_MAX = 200;
 

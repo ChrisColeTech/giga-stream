@@ -8,6 +8,7 @@ import { SORTS } from "../services/title-service.js";
 import { ok } from "./envelope.js";
 import { actorOf, isAdmin, signedIn } from "./guard.js";
 import { TitleInputSchema, TitlePatchSchema } from "../types/title-input.js";
+import { CatalogQuerySchema } from "../types/title-catalog.js";
 import { StoredTitlesQuerySchema } from "../types/title-stored.js";
 import { parseInput } from "./parse-input.js";
 
@@ -69,6 +70,12 @@ export function registerTitles(app: FastifyInstance, services: Services): void {
   app.get("/api/titles/genres", async (request, reply) => {
     const query = parseInput(z.object({ kind: z.enum(["movie", "tv"]).default("movie") }), request.query);
     return ok(reply, await services.titles.genres(query.kind));
+  });
+
+  // The fileserver's sync read (docs/03 section 7.4): public, store-only, never TMDB; before `/api/titles/:titleId`.
+  app.get("/api/titles/catalog", async (request, reply) => {
+    const query = parseInput(CatalogQuerySchema, request.query, ERRORS.requestInvalid);
+    return ok(reply, services.titleCatalog.page(query));
   });
 
   app.get("/api/titles/sync", async (request, reply) => {

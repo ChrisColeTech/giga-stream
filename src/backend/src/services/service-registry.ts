@@ -26,6 +26,7 @@ import { createSecurityQuestionService } from "./security-question-service.js";
 import { createStreamTemplates } from "./stream-templates.js";
 import { createSyncScheduler } from "./sync-scheduler.js";
 import { seedSyncRecords } from "./sync-seed.js";
+import { createTitleCatalog } from "./title-catalog-service.js";
 import { createTitleService } from "./title-service.js";
 import { createStoredTitles } from "./title-stored-service.js";
 import { createTmdbClient } from "./tmdb-client.js";
@@ -137,6 +138,7 @@ export function createServices(store: Store, options: ServiceOptions) {
     providers: createProviderService({ store, audit, now }),
     titles,
     storedTitles: createStoredTitles(store),
+    titleCatalog: createTitleCatalog(store),
     playlists: createPlaylistService({ store, audit, runner, onChange: scheduler.arm }),
     jobs: createJobService({ store, audit, now, runner, progress, onChange: scheduler.arm }),
     hasAccounts: (): boolean => store.accounts.count() > 0,
