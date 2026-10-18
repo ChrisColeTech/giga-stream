@@ -23,13 +23,13 @@ const names = async (s: Sync, query: string): Promise<string[]> => {
   return ((pick(answer.body, "data.items") as Array<Record<string, unknown>>).map((c) => String(c.name))).sort();
 };
 
-test("the status filter keeps live, dead or never-checked stream rows; the playlist filter keeps one playlist's", async () => {
+test("the status filter keeps online, offline or never-checked stream rows; the playlist filter keeps one playlist's", async () => {
   const s = await synced();
-  assert.deepEqual(await names(s, "&status=live"), ["Up"]);
-  assert.deepEqual(await names(s, "&status=dead"), ["Down"]);
+  assert.deepEqual(await names(s, "&status=online"), ["Up"]);
+  assert.deepEqual(await names(s, "&status=offline"), ["Down"]);
   assert.deepEqual(await names(s, "&status=unchecked"), ["Hand"], "a hand-made channel is never checked");
   assert.deepEqual(await names(s, "&playlist=1"), ["Down", "Up"]);
-  assert.deepEqual(await names(s, "&playlist=1&status=dead"), ["Down"]);
+  assert.deepEqual(await names(s, "&playlist=1&status=offline"), ["Down"]);
   assert.deepEqual(await names(s, "&playlist=99"), []);
   assert.deepEqual(await names(s, "&q=list.m3u"), ["Down", "Up"], "q matches the playlist's name");
 });
@@ -38,16 +38,16 @@ test("a stream row carries its verdict, check time and relative cached logo addr
   const s = await synced();
   const rows = await s.channels();
   const up = rows.find((r) => r.name === "Up") ?? {};
-  assert.equal(up.status, "live");
+  assert.equal(up.status, "online");
   assert.equal(up.checkedAt, s.t.clock.now());
   assert.match(String(up.cachedLogoUrl), /^\/logos\/c\/[0-9a-f]{32}\.png$/);
   assert.equal(up.logoUrl, LOGO("up"));
   const down = rows.find((r) => r.name === "Down") ?? {};
-  assert.deepEqual([down.status, down.cachedLogoUrl], ["dead", undefined]);
+  assert.deepEqual([down.status, down.cachedLogoUrl], ["offline", undefined]);
   const hand = rows.find((r) => r.name === "Hand") ?? {};
   assert.deepEqual([hand.status, hand.checkedAt, hand.cachedLogoUrl], [undefined, undefined, undefined]);
   const view = (await s.api("GET", "/api/playlists/1")).body;
-  assert.deepEqual(["channels", "live", "dead"].map((f) => pick(view, `data.${f}`)), [2, 1, 1]);
+  assert.deepEqual(["channels", "online", "offline"].map((f) => pick(view, `data.${f}`)), [2, 1, 1]);
 });
 
 test("a channel edited to another address loses its verdict, and one edited to another logo loses its cached file", async () => {
@@ -60,5 +60,5 @@ test("a channel edited to another address loses its verdict, and one edited to a
   );
   const down = (await s.channels()).find((r) => r.name === "Down") ?? {};
   const renamed = await s.api("PATCH", `/api/channels/${String(down.id)}`, { name: "Renamed" });
-  assert.deepEqual([pick(renamed.body, "data.status"), pick(renamed.body, "data.checkedAt")], ["dead", s.t.clock.now()], "a rename keeps the verdict");
+  assert.deepEqual([pick(renamed.body, "data.status"), pick(renamed.body, "data.checkedAt")], ["offline", s.t.clock.now()], "a rename keeps the verdict");
 });

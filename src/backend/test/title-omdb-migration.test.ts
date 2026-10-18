@@ -40,7 +40,7 @@ test("027 lands on a version-26 database: the titles are kept, omdb_failed_at is
 
     const db = new DatabaseSync(file, { readOnly: true });
     try {
-      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 28);
+      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 29);
       const column = db.prepare("PRAGMA table_info(titles)").all().find((c) => c.name === "omdb_failed_at");
       assert.deepEqual([column?.type, column?.notnull], ["INTEGER", 0]);
       assert.deepEqual(db.prepare("SELECT omdb_failed_at FROM titles").all().map((r) => ({ ...r })),

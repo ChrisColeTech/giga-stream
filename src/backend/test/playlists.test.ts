@@ -26,10 +26,10 @@ test("the list and a read are the same view: counts, host or file name, the job'
   const list = (await api("GET", "/api/playlists")).body;
   assert.deepEqual(pick(list, "data.items.0"), {
     id: 1, name: "us", kind: "url", url: ONE, host: "cdn.example", enabled: true,
-    channels: 2, enabledChannels: 0, live: 0, dead: 0,
+    channels: 2, enabledChannels: 0, online: 0, offline: 0,
   });
   assert.deepEqual(pick(list, "data.items.1"), {
-    id: 2, name: "mine.m3u", kind: "file", fileName: "mine.m3u", enabled: true, channels: 2, enabledChannels: 0, live: 0, dead: 0,
+    id: 2, name: "mine.m3u", kind: "file", fileName: "mine.m3u", enabled: true, channels: 2, enabledChannels: 0, online: 0, offline: 0,
   });
   assert.deepEqual((await api("GET", "/api/playlists/2")).body, { ok: true, data: pick(list, "data.items.1") });
   const missing = await api("GET", "/api/playlists/99");

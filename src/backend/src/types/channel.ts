@@ -57,7 +57,7 @@ export interface StreamAdminChannel extends BackendChannel {
   playlistId?: number;
   playlistName?: string;
   /** The sync's verdict on this row's own stream address; absent = not checked (docs/03 section 7.2c). */
-  status?: "live" | "dead";
+  status?: "online" | "offline";
   checkedAt?: number;
   /** The relative `/logos/c/<file>` of the cached copy; `logoUrl` stays the source address. */
   cachedLogoUrl?: string;
@@ -113,7 +113,7 @@ export interface StreamRecord extends RecordCore {
   /** The parent playlist, a foreign key with cascade; null on a hand-made row. */
   playlistId: number | null;
   /** The sync-owned columns: written only by the sync's targeted statements, never by `update` (docs/43 section 3.1). */
-  status: "live" | "dead" | null;
+  status: "online" | "offline" | null;
   checkedAt: number | null;
   logoFile: string | null;
   logoCheckedAt: number | null;

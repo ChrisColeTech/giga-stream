@@ -23,8 +23,8 @@ const NOTHING = { created: 0, updated: 0, skipped: 0, refused: 0, refusalExample
  * read); a `url` playlist is fetched on every run through the guarded fetch and imported (create and update, never
  * delete); a fetch that fails is `source: unreachable` and the run goes on. (3) Missing logo addresses are filled from
  * the iptv-org index, (4) logo bytes are cached, (5) each stream address is checked. A stop ends the run between and
- * inside the steps with everything already written kept: `stopped`. The live, dead and unchecked counts are what the
- * store holds when the run ends, so a resumed run reports the whole playlist.
+ * inside the steps with everything already written kept: `stopped`. The online, offline and unchecked counts are what
+ * the store holds when the run ends, so a resumed run reports the whole playlist.
  */
 export function createPlaylistJob(deps: {
   store: Store;
@@ -55,10 +55,11 @@ export function createPlaylistJob(deps: {
     if (!signal.aborted) await checkStreams(run);
     const health = store.channels.countsByPlaylist().get(playlist.id);
     const channels = health?.channels ?? 0;
-    const live = health?.live ?? 0;
-    const dead = health?.dead ?? 0;
+    const online = health?.online ?? 0;
+    const offline = health?.offline ?? 0;
     const counts: PlaylistCounts = {
-      ...changes, source, logosCached: logos.cached, logosFailed: logos.failed, live, dead, unchecked: channels - live - dead,
+      ...changes, source, logosCached: logos.cached, logosFailed: logos.failed, online, offline,
+      unchecked: channels - online - offline,
       ...(signal.aborted && { stopped: true }),
     };
     return { result: signal.aborted ? "stopped" : "ok", counts };

@@ -5,7 +5,7 @@ import type { AdminChannel } from "./channel.js";
 import type { ChannelState } from "./live-stream.js";
 
 export const CHANNEL_SORTS = ["number", "name", "category", "kind", "playlist"] as const;
-export const CHANNEL_STATUSES = ["live", "dead", "unchecked"] as const;
+export const CHANNEL_STATUSES = ["online", "offline", "unchecked"] as const;
 export type ChannelSort = (typeof CHANNEL_SORTS)[number];
 export const SORT_DIRS = ["asc", "desc"] as const;
 export type SortDir = (typeof SORT_DIRS)[number];

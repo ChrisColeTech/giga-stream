@@ -22,7 +22,7 @@ const ChannelRow = z.object({
   sync_name: z.string().nullable(),
   playlist_id: z.number().int().nullable(),
   enabled: z.number().int(),
-  status: z.enum(["live", "dead"]).nullable(),
+  status: z.enum(["online", "offline"]).nullable(),
   checked_at: z.number().int().nullable(),
   logo_file: z.string().nullable(),
   logo_checked_at: z.number().int().nullable(),

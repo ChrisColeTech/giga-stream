@@ -26,7 +26,7 @@ function withStore(work: (store: ReturnType<typeof createStore>, setSyncColumns:
     // The sync's own targeted writes arrive in a later wave; here a second connection stands in for them.
     const setSyncColumns = (): void => {
       const db = new DatabaseSync(file);
-      db.exec("UPDATE channels SET status = 'dead', checked_at = 50, logo_file = 'f.png', logo_checked_at = 60 WHERE id = 'a'");
+      db.exec("UPDATE channels SET status = 'offline', checked_at = 50, logo_file = 'f.png', logo_checked_at = 60 WHERE id = 'a'");
       db.close();
     };
     try {
@@ -47,8 +47,8 @@ const synced = (store: ReturnType<typeof createStore>) => {
 test("an update writes none of the sync-owned columns, whatever the record in hand says", () => {
   withStore((store, setSyncColumns) => {
     setSyncColumns();
-    store.channels.update(row({ name: "Renamed", status: "live", checkedAt: 1, logoFile: "other.png", logoCheckedAt: 2, revision: 2 }));
-    assert.deepEqual(synced(store), ["dead", 50, "f.png", 60]);
+    store.channels.update(row({ name: "Renamed", status: "online", checkedAt: 1, logoFile: "other.png", logoCheckedAt: 2, revision: 2 }));
+    assert.deepEqual(synced(store), ["offline", 50, "f.png", 60]);
     assert.equal(store.channels.find("a")?.name, "Renamed");
   });
 });
@@ -57,15 +57,15 @@ test("a changed stream address clears the verdict, a changed logo address clears
   withStore((store, setSyncColumns) => {
     setSyncColumns();
     store.channels.update(row({ category: "Sports" }));
-    assert.deepEqual(synced(store), ["dead", 50, "f.png", 60], "nothing about an address changed");
+    assert.deepEqual(synced(store), ["offline", 50, "f.png", 60], "nothing about an address changed");
     store.channels.update(row({ streamUrl: "https://s.example/a-2.m3u8" }));
     assert.deepEqual(synced(store), [null, null, "f.png", 60], "the verdict was about the old address");
     setSyncColumns();
     store.channels.update(row({ streamUrl: "https://s.example/a-2.m3u8", logoUrl: "https://img.example/new.png" }));
-    assert.deepEqual(synced(store), ["dead", 50, null, null], "the cached copy was of the old logo");
+    assert.deepEqual(synced(store), ["offline", 50, null, null], "the cached copy was of the old logo");
     setSyncColumns();
     store.channels.update(row({ streamUrl: "https://s.example/a-2.m3u8", logoUrl: null }));
-    assert.deepEqual(synced(store), ["dead", 50, null, null], "no logo address, no cached copy");
+    assert.deepEqual(synced(store), ["offline", 50, null, null], "no logo address, no cached copy");
   });
 });
 

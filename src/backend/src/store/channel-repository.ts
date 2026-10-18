@@ -79,7 +79,7 @@ export function createChannelRepository(db: DatabaseSync) {
     },
     isEmpty: (): boolean => CountRow.parse(count.get()).n === 0,
     countLive: (): number => CountRow.parse(countLive.get()).n,
-    /** Channels, enabled, live and dead per playlist, for the playlist views. */
+    /** Channels, enabled, online and offline per playlist, for the playlist views. */
     countsByPlaylist: stats.byPlaylist,
     /** The id of the live row with this number, if any (a live number is unique among live rows). */
     liveNumberHolder(number: string): string | undefined {
@@ -105,7 +105,7 @@ export function createChannelRepository(db: DatabaseSync) {
       writeVideos(c);
     },
     /** A hand-set verdict on one stream row's own address: `status` and `checked_at` only, no revision (admin-only). */
-    setVerdict: (id: string, status: "live" | "dead", at: number): boolean =>
+    setVerdict: (id: string, status: "online" | "offline", at: number): boolean =>
       Number(setVerdict.run(status, at, id).changes) > 0,
     remove(id: string): boolean {
       return Number(remove.run(id).changes) > 0;

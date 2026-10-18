@@ -59,7 +59,7 @@ function databaseAt(file: string, version: number): void {
   }
 }
 
-test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 27", () => {
+test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 29", () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-ui-state-migration-"));
   const file = path.join(dataDir, DATABASE_FILE_NAME);
   try {
@@ -69,7 +69,7 @@ test("migration 017 lands on a 016 database: the table appears and the later mig
 
     createStore(file).close();
 
-    assert.equal(versionOf(file), 28);
+    assert.equal(versionOf(file), 29);
     assert.equal(tableExists(file, "admin_ui_state"), true);
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
@@ -82,9 +82,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     createStore(file).close();
     createStore(file).close();
-    assert.equal(versionOf(file), 28);
+    assert.equal(versionOf(file), 29);
 
-    reshape(file, [], 29);
+    reshape(file, [], 30);
     assert.throws(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,
