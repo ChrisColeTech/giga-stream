@@ -103,6 +103,18 @@ export function createJobService(deps: {
       return view(existing(id));
     },
 
+    /**
+     * `Stop` (docs/43 section 3.4a): cancels the run in progress and keeps everything already written. The run ends
+     * within seconds (its requests abort); the job reads `running` until then. A catalog sync has no cancellation hook.
+     */
+    stop(id: number, actor: Actor): JobView {
+      const current = existing(id);
+      if (current.type === "catalog") throw invalid("id", "A catalog sync cannot be stopped.");
+      if (!runner.abort(id)) throw new AppError(ERRORS.jobNotRunning, { id });
+      audit.record(actor, { action: "job.stopped", subject: String(id), detail: { name: view(current).name } });
+      return view(existing(id));
+    },
+
     remove(id: number, actor: Actor): { id: number } {
       const current = existing(id);
       if (current.type === "playlist") throw invalid("id", "A playlist's job goes with the playlist.");

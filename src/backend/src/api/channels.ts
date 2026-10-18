@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ERRORS } from "../constants/errors.js";
 import { CHANNEL_BODY_LIMIT_BYTES } from "../constants/limits.js";
 import type { Services } from "../services/service-registry.js";
+import { ChannelBulkSchema } from "../types/channel-bulk.js";
 import { ChannelInputSchema, ChannelPatchSchema } from "../types/channel-input.js";
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
@@ -32,6 +33,12 @@ export function registerChannels(app: FastifyInstance, services: Services): void
     const principal = signedIn(services, request);
     const input = parseInput(ChannelInputSchema, request.body, ERRORS.channelInvalid);
     return ok(reply, services.channels.create(input, actorOf(request, principal), baseOf(request)), 201);
+  });
+
+  app.patch("/api/channels", WRITE, async (request, reply) => {
+    const principal = signedIn(services, request);
+    const { enabled, ids } = parseInput(ChannelBulkSchema, request.body, ERRORS.channelInvalid);
+    return ok(reply, services.channels.setEnabledMany(ids, enabled, actorOf(request, principal)));
   });
 
   app.patch("/api/channels/:channelId", WRITE, async (request, reply) => {

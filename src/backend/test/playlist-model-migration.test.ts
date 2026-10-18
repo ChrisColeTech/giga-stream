@@ -92,7 +92,7 @@ test("022 on a version-21 database keeps the channels and videos, rebuilds playl
     const db = new DatabaseSync(file);
     db.exec("PRAGMA foreign_keys = ON");
     try {
-      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 23);
+      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 24);
       assert.deepEqual(rows(db, "PRAGMA foreign_key_check"), []);
       assert.deepEqual(rows(db, "SELECT COUNT(*) AS n FROM channels"), [{ n: 9 }]);
       assert.deepEqual(rows(db, "SELECT channel_id, position, path FROM channel_videos ORDER BY channel_id, position").map((v) => `${v.channel_id}${v.position}${v.path}`),

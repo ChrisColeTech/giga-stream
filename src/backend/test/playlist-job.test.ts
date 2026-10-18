@@ -1,5 +1,5 @@
-// A playlist's sync job, this wave's body (docs/43 section 3.4, step 2 only): a file playlist reads nothing; a web
-// playlist is fetched on every run and imported; a run is started and answered `202`; the result is typed.
+// A playlist's sync job (docs/43 section 3.4): a file playlist reads nothing; a web playlist is fetched on every run and
+// imported; a run is started and answered `202`; the result is typed. Steps 3 to 5 have their own tests (`sync-*.test.ts`).
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -28,10 +28,11 @@ test("a file playlist is never read again: the run records a typed result and fe
   const done = await runJob(s);
   assert.deepEqual([done.lastResult, done.running], ["ok", false]);
   assert.deepEqual(done.lastCounts, {
-    created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, live: 0, dead: 0,
-    unchecked: 2, refusalExamples: [],
+    created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, live: 0, dead: 2,
+    unchecked: 0, refusalExamples: [],
   });
-  assert.deepEqual(s.feed.asked, []);
+  assert.deepEqual(s.feed.asked, [], "no playlist address is read");
+  assert.equal(s.feed.everything.filter((url) => url.startsWith("https://stream.example/")).length, 2, "each stream is checked");
   assert.equal(done.lastRunAt, s.t.clock.now());
   const view = pick((await s.api("GET", "/api/playlists/1")).body, "data") as Record<string, unknown>;
   assert.deepEqual([view.lastResult, view.lastRunAt, pick(view, "lastCounts.source")], ["ok", done.lastRunAt, "file"]);

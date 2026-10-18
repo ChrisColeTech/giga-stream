@@ -101,3 +101,13 @@ test("a busy engine is retried a second later; stop clears the timer", () => {
   tick(60_000);
   assert.deepEqual(started, [1, 1]);
 });
+
+test("a stopped run keeps the stop time as its last run, so the scheduler waits a whole interval before running it again", () => {
+  const { scheduler, started, tick } = harness([{ ...playlistJob(1, "15m", START), lastResult: "stopped" }]);
+  scheduler.arm();
+  tick(15 * MINUTE - 1);
+  assert.deepEqual(started, [], "not restarted early");
+  tick(1);
+  assert.deepEqual(started, [1], "due one interval after the stop");
+  scheduler.stop();
+});

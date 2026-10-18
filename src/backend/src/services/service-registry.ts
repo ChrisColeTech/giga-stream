@@ -1,4 +1,5 @@
 import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
+import { SYNC_CONCURRENCY, SYNC_PER_HOST_CONCURRENCY } from "../constants/limits.js";
 import { createLiveEngine, type LiveSeams } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
 import { createAccountService } from "./account-service.js";
@@ -8,7 +9,12 @@ import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
 import { createJobRunner } from "./job-runner.js";
 import { createJobService } from "./job-service.js";
+import { createLogoCache } from "./logo-cache.js";
+import { createLogoFill } from "./logo-fill.js";
+import { createLogoResolver } from "./logo-resolver.js";
 import { createOmdbClient } from "./omdb-client.js";
+import { createRequestLimiter } from "./request-limiter.js";
+import { createStreamCheck } from "./stream-check.js";
 import { createPlaylistImporter } from "./playlist-import.js";
 import { createPlaylistJob } from "./playlist-job.js";
 import { createPlaylistService } from "./playlist-service.js";
@@ -48,6 +54,8 @@ export interface ServiceOptions {
   playlistSyncMax: number;
   /** The guarded outbound fetch for every address that comes from playlist content (docs/43 section 3.8). */
   safeFetch?: SafeFetch;
+  /** How long the iptv-org logo index is kept before it is fetched again (hours). */
+  logoIndexTtlHours?: number;
 }
 
 /** Every service, built once from the store; routes receive this and call one service each. */
@@ -86,22 +94,30 @@ export function createServices(store: Store, options: ServiceOptions) {
     store, audit, tmdb, omdb, streams, now,
     scheduleLabel: () => scheduleOf("catalog"),
   });
+  const safeFetch = options.safeFetch ?? createSafeFetch();
   const importer = createPlaylistImporter({
-    store, audit, now,
+    store, audit, now, safeFetch,
     maxBytes: options.playlistSyncMaxBytes,
     maxEntries: options.playlistSyncMax,
-    safeFetch: options.safeFetch ?? createSafeFetch(),
     onChange: () => scheduler.arm(),
   });
+  const limiter = createRequestLimiter({ global: SYNC_CONCURRENCY, perHost: SYNC_PER_HOST_CONCURRENCY });
+  const logoCache = createLogoCache({ store, safeFetch, limiter, dataDir: options.dataDir, now });
+  const resolver = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours ?? 24, safeFetch, now });
   const runner = createJobRunner({
     store, audit, now, titles,
-    playlistJob: createPlaylistJob({ store, importer }),
+    playlistJob: createPlaylistJob({
+      store, importer, now, logoCache,
+      fillLogos: createLogoFill({ store, resolver }),
+      checkStreams: createStreamCheck({ store, safeFetch, limiter, now }),
+    }),
     onSettled: () => scheduler.arm(),
   });
   const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "" });
   return {
     runner,
     importer,
+    logoCache,
     audit,
     auth,
     securityQuestions,

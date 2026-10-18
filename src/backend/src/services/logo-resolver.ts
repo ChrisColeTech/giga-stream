@@ -1,16 +1,23 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 
-import { LOGO_INDEX_MAX_BYTES, LOGO_INDEX_TIMEOUT_MS } from "../constants/limits.js";
+import { LOGO_INDEX_MAX_BYTES, LOGO_INDEX_RETRY_MS, LOGO_INDEX_TIMEOUT_MS } from "../constants/limits.js";
 import { isAcceptedAddress } from "./address-rule.js";
+import type { SafeFetch } from "./safe-fetch.js";
 
 /** CDN failover, StepDaddy's pair (`supplements/logo_resolve.py`). */
 const LOGOS_URLS = ["https://iptv-org.github.io/api/logos.json", "https://cdn.jsdelivr.net/gh/iptv-org/api@gh-pages/logos.json"];
 const CHANNELS_URLS = ["https://iptv-org.github.io/api/channels.json", "https://cdn.jsdelivr.net/gh/iptv-org/api@gh-pages/channels.json"];
 
 const CACHE_FILE = "logo-index.json";
-const CacheFile = z.object({ fetchedAt: z.number(), byTvg: z.record(z.string()), byName: z.record(z.string()) });
+/** `fetchedAt` is 0 when only a failure stamp is held; `failedAt` is the last failed load, retried after an hour. */
+const CacheFile = z.object({
+  fetchedAt: z.number(),
+  failedAt: z.number().optional(),
+  byTvg: z.record(z.string()),
+  byName: z.record(z.string()),
+});
 const LogoRow = z
   .object({
     channel: z.string().optional(),
@@ -25,10 +32,11 @@ const ChannelRow = z.object({ id: z.string().optional(), name: z.string().option
 
 const QUALITY = /\([^)]*\)|\b(?:hd|sd|fhd|uhd|4k|720p|1080p|2160p|us|uk|usa|ca|de|fr|it|es)\b/gi;
 const NON_ALNUM = /[^a-z0-9]+/g;
+const MARKS = /[̀-ͯ]/g;
 
-/** StepDaddy's normalized channel name: case, separators and quality/region tags out. */
+/** StepDaddy's normalized channel name: accents folded first (`Télé` is `tele`), then case, separators and tags out. */
 export function normalizeChannelName(name: string): string {
-  return name.toLowerCase().replace(QUALITY, " ").replace(NON_ALNUM, "");
+  return name.normalize("NFD").replace(MARKS, "").toLowerCase().replace(QUALITY, " ").replace(NON_ALNUM, "");
 }
 
 /** A logo address must pass the address rule (`03` section 7.3): `http` or `https`, no credentials; `//host` is `https`. */
@@ -41,125 +49,118 @@ export function acceptedLogoUrl(value: string | undefined): string | undefined {
   return isAcceptedAddress(absolute) ? absolute : undefined;
 }
 
-/**
- * The iptv-org logo index (docs/03 section 7.2c, "Enrichment"): `logos.json` grouped by channel id,
- * `channels.json` mapping names and alt_names onto those logos. Disk-cached under the data folder with
- * a TTL; a fetch failure degrades to the stale cache, then to nothing. A miss returns `undefined`.
- */
-export function createLogoResolver(deps: { dataDir: string; ttlHours: number; fetchImpl?: typeof fetch; now: () => number }) {
-  const file = path.join(deps.dataDir, CACHE_FILE);
-  const ttlMs = deps.ttlHours * 3_600_000;
-  const fetchImpl = deps.fetchImpl ?? fetch;
-  let byTvg = new Map<string, string>();
-  let byName = new Map<string, string>();
-  let loadedAt: number | null = null;
-  let loading: Promise<void> | null = null;
+const betterScore = (a: [number, number, number], b: [number, number, number]): boolean =>
+  a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : a[2] > b[2];
 
-  function readCache(): z.infer<typeof CacheFile> | null {
-    try {
-      return CacheFile.parse(JSON.parse(readFileSync(file, "utf-8")));
-    } catch {
-      return null;
+/** Indexes both lists; a malformed row is skipped, never thrown on. */
+function buildIndex(logos: unknown[] | undefined, channels: unknown[] | undefined) {
+  const best = new Map<string, { score: [number, number, number]; url: string }>();
+  for (const row of logos ?? []) {
+    const parsed = LogoRow.safeParse(row);
+    if (!parsed.success) continue;
+    const { channel, url: raw, in_use, width, height, format } = parsed.data;
+    const url = acceptedLogoUrl(raw);
+    if (url === undefined || channel === undefined || channel === "") continue;
+    const score: [number, number, number] = [in_use ? 1 : 0, (width ?? 0) * (height ?? 0), format?.toUpperCase() === "PNG" ? 1 : 0];
+    const current = best.get(channel);
+    if (current === undefined || betterScore(score, current.score)) best.set(channel, { score, url });
+  }
+  const byTvg = new Map([...best].map(([id, { url }]) => [id, url] as const));
+  const byName = new Map<string, string>();
+  for (const row of channels ?? []) {
+    const parsed = ChannelRow.safeParse(row);
+    if (!parsed.success) continue;
+    const url = parsed.data.id !== undefined ? byTvg.get(parsed.data.id) : undefined;
+    if (url === undefined) continue;
+    for (const name of [parsed.data.name, ...parsed.data.alt_names]) {
+      const key = normalizeChannelName(name ?? "");
+      if (key !== "" && !byName.has(key)) byName.set(key, url);
     }
   }
+  return { byTvg, byName };
+}
+
+/**
+ * The iptv-org logo index (docs/03 section 7.2c, "Enrichment"): `logos.json` grouped by channel id, `channels.json`
+ * mapping names and alt_names onto those logos. Loaded once (through the guarded fetch), disk-cached under the data
+ * folder with a TTL; a failed load is stamped on disk and not retried for an hour, and degrades to the stale index, then
+ * to nothing. `lookup` is synchronous after `load`; a miss is `undefined`.
+ */
+export function createLogoResolver(deps: { dataDir: string; ttlHours: number; safeFetch: SafeFetch; now: () => number }) {
+  const file = path.join(deps.dataDir, CACHE_FILE);
+  const ttlMs = deps.ttlHours * 3_600_000;
+  let byTvg = new Map<string, string>();
+  let byName = new Map<string, string>();
+  let fetchedAt = 0;
+  let failedAt: number | undefined;
+  let loading: Promise<void> | null = null;
+
+  const fresh = (): boolean =>
+    (fetchedAt > 0 && deps.now() - fetchedAt < ttlMs) || (failedAt !== undefined && deps.now() - failedAt < LOGO_INDEX_RETRY_MS);
 
   function adopt(cache: z.infer<typeof CacheFile>): void {
     byTvg = new Map(Object.entries(cache.byTvg));
     byName = new Map(Object.entries(cache.byName));
-    loadedAt = cache.fetchedAt;
+    fetchedAt = cache.fetchedAt;
+    failedAt = cache.failedAt;
   }
 
-  function saveCache(): void {
+  function save(): void {
     try {
-      writeFileSync(
-        file,
-        JSON.stringify({ fetchedAt: loadedAt, byTvg: Object.fromEntries(byTvg), byName: Object.fromEntries(byName) }),
-        "utf-8",
-      );
+      const body = { fetchedAt, failedAt, byTvg: Object.fromEntries(byTvg), byName: Object.fromEntries(byName) };
+      writeFileSync(file, JSON.stringify(body), "utf-8");
     } catch {
       // a read-only data folder means no cache, never a failed sync
     }
   }
 
   /** One CDN pair with failover: the first address that answers a list wins. */
-  async function fetchList(urls: readonly string[]): Promise<unknown[] | undefined> {
+  async function fetchList(urls: readonly string[], signal: AbortSignal): Promise<unknown[] | undefined> {
     for (const url of urls) {
       try {
-        const response = await fetchImpl(url, { signal: AbortSignal.timeout(LOGO_INDEX_TIMEOUT_MS) });
-        if (!response.ok) continue;
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (bytes.byteLength > LOGO_INDEX_MAX_BYTES) continue;
-        const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+        const answer = await deps.safeFetch(url, { timeoutMs: LOGO_INDEX_TIMEOUT_MS, maxBytes: LOGO_INDEX_MAX_BYTES, signal });
+        if (answer.status < 200 || answer.status >= 300) continue;
+        const parsed: unknown = JSON.parse(answer.body.toString("utf-8"));
         if (Array.isArray(parsed)) return parsed;
       } catch {
-        // try the next CDN
+        if (signal.aborted) return undefined;
       }
     }
     return undefined;
   }
 
-  function build(logos: unknown[] | undefined, channels: unknown[] | undefined): void {
-    const better = (a: [number, number, number], b: [number, number, number]): boolean =>
-      a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : a[2] > b[2];
-    const best = new Map<string, { score: [number, number, number]; url: string }>();
-    for (const row of logos ?? []) {
-      const parsed = LogoRow.parse(row);
-      const url = acceptedLogoUrl(parsed.url);
-      if (url === undefined || parsed.channel === undefined || parsed.channel === "") continue;
-      const score: [number, number, number] = [
-        parsed.in_use ? 1 : 0,
-        (parsed.width ?? 0) * (parsed.height ?? 0),
-        parsed.format?.toUpperCase() === "PNG" ? 1 : 0,
-      ];
-      const current = best.get(parsed.channel);
-      if (current === undefined || better(score, current.score)) best.set(parsed.channel, { score, url });
+  async function ensure(signal: AbortSignal): Promise<void> {
+    if (fresh()) return;
+    try {
+      adopt(CacheFile.parse(JSON.parse(readFileSync(file, "utf-8"))));
+    } catch {
+      // no usable cache file
     }
-    byTvg = new Map([...best].map(([id, { url }]) => [id, url]));
-    byName = new Map();
-    for (const row of channels ?? []) {
-      const parsed = ChannelRow.parse(row);
-      const url = parsed.id !== undefined ? byTvg.get(parsed.id) : undefined;
-      if (url === undefined) continue;
-      for (const name of [parsed.name, ...parsed.alt_names]) {
-        const key = normalizeChannelName(name ?? "");
-        if (key !== "" && !byName.has(key)) byName.set(key, url);
-      }
+    if (fresh()) return;
+    const logos = await fetchList(LOGOS_URLS, signal);
+    const channels = await fetchList(CHANNELS_URLS, signal);
+    if (signal.aborted) return; // a stop is not a failure: nothing is stamped
+    if (logos === undefined && channels === undefined) {
+      failedAt = deps.now(); // a stale index beats none; either way this is not retried for an hour
+    } else {
+      ({ byTvg, byName } = buildIndex(logos, channels));
+      fetchedAt = deps.now();
+      failedAt = undefined;
     }
-    loadedAt = deps.now();
-  }
-
-  async function ensure(): Promise<void> {
-    if (loadedAt !== null && deps.now() - loadedAt < ttlMs) return;
-    if (loading !== null) return loading;
-    loading = (async () => {
-      const cache = readCache();
-      if (cache !== null && deps.now() - cache.fetchedAt < ttlMs) {
-        adopt(cache);
-        return;
-      }
-      const logos = await fetchList(LOGOS_URLS);
-      const channels = await fetchList(CHANNELS_URLS);
-      if (logos === undefined && channels === undefined) {
-        if (cache !== null) adopt(cache); // a stale index beats none
-        loadedAt = deps.now(); // either way, this attempt is not retried once per entry
-        return;
-      }
-      build(logos, channels);
-      saveCache();
-    })().finally(() => {
-      loading = null;
-    });
-    return loading;
+    save();
   }
 
   return {
+    /** Loads the index once (a second caller waits for the first); never throws. */
+    load(signal: AbortSignal): Promise<void> {
+      loading ??= ensure(signal).catch(() => undefined).finally(() => {
+        loading = null;
+      });
+      return loading;
+    },
+
     /** The logo address for an entry without one of its own, or undefined on any miss. */
-    async resolve(name: string, tvgId?: string): Promise<string | undefined> {
-      try {
-        await ensure();
-      } catch {
-        return undefined; // an unreachable index is a missing enrichment, never a failed sync
-      }
+    lookup(name: string, tvgId?: string | null): string | undefined {
       const tid = tvgId?.split("@")[0]?.trim();
       if (tid !== undefined && tid !== "") {
         const byId = byTvg.get(tid);
