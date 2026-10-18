@@ -57,6 +57,15 @@ test('the three-state All sits right of the verbs, with no Clear selection and n
   assert.ok(!html.includes('Clear selection') && !html.includes('selected'))
 })
 
+test('a long list offers Select all M matching as its own step, a ghost word just before All, only when given', () => {
+  const matching = { label: 'Select all 5,003 matching', onPress: NOTHING }
+  const html = strip({ selection: { verbs: VERBS, all: { ...ALL, checked: true }, matching } })
+  const offer = buttons(html).find((button) => text(button) === matching.label) ?? ''
+  assert.ok(offer.includes('bg-transparent') && !offer.includes('<svg'))
+  assert.ok(html.indexOf(matching.label) > html.indexOf('>Delete<') && html.indexOf(matching.label) < html.indexOf('Select all accounts'))
+  assert.ok(!strip(withVerbs()).includes('matching'))
+})
+
 test('paging is the icon pair right of All, the last controls: no forward verb in a list row', () => {
   const html = strip({ ...withVerbs(), paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } } })
   assert.ok(html.includes('aria-label="Newer. This is the first page."') && html.includes('aria-label="Older"'))

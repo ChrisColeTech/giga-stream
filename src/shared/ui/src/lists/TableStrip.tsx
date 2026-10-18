@@ -44,6 +44,10 @@ export interface TableStripProps {
       /** Nothing is listed yet. */
       readonly disabled?: boolean;
     };
+    /** A long, paged list (`docs/41` section 4.4): `All` ticks the LOADED rows; once they are all ticked and the query
+     *  holds more, this separate step offers every matching row (`Select all 5,003 matching`), a ghost word just
+     *  before `All`. Absent while the offer does not stand. */
+    readonly matching?: { readonly label: string; readonly onPress: () => void; readonly reason?: string };
   };
 }
 
@@ -92,6 +96,11 @@ export function TableStrip({ label, noun, refresh, paging, selection }: TableStr
         <Verb key={verb.id} verb={verb} />
       ))}
       <span className="min-w-0 flex-1" aria-hidden />
+      {selection?.matching !== undefined && (
+        <Button size="sm" variant="ghost" reason={selection.matching.reason} onClick={selection.matching.onPress}>
+          {selection.matching.label}
+        </Button>
+      )}
       {selection !== undefined && (
         <AllCheckbox
           checked={selection.all.checked}
