@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { AppShell } from "@/components/chrome/AppShell";
 import { useAppStore } from "@/store/app-store";
-import { renderLive, resetStore } from "./support/store";
+import { renderLive, resetStore, signInForTest } from "./support/store";
 
 const shell = (): string => renderLive(createElement(AppShell));
 
@@ -34,6 +34,10 @@ describe("the signed-out window", () => {
 });
 
 describe("the signed-in window", () => {
+  beforeEach(() => {
+    signInForTest(); // the store starts signed out, as a reload does
+  });
+
   it("has the chrome, an active shell and no wall", () => {
     const html = shell();
     assert.ok(html.includes("<header"));

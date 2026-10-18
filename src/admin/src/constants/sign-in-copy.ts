@@ -17,6 +17,9 @@ export const SIGNED_OUT_NOTICE = "Signed out.";
 /** What the gate says after a session ends under the app (a refresh that failed, a second 401): `29` section 6.2. */
 export const SESSION_ENDED_NOTICE = "Your session ended. Sign in again.";
 
+/** Changing your OWN password ends your sessions, this one included (`29` section 6.2). */
+export const PASSWORD_CHANGED_NOTICE = "Password changed. Sign in again.";
+
 export const REFUSAL_SENTENCES: Readonly<Record<RefusalKind, string>> = {
   invalid: "The email or password is wrong.",
   locked: "This account is locked for a while after failed sign-ins.",

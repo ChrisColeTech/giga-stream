@@ -5,7 +5,8 @@ import { GATE_START, gateError, gateNotice, nextGate, phaseFor, type GateState }
 import type { AuthResult, RefusalKind } from "@/types/auth";
 
 const SUBMITTING: GateState = { phase: "submitting" };
-const OK: AuthResult = { ok: true, session: { actor: { email: "ada@example.test", name: "Ada" } } };
+const TOKENS = { accessToken: "a", accessExpiresAt: 1, refreshToken: "r", refreshExpiresAt: 2 };
+const OK: AuthResult = { ok: true, session: { actor: { email: "ada@example.test", name: "Ada" }, tokens: TOKENS } };
 const refusal = (kind: RefusalKind): AuthResult => ({ ok: false, refusal: kind });
 
 describe("the gate's state", () => {

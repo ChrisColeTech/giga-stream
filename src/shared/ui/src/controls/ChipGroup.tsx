@@ -1,53 +1,64 @@
-import { cn } from '../lib/cn'
+import { cn } from "../lib/cn";
+import { lockedByMin, minReason } from "./chip-rules";
+import { PILL_CHIP, PILL_FIELD_CHIP, PILL_FIELD_ROW, PILL_ROW } from "./pill-classes";
 
-/* A MULTI-SELECT in the segmented vocabulary (giga-images merge-ui, verbatim):
- * the same recessed track and raised, accent-text chips as `Segmented`, but
- * each chip is its own aria-pressed toggle. Segmented is for one-of; this is
- * for any-of — presets, aspects, resolution buckets (doc 06 §1b). */
 export interface ChipOption {
-  value: string
-  label: string
-  title?: string
-  disabled?: boolean
+  readonly value: string;
+  readonly label: string;
+  readonly title?: string;
+  readonly disabled?: boolean;
 }
 
 export interface ChipGroupProps {
-  options: ReadonlyArray<ChipOption>
-  selected: ReadonlySet<string>
-  onToggle: (value: string) => void
-  disabled?: boolean
-  'aria-label': string
-  className?: string
+  readonly options: ReadonlyArray<ChipOption>;
+  readonly selected: ReadonlySet<string>;
+  readonly onToggle: (value: string) => void;
+  /** How many chips must stay on (default 0): the last `min` lit chips are locked, with `minText` as their title. */
+  readonly min?: number;
+  /** The locked chips' reason; the rule in a sentence unless a caller words it. */
+  readonly minText?: string;
+  /** The form's field size: 36px chips at the body size, equal, spanning the row (the same as `Segmented`'s). */
+  readonly field?: boolean;
+  readonly disabled?: boolean;
+  readonly "aria-label": string;
+  readonly className?: string;
 }
 
-const TRACK = 'inline-flex flex-wrap gap-0.5 rounded-ctl border border-ctl-edge bg-surface p-0.5'
-const CHIP =
-  'inline-flex h-[30px] cursor-pointer items-center justify-center rounded-[1px] border-0 bg-transparent px-3 ' +
-  'text-sm whitespace-nowrap text-muted transition-[background,color,box-shadow] duration-fade ease-linear hover:text-text ' +
-  'disabled:cursor-not-allowed disabled:text-dim disabled:hover:text-dim ' +
-  'data-active:bg-[linear-gradient(180deg,var(--color-ctl-hi),var(--color-ctl))] data-active:font-semibold data-active:text-accent-text ' +
-  'data-active:shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)]'
-
-export function ChipGroup({ options, selected, onToggle, disabled = false, className, ...rest }: ChipGroupProps) {
+/* ANY-OF, IN THE PILL VOCABULARY (`docs/28` section 4.3, Appendix A row 21): the chips are `Segmented`'s own flat pills,
+ * each its own `aria-pressed` toggle, with no recessed track (the track is the nav's look and appears nowhere else). Where
+ * a choice needs at least N, the last N lit chips are natively disabled with the rule as their title: disabled, never
+ * hidden, and the reason rides the chip. */
+export function ChipGroup({
+  options,
+  selected,
+  onToggle,
+  min = 0,
+  minText,
+  field = false,
+  disabled = false,
+  className,
+  ...rest
+}: ChipGroupProps) {
   return (
-    <div role="group" className={cn(TRACK, className)} {...rest}>
+    <div role="group" className={cn(field ? PILL_FIELD_ROW : PILL_ROW, className)} {...rest}>
       {options.map((option) => {
-        const on = selected.has(option.value)
+        const on = selected.has(option.value);
+        const locked = lockedByMin(on, selected.size, min);
         return (
           <button
             key={option.value}
             type="button"
             aria-pressed={on}
-            data-active={on ? '' : undefined}
-            disabled={disabled || option.disabled}
-            title={option.title}
-            className={CHIP}
+            data-active={on ? "" : undefined}
+            disabled={disabled || option.disabled === true || locked}
+            title={locked ? (minText ?? minReason(min)) : option.title}
+            className={cn(PILL_CHIP, field ? PILL_FIELD_CHIP : "h-7 px-3 text-xs")}
             onClick={() => onToggle(option.value)}
           >
             {option.label}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

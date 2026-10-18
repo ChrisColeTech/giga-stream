@@ -10,6 +10,7 @@ export function useSignIn(): (email: string, password: string) => Promise<AuthRe
   const beginSignIn = useAppStore((state) => state.beginSignIn);
   const finishSignIn = useAppStore((state) => state.finishSignIn);
   const say = useAppStore((state) => state.say);
+  const loadAudit = useAppStore((state) => state.loadAudit);
 
   return useCallback(
     async (email, password) => {
@@ -19,10 +20,12 @@ export function useSignIn(): (email: string, password: string) => Promise<AuthRe
         .signIn(email.trim(), password)
         .catch((): AuthResult => ({ ok: false, refusal: "unreachable" }));
       finishSignIn(result);
-      if (result.ok) say(SIGNED_IN_NOTICE);
-      else say(REFUSAL_SENTENCES[result.refusal], "warn", "Session");
+      if (result.ok) {
+        say(SIGNED_IN_NOTICE);
+        void loadAudit();
+      } else say(REFUSAL_SENTENCES[result.refusal], "warn", "Session");
       return result;
     },
-    [beginSignIn, finishSignIn, say],
+    [beginSignIn, finishSignIn, say, loadAudit],
   );
 }

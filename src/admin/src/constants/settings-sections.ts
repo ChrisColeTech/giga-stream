@@ -43,3 +43,6 @@ export const NOT_SIGNED_IN = "You are not signed in.";
 
 export const RESTORE_AT_DEFAULTS = "Appearance is already at its defaults.";
 export const RESTORE_TITLE = "Dark, Follow system, Amber and a zoom of 1";
+
+/** This admin app's version, shown in About. The backend's facts are dashes until `services/health.ts` is wired. */
+export const APP_VERSION = "0.1.0";

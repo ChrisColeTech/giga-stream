@@ -26,8 +26,10 @@ describe("the admin's source", () => {
     assert.ok(SOURCES.length > 50, `${SOURCES.length} files`);
   });
 
-  it("makes no request: no fetch, XMLHttpRequest, WebSocket, EventSource or beacon", () => {
-    assert.deepEqual(offenders(/\bfetch\s*\(|XMLHttpRequest|new WebSocket|new EventSource|sendBeacon/), []);
+  it("calls fetch in services/api.ts only, and uses no XMLHttpRequest, WebSocket, EventSource or beacon", () => {
+    const calls = offenders(/\bfetch\s*\(/).map((path) => path.replaceAll("\\", "/"));
+    assert.deepEqual(calls, ["/services/api.ts"]);
+    assert.deepEqual(offenders(/XMLHttpRequest|new WebSocket|new EventSource|sendBeacon/), []);
   });
 
   it("touches no browser storage or cookie", () => {

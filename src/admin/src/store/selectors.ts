@@ -1,6 +1,5 @@
 import { railKey } from "@/constants/tabs";
 import type { Tab } from "@/types/shell";
-import { olderRemaining } from "./audit-slice";
 import { useAppStore } from "./app-store";
 
 export const useTab = (): Tab => useAppStore((state) => state.tab);
@@ -16,4 +15,4 @@ export const useWorkSurfaceOpen = (): boolean => useAppStore((state) => state.ov
 export const useWorkspaceOpen = (tab: Tab): boolean => useAppStore((state) => state.workspaces[tab] !== null);
 
 /** Whether the Events drawer has an older page to load. */
-export const useOlderAvailable = (): boolean => useAppStore((state) => olderRemaining(state.olderLoaded));
+export const useOlderAvailable = (): boolean => useAppStore((state) => state.olderCursor !== null);

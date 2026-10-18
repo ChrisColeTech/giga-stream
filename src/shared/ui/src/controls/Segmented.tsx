@@ -1,4 +1,5 @@
 import { cn } from '../lib/cn'
+import { PILL_CHIP, PILL_EQUAL_ROW, PILL_FIELD_CHIP, PILL_FIELD_ROW, PILL_ROW } from './pill-classes'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -38,18 +39,11 @@ interface SegmentedProps<T extends string> {
  * use for `data-on`, so a lit chip reads like a pressed toggle button
  * anywhere else. Counts ride inside the chip's label. `equal` sizes every
  * chip to the widest so a row never re-flows as counts change. */
-const ROW = 'inline-flex flex-none flex-wrap items-center gap-1.5'
-const EQUAL_ROW = 'inline-grid auto-cols-fr grid-flow-col gap-1.5'
-/** The field size spans the row: equal segments that take the row's full width. */
-const FIELD_ROW = 'grid w-full min-w-0 flex-1 auto-cols-fr grid-flow-col gap-1.5'
-const FIELD_CHIP = 'h-9 px-3 text-sm'
-
-const CHIP =
-  'inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.25 rounded-full border border-ctl-edge ' +
-  'bg-transparent whitespace-nowrap text-muted transition-[background,color,border-color] duration-fade ease-linear ' +
-  'hover:bg-hov hover:text-text ' +
-  'data-active:border-accent-edge data-active:bg-accent-tint data-active:font-semibold data-active:text-accent-text ' +
-  'disabled:cursor-not-allowed disabled:text-dim disabled:hover:bg-transparent disabled:hover:text-dim'
+const ROW = PILL_ROW
+const EQUAL_ROW = PILL_EQUAL_ROW
+const FIELD_ROW = PILL_FIELD_ROW
+const FIELD_CHIP = PILL_FIELD_CHIP
+const CHIP = PILL_CHIP
 
 /** Chips share a rail's full width equally — never ragged. */
 export const SEG_FULL = 'flex [&>button]:flex-1 [&>button]:justify-center'

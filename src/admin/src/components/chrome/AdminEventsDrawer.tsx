@@ -11,5 +11,5 @@ export function AdminEventsDrawer() {
   const loadOlder = useAppStore((state) => state.loadOlder);
   const available = useOlderAvailable();
 
-  return <EventsDrawer open={open} rows={events} onClear={clearEvents} older={{ available, onLoad: loadOlder }} />;
+  return <EventsDrawer open={open} rows={events} onClear={clearEvents} older={{ available, onLoad: () => void loadOlder() }} />;
 }
