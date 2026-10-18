@@ -22,7 +22,6 @@ export const SETTINGS_LABELS: readonly string[] = [
   "Accent",
   "UI zoom",
   "Signed in as",
-  "Name",
   "Security question",
   "Answer",
   "Current password",

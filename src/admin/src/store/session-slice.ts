@@ -30,7 +30,7 @@ export interface SessionSlice {
   finishSignIn: (result: AuthResult) => void;
   /** A refresh answered: the new tokens replace the old whole (the refresh token is single-use). */
   adoptTokens: (tokens: SessionTokens) => void;
-  /** The signed-in account changed its own username or name: the actor follows (the id never changes). */
+  /** The signed-in account changed its own username: the actor follows (the id never changes). */
   updateActor: (account: SessionActor) => void;
   /** The session ended under the app (a failed refresh, a second 401, an own password change): the gate returns with
    *  `sentence` on its notice. */
@@ -97,7 +97,6 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
         actor: {
           id: actor.id,
           username: actor.username,
-          name: actor.name,
           ...(flag !== undefined && { securityQuestionSet: flag }),
         },
       });

@@ -6,7 +6,6 @@ export interface SessionActor {
   /** The account id as the backend gives it: a username can change, an id cannot, so own-account rules compare ids. */
   readonly id: string | number;
   readonly username: string;
-  readonly name: string;
   /** Whether the account has set its security question (`40`); read only, unknown (absent) until the backend says. */
   readonly securityQuestionSet?: boolean;
 }

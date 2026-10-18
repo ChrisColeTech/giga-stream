@@ -124,11 +124,19 @@ describe("the audit tail", () => {
   });
 
   it("names accounts by the held username and never shows a password field", async () => {
-    state().accountsLoaded([{ id: "acct_5", username: "held@x.test", name: "H", disabled: false, createdAt: 1, updatedAt: 1 }]);
+    state().accountsLoaded([{ id: "acct_5", username: "held@x.test", disabled: false, createdAt: 1, updatedAt: 1 }]);
     const updated = entry(5, { action: "account.updated", detail: { name: "Hal", fields: ["name"], password: "hunter2" } });
     await tailOf(fakeService([{ items: [updated], unreadable: 0 }])).reload();
     assert.equal(state().events[0]?.sentence, "ada@example.test updated account held@x.test");
     assert.ok(!JSON.stringify(state().events).includes("hunter2"));
+  });
+
+  it("reads account rows that carry a username and old rows that carry only a name", async () => {
+    const now = entry(6, { action: "account.updated", detail: { username: "new@x.test", fields: ["username"] } });
+    const old = entry(7, { action: "account.updated", detail: { name: "Hal", fields: ["name"] } });
+    await tailOf(fakeService([{ items: [now, old], unreadable: 0 }])).reload();
+    const sentences = state().events.map((e) => e.sentence).sort();
+    assert.deepEqual(sentences, ["ada@example.test updated account Hal", "ada@example.test updated account new@x.test"]);
   });
 
   it("holds no async action in the store", () => {

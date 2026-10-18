@@ -46,8 +46,8 @@ function count(detail: AuditEntry["detail"], key: string): number {
 }
 
 /** An account is named by its username: the backend writes it on `account.created` and `deleted`; an `updated` entry
- *  holds only the account's name, so the held username for the subject id comes first. Only the named keys are read,
- *  never a field called `password`. */
+ *  entry written before accounts lost their name holds that name instead, so `name` stays a last fallback for old rows.
+ *  Only the named keys are read, never a field called `password`. */
 function accountName(entry: AuditEntry, names: SubjectNames): string {
   const held = entry.subject === undefined ? undefined : names[entry.subject];
   return text(entry.detail, "username") ?? held ?? text(entry.detail, "name") ?? entry.subject ?? "";

@@ -45,7 +45,6 @@ export function selectAllState(items: readonly AdminAccount[], ticked: readonly 
 export interface AccountRowView {
   readonly id: AccountId;
   readonly username: string;
-  readonly name: string;
   readonly state: RowState;
   /** The last sign-in as the list shows it, `never` if absent. */
   readonly when: string;
@@ -55,7 +54,6 @@ export function accountRow(account: AdminAccount): AccountRowView {
   return {
     id: account.id,
     username: account.username,
-    name: account.name,
     state: enabledState(!account.disabled),
     when: formatWhen(account.lastSignInAt),
   };

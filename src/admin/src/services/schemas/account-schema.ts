@@ -4,7 +4,6 @@ import { z } from "zod";
 export const AccountSchema = z.object({
   id: z.union([z.string(), z.number()]),
   username: z.string(),
-  name: z.string(),
   disabled: z.boolean(),
   createdAt: z.number(),
   updatedAt: z.number(),

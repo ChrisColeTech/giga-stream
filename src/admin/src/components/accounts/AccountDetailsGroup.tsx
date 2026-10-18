@@ -20,9 +20,9 @@ export interface AccountDetailsGroupProps {
   readonly lockReason: string | undefined;
 }
 
-/** `Details`: Name, Username, the Enabled switch (the inverse of the stored `disabled`), the last sign-in and whether a
- *  security question is set (`Set` or `Not set`), both read only. Name first on every form. The switch is disabled with
- *  its reason while this is the last enabled account. */
+/** `Details`: Username, the Enabled switch (the inverse of the stored `disabled`), the last sign-in and whether a
+ *  security question is set (`Set` or `Not set`), both read only. The username is the identity and comes first; an
+ *  account has no name. The switch is disabled with its reason while this is the last enabled account. */
 export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason }: AccountDetailsGroupProps) {
   const toggle = (
     <Toggle
@@ -34,20 +34,18 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
   );
   return (
     <Group id="ac-details" icon={User} title="Details">
-      {(["name", "username"] as const).map((key) => (
-        <Row key={key} label={key === "name" ? "Name" : "Username"} error={errors[key]}>
-          <Input
-            type="text"
-            value={draft[key]}
-            className={FIELD_CONTROL}
-            aria-label={key === "name" ? "Name" : "Username"}
-            aria-invalid={errors[key] !== undefined}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(event) => onChange({ [key]: event.target.value })}
-          />
-        </Row>
-      ))}
+      <Row label="Username" error={errors["username"]}>
+        <Input
+          type="text"
+          value={draft.username}
+          className={FIELD_CONTROL}
+          aria-label="Username"
+          aria-invalid={errors["username"] !== undefined}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => onChange({ username: event.target.value })}
+        />
+      </Row>
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
         {lockReason === undefined ? (
           toggle

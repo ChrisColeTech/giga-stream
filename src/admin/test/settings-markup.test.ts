@@ -52,7 +52,7 @@ describe("Appearance", () => {
 describe("Session", () => {
   it("names who is signed in, and Sign out works", () => {
     const html = render(SessionSection);
-    assert.ok(html.includes("ada@example.test") && html.includes(">Ada<"));
+    assert.ok(html.includes("ada@example.test") && !html.includes(">Name<"));
     assert.ok(html.includes("Sign out") && !html.includes("Sign out. "));
   });
 

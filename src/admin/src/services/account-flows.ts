@@ -51,7 +51,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
     const actor = store().actor;
     return actor !== null && sameId(actor.id, account.id);
   };
-  const rejected = (sentence: string, field?: "name" | "username" | "password"): FlowRefused => {
+  const rejected = (sentence: string, field?: "username" | "password"): FlowRefused => {
     store().say(sentence, "warn", "Account");
     return { ok: false, sentence, ...(field !== undefined && { field }) };
   };
@@ -74,7 +74,7 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
   }
 
   /** A write whose answer could not be read may still have happened: read the list again. */
-  const afterFailure = (error: unknown, field?: "name" | "username" | "enabled"): FlowRefused => {
+  const afterFailure = (error: unknown, field?: "username" | "enabled"): FlowRefused => {
     const result = refusal(store(), error, field);
     if (codeOf(error) === BAD_ANSWER) void load();
     return result;

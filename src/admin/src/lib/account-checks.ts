@@ -1,11 +1,5 @@
+import { PASSWORD_MAX, PASSWORD_MIN, USERNAME_MAX } from "@/constants/account-limits";
 import {
-  NAME_MAX,
-  PASSWORD_MAX,
-  PASSWORD_MIN,
-  USERNAME_MAX,
-} from "@/constants/account-limits";
-import {
-  NAME_LENGTH,
   PASSWORD_LONG,
   PASSWORD_REQUIRED,
   SAVING_REASON,
@@ -24,18 +18,13 @@ export function usernameLength(value: string): Refusal {
   return length === 0 || length <= USERNAME_MAX ? null : USERNAME_LENGTH;
 }
 
-export function nameLength(value: string): Refusal {
-  const length = value.trim().length;
-  return length === 0 || length <= NAME_MAX ? null : NAME_LENGTH;
-}
-
 /** Never trimmed: a space is part of a password. */
 export function passwordLength(value: string): Refusal {
   return value.length > PASSWORD_MAX ? PASSWORD_LONG : null;
 }
 
 export interface FieldRefusal {
-  readonly field: "name" | "username" | "password";
+  readonly field: "username" | "password";
   readonly sentence: string;
 }
 
@@ -44,7 +33,6 @@ const passwordRequired = (value: string): Refusal => (value.length < PASSWORD_MI
 /** Why `Create` is disabled, in the form's order, or undefined. Busy and unreachable come after the required fields. */
 export function createReason(draft: NewAccountDraft, busy: boolean, unreachable: boolean): string | undefined {
   return (
-    required("Name", draft.name) ??
     required("Username", draft.username) ??
     passwordRequired(draft.password) ??
     (busy ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined)
@@ -54,7 +42,6 @@ export function createReason(draft: NewAccountDraft, busy: boolean, unreachable:
 /** The first value the form refuses when `Create` is pressed, in the form's order, or null. */
 export function firstCreateRefusal(draft: NewAccountDraft): FieldRefusal | null {
   const checks: Array<[FieldRefusal["field"], Refusal]> = [
-    ["name", nameLength(draft.name)],
     ["username", usernameLength(draft.username)],
     ["password", passwordLength(draft.password)],
   ];
@@ -63,9 +50,7 @@ export function firstCreateRefusal(draft: NewAccountDraft): FieldRefusal | null 
 }
 
 /** The refusal of a workspace save, for the fields that are being changed. */
-export function firstSaveRefusal(patch: { name?: string; username?: string }): FieldRefusal | null {
-  const name = patch.name === undefined ? null : (required("Name", patch.name) ?? nameLength(patch.name));
-  if (name !== null) return { field: "name", sentence: name };
+export function firstSaveRefusal(patch: { username?: string }): FieldRefusal | null {
   const username =
     patch.username === undefined ? null : (required("Username", patch.username) ?? usernameLength(patch.username));
   return username === null ? null : { field: "username", sentence: username };
