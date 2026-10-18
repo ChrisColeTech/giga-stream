@@ -15,15 +15,15 @@ export const PlaylistPatchSchema = z.object({ name: name.optional(), url: url.op
 export type PlaylistPatch = z.infer<typeof PlaylistPatchSchema>;
 
 /**
- * A playlist as a read answers it (docs/03 section 7.2c): never its address, only the host and a masked form; the
- * last run is joined in from its one sync job.
+ * A playlist as a read answers it (docs/03 section 7.2c): a web playlist's address in full, and its host; the last
+ * run is joined in from its one sync job.
  */
 export interface PlaylistView {
   id: number;
   name: string;
   kind: "file" | "url";
+  url?: string;
   host?: string;
-  masked?: string;
   fileName?: string;
   enabled: boolean;
   channels: number;

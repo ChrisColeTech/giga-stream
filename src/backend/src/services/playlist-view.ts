@@ -2,13 +2,10 @@ import type { PlaylistRecord } from "../store/playlist-repository.js";
 import type { Store } from "../store/store.js";
 import type { PlaylistView } from "../types/playlist.js";
 
-/** The masked form of a web playlist's host: all a read ever shows of the address (docs/26 section 3.11). */
-export const maskedHost = (host: string): string => `https://${host}/…`;
-
 const NO_CHANNELS = { channels: 0, enabled: 0, live: 0, dead: 0 };
 
 /**
- * The playlist as any read may show it: its columns (never the address), the counts of its channels, and the last
+ * The playlist as a signed-in admin reads it: its columns (the web address in full, docs/03 section 7.2c), the counts of its channels, and the last
  * run joined in from its one sync job (docs/43 section 3.1).
  */
 export function playlistView(store: Store, playlist: PlaylistRecord, counts = store.channels.countsByPlaylist()): PlaylistView {
@@ -18,7 +15,8 @@ export function playlistView(store: Store, playlist: PlaylistRecord, counts = st
     id: playlist.id,
     name: playlist.name,
     kind: playlist.kind,
-    ...(playlist.host !== undefined && { host: playlist.host, masked: maskedHost(playlist.host) }),
+    ...(playlist.url !== undefined && { url: playlist.url }),
+    ...(playlist.host !== undefined && { host: playlist.host }),
     ...(playlist.fileName !== undefined && { fileName: playlist.fileName }),
     enabled: playlist.enabled,
     channels: stats.channels,

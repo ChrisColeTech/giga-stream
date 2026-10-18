@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { ApiError } from "@giga/http/api-error";
 import { changedFields, urlBody } from "@/lib/playlist-body";
-import { draftOf, startReplace } from "@/lib/playlist-draft";
+import { draftOf } from "@/lib/playlist-draft";
 import { playlists } from "@/services/playlists";
 import { json, success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
@@ -65,29 +65,29 @@ describe("the playlists service", () => {
     );
   });
 
-  it("imports a web address as JSON `{ url }`, and never reads an address back", async () => {
+  it("imports a web address as JSON `{ url }`, and the answer's `url` is read in full", async () => {
     await withBackend(
       () => success({ ...row(9), url: SECRET, created: true, imported: IMPORTED }, 201),
       async (calls) => {
         const answer = await playlists.create(urlBody({ source: "url", file: null, address: ` ${SECRET} ` }));
         assert.deepEqual(calls[0]?.body, { url: SECRET });
         assert.equal(calls[0]?.headers["content-type"], "application/json");
-        assert.ok(!JSON.stringify(answer).includes("hunter2"));
-        assert.equal(answer.playlist.masked, "https://iptv.example.test/…");
+        assert.equal(answer.playlist.url, SECRET);
+        assert.equal("masked" in answer.playlist, false);
       },
     );
   });
 
-  it("patches only the changed fields: Replace sends `url`, an unchanged one sends nothing", async () => {
+  it("patches only the changed fields: an edited address sends `url`, an unchanged one sends nothing", async () => {
     const saved = row(4);
     await withBackend(
       () => success(saved),
       async (calls) => {
         await playlists.update(4, changedFields(saved, { ...draftOf(saved), enabled: false }));
-        await playlists.update(4, changedFields(saved, { ...startReplace(draftOf(saved)), address: SECRET }));
+        await playlists.update(4, changedFields(saved, { ...draftOf(saved), address: SECRET }));
         assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/playlists/4", { enabled: false }]);
         assert.deepEqual(calls[1]?.body, { url: SECRET });
-        assert.deepEqual(changedFields(saved, startReplace(draftOf(saved))), {});
+        assert.deepEqual(changedFields(saved, draftOf(saved)), {});
       },
     );
   });

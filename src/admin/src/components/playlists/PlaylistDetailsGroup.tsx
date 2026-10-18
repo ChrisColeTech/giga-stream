@@ -1,16 +1,13 @@
-import { FileText, Link } from "lucide-react";
-import { Button } from "@giga/ui/controls/Button";
+import { FileText } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import type { SaveVerb } from "@/lib/workspace-verbs";
-import { ADDRESS_TIP, ENABLED_TIP, FILE_ADDRESS_TIP, NAME_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
-import { replaceReason, startReplace, type PlaylistDraft } from "@/lib/playlist-draft";
-import { sourceOf } from "@/lib/playlist-rows";
+import { ADDRESS_TIP, ENABLED_TIP, FILE_ADDRESS_TIP, NAME_TIP } from "@/constants/playlist-copy";
+import type { PlaylistDraft } from "@/lib/playlist-draft";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 
@@ -23,19 +20,10 @@ export interface PlaylistDetailsGroupProps {
   readonly save: SaveVerb;
 }
 
-/** `Details` (`38` section 3.3): Name (first), Address, Enabled. The Address shows the backend's `masked` (a file
- *  playlist, its file name), read-only and mono, with a ghost `Replace` at the row's end. `Replace` unlocks it as an EMPTY
- *  password field (never prefilled: the address is never shown back) and disables itself with `Type the new value, then
- *  Save.`; left empty, nothing is sent. For a file playlist `Replace` is disabled: it has no web address, so the file is
- *  imported again. Masking is display only: the stored address changes only when a new one is saved. */
+/** `Details` (`38` section 3.3, `43` section 4.1): Name (first), Address, Enabled. A web playlist's Address is an
+ *  editable plain text field holding the full address (owner, 2026-10-18), saved with the form's `Save details` and
+ *  checked by the same address rule; a file playlist shows its file name, read-only. */
 export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }: PlaylistDetailsGroupProps) {
-  const locked = !draft.replacing;
-  const reason = replaceReason(draft, playlist);
-  const replace = (
-    <Button variant="ghost" reason={reason} onClick={() => onChange(startReplace(draft))}>
-      <Link aria-hidden /> Replace
-    </Button>
-  );
   return (
     <Group id="pw-details" icon={FileText} title="Details">
       <Row label="Name" tip={NAME_TIP} error={errors["name"]}>
@@ -54,19 +42,18 @@ export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }
         label="Address"
         tip={playlist.kind === "file" ? FILE_ADDRESS_TIP : ADDRESS_TIP}
         error={errors["address"]}
-        trailing={reason === undefined ? <Tooltip text={REPLACE_TITLE}>{replace}</Tooltip> : replace}
       >
-        {locked ? (
+        {playlist.kind === "file" ? (
           <Input
             type="text"
-            value={sourceOf(playlist)}
+            value={playlist.fileName ?? playlist.name}
             readOnly
             className={`${FIELD_CONTROL} font-mono text-faint`}
             aria-label="Address"
           />
         ) : (
           <Input
-            type="password"
+            type="text"
             value={draft.address}
             className={FIELD_CONTROL}
             aria-label="Address"

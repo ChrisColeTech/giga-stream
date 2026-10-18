@@ -1,5 +1,5 @@
 // Playlists after they exist (docs/43 sections 3.1 and 3.2): the views, rename, enable, rotating a web address, and the
-// precedence of the three `enabled` switches. The address is a secret no read or audit entry repeats. No network.
+// precedence of the three `enabled` switches. The playlist reads show the address; no audit entry repeats it. No network.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -19,13 +19,13 @@ test("every route needs a signed-in admin: 401 without a token", async () => {
   }
 });
 
-test("the list and a read are the same view: counts, host or file name, the job's last run; never the address", async () => {
+test("the list and a read are the same view: counts, host or file name, the job's last run; the address in full for a web playlist", async () => {
   const { t, token, api, importUrl } = await setupPlaylists();
   await importUrl(ONE);
   await uploadFile(t, token, "mine.m3u", M3U);
   const list = (await api("GET", "/api/playlists")).body;
   assert.deepEqual(pick(list, "data.items.0"), {
-    id: 1, name: "us", kind: "url", host: "cdn.example", masked: "https://cdn.example/…", enabled: true,
+    id: 1, name: "us", kind: "url", url: ONE, host: "cdn.example", enabled: true,
     channels: 2, enabledChannels: 0, live: 0, dead: 0,
   });
   assert.deepEqual(pick(list, "data.items.1"), {
@@ -57,8 +57,9 @@ test("a patch renames, disables, or - for a web playlist - replaces the address;
   assert.deepEqual([file.status, pick(file.body, "error.code"), pick(file.body, "error.details.field")], [422, "playlist.invalid", "url"]);
   assert.equal((await api("PATCH", "/api/playlists/99", { name: "x" })).status, 404);
   assert.equal((await api("PATCH", "/api/playlists/1", { kind: "file" })).status, 422);
-  const text = JSON.stringify([await audit(), (await api("GET", "/api/playlists")).body]);
-  assert.equal(["SECRET-VALUE", "ANOTHER-SECRET"].some((s) => text.includes(s)), false);
+  const text = JSON.stringify(await audit());
+  assert.equal(["SECRET-VALUE", "ANOTHER-SECRET", "token=", "key="].some((s) => text.includes(s)), false);
+  assert.equal(pick((await api("GET", "/api/playlists/1")).body, "data.url"), ONE, "the read shows the rotated address");
   assert.equal(feed.asked.length, 2, "a patch fetches nothing");
 });
 

@@ -1,5 +1,5 @@
 // The web-address import (docs/43 sections 3.2 and 7): the address is fetched once through the guarded fetch, parsed,
-// then written in one transaction; a failure creates nothing; the address is a secret no read or log repeats.
+// then written in one transaction; a failure creates nothing; the admin reads the address in full, but no audit entry, job, refusal example or error repeats it.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -16,21 +16,22 @@ test("importing needs a signed-in admin", async () => {
   }
 });
 
-test("an address is fetched once and becomes a playlist with disabled channels and a job; no read repeats the address", async () => {
+test("an address is fetched once and becomes a playlist with disabled channels and a job; only the playlist reads show the address", async () => {
   const { api, feed, adminChannels, revision, audit } = await setupPlaylists();
   const before = await revision();
   const made = await api("POST", "/api/playlists", { url: ONE });
   assert.equal(made.status, 201);
   assert.deepEqual(
-    ["name", "kind", "host", "masked", "fileName", "created"].map((f) => pick(made.body, `data.${f}`)),
-    ["us", "url", "cdn.example", "https://cdn.example/…", undefined, true],
+    ["name", "kind", "url", "host", "fileName", "created", "masked"].map((f) => pick(made.body, `data.${f}`)),
+    ["us", "url", ONE, "cdn.example", undefined, true, undefined],
   );
   assert.deepEqual(pick(made.body, "data.imported"), { created: 2, updated: 0, skipped: 0, refused: 0, refusalExamples: [] });
   assert.deepEqual(feed.asked, [ONE], "one fetch");
   assert.equal(await revision(), before + 1);
   assert.deepEqual((await adminChannels()).map((r) => [r.name, r.enabled, r.source]), [["ABC", false, "cdn.example"], ["ESPN", false, "cdn.example"]]);
-  const reads = [made.body, (await api("GET", "/api/playlists")).body, (await api("GET", "/api/playlists/1")).body,
-    (await api("GET", "/api/jobs")).body, await audit(), await adminChannels()];
+  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.0.url"), ONE, "the list shows the address in full");
+  assert.equal(pick((await api("GET", "/api/playlists/1")).body, "data.url"), ONE, "so does a read");
+  const reads = [pick(made.body, "data.imported"), (await api("GET", "/api/jobs")).body, await audit(), await adminChannels()];
   const text = JSON.stringify(reads);
   for (const secret of SECRETS) assert.equal(text.includes(secret), false, secret);
   assert.deepEqual(pick(await audit(), "0.detail.source"), "cdn.example");

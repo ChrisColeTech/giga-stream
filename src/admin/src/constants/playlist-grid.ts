@@ -1,7 +1,7 @@
 import type { GridHeading } from "@giga/ui/lists/RecordGrid";
 import type { GridLayout } from "@giga/ui/lists/record-grid-layout";
 
-/** The Playlists list's column set (`43` section 4.1): name, source (the masked host or the file name), the four counts,
+/** The Playlists list's column set (`43` section 4.1): name, source (the host or the file name), the four counts,
  *  last run, state. Tracks are rem so the header and the rows line up; the end track fits the armed question
  *  (`Delete <name> and its 2,598 channels?`) for a long name. */
 export const PLAYLIST_GRID: GridLayout = {

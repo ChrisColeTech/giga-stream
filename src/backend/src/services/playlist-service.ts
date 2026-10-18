@@ -13,8 +13,8 @@ const invalid = (field: string, message: string): AppError => new AppError(ERROR
 
 /**
  * The playlists after they exist (docs/43 sections 3.1 and 3.2): read, rename, enable, rotate a web playlist's address,
- * delete. The address is a secret - it can carry credentials in its query - so no answer shows it (only `host` and
- * `masked`) and an audit entry holds the host alone. A playlist's `enabled` is part of what a public reader sees, so
+ * delete. The address can carry credentials in its query: a signed-in admin reads it in full, but an audit entry
+ * holds the host alone. A playlist's `enabled` is part of what a public reader sees, so
  * changing it takes a revision. Deleting a playlist aborts its running sync, waits for it, and removes the playlist
  * together with its channels and sync job through the foreign keys, in one transaction. `onChange` re-arms the
  * scheduler.

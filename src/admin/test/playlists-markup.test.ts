@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { PlaylistDetailsGroup } from "@/components/playlists/PlaylistDetailsGroup";
 import { PlaylistStatusGroup } from "@/components/playlists/PlaylistStatusGroup";
-import { draftOf, startReplace } from "@/lib/playlist-draft";
+import { draftOf } from "@/lib/playlist-draft";
 import { playlistRow } from "@/lib/playlist-rows";
 import { PlaylistsPage } from "@/pages/PlaylistsPage";
 import { useAppStore } from "@/store/app-store";
@@ -48,7 +48,7 @@ describe("the playlists list", () => {
     assert.ok(!html.includes("No playlists"));
   });
 
-  it("shows the columns, the masked host or the file name, the counts, state words, a dimmed disabled row and `never`", () => {
+  it("shows the columns, the host or the file name, the counts, state words, a dimmed disabled row and `never`", () => {
     const ran = new Date(2026, 9, 17, 6, 0).getTime();
     state().playlistsLoaded(
       [
@@ -62,7 +62,8 @@ describe("the playlists list", () => {
     for (const heading of [">name<", ">source<", ">channels<", ">enabled<", ">live<", ">dead<", ">last run<", ">state<"]) {
       assert.ok(html.includes(heading), heading);
     }
-    assert.ok(html.includes("https://iptv.example.test/…") && html.includes(">us.m3u</span>"));
+    assert.ok(html.includes(">iptv.example.test</span>") && html.includes(">us.m3u</span>"));
+    assert.ok(!html.includes("list.m3u"), "the list shows the host, not the full address");
     assert.ok(html.includes(">2,598<") && html.includes(">1,904<") && html.includes(">640<") && html.includes(">12<"));
     assert.ok(html.includes("2026-10-17 06:00") && html.includes(">never<"));
     assert.ok(html.includes('data-st="enabled"') && html.includes('data-st="disabled"') && html.includes("opacity-45"));
@@ -103,14 +104,14 @@ describe("the Playlists table strip", () => {
 });
 
 describe("a playlist's workspace", () => {
-  it("opens with the rail, the page toolbar (Discard, Channels →), Details then Status, the masked address, Save details", () => {
+  it("opens with the rail, the page toolbar (Discard, Channels →), Details then Status, the full address, Save details", () => {
     state().playlistsLoaded([row(1)], {});
     state().openWorkspace("playlists", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Playlist sections"') && at(html, ">Details<") < at(html, ">Status<"));
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Address"'));
-    assert.ok(/<input[^>]*readOnly=""[^>]*aria-label="Address"[^>]*value="https:\/\/iptv\.example\.test\/…"/.test(html));
-    assert.ok(html.includes(" Replace</button>") && !html.includes('type="password"'));
+    assert.ok(/<input[^>]*type="text"[^>]*aria-label="Address"[^>]*value="https:\/\/iptv\.example\.test\/list\.m3u"/.test(html));
+    assert.ok(!html.includes("readOnly=\"\"") && !html.includes("Replace") && !html.includes('type="password"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(html.includes("Discard changes") && html.includes("Save details") && !html.includes(">Save<"));
     assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "the forward verb is Channels →");
@@ -125,22 +126,21 @@ describe("a playlist's workspace", () => {
     assert.ok(page().includes('aria-label="Channels →. This playlist has no channels."'));
   });
 
-  it("Replace unlocks an empty password field and disables itself with its reason", () => {
+  it("a web playlist's Address is an editable plain text field holding what the draft holds", () => {
     const playlist = row(1);
-    const draft = startReplace(draftOf(playlist));
+    const draft = { ...draftOf(playlist), address: "https://iptv.example.test/new.m3u" };
     const props = { playlist, draft, errors: {}, onChange: () => undefined, save: { onPress: () => undefined } };
     const html = renderLive(createElement(PlaylistDetailsGroup, props));
-    assert.ok(/<input[^>]*type="password"[^>]*aria-label="Address"[^>]*value=""/.test(html));
-    assert.ok(html.includes('aria-label="Replace. Type the new value, then Save."'));
-    assert.ok(!html.includes("https://iptv.example.test/…"), "the masked form is gone while unlocked");
+    assert.ok(/<input[^>]*type="text"[^>]*aria-label="Address"[^>]*value="https:\/\/iptv\.example\.test\/new\.m3u"/.test(html));
+    assert.ok(!/<input[^>]*readOnly=""[^>]*aria-label="Address"/.test(html));
   });
 
-  it("a file playlist shows its file name and disables Replace: it has no web address", () => {
+  it("a file playlist shows its file name read-only: it has no web address", () => {
     const playlist = filePlaylist(2);
     const props = { playlist, draft: draftOf(playlist), errors: {}, onChange: () => undefined, save: { onPress: () => undefined } };
     const html = renderLive(createElement(PlaylistDetailsGroup, props));
     assert.ok(/<input[^>]*readOnly=""[^>]*aria-label="Address"[^>]*value="us\.m3u"/.test(html));
-    assert.ok(html.includes('aria-label="Replace. A file playlist has no web address. Import the file again."'));
+    assert.ok(!html.includes("Replace"));
   });
 
   it("Status for a web playlist: Host, Source type, the counts line, Last run, and the run in words from the typed result", () => {

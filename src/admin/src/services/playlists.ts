@@ -15,8 +15,7 @@ import type { RecordInput } from "./service-types";
 /** The Playlists routes (`43` section 3.2, `03` section 7.2c), REAL: `GET /api/playlists`, the two imports, `PATCH` and
  *  `DELETE /api/playlists/:id`. `importFile` posts the chosen file as one multipart `file` part; `create` is the
  *  web-address import and takes `{ url, name?, enabled? }`. Both answer the playlist, whether it is new, and what the
- *  import did. The address is a secret: no answer carries it (only `host` and `masked`), and this module never reads
- *  one back. `422 playlist.invalid` names its field (`url` or `file`), `409 playlist.taken` a name or address already
+ *  import did. A web playlist's answer carries its address in full (`url`) and its `host`. `422 playlist.invalid` names its field (`url` or `file`), `409 playlist.taken` a name or address already
  *  held. A patch takes `name`, `enabled`, and for a web playlist a replacement `url`. `remove` answers
  *  `{ id, deletedChannels, deletedJobs }`. The list is read row by row: an unreadable row is dropped and counted. A
  *  write answer that does not parse is `backend.bad_response`. */

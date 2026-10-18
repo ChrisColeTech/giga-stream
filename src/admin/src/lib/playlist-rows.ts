@@ -50,10 +50,9 @@ export function idOf(text: string): number | null {
   return Number.isInteger(id) ? id : null;
 }
 
-/** Where a playlist came from, as the list and the workspace show it: a web playlist's masked address, a file
- *  playlist's file name. The address itself is never shown. */
+/** Where a playlist came from, as the list shows it: a web playlist's host, a file playlist's file name. */
 export const sourceOf = (playlist: AdminPlaylist): string =>
-  playlist.kind === "file" ? (playlist.fileName ?? playlist.name) : (playlist.masked ?? playlist.host ?? "");
+  playlist.kind === "file" ? (playlist.fileName ?? playlist.name) : (playlist.host ?? "");
 
 const num = (value: number): string => value.toLocaleString("en-US");
 
