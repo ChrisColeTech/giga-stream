@@ -69,7 +69,7 @@ export function LibraryBody({
   reveal,
   onRevealed,
 }: LibraryBodyProps) {
-  const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading);
+  const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading, view);
   const inHistory = source === "history";
   const continueRows = inHistory || !showContinue ? [] : continuing;
   const historyEmpty = !items.some((item) => item.progress !== undefined);

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { GRID_SPEC, LIST_SPEC } from "@/constants/library-window";
 import {
-  anchorOf, gridStep, rowCount, rowLayout, scrollTopForAnchor, scrollTopToReveal, visibleRows, windowSegments,
+  anchorOf, gridStep, nonEmptyRange, resetsToTop, rowCount, rowLayout, scrollTopForAnchor, scrollTopToReveal,
+  visibleRows, windowSegments,
 } from "@/lib/window-rows";
 
 /** CSS `repeat(auto-fill, minmax(144px, 1fr))` with a 12px gap: the columns the browser makes of `width`. */
@@ -172,6 +173,51 @@ describe("gridStep", () => {
   it("is a column in the list", () => {
     assert.equal(gridStep("ArrowDown", 3, 1, 10), 4);
     assert.equal(gridStep("ArrowUp", 3, 1, 10), 2);
+  });
+});
+
+describe("a stale or oversized offset (a scroll position carried over from another list)", () => {
+  const layout = rowLayout(1476, GRID_SPEC);
+  it("clamps to the last rows when the offset is past the content height", () => {
+    const range = visibleRows({ top: 3373 + 1e6, height: 900 }, layout, 40, 3);
+    assert.equal(range.last, 39);
+    assert.ok(range.first >= 36 && range.first <= 39);
+  });
+  it("treats a negative or non-finite offset as the top", () => {
+    assert.equal(visibleRows({ top: -5000, height: 900 }, layout, 40, 3).first, 0);
+    assert.equal(visibleRows({ top: Number.NaN, height: 900 }, layout, 40, 3).first, 0);
+  });
+  it("never answers an empty window for a non-empty list", () => {
+    for (const top of [0, 1, 3373, 25824, 1e9, -1e9, Number.NaN, Infinity]) {
+      const range = visibleRows({ top, height: 900 }, layout, 17, 3);
+      assert.ok(range.last >= range.first && range.first >= 0 && range.last <= 16, `top ${top}`);
+    }
+  });
+});
+
+describe("nonEmptyRange", () => {
+  it("keeps a sound range and an empty list empty", () => {
+    assert.deepEqual(nonEmptyRange({ first: 2, last: 5 }, 10), { first: 2, last: 5 });
+    assert.deepEqual(nonEmptyRange({ first: 2, last: 5 }, 0), { first: 0, last: -1 });
+  });
+  it("moves a range past the end to the last rows, and an inverted one to the first rows", () => {
+    assert.deepEqual(nonEmptyRange({ first: 50, last: 54 }, 10), { first: 5, last: 9 });
+    assert.deepEqual(nonEmptyRange({ first: 4, last: 3 }, 10), { first: 0, last: 0 });
+    assert.deepEqual(nonEmptyRange({ first: -3, last: -1 }, 10), { first: 0, last: 2 });
+  });
+});
+
+describe("resetsToTop", () => {
+  it("resets on every view switch, in any direction, and on the first mount", () => {
+    const views = ["rows", "grid", "list"];
+    for (const from of views) {
+      for (const to of views) assert.equal(resetsToTop({ loading: false, view: to, previousView: from }), from !== to);
+    }
+    assert.equal(resetsToTop({ loading: false, view: "grid", previousView: null }), true);
+  });
+  it("resets while a first page reads, and keeps the position when the tab is shown again", () => {
+    assert.equal(resetsToTop({ loading: true, view: "grid", previousView: "grid" }), true);
+    assert.equal(resetsToTop({ loading: false, view: "grid", previousView: "grid" }), false);
   });
 });
 

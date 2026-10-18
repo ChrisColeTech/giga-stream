@@ -223,3 +223,12 @@ On the owner's real stack (`07` section 4), Library, All, grid view, Chrome MCP 
    back on the card.
 9. List view: the same steps 1, 2, 4 and 5; rows are 68px and never overlap.
 10. Posters: only mounted cards request `/api/images`; no accent colours while loading (the shimmer).
+
+## Fixed: grid after Rows
+
+Switching Rows to Grid showed a blank grid. The scroller is the parent of the windowed list, so React attached its ref
+after the hook's layout effects had run; when both mount in one commit (items already loaded) the hook found `null`,
+bound no scroll listener or ResizeObserver, and the window never followed the scroll. The hook now follows the live
+element in state (read after each commit) and binds to it. A view switch, like a first-page read, resets the scroller to
+the top (`resetsToTop`); showing the tab again changes neither, so the position is kept. `visibleRows` clamps a stale or
+non-finite offset and `nonEmptyRange` never leaves a non-empty list with an empty window.

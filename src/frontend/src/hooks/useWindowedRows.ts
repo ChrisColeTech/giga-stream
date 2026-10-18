@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { OVERSCAN_ROWS } from "@/constants/library-window";
 import {
   anchorOf, rowCount, rowLayout, scrollTopForAnchor, scrollTopToReveal, visibleRows, windowSegments,
@@ -81,8 +81,13 @@ export function useWindowedRows(
     setFrame((current) => (sameFrame(current, next) ? current : next));
   }, [scroller, spec, gridTop]);
 
+  /* The scroller is the parent of this list, so React attaches its ref only after this hook's layout effects have run:
+     on a first render that mounts scroller and list together (Rows to Grid) it is still null then. Follow the live
+     element in state, read after every commit (passive effects run once all refs are attached), so the listener and
+     observer bind to the element that really scrolls and re-bind when it changes. */
+  const [root, setRoot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setRoot(scroller.current); });
   useLayoutEffect(() => {
-    const root = scroller.current;
     const node = container.current;
     if (root === null || node === null) return undefined;
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => measure());
@@ -94,7 +99,7 @@ export function useWindowedRows(
       observer?.disconnect();
       root.removeEventListener("scroll", measure);
     };
-  }, [scroller, measure]);
+  }, [root, measure]);
   useLayoutEffect(() => measure(), [count, measure]);
 
   const tryFocus = useCallback((): void => {
