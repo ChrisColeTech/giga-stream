@@ -4,6 +4,7 @@ import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/channel-copy";
 import { useChannelActions } from "@/hooks/useChannelActions";
 import type { ChannelBulk } from "@/hooks/useChannelBulk";
+import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { useAppStore } from "@/store/app-store";
 import { ChannelRows } from "./ChannelRows";
 
@@ -16,10 +17,12 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
   const ticked = useAppStore((state) => state.channels.ticked);
   const setTicked = useAppStore((state) => state.channelsSetTicked);
   const { flows, track } = useChannelActions();
+  const forward = useForwardVerbs("channels");
   const strip = (
     <TableStrip
       label="Channels table"
       noun="channels"
+      forward={forward}
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason: loading ? LOADING_REASON : undefined }}
       selection={{ count: ticked.length, verbs: bulk.verbs, onClear: () => setTicked([]) }}
     />

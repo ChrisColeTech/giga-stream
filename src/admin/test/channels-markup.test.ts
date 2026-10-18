@@ -63,25 +63,21 @@ describe("the New channel form", () => {
     const html = renderLive(createElement(ChannelsIndex));
     assert.ok(html.includes('aria-label="Create. Name is required."'));
     assert.ok(html.includes(`aria-label="Choose. ${NO_HOST}"`));
-    assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New channel"));
+    assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New channel"), "no bar above the New group");
   });
 });
 
-describe("the channels toolbar and table strip", () => {
-  const toolbar = () => {
-    const html = renderLive(createElement(ChannelsIndex));
-    return html.slice(html.indexOf('role="toolbar"'), html.indexOf("New channel"));
-  };
+describe("the channels table strip", () => {
   const table = () => {
     const html = renderLive(createElement(ChannelsIndex));
     return html.slice(html.indexOf('aria-label="Channels table"'));
   };
 
-  it("keeps only the Preview arrow in the page toolbar, waiting for a ticked row; no bulk verb is there", () => {
-    const html = toolbar();
+  it("holds Preview beside Refresh, waiting for a ticked row; no bulk verb shows until a row is ticked", () => {
+    const html = table();
     assert.ok(html.includes('aria-label="Preview channel. Tick a row first"'));
+    assert.ok(html.indexOf("Preview channel") < html.indexOf("Refresh channels"));
     for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(!html.includes(verb), verb);
-    assert.equal((html.match(/<button/g) ?? []).length, 1);
   });
 
   it("draws Refresh in the table strip and the bulk verbs only once a row is ticked", () => {
@@ -98,9 +94,9 @@ describe("the channels toolbar and table strip", () => {
     state().channelsLoaded([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
-    assert.ok(toolbar().includes('aria-label="Preview channel. Tick only one row"'));
+    assert.ok(table().includes('aria-label="Preview channel. Tick only one row"'));
     state().channelTick("a", false);
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(toolbar()) && !toolbar().includes("Preview channel. "));
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(table()) && !table().includes("Preview channel. "));
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {

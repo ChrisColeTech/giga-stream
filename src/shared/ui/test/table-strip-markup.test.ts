@@ -20,6 +20,14 @@ const strip = (props: Partial<TableStripProps> = {}): string =>
 const withRows = (count: number) => ({ selection: { count, verbs: VERBS, onClear: NOTHING } })
 const buttons = (html: string): string[] => html.match(/<button[^>]*>.*?<\/button>/g) ?? []
 
+test('forward verbs are icon buttons before Refresh, each with its tooltip and its reason', () => {
+  const forward: readonly StripVerb[] = [{ id: 'go', label: 'Go to Titles', icon: Play, onPress: NOTHING, reason: 'Tick a row first' }]
+  const html = strip({ forward })
+  assert.equal(buttons(html).length, 2)
+  assert.ok(html.includes('aria-label="Go to Titles. Tick a row first"'))
+  assert.ok(html.indexOf('Go to Titles') < html.indexOf('Refresh accounts'))
+})
+
 test('with nothing ticked the strip is the Refresh icon alone, labelled and with a tooltip', () => {
   const html = strip(withRows(0))
   assert.ok(html.includes('role="toolbar"') && html.includes('aria-label="Accounts table"'))

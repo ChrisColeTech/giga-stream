@@ -1,10 +1,9 @@
 import { DiscardBar } from "@/components/records/DiscardBar";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { MANUAL_NO_TMDB, NOTHING_EDITED, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/title-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { useTitleActions } from "@/hooks/useTitleActions";
-import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
+import { changeReason } from "@/lib/workspace-verbs";
 import { formKeyOf, saveRequiredReason } from "@/lib/title-checks";
 import { draftOfTitle, sameTitleDraft } from "@/lib/title-draft";
 import { isManualTitle } from "@/lib/title-rows";
@@ -19,7 +18,6 @@ import { TitleSeasonsGroup } from "./TitleSeasonsGroup";
 export interface TitleEditorProps {
   readonly detail: AdminTitleDetail;
   readonly active: boolean;
-  readonly jobs: ToolbarAction;
 }
 
 /** Why `Revert to TMDB` is disabled (`37` section 4.3): a title made by hand, nothing edited, a call running. */
@@ -32,7 +30,7 @@ function revertReason(detail: AdminTitleDetail, saving: boolean, unreachable: bo
 /** A title's workspace once its detail has answered: the form over the detail, ONE Save sending only the changed fields
  *  (`lib/title-body.ts`; an emptied optional field is `null`), whose answer replaces the row and the baseline. `Save
  *  details` ends the page's last group; `Revert to TMDB` is the icon on Details' State row. */
-export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
+export function TitleEditor({ detail, active }: TitleEditorProps) {
   const form = useRecordForm({ initial: draftOfTitle(detail), same: sameTitleDraft });
   const { flows, saving, track } = useTitleActions();
   const unreachable = useAppStore((state) => state.titles.unreachable);
@@ -62,7 +60,6 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
     <TitleFrame
       series={series}
       active={active}
-      toolbar={<WorkspaceToolbar label="Title toolbar" forward={jobs} />}
       bar={<DiscardBar dirty={form.dirty} onDiscard={form.discard} />}
     >
       {(spy) => (

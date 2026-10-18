@@ -103,12 +103,12 @@ describe("the titles grid", () => {
   });
 });
 
-describe("the toolbar and table strip", () => {
-  it("keeps the enabled Jobs arrow in the toolbar; the bulk verbs wait for a ticked row in the strip", () => {
+describe("the table strip", () => {
+  it("keeps the enabled Jobs arrow in the strip; the bulk verbs wait for a ticked row", () => {
     const html = page();
-    const forward = html.match(/<button[^>]*aria-label="Go to Jobs"[^>]*>/)?.[0] ?? "";
-    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
+    const forward = table.match(/<button[^>]*aria-label="Go to Jobs"[^>]*>/)?.[0] ?? "";
+    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
     for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
   });
 
@@ -157,7 +157,7 @@ describe("a title's workspace", () => {
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
-    assert.ok(html.includes('value="120"') && /<button[^>]*aria-label="Go to Jobs"/.test(html) && !html.includes("Jobs →"));
+    assert.ok(html.includes('value="120"') && !html.includes("Jobs →"));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Images<"));
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });

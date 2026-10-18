@@ -1,4 +1,4 @@
-import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
 import { FORWARD_ICONS, FORWARD_TOOLTIPS, type ForwardDestination } from "@/constants/toolbar-icons";
 
@@ -15,10 +15,9 @@ export interface SaveVerb {
   readonly reason?: string;
 }
 
-/** A workspace's page toolbar (`01` section 9): only its forward verb, an arrow icon whose tooltip names the tab it goes
- *  to (`Titles`), or nothing (Accounts). Save and Discard are not here: Save ends the form's body and Discard is the form's
- *  ghost verb (`changeReason`). The forward verb carries only its own reason. */
-export function forwardVerbs(forward: ToolbarAction | undefined): readonly ToolbarVerb[] {
+/** One forward verb as an icon verb whose tooltip names where it goes (`Go to Titles`, `Preview channel`), or nothing.
+ *  It carries only its own reason. Save and Discard are not here (`changeReason`). */
+export function forwardVerbs(forward: ToolbarAction | undefined): readonly StripVerb[] {
   if (forward === undefined) return [];
   return [
     {

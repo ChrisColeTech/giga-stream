@@ -26,6 +26,8 @@ export interface TableStripProps {
   /** What the list is called in the Refresh tooltip (`Refresh accounts`). */
   readonly noun: string;
   readonly refresh: StripPress;
+  /** The page's cross-tab verbs (`Preview channel`, `Go to Titles`): icon buttons beside Refresh, each with its tooltip. */
+  readonly forward?: readonly StripVerb[];
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
   /** Rows are ticked: the count, the bulk verbs and the way out. Absent or zero, none of it is drawn. */
@@ -70,8 +72,8 @@ function Verb({ verb }: { readonly verb: StripVerb }) {
  *  grid. At its left, while rows are ticked, the count in the strip heading style (mono 12 faint, the count dim), the bulk
  *  verbs and `Clear selection`; at its right edge the paging pair of a list that pages and `Refresh`. Icons only, each
  *  with an `aria-label` and a tooltip; the one text verb is the armed Delete. The list group's heading carries none of
- *  it, and neither does the page toolbar. */
-export function TableStrip({ label, noun, refresh, paging, selection }: TableStripProps) {
+ *  it. There is no page toolbar: the cross-tab verbs ride this strip. */
+export function TableStrip({ label, noun, refresh, forward, paging, selection }: TableStripProps) {
   const ticked = selection !== undefined && selection.count > 0;
   const press = (what: StripPress, id: string, text: string, glyph: LucideIcon): StripVerb => ({
     id,
@@ -94,6 +96,7 @@ export function TableStrip({ label, noun, refresh, paging, selection }: TableStr
         </>
       )}
       <span className="flex-1" />
+      {forward?.map((verb) => <Icon key={verb.id} verb={verb} />)}
       {paging !== undefined && (
         <>
           <Icon verb={press(paging.newer, "newer", "Newer", ChevronLeft)} />

@@ -67,13 +67,13 @@ describe("the playlists list", () => {
   });
 });
 
-describe("the Playlists toolbar and table strip", () => {
-  it("keeps the Jobs arrow alone in the page toolbar; Refresh is the table strip's, the bulk verbs wait for a tick", () => {
+describe("the Playlists table strip", () => {
+  it("holds the Jobs arrow and Refresh, no bar above the form; the bulk verbs wait for a tick", () => {
     state().playlistsLoaded([row(1)], {});
     const html = page();
-    const toolbar = html.slice(html.indexOf('role="toolbar"'), html.indexOf("New playlist"));
-    assert.ok(/<button[^>]*aria-label="Go to Jobs"/.test(toolbar) && !toolbar.includes("Sync now"));
+    assert.ok(html.indexOf('role="toolbar"') > html.indexOf("New playlist"));
     const table = html.slice(html.indexOf('aria-label="Playlists table"'));
+    assert.ok(/<button[^>]*aria-label="Go to Jobs"/.test(table));
     assert.ok(table.includes('aria-label="Refresh playlists"'));
     for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
   });
@@ -99,7 +99,7 @@ describe("a playlist's workspace", () => {
     assert.ok(html.includes(" Replace</button>") && !html.includes('type="password"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(html.includes("Discard changes") && html.includes("Save details") && !html.includes(">Save<"));
-    assert.ok(/<button[^>]*aria-label="Go to Jobs"/.test(html) && !html.includes("Jobs →"));
+    assert.ok(!html.includes("Jobs →"));
     assert.ok(!html.includes("Sync now"), "no sync verb in a playlist's workspace");
   });
 

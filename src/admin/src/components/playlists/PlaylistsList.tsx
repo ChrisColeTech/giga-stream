@@ -2,6 +2,7 @@ import { List } from "lucide-react";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/account-copy";
+import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import { usePlaylistBulk } from "@/hooks/usePlaylistBulk";
 import { useAppStore } from "@/store/app-store";
@@ -16,10 +17,12 @@ export function PlaylistsList() {
   const setTicked = useAppStore((state) => state.playlistsSetTicked);
   const { flows, track } = usePlaylistActions();
   const { verbs } = usePlaylistBulk();
+  const forward = useForwardVerbs("playlists");
   const strip = (
     <TableStrip
       label="Playlists table"
       noun="playlists"
+      forward={forward}
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason: loading ? LOADING_REASON : undefined }}
       selection={{ count: ticked.length, verbs, onClear: () => setTicked([]) }}
     />

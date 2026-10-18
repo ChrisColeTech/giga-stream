@@ -18,7 +18,14 @@ const details = (channel: StreamAdminChannel) =>
     createElement(StreamDetailsGroup, { channel, draft: streamDraft(channel), errors: {}, onChange: () => undefined }),
   );
 const statusGroup = (channel: StreamAdminChannel, revertReason?: string) =>
-  renderLive(createElement(StreamStatusGroup, { channel, revertReason, onRevert: () => undefined }));
+  renderLive(
+    createElement(StreamStatusGroup, {
+      channel,
+      revertReason,
+      onRevert: () => undefined,
+      preview: { label: "Preview", onPress: () => undefined },
+    }),
+  );
 const SAVE = { onPress: () => undefined, reason: "Nothing has changed." };
 const SYNCED = stream("s", { source: "lists.example", editedFields: ["name", "streamUrl"] });
 
@@ -36,7 +43,7 @@ describe("a stream channel's workspace", () => {
     assert.ok(!html.includes(">Playback<"));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "the toolbar's forward arrow is an icon button");
+    assert.ok(/<button[^>]*aria-label="Preview channel"[^>]*>/.test(html), "Preview is an icon button in the Status group");
     assert.ok(!html.includes("Preview →") && !html.includes(">Save<"));
     assert.ok(html.indexOf("Save details") > html.indexOf(">Stream<"), "the commit ends the Stream group");
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));

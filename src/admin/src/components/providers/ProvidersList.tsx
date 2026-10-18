@@ -2,6 +2,7 @@ import { Plug } from "lucide-react";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/provider-copy";
+import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { useProviderActions } from "@/hooks/useProviderActions";
 import { useProviderBulk } from "@/hooks/useProviderBulk";
 import { useAppStore } from "@/store/app-store";
@@ -16,10 +17,12 @@ export function ProvidersList() {
   const setTicked = useAppStore((state) => state.providersSetTicked);
   const { flows, track } = useProviderActions();
   const { verbs } = useProviderBulk();
+  const forward = useForwardVerbs("providers");
   const strip = (
     <TableStrip
       label="Providers table"
       noun="providers"
+      forward={forward}
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason: loading ? LOADING_REASON : undefined }}
       selection={{ count: ticked.length, verbs, onClear: () => setTicked([]) }}
     />

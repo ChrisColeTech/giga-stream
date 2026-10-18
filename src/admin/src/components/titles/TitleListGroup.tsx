@@ -2,6 +2,7 @@ import { Clapperboard } from "lucide-react";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/title-copy";
+import { useForwardVerbs } from "@/hooks/useForwardVerbs";
 import { useTitleActions } from "@/hooks/useTitleActions";
 import { useTitleBulk } from "@/hooks/useTitleBulk";
 import { pagingReasons } from "@/lib/title-query";
@@ -22,6 +23,7 @@ export function TitleListGroup() {
   const setTicked = useAppStore((state) => state.titlesSetTicked);
   const { flows, track } = useTitleActions();
   const { verbs } = useTitleBulk();
+  const forward = useForwardVerbs("titles");
   const paging = pagingReasons(view.page, totalPages);
   const read = (call: () => Promise<unknown>): void => void track("read", call);
 
@@ -29,6 +31,7 @@ export function TitleListGroup() {
     <TableStrip
       label="Titles table"
       noun="titles"
+      forward={forward}
       refresh={{ onPress: () => read(flows.refresh), reason: loading ? LOADING_REASON : undefined }}
       paging={{
         newer: { onPress: () => read(flows.newer), reason: paging.newer },

@@ -38,6 +38,7 @@ const status = (channel: LiveAdminChannel, rebuildReason?: string, refreshReason
       rebuildReason,
       onRebuild: () => undefined,
       onCopy: () => undefined,
+      preview: { label: "Preview", onPress: () => undefined },
     }),
   );
 

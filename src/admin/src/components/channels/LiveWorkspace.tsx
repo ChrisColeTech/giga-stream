@@ -4,7 +4,6 @@ import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { CHANNEL_LABELS, CHOOSE_UNAVAILABLE, LIVE_SECTION_IDS, LIVE_SECTIONS, LOADING_REASON } from "@/constants/channel-copy";
 import { useChannelEditor } from "@/hooks/useChannelEditor";
 import { rebuildReason } from "@/lib/channel-guard";
@@ -44,7 +43,6 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Channel toolbar" forward={forward} />}
     >
       <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
@@ -65,6 +63,7 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           <div ref={spy.bind("lv-status")}>
             <LiveStatusGroup
               channel={channel}
+              preview={forward}
               refreshReason={loading ? LOADING_REASON : undefined}
               onRefresh={() => void track("refresh", flows.refresh)}
               rebuildReason={rebuildReason(channel, form.dirty, write)}

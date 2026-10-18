@@ -9,16 +9,14 @@ export interface WorkspaceFrameProps {
   readonly active: boolean;
   /** The rail (`RecordRail`), the engine's left pane: resizable by its sash, collapsed by the titlebar's toggle. */
   readonly rail: ReactNode;
-  /** The workspace's toolbar strip (`WorkspaceToolbar`). */
-  readonly toolbar: ReactNode;
-  /** The scrolling page of groups. */
+  /** The pinned `Discard` strip and the scrolling page of groups. */
   readonly children: ReactNode;
 }
 
 /** A workspace: the library pane engine bound to the admin's store, the rail as its left pane (`<tab>.left`, limits from
- *  `constants/tabs.ts`) and, as its centre, the toolbar over the scrolling page (`28` section 6.1). The geometry is the
- *  engine's alone; this file only places the parts. */
-export function WorkspaceFrame({ tab, active, rail, toolbar, children }: WorkspaceFrameProps) {
+ *  `constants/tabs.ts`) and, as its centre, the form's own groups (`28` section 6.1): no page toolbar sits above them. The
+ *  geometry is the engine's alone; this file only places the parts. */
+export function WorkspaceFrame({ tab, active, rail, children }: WorkspaceFrameProps) {
   return (
     <WorkspaceSplit
       engine={PANE_ENGINE}
@@ -27,7 +25,6 @@ export function WorkspaceFrame({ tab, active, rail, toolbar, children }: Workspa
       left={rail}
       center={
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {toolbar}
           {children}
         </div>
       }

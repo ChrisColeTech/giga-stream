@@ -4,7 +4,6 @@ import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
-import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { CHANNEL_LABELS, STREAM_SECTION_IDS, STREAM_SECTIONS } from "@/constants/channel-copy";
 import { useChannelEditor } from "@/hooks/useChannelEditor";
 import { revertReason } from "@/lib/channel-guard";
@@ -36,7 +35,6 @@ export function StreamWorkspace({ channel, active }: { readonly channel: StreamA
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Channel toolbar" forward={forward} />}
     >
       <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
@@ -61,6 +59,7 @@ export function StreamWorkspace({ channel, active }: { readonly channel: StreamA
           <div ref={spy.bind("st-status")}>
             <StreamStatusGroup
               channel={channel}
+              preview={forward}
               revertReason={revertReason(channel, { saving: actions.saving, unreachable })}
               onRevert={() => void actions.track("revert", () => actions.flows.revert(channel.id))}
             />

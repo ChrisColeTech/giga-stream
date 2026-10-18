@@ -80,12 +80,12 @@ describe("the providers list", () => {
   });
 });
 
-describe("the toolbar and table strip", () => {
-  it("draws an enabled Titles arrow in the toolbar; Refresh is the table strip's and the bulk verbs wait for a tick", () => {
+describe("the table strip", () => {
+  it("draws an enabled Titles arrow in the strip; Refresh is there too and the bulk verbs wait for a tick", () => {
     const html = page();
-    const forward = html.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
-    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
     const table = html.slice(html.indexOf('aria-label="Providers table"'));
+    const forward = table.match(/<button[^>]*aria-label="Go to Titles"[^>]*>/)?.[0] ?? "";
+    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
     assert.ok(table.includes('aria-label="Refresh providers"'));
     for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
   });
@@ -108,7 +108,7 @@ describe("a provider's workspace", () => {
     assert.ok(at(html, ">Details<") < at(html, ">Templates<") && at(html, ">Templates<") < at(html, ">Player<"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Player<"));
-    assert.ok(/<button[^>]*aria-label="Go to Titles"/.test(html) && !html.includes("Titles →"));
+    assert.ok(!html.includes("Titles →"));
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
     assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));

@@ -1,13 +1,12 @@
-import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import type { ForwardVerb } from "@/constants/index-frames";
 import { FORWARD_ICONS, FORWARD_TOOLTIPS } from "@/constants/toolbar-icons";
 import type { Tab } from "@/types/shell";
 
 const NOTHING = (): void => undefined;
 
-/** An index's toolbar: its one forward verb as an arrow icon (the tooltip names where it goes), or nothing (Accounts, the
- *  last tab). A verb with a `to` switches to that tab on its index; a verb with only a `reason` is disabled with it. */
-export function indexVerbs(forward: ForwardVerb | null, request: (tab: Tab) => void): readonly ToolbarVerb[] {
+/** An index's forward verb for its table strip: an icon (the tooltip names where it goes), or nothing (Accounts, Jobs). A verb with a `to` switches to that tab on its index; a verb with only a `reason` is disabled with it. */
+export function indexVerbs(forward: ForwardVerb | null, request: (tab: Tab) => void): readonly StripVerb[] {
   if (forward === null) return [];
   const { to } = forward;
   return [
