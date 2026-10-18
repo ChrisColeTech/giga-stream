@@ -1,0 +1,146 @@
+import assert from "node:assert/strict";
+import { beforeEach, describe, it } from "node:test";
+import { createElement } from "react";
+import { CatalogRows } from "@/components/jobs/CatalogRows";
+import { JobScheduleGroup } from "@/components/jobs/JobScheduleGroup";
+import { NewJobForm } from "@/components/jobs/NewJobForm";
+import { JobsPage } from "@/pages/JobsPage";
+import type { AdminJob } from "@/services/schemas/job-schema";
+import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
+import { useAppStore } from "@/store/app-store";
+import { renderLive, resetStore, signInForTest } from "./support/store";
+
+const state = () => useAppStore.getState();
+const playlist = (id: number, enabled = true): AdminPlaylist => ({
+  id,
+  name: `List ${id}`,
+  host: "h.test",
+  masked: "h.test/…",
+  enabled,
+  channels: 0,
+});
+const job = (id: number, extra: Partial<AdminJob> = {}): AdminJob => ({
+  id,
+  name: `Job ${id}`,
+  type: "playlist",
+  enabled: true,
+  schedule: "24h",
+  config: { playlistId: 1, dryRun: false, prune: true },
+  playlistName: "List 1",
+  running: false,
+  createdAt: 1,
+  ...extra,
+});
+const CATALOG: Partial<AdminJob> = { type: "catalog", config: { scope: "popular", kind: "tv", pages: 5 } };
+const page = (): string => renderLive(createElement(JobsPage, { active: true }));
+const at = (html: string, text: string): number => {
+  const index = html.indexOf(text);
+  assert.ok(index >= 0, `missing: ${text}`);
+  return index;
+};
+
+beforeEach(() => {
+  resetStore();
+  signInForTest();
+});
+
+describe("the New job form", () => {
+  it("has Name, then Type, then a playlist job's Playlist select, the disabled one marked", () => {
+    state().jobsPlaylistsLoaded([playlist(1), playlist(2, false)]);
+    const html = page();
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
+    assert.ok(at(html, 'aria-label="Type"') < at(html, 'aria-label="Playlist"'));
+    assert.ok(html.includes(">List 1</option>") && html.includes(">List 2 · disabled</option>"));
+    assert.ok(!html.includes('aria-label="Scope"') && !html.includes('placeholder="'));
+    assert.ok(html.includes('aria-label="Create. Name is required."'));
+  });
+
+  it("draws the Playlist row as a shimmer with no playlist to choose: no invented option", () => {
+    const html = renderLive(createElement(NewJobForm));
+    assert.ok(html.includes("animate-skel-shimmer") && !html.includes("<option"));
+  });
+
+  it("offers Playlist and Catalog as the Type; a catalog job's rows are Scope and Kind", () => {
+    const html = renderLive(createElement(NewJobForm));
+    assert.ok(/aria-pressed="true"[^>]*>Playlist</.test(html) && html.includes(">Catalog</button>"));
+    assert.ok(!html.includes('aria-label="Scope"'), "a playlist job by default renders no catalog row");
+    const props = { scope: "trending", kind: "movie", onChange: () => undefined } as const;
+    const rows = renderLive(createElement(CatalogRows, props));
+    assert.ok(at(rows, 'aria-label="Scope"') < at(rows, 'aria-label="Kind"'));
+    for (const label of [">Trending<", ">Popular<", ">Movies<", ">Series<"]) assert.ok(rows.includes(label), label);
+  });
+});
+
+describe("the jobs list", () => {
+  it("draws shimmer rows before a read, then the headings, words, the running bar and a dimmed disabled job", () => {
+    assert.ok(page().includes("animate-skel-shimmer"));
+    state().jobsLoaded([
+      job(1, { running: true }),
+      job(2, { enabled: false }),
+      job(3, { ...CATALOG, lastRunAt: 5, lastOutcome: "TMDB down", lastCounts: { titles: 0 } }),
+    ]);
+    const html = page();
+    for (const heading of [">name<", ">type<", ">target<", ">schedule<", ">last run<", ">outcome<", ">state<"]) {
+      assert.ok(html.includes(heading), heading);
+    }
+    assert.ok(html.includes('data-st="running"') && html.includes("animate-pulse-busy"));
+    assert.ok(html.includes('data-st="disabled"') && html.includes("opacity-45") && html.includes('data-st="failed"'));
+    assert.ok(html.includes(">popular series<") && html.includes(">List 1<") && html.includes(">never<"));
+    assert.ok(html.includes('title="A running job cannot be deleted."'));
+  });
+
+  it("draws Enable, Disable, Delete and the filled Run job, each disabled with `Tick a job first`", () => {
+    state().jobsLoaded([job(1)]);
+    const html = page();
+    for (const verb of ["Enable", "Disable", "Run job"]) {
+      assert.ok(html.includes(`aria-label="${verb}. Tick a job first"`), verb);
+    }
+    assert.ok(at(html, "Enable") < at(html, "Run job"));
+  });
+
+  it("disables Run job with the gate's reason for a ticked job whose playlist is disabled", () => {
+    state().jobsPlaylistsLoaded([playlist(1, false)]);
+    state().jobsLoaded([job(1)]);
+    state().jobTick(1, true);
+    assert.ok(page().includes('aria-label="Run job. A ticked job&#x27;s playlist is disabled."'));
+  });
+});
+
+describe("a job's workspace", () => {
+  it("a playlist job: rail, Details in order, Run with Dry run and Prune, Last run counts, Channels →", () => {
+    const counts = { created: 2, updated: 1, refusalExamples: ["bad address"], createdIds: ["ch_a", "ch_b"] };
+    state().jobsPlaylistsLoaded([playlist(1)]);
+    state().jobsLoaded([job(1, { lastRunAt: 5, lastOutcome: "Synced: 2 created, 1 updated.", lastCounts: counts })]);
+    state().openWorkspace("jobs", "1");
+    const html = page();
+    assert.ok(html.includes('aria-label="Job sections"'));
+    for (const [a, b] of [[">Details<", ">Schedule<"], [">Schedule<", ">Run<"], [">Run<", ">Last run<"]]) {
+      assert.ok(at(html, a ?? "") < at(html, b ?? ""));
+    }
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
+    assert.ok(html.includes('aria-label="Dry run"') && html.includes('aria-label="Prune"'));
+    assert.ok(html.includes("2 created · 1 updated") && html.includes(">bad address<"));
+    assert.ok(html.includes(">ch_a</button>") && html.includes("Channels →") && !html.includes("Titles →"));
+    assert.ok(html.includes('aria-label="Interval"') && html.includes('value="24h"'));
+  });
+
+  it("a catalog job: Scope, Kind and Pages, no Dry run, Titles and a shimmer Stale, Titles →", () => {
+    state().jobsLoaded([job(4, { ...CATALOG, lastRunAt: 5, lastOutcome: "ok", lastCounts: { titles: 1240 } })]);
+    state().openWorkspace("jobs", "4");
+    const html = page();
+    assert.ok(html.includes('aria-label="Scope"') && html.includes('aria-label="Pages"'));
+    assert.ok(!html.includes('aria-label="Dry run"') && !html.includes('aria-label="Playlist"'));
+    assert.ok(html.includes(">1240<") && html.includes("animate-skel-shimmer") && html.includes("Titles →"));
+    assert.ok(html.includes(">Run job</button>"), "an enabled catalog job can run");
+  });
+
+  it("disables the workspace's Run job for a disabled job, and shows a bad interval under its row", () => {
+    state().jobsLoaded([job(1, { enabled: false })]);
+    state().openWorkspace("jobs", "1");
+    assert.ok(page().includes('aria-label="Run job. Jobs that are disabled cannot run."'));
+    const sentence = "Interval is a number and m or h, like 30m or 6h, or off.";
+    const props = { value: "x", error: sentence, onChange: () => undefined };
+    const html = renderLive(createElement(JobScheduleGroup, props));
+    assert.ok(html.includes('role="alert"') && html.includes(sentence) && html.includes('aria-invalid="true"'));
+  });
+});

@@ -1,9 +1,2 @@
-import type { SliceGet, SliceSet } from "./slice-host";
-
-/** PLACEHOLDER. The Playlists wave replaces this file (it re-exports `store/playlists-slice.ts`); until then the tab has
- *  no state of its own and the registry spreads nothing for it. */
-export type PlaylistsSlice = Record<never, never>;
-
-export function createPlaylistsSlice(_set: SliceSet<PlaylistsSlice>, _get: SliceGet<PlaylistsSlice>): PlaylistsSlice {
-  return {};
-}
+/** The Playlists tab's slice, registered here (`39` section 5): every tab's file in this folder re-exports its own. */
+export { createPlaylistsSlice, NO_PLAYLISTS, type PlaylistsSlice } from "../playlists-slice";
