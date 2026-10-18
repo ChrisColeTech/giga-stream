@@ -1,6 +1,6 @@
 # 36 - Admin Channels and Preview plan (Wave 3b)
 
-**Status: plan, written before the code (branch `admin/channels-tab`, cut from `family-port` after Wave 3a, `35`, has landed).**
+**Status: plan, written before the code (branch `admin/channels-tab`, cut from `family-port` after Wave 3a, `35`, and the backend Wave B2 (real ids, `39` section 7) have landed).** Amended 2026-10-17 (owner): bulk verbs on the ticked rows, a real id number, Name first.
 Owner, 2026-10-17: no fixture waves; every tab is built directly against the real backend routes through the service
 modules, and a wave exits only when every control is really wired and verified. This document is the Channels tab end to
 end, with the Preview window. It supersedes the fixture-first Wave 3 of `28` (its reference content - the look, the
@@ -49,7 +49,7 @@ the Status heading's `Refresh`); a stop-a-build route (the statusbar `Stop` stay
 | Method | Route | Body | Answer |
 |---|---|---|---|
 | `list` | `GET /api/admin-channels` | none | `{ items: AdminChannel[], revision }` |
-| `create` live | `POST /api/channels` | `{ kind: "live", id, name, category, number, folder }` or the same with `videos: string[]` in place of `folder`; `mode`, `captions`, `variants` optional | `201` `LiveAdminChannel`, `state: "preparing"` |
+| `create` live | `POST /api/channels` | `{ kind: "live", name, category, number, folder }` (no `id`: the backend assigns it, 3.2) or the same with `videos: string[]` in place of `folder`; `mode`, `captions`, `variants` optional | `201` `LiveAdminChannel`, `state: "preparing"` |
 | `create` stream | `POST /api/channels` | `{ kind: "stream", name, category, number?, logoUrl?, streamUrl }` | `201` `StreamAdminChannel` |
 | `update` | `PATCH /api/channels/:id` | only the changed fields of `name category number logoUrl streamUrl mode captions variants folder videos enabled`; `kind` may be echoed; `folder` and `videos` are exclusive and replace each other | the `AdminChannel` (a live row `preparing` after a source, mode, caption or quality change) |
 | `remove` | `DELETE /api/channels/:id` | none | `{ id }` |
@@ -70,10 +70,10 @@ or video is refused at write time (`That folder does not exist.`, field `folder`
 - `list` parses `items` one row at a time (`z.array(z.unknown())`, each row `ChannelSchema.safeParse`): an unreadable row is
   dropped and counted, one `warn` notice (`N channels could not be read.`), the rest shown (`01` section 8). The schema file gains
   `ChannelListLenientSchema`; `ChannelListSchema` stays for the tests.
-- The id of a new live channel is **derived from the Name** (`lib/channel-id.ts`: lower case, runs of anything but `a-z0-9`
-  become one `-`, trimmed, at most 64). A name with no letter or digit is refused under Name (`Name needs a letter or a number.`).
-  The derived id appears read-only as `Id` in Details. A 409 on a live create is shown under Number with `Another channel
-  already has that id or number.` (the backend does not say which). This is a gap filled; the owner may ask for an Id row (open decision in `39`).
+- **A real id number, never derived** (owner, 2026-10-17; the backend side is Wave B2 of `39` section 7, which this wave is cut after). Every channel answer carries `idNumber`, a backend-assigned,
+  never-reused integer. The admin sends **no id** on create and derives nothing: `lib/channel-id.ts` does not exist. The channel's string `id` stays the stable key (the fileserver, `/live/<id>/...` and
+  `/logos/<id>.png` read it); the backend gives a new live channel the id `live-<idNumber>` itself. The number is shown read-only as the list column `id` and as the `Id` row in Details (last row). A 409 on a live
+  create is `channel.taken` on the number (the id can no longer collide), shown under Number with `Another channel already has that number.`. `ChannelSchema` gains `idNumber: z.number()`.
 - `number` is sent as text (`"7"`), never a JSON number. `variants` are sent as the list in the order chosen.
 
 ## 4. Pieces to build, by file
@@ -84,7 +84,8 @@ Paths under `src/admin/src/`. "C" create, "U" update. Bounds are expected sizes;
 |---|---|---|
 | U | `services/channels.ts` (90) | the table of 3.1 over `request`; `ChannelsService` is unchanged |
 | U | `services/schemas/channel-schema.ts` | `ChannelListLenientSchema` |
-| C | `lib/channel-id.ts` (25), `lib/channel-body.ts` (80) | pure: the id; a create body from a New form, a PATCH body from `draft` against the saved channel (only changed fields; `folder`/`videos` only when the source changed; `number` as text) |
+| C | `lib/channel-bulk.ts` (70) | pure: the bulk verbs' eligibility and reasons (5.3) |
+| C | `lib/channel-body.ts` (80) | pure: a create body from a New form (no id), a PATCH body from `draft` against the saved channel (only changed fields; `folder`/`videos` only when the source changed; `number` as text) |
 | C | `lib/channel-guard.ts` (70) | pure: every disabled reason of this tab (`Rebuild`, `Apply`, `Preview →` index and workspace, `Revert`, `Delete` tooltip of a synced row) |
 | C | `lib/preview-state.ts` (50), `lib/preview-address.ts` (20) | pure: the status line, `Retry` visibility, skeleton flag, attach rule; the path-only address (`new URL(streamUrl).pathname` for a live row) |
 | C | `lib/video-order.ts` (30) | pure: move up/down, remove, add keeping order |
@@ -133,7 +134,7 @@ window; type the path.`, and the field is a typed path. `Choose` exists only on 
 
 ### 5.2 The list (`ListGroup`, icon `radio`, title `Channels`, heading action ghost `Refresh`)
 
-`RecordGrid` over the rows of `channelRows`; headings `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
+`RecordGrid` over the rows of `channelRows`; headings `id` (`idNumber`, mono), `number`, `name`, `category`, `kind`, `state`, `mode`, `now playing`, `fault`
 (`constants/channel-grid.ts`, tracks in rem, the end track fits `Delete Fixture Entertainment?`, a minimum width inside its own
 scroller). Select-all tick `Select all channels` (`mixed` over a part); row tick `Select <name>`; a press on the data cells opens
 the workspace (no `Open` button, no double click); the state column is the `StateWord` of `channelState`; a disabled row is
@@ -147,6 +148,19 @@ while `idle` or `loading` or empty - never a sentence over it, never an empty ca
 
 `IndexToolbar` with the one filled forward verb `Preview →` (`lib/channel-guard.ts`): disabled with `Tick a row first` (none ticked)
 or `Tick only one row` (two or more); with one ticked row, live or stream, it calls `openPreview(id)`. A New form never gates it.
+
+**Bulk verbs** (owner, 2026-10-17; the mechanism - one sequential runner, a failure never stops the rest, a summary on the notice, `N working`, the failure list under the toolbar, one re-read at the end,
+failed and skipped rows stay ticked - is `39` section 6, built by Wave 3a and consumed here through `useBulkAction`). Ghost verbs beside `Preview →`, always drawn, disabled with `Tick a row first` until a row is ticked:
+
+| Verb | Calls | Skipped, with its reason | Verb disabled (reason) when |
+|---|---|---|---|
+| `Enable` | `PATCH { enabled: true }` | already enabled: `Already enabled.` | all skipped: `Every ticked channel is already enabled.` |
+| `Disable` | `PATCH { enabled: false }` | already disabled: `Already disabled.` | all skipped: `Every ticked channel is already disabled.` |
+| `Rebuild` | `POST .../rebuild` | a stream channel: `A stream channel has nothing to rebuild.`; a disabled one: `Enable the channel to rebuild it.` | nothing left: the first skipped reason |
+| `Delete` | `DELETE` (two-step: `Delete N channels?`) | none; the tooltip of a synced row's single `Delete` (the next sync adds it again) is repeated in the summary | none ticked |
+| `Preview →` | single row only (5.3 above) | | as above |
+
+`Rebuild` answers `preparing` per row, so the summary reads `Rebuilding 3 of 4 channels; 1 skipped.` and the statusbar `N preparing` updates once, with the final re-read. Disabling a live channel stops it; enabling starts it.
 
 ### 5.4 The statusbar
 
@@ -236,7 +250,8 @@ Moved by its header, resized by its edges, closed by its `X` or `Escape` (not wh
 | File | Cases |
 |---|---|
 | `channels-service.test.ts` | each route of 3.1 with the body it sends (fake backend from `test/support/fake-backend.ts`): create live with a folder and with videos, create stream, only changed fields in a PATCH, `folder` and `videos` exclusive, number as text, rebuild, revert, both fault calls; the list drops an unreadable row and counts it; `409` and `422` carry `field` |
-| `channel-body.test.ts`, `channel-id.test.ts` | the create and PATCH bodies; the id rules (case, runs, trim, 64, no letters refused) |
+| `channel-body.test.ts` | the create body carries no `id`; the PATCH body |
+| `channel-bulk.test.ts` | each verb's skip rules and reasons (stream/disabled/already), the disabled reasons, the plan over mixed ticked rows; a run through the shared runner with one forced failure keeps the rest |
 | `channel-guard.test.ts` | every reason in order: `Preview →` index (none, two, one live, one stream), workspace (dirty, new), `Rebuild` (dirty, disabled), `Apply` (not live), `Clear` (no fault), `Revert` (hand-made, nothing edited) |
 | `channels-slice.test.ts` | the status transitions; `upsert` replaces by id; `remove`; ticks pruned with their row; `reset` on sign-out; `setWork({ preparing })` counts `preparing`, `starting`, `restarting` after every load and write |
 | `channel-flows.test.ts` | the create, save, remove, rebuild, revert, fault flows: answer replaces the record, form clears, notices, `channel.invalid` field to its row, `channel.taken` under Number, a changed `serial` drops the answer, a transport failure sets `unreachable` and disables writes until a read |
@@ -268,7 +283,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, all clean.
 3. **Role.** Implements sections 3 to 8 in the five commits of section 2; writes and runs its tests; no browser, no server; edits no doc; commits on its branch, never pushes or merges.
 4. **Read first.** `AGENTS.md`; `07` 6; `01` 4, 5, 6, 8, 9; this document; `35` (the pattern: slice, flows, serial, notices); `29` 5, 7, 9.1, 9.7, 10, 13; `26` 4.5 to 4.7; `28` 7.2 to 7.4; the foundation files of section 1; the backend's `api/channels.ts`, `api/admin-channels.ts`, `api/live-faults.ts`, `types/channel-input.ts`, `services/live-channel-rules.ts` as read-only reference; the library's `ChildWindow`, `RecordGrid`, `ArmedButton`, `Toggle`, `Segmented`, `ChipGroup`.
 5. **Scope.** Section 4; out of scope as section 2.
-6. **Report.** `07` 6.4, plus every gap filled (the derived id first) and any signature of `StateWord` / `useRecordForm` that differed.
+6. **Report.** `07` 6.4, plus every gap filled (the first one: anything the backend's `idNumber` answer does not cover) and any signature of `StateWord` / `useRecordForm` that differed.
 
 ## 12. The coordinator's acceptance
 
@@ -287,7 +302,9 @@ On a temporary backend (`39` section 7): `FIXTURE_DIR` of videos (`npm run fixtu
 | # | Doc says | Code does |
 |---|---|---|
 | 1 | `26` 4.5a: Preview plays `masterUrl` | no admin answer has it; the live row's `streamUrl` is `<caller origin>/live/<id>/master.m3u8` (`29` 9.7 already corrects it) |
-| 2 | `28` 7.3: the live New form has Name, Kind, Number, Category, Folder | the backend requires a kebab-case `id` on create; the form has no Id row, so the id is derived from the name (3.2) |
+| 2 | `28` 7.3: the live New form has Name, Kind, Number, Category, Folder | superseded (owner, 2026-10-17): the backend assigns the id (Wave B2); the form sends none and derives none (3.2). Also: Name is first on every form (`39` section 5) |
+| 10 | `28` 7.2: the Channels toolbar has `Preview →` only; ticks arm one verb | superseded (owner, 2026-10-17): bulk verbs `Enable`, `Disable`, `Rebuild`, `Delete` beside it (5.3) |
+| 11 | `29` 5: `BackendChannel` has `id` only | gains `idNumber` (3.2) |
 | 3 | `28` Wave 3 / `29` Wave 8 plan fixtures first, then a wiring wave | superseded: this wave is wired directly; `FIXTURE_BUILD_MS`, `useFixtureLoad`, `fixtures/channels.ts` do not exist |
 | 4 | `28` Wave 2 row lists `useRecordForm`, `StateWord` as created | neither is in the tree; they are Wave 3a's (`35`) |
 | 5 | `29` 9.1: a live PATCH may change `logoUrl` | refused (`A live channel has no logoUrl...`); the live Logo row is read-only |
