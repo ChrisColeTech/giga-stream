@@ -16,7 +16,8 @@ export interface AuthSession {
   readonly tokens: SessionTokens;
 }
 
-/** The session's tokens, held in memory only (never storage): expiries are unix milliseconds. The refresh token is
+/** The session's tokens, held in memory only (never storage; the refresh token also rides an httpOnly cookie the app
+ *  cannot read, and a reload restores the session from it): expiries are unix milliseconds. The refresh token is
  *  single-use, so a refresh replaces the whole object. */
 export interface SessionTokens {
   readonly accessToken: string;
@@ -47,6 +48,8 @@ export type ResetResult =
 export interface AuthPort {
   /** Never rejects: every failure is a refusal. */
   signIn: (username: string, password: string) => Promise<AuthResult>;
+  /** The on-load probe (one call, shared): the session the httpOnly refresh cookie restores, or null. Never rejects. */
+  restore: () => Promise<AuthSession | null>;
   /** Never rejects: the session is cleared whatever the answer is (`29` section 6.1). */
   signOut: () => Promise<void>;
   /** Never rejects. No token is sent: the caller is signed out. */

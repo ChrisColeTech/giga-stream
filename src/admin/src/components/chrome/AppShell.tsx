@@ -6,6 +6,8 @@ import { ChannelsPage } from "@/pages/ChannelsPage";
 import { JobsPage } from "@/pages/JobsPage";
 import { PlaylistsPage } from "@/pages/PlaylistsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
+import { RestoreWall } from "@/components/session/RestoreWall";
+import { useRestoreSession } from "@/hooks/useRestoreSession";
 import { useSessionState } from "@/hooks/useSessionState";
 import { SignInPage } from "@/pages/SignInPage";
 import { TitlesPage } from "@/pages/TitlesPage";
@@ -24,6 +26,8 @@ export function AppShell() {
   const tab = useTab();
   const signedIn = useAppStore((state) => state.signedIn);
   const serial = useAppStore((state) => state.serial);
+  const restoring = useAppStore((state) => state.restoring);
+  useRestoreSession();
   useSessionState(signedIn, serial);
 
   return (
@@ -48,7 +52,7 @@ export function AppShell() {
           )}
         </ShellFrame>
       </div>
-      {!signedIn && <SignInPage />}
+      {!signedIn && (restoring ? <RestoreWall /> : <SignInPage />)}
     </>
   );
 }

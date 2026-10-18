@@ -11,7 +11,8 @@ import { AnySchema, SessionSchema, tokensOf, type BackendSession } from "./schem
 
 /* The admin's request layer over `@giga/http`'s `createApi` (`29` sections 6.2 and 7): the bearer token from the in-memory
  * session, a refresh before an access token runs out, and ONE refresh when several requests meet a 401 together. The
- * refresh token is single-use, so the refresh is a shared promise and is never retried. A refresh that fails for any
+ * refresh token is single-use and rides an httpOnly cookie the app cannot read, so the refresh is a shared promise and is
+ * never retried; a reload restores the session with one probe of the same call (`restore`). A refresh that fails for any
  * reason ends the session. Pure of the store: the app wires it in `api.ts`, a test wires a fake fetch and clock. */
 
 export interface SessionApiDeps {
@@ -36,7 +37,10 @@ export interface SessionApi {
   resetStart: (username: string) => Promise<string>;
   /** `POST /api/auth/reset`: no token. */
   reset: (username: string, answer: string, newPassword: string) => Promise<void>;
-  /** `POST /api/auth/logout` with the refresh token. Never rejects: the session is gone whatever the answer is. */
+  /** `POST /api/auth/refresh` once on load, carrying only the httpOnly cookie: the session it restores, or null (no
+   *  cookie, an ended session, an unreachable backend). Never rejects; a second call shares the first. */
+  restore: () => Promise<BackendSession | null>;
+  /** `POST /api/auth/logout` (the cookie names the session). Never rejects: the session is gone whatever the answer is. */
   logout: () => Promise<void>;
 }
 
@@ -69,7 +73,7 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
     const tokens = deps.tokens();
     if (tokens === null) return Promise.reject(unauthorized());
     const run = open
-      .api("/api/auth/refresh", SessionSchema, { method: "POST", body: { refreshToken: tokens.refreshToken } })
+      .api("/api/auth/refresh", SessionSchema, { method: "POST" })
       .then((session) => deps.adopt(tokensOf(session)))
       .finally(() => {
         inflight = null;
@@ -106,8 +110,19 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
     }
   }
 
+  /** The one on-load probe: the same promise for every caller, so a double mount sends one refresh. */
+  let probe: Promise<BackendSession | null> | null = null;
+
+  function restore(): Promise<BackendSession | null> {
+    /* A session already in memory owns the refresh token's rotation: probing beside it would present a used token. */
+    if (deps.tokens() !== null) return Promise.resolve(null);
+    probe ??= open.api("/api/auth/refresh", SessionSchema, { method: "POST" }).catch(() => null);
+    return probe;
+  }
+
   return {
     request,
+    restore,
     login: (username, password) =>
       open.api("/api/auth/login", SessionSchema, { method: "POST", body: { username, password } }),
     resetStart: async (username) => {
@@ -122,7 +137,7 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
       const tokens = deps.tokens();
       if (tokens === null) return;
       try {
-        await authed.api("/api/auth/logout", AnySchema, { method: "POST", body: { refreshToken: tokens.refreshToken } });
+        await authed.api("/api/auth/logout", AnySchema, { method: "POST" });
       } catch {
         /* auth.refresh_invalid, a transport failure: the session is gone either way (`29` section 6.1). */
       }

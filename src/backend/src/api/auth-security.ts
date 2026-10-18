@@ -6,6 +6,7 @@ import { ResetSchema, ResetStartSchema, SecurityQuestionSetSchema } from "../typ
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
+import { clearRefreshCookie } from "./refresh-cookie.js";
 
 /**
  * The password reset by security question (docs/40 section 3.3). All three are under `/api/auth`, so every answer
@@ -27,6 +28,8 @@ export function registerAuthSecurity(app: FastifyInstance, services: Services): 
 
   app.post("/api/auth/reset", async (request, reply) => {
     const { username, answer, newPassword } = parseInput(ResetSchema, request.body, ERRORS.accountInvalid);
-    return ok(reply, await services.securityQuestions.reset(username, answer, newPassword, actorOf(request)));
+    const done = await services.securityQuestions.reset(username, answer, newPassword, actorOf(request));
+    clearRefreshCookie(request, reply); // the reset ended every session of the account
+    return ok(reply, done);
   });
 }

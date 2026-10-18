@@ -50,7 +50,7 @@ describe("the refresh", () => {
     const state = rig(backend.fetch, { ...TOKENS, accessExpiresAt: 1_010 });
     await createSessionApi(state.deps).request("/api/x", Item);
     assert.deepEqual(backend.calls.map((call) => call.url), ["/api/auth/refresh", "/api/x"]);
-    assert.equal(backend.calls[0]?.body && (backend.calls[0].body as { refreshToken: string }).refreshToken, "refresh-1");
+    assert.equal(backend.calls[0]?.body, undefined, "no body: the httpOnly cookie carries the refresh token");
     assert.equal(backend.calls[1]?.headers.authorization, "Bearer access-2");
     assert.equal(state.tokens?.refreshToken, "refresh-2", "the new session replaces the old whole");
   });
@@ -114,10 +114,10 @@ describe("the refresh", () => {
 });
 
 describe("logout", () => {
-  it("posts the refresh token with the bearer", async () => {
+  it("posts with the bearer and no body: the cookie names the session", async () => {
     const backend = scripted(() => success({}));
     await createSessionApi(rig(backend.fetch, TOKENS).deps).logout();
-    assert.deepEqual(backend.calls.map((call) => [call.url, call.body]), [["/api/auth/logout", { refreshToken: "refresh-1" }]]);
+    assert.deepEqual(backend.calls.map((call) => [call.url, call.body]), [["/api/auth/logout", undefined]]);
     assert.equal(backend.calls[0]?.headers.authorization, "Bearer access-1");
   });
 
@@ -141,7 +141,7 @@ describe("the session in the store", () => {
 
   beforeEach(() => resetStore());
 
-  it("starts signed out, with no tokens: a reload starts at the gate", () => {
+  it("starts signed out, with no tokens in memory: a reload is restored by the probe (restore-session.test.ts)", () => {
     assert.equal(state().signedIn, false);
     assert.equal(state().tokens, null);
   });
