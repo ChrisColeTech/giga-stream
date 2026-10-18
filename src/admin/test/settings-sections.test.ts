@@ -17,16 +17,19 @@ const source = (name: string): string =>
   readFileSync(new URL(`../src/components/settings/${name}.tsx`, import.meta.url), "utf8");
 
 describe("Settings' rail", () => {
-  it("has three sections, in order: Appearance, Session, About", () => {
-    assert.deepEqual(SETTINGS_SECTIONS.map((section) => section.id), ["appearance", "session", "about"]);
-    assert.deepEqual(SETTINGS_SECTIONS.map((section) => section.label), ["Appearance", "Session", "About"]);
+  it("has four sections, in order: Appearance, Session, Account, About", () => {
+    assert.deepEqual(SETTINGS_SECTIONS.map((section) => section.id), ["appearance", "session", "account", "about"]);
+    assert.deepEqual(
+      SETTINGS_SECTIONS.map((section) => section.label),
+      ["Appearance", "Session", "Account", "About"],
+    );
     for (const section of SETTINGS_SECTIONS) assert.ok(section.icon !== undefined);
   });
 });
 
 describe("Settings' label column", () => {
-  it("lists every row label the three pages render, so the column does not move between pages", () => {
-    const rows = ["AppearanceSection", "SessionSection", "AboutSection"].flatMap((file) =>
+  it("lists every row label the four pages render, so the column does not move between pages", () => {
+    const rows = ["AppearanceSection", "SessionSection", "SecurityQuestionSection", "AboutSection"].flatMap((file) =>
       Array.from(source(file).matchAll(/<Row\s+label="([^"]+)"/g), (match) => match[1] ?? ""),
     );
     assert.ok(rows.length >= 12, `found ${rows.length} rows`);
@@ -34,7 +37,9 @@ describe("Settings' label column", () => {
   });
 
   it("holds nothing that is not a row, and no repeats", () => {
-    const written = ["AppearanceSection", "SessionSection", "AboutSection"].map(source).join("\n");
+    const written = ["AppearanceSection", "SessionSection", "SecurityQuestionSection", "AboutSection"]
+      .map(source)
+      .join("\n");
     for (const label of SETTINGS_LABELS) assert.ok(written.includes(`label="${label}"`), `${label} is no row`);
     assert.equal(new Set(SETTINGS_LABELS).size, SETTINGS_LABELS.length);
   });
