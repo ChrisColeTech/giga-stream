@@ -13,6 +13,7 @@ export const ERRORS = {
   requestInvalid: { code: "request.invalid", status: 400, message: "The request was not understood." },
   channelNotFound: { code: "channel.not_found", status: 404, message: "That channel does not exist." },
   channelInvalid: { code: "channel.invalid", status: 422, message: "That channel is not valid." },
+  channelNotStream: { code: "channel.not_stream", status: 422, message: "Only a stream channel has a verdict." },
   channelTaken: { code: "channel.taken", status: 409, message: "Another channel already has that id or number." },
   faultInvalid: { code: "fault.invalid", status: 400, message: "That fault is not valid." },
   mediaNotFound: { code: "media.not_found", status: 404, message: "That part of the stream is not available." },
