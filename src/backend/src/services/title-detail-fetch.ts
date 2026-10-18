@@ -39,8 +39,8 @@ const appended = (seasons: readonly number[]): string[] => seasons.map((n) => `s
  * The one place a title's TMDB detail is fetched and stored (docs/47 section 3.1): the Library fill's `details` phase,
  * an admin's add (`POST /api/titles/from-tmdb`) and a revert. A movie is one `/movie/{id}` call with the credits and
 external ids, mapped by `detailOf`. A series is `/tv/{id}` with `append_to_response=credits,external_ids,season/1,...`
- * - TMDB allows 20 appended items, so a call that refreshes a known series carries up to 18 seasons; a series seen for the
- * first time learns its season list from that call and gets follow-up calls of up to 20 `season/N` appends for them; the season answers become `seasons[n].episodes` and everything is written in ONE short
+ * - TMDB allows 20 appended items, so the first call of any series (seen before or not) carries seasons 1 to 18, a known
+ * series only the ones it still lacks; seasons above 18 get follow-up calls of up to 20 `season/N` appends; the season answers become `seasons[n].episodes` and everything is written in ONE short
  * transaction. A series whose detail is fresh but whose seasons lack episodes asks for just the missing seasons. A
  * `season/N` the answer does not carry is left for the next run. An admin's edited fields and a series' stored episodes
  * are kept. Nothing is asked of OMDb.
@@ -57,9 +57,11 @@ export function createDetailFetch(deps: { store: Store; tmdb: TmdbClient; now: (
     const staleBefore = options.staleBefore ?? now() - TITLE_FRESH_MS;
     const wholeDetail = options.force === true || existing === undefined || prior.shape !== "detail" || existing.fetchedAt < staleBefore;
     const base = wholeDetail ? ["credits", "external_ids"] : [];
-    // A series not seen as a detail yet has no season list to ask by (TMDB's answer to a season that does not exist is not
-    // known, so none is guessed): its first call carries the detail alone and the seasons follow in calls of up to 20.
-    const wanted = kind !== "tv" || !Array.isArray(prior.seasons) ? [] : seasonsMissing(prior, staleBefore);
+    // A series not seen as a detail yet has no season list to ask by, so its first call asks for seasons 1 to 18 blind:
+    // TMDB answers 200 with only the `season/N` keys that exist (verified against the real API). Seasons above 18 follow
+    // in calls of up to 20, decided from the answer's own `seasons[]`.
+    const blind = Array.from({ length: TMDB_APPEND_MAX - base.length }, (_, i) => i + 1);
+    const wanted = kind !== "tv" ? [] : !Array.isArray(prior.seasons) ? blind : seasonsMissing(prior, staleBefore);
     const first = wanted.slice(0, TMDB_APPEND_MAX - base.length);
     if (base.length === 0 && first.length === 0) return undefined;
     const answer = await call([...base, ...appended(first)]);

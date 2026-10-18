@@ -115,16 +115,17 @@ test("the Library fill makes no OMDb call", async () => {
   assert.equal(omdb.calls.length, 0);
 });
 
-test("a series' seasons ride TMDB's append_to_response: the first sight learns the list, a refresh is ONE call", async () => {
+test("a series' seasons ride TMDB's append_to_response: a never-seen series is ONE call, and so is a refresh", async () => {
   const tmdb = await walkTmdb({ movie: 1, tv: 1 });
   const f = await fillApp(tmdb, 1);
   await run(f);
   const mine = (): string[] => tmdb.appends.filter((a) => a.startsWith("2010|"));
-  assert.deepEqual(mine(), ["2010|credits,external_ids", "2010|season/1,season/2"], "season 0 is never asked for");
+  const blind = `2010|credits,external_ids,${Array.from({ length: 18 }, (_, i) => `season/${i + 1}`).join(",")}`;
+  assert.deepEqual(mine(), [blind], "seasons 1 to 18 blind, never season 0; the fake answers only the keys that exist");
   f.t.clock.advance(FOUR_DAYS_MS);
   await f.renew();
   await run(f);
-  assert.deepEqual(mine().slice(2), ["2010|credits,external_ids,season/1,season/2"], "detail and seasons in one call");
+  assert.deepEqual(mine().slice(1), ["2010|credits,external_ids,season/1,season/2"], "a refresh asks for the known seasons");
   const detail = (await f.api("GET", "/api/titles/tv-2010")).body;
   assert.deepEqual(pick(detail, "data.seasons"), [{ season: 1, episodeCount: 1 }, { season: 2, episodeCount: 1 }]);
   for (const n of [1, 2]) {
@@ -133,23 +134,23 @@ test("a series' seasons ride TMDB's append_to_response: the first sight learns t
   assert.deepEqual(pick((await f.api("GET", "/api/titles/tv-2010/seasons/0")).body, "data.episodes"), []);
 });
 
-test("a series with more than 18 seasons gets follow-up calls of season appends only", async () => {
+test("a series with 36 seasons is one call and one follow-up of season appends only", async () => {
   const tmdb = await walkTmdb({ movie: 1, tv: 1 });
-  tmdb.state.seasonCount = 45;
+  tmdb.state.seasonCount = 36;
   const f = await fillApp(tmdb, 1);
   const job = await run(f);
   const mine = tmdb.appends.filter((a) => a.startsWith("2010|")).map((a) => a.split("|")[1]?.split(",") ?? []);
-  assert.equal(pick(job, "lastCounts.seasons"), 45 + 45, "both series, every season");
-  assert.deepEqual(mine.map((a) => a.length), [2, 20, 20, 5], "the detail, then seasons 1-20, 21-40 and 41-45");
-  assert.deepEqual(mine[1]?.[0], "season/1");
-  assert.equal(mine[3]?.at(-1), "season/45");
+  assert.equal(pick(job, "lastCounts.seasons"), 36 + 36, "both series, every season");
+  assert.deepEqual(mine.map((a) => a.length), [20, 18], "credits, external_ids and seasons 1-18, then seasons 19-36");
+  assert.equal(mine[1]?.[0], "season/19");
+  assert.equal(mine[1]?.at(-1), "season/36");
   f.t.clock.advance(FOUR_DAYS_MS);
   await f.renew();
   const before = tmdb.appends.length;
   await run(f);
   const refresh = tmdb.appends.slice(before).filter((a) => a.startsWith("2010|")).map((a) => a.split("|")[1]?.split(",").length);
-  assert.deepEqual(refresh, [20, 20, 7], "a refresh: credits, external_ids and 18 seasons, then 20, then 7");
-  assert.equal(pick((await f.api("GET", "/api/titles/tv-2010/seasons/45")).body, "data.episodes.0.title"), "Episode 2010/45");
+  assert.deepEqual(refresh, [20, 18], "a refresh: the same two calls");
+  assert.equal(pick((await f.api("GET", "/api/titles/tv-2010/seasons/36")).body, "data.episodes.0.title"), "Episode 2010/36");
 });
 
 test("a season TMDB leaves out of its answer stays empty and only that season is asked for on the next run", async () => {
