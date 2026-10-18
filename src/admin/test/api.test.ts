@@ -96,7 +96,7 @@ describe("the bearer", () => {
 describe("the sentences", () => {
   const DOCUMENTED = [
     "auth.unauthorized", "auth.invalid_credentials", "auth.refresh_invalid", "auth.rate_limited", "auth.locked",
-    "account.not_found", "account.invalid", "account.username_taken", "account.last_admin", "account_state.invalid",
+    "auth.reset_invalid", "account.not_found", "account.invalid", "account.username_taken", "account.last_admin", "account_state.invalid",
     "channel.not_found", "channel.invalid", "channel.taken", "fault.invalid", "path.invalid", "media.not_found",
     "range.unsatisfiable", "provider.not_found", "provider.invalid", "title.not_found", "title.invalid",
     "title.manual", "tmdb.unavailable", "playlist.not_found", "playlist.invalid", "playlist.unreachable",

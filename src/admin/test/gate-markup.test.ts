@@ -42,11 +42,15 @@ describe("the gate, idle", () => {
     assert.ok(!html.includes('role="alert"'));
   });
 
-  it("offers no OAuth, no forgot password, no sign-up and no password toggle", () => {
+  it("offers no OAuth, no sign-up and no password toggle, and one `Forgot password?` link under the Password row", () => {
     const html = page().toLowerCase();
-    for (const word of ["google", "github", "oauth", "forgot", "create an account", "sign up", "show password"]) {
+    for (const word of ["google", "github", "oauth", "create an account", "sign up", "show password"]) {
       assert.ok(!html.includes(word), word);
     }
+    const link = page();
+    assert.equal(link.split("Forgot password?").length - 1, 1);
+    assert.ok(link.indexOf('aria-label="Password"') < link.indexOf("Forgot password?"));
+    assert.ok(link.indexOf("Forgot password?") < link.indexOf('type="submit"'));
   });
 });
 

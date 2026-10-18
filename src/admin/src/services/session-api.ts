@@ -6,6 +6,7 @@ import { ERROR_SENTENCES, FAILURE_CODES, REFRESH_SKEW_MS } from "@/constants/api
 import { SESSION_ENDED_NOTICE } from "@/constants/sign-in-copy";
 import type { SessionTokens } from "@/types/auth";
 import type { EventArea } from "@/types/events";
+import { ResetDoneSchema, ResetStartSchema } from "./schemas/reset-schema";
 import { AnySchema, SessionSchema, tokensOf, type BackendSession } from "./schemas/session-schema";
 
 /* The admin's request layer over `@giga/http`'s `createApi` (`29` sections 6.2 and 7): the bearer token from the in-memory
@@ -31,12 +32,19 @@ export interface SessionApi {
   request: <T>(path: string, schema: z.ZodType<T>, options?: CallOptions) => Promise<T>;
   /** `POST /api/auth/login`: no token. */
   login: (username: string, password: string) => Promise<BackendSession>;
+  /** `POST /api/auth/reset-start`: no token. Rejects with an `ApiError`; the auth port turns it into a refusal. */
+  resetStart: (username: string) => Promise<string>;
+  /** `POST /api/auth/reset`: no token. */
+  reset: (username: string, answer: string, newPassword: string) => Promise<void>;
   /** `POST /api/auth/logout` with the refresh token. Never rejects: the session is gone whatever the answer is. */
   logout: () => Promise<void>;
 }
 
 const unauthorized = (): ApiError => new ApiError("auth.unauthorized", ERROR_SENTENCES["auth.unauthorized"] ?? "", 401);
-const isUnauthorized = (error: unknown): boolean => error instanceof ApiError && error.status === 401;
+/** A 401 that means the access token is no good. A wrong CURRENT password (`auth.invalid_credentials`) is also a 401, but
+ *  the session is fine: it must reach the form, never refresh and never end the session. */
+const isUnauthorized = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 401 && error.code !== "auth.invalid_credentials";
 
 export function createSessionApi(deps: SessionApiDeps): SessionApi {
   const common = {
@@ -102,6 +110,14 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
     request,
     login: (username, password) =>
       open.api("/api/auth/login", SessionSchema, { method: "POST", body: { username, password } }),
+    resetStart: async (username) => {
+      const body = { username };
+      return (await open.api("/api/auth/reset-start", ResetStartSchema, { method: "POST", body })).question;
+    },
+    reset: async (username, answer, newPassword) => {
+      const body = { username, answer, newPassword };
+      await open.api("/api/auth/reset", ResetDoneSchema, { method: "POST", body });
+    },
     logout: async () => {
       const tokens = deps.tokens();
       if (tokens === null) return;

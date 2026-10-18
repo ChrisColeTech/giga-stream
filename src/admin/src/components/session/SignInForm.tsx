@@ -4,20 +4,28 @@ import { Input } from "@giga/ui/controls/Input";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Form } from "@giga/ui/form/Form";
 import { Row } from "@giga/ui/form/Row";
-import { GATE_HEADING, SIGNING_IN_LABEL } from "@/constants/sign-in-copy";
+import { GATE_HEADING, SIGNING_IN_LABEL, SIGN_IN_WAITING_REASON } from "@/constants/sign-in-copy";
 import { useSignIn } from "@/hooks/useSignIn";
 import { gateError } from "@/lib/gate-state";
 import { signInReason } from "@/lib/sign-in-verb";
 import { useAppStore } from "@/store/app-store";
+import { ForgotLink } from "./ForgotLink";
+
+export interface SignInFormProps {
+  /** The username to start with: what was typed before the reset views, so it is never typed twice. */
+  readonly initialUsername?: string;
+  /** `Forgot password?` was pressed with this username typed. */
+  readonly onForgot?: (username: string) => void;
+}
 
 /** The gate's form: Username, Password and one primary `Sign in`, disabled with its reason until both are filled and
  *  while the port answers (`34` section 3). Enter in either field submits. A refusal keeps the username, clears the
  *  password (not for an unreachable backend: the retry needs it), shows its sentence under the Password row and puts
- *  focus back there. Username is focused on open. */
-export function SignInForm() {
+ *  focus back there. Username is focused on open. `Forgot password?` sits right-aligned under the Password row. */
+export function SignInForm({ initialUsername = "", onForgot }: SignInFormProps) {
   const gate = useAppStore((state) => state.gate);
   const signIn = useSignIn();
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(initialUsername);
   const [password, setPassword] = useState("");
   /* The library's Input takes no ref; the row's wrapper finds its field. */
   const passwordRow = useRef<HTMLDivElement>(null);
@@ -65,6 +73,9 @@ export function SignInForm() {
           />
         </Row>
       </div>
+      {onForgot !== undefined && (
+        <ForgotLink onPress={() => onForgot(username)} reason={submitting ? SIGN_IN_WAITING_REASON : undefined} />
+      )}
       <div className="pt-1">
         <Button
           type="submit"

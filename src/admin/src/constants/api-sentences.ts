@@ -15,6 +15,7 @@ export const ERROR_SENTENCES: SentenceTable = {
   "auth.refresh_invalid": "That session has ended; sign in again.",
   "auth.rate_limited": "Too many sign-in attempts; wait a minute.",
   "auth.locked": "This account is locked for a while after failed sign-ins.",
+  "auth.reset_invalid": "That answer is not right, or the reset is not available for this username.",
   "account.not_found": "That account does not exist.",
   "account.invalid": "That account is not valid.",
   "account.username_taken": "Another account already uses that username.",

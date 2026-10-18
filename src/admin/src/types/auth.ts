@@ -7,6 +7,8 @@ export interface SessionActor {
   readonly id: string | number;
   readonly username: string;
   readonly name: string;
+  /** Whether the account has set its security question (`40`); read only, unknown (absent) until the backend says. */
+  readonly securityQuestionSet?: boolean;
 }
 
 /** What a sign-in hands the store. Wave 7 widens it with the tokens of `29` section 5 (held in memory only). */
@@ -31,9 +33,25 @@ export type AuthResult =
   | { readonly ok: true; readonly session: AuthSession }
   | { readonly ok: false; readonly refusal: RefusalKind };
 
+/** `POST /api/auth/reset-start`: the question to answer (the account's own, or a stand-in: the backend never says which),
+ *  or why it could not be asked (`40` section 4.3). */
+export type ResetStartResult =
+  | { readonly ok: true; readonly question: string }
+  | { readonly ok: false; readonly refusal: "rate_limited" | "unreachable" };
+
+/** `POST /api/auth/reset`: `invalid` is `auth.reset_invalid` (a wrong answer, a lock, no account: one sentence for all),
+ *  `weak` a `422` on the new password. */
+export type ResetResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly refusal: "invalid" | "weak" | "rate_limited" | "unreachable" };
+
 export interface AuthPort {
   /** Never rejects: every failure is a refusal. */
   signIn: (username: string, password: string) => Promise<AuthResult>;
   /** Never rejects: the session is cleared whatever the answer is (`29` section 6.1). */
   signOut: () => Promise<void>;
+  /** Never rejects. No token is sent: the caller is signed out. */
+  resetStart: (username: string) => Promise<ResetStartResult>;
+  /** Never rejects. No token is sent. A success signs the account out everywhere, so the caller returns to the gate. */
+  resetPassword: (username: string, answer: string, newPassword: string) => Promise<ResetResult>;
 }

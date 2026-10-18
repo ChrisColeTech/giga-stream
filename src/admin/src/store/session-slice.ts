@@ -90,7 +90,17 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
       if (get().signedIn) set({ tokens });
     },
     updateActor: (actor) => {
-      if (get().signedIn) set({ actor: { id: actor.id, username: actor.username, name: actor.name } });
+      if (!get().signedIn) return;
+      /* The security-question flag is the session's own fact: an update that does not carry it keeps the held one. */
+      const flag = actor.securityQuestionSet ?? get().actor?.securityQuestionSet;
+      set({
+        actor: {
+          id: actor.id,
+          username: actor.username,
+          name: actor.name,
+          ...(flag !== undefined && { securityQuestionSet: flag }),
+        },
+      });
     },
     endSession: (sentence) => set(signedOut(nextGate(get().gate, { type: "ended", sentence }))),
     signOut: () => set(signedOut(GATE_START)),
