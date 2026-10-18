@@ -2,6 +2,7 @@ import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import type { AuditService } from "./audit-service.js";
 import type { OmdbClient } from "./omdb-client.js";
+import { createTitleDeleted } from "./title-deleted.js";
 import { createTitleOverlay, viewOf } from "./title-overlay.js";
 import { createTitleRecords, isManualId } from "./title-records.js";
 import { createTitleSources } from "./title-sources.js";
@@ -42,8 +43,9 @@ export function createTitleService(deps: {
   scheduleLabel?: () => string;
 }) {
   const { store } = deps;
-  const reads = createTitleReads(deps);
-  const sync = createTitleSync({ ...deps, ensureTitle: reads.ensureTitle });
+  const deleted = createTitleDeleted(deps);
+  const reads = createTitleReads({ ...deps, deleted });
+  const sync = createTitleSync({ ...deps, deleted, ensureTitle: reads.ensureTitle });
   const sources = createTitleSources(store);
   const streams = deps.streams;
   const overlay = createTitleOverlay(store);
@@ -84,6 +86,8 @@ export function createTitleService(deps: {
 
   return {
     ...records,
+    listDeleted: deleted.list,
+    restore: deleted.restore,
     startSync: sync.startSync,
     runNow: sync.runNow,
     isSyncRunning: sync.isRunning,
@@ -98,6 +102,7 @@ export function createTitleService(deps: {
         ...answer,
         items: query.page === 1 ? overlay.merge(items, manual, query.sort) : items,
         totalResults: answer.totalResults + manual.length,
+        skipped: (answer.skipped ?? 0) + answer.items.length - items.length,
       };
     },
 
@@ -105,7 +110,9 @@ export function createTitleService(deps: {
       const manual = overlay.manualMatches({ kind, q, ...options });
       const answer = await tmdbPage(() => reads.search(kind, q, page), page, manual.length);
       const items = overlay.decorate(answer.items, options.includeDisabled);
-      return { ...answer, items: page === 1 ? [...manual, ...items] : items, totalResults: answer.totalResults + manual.length };
+      const skipped = (answer.skipped ?? 0) + answer.items.length - items.length;
+      const total = answer.totalResults + manual.length;
+      return { ...answer, items: page === 1 ? [...manual, ...items] : items, totalResults: total, skipped };
     },
 
     async detail(titleId: string, options: ReadOptions = {}): Promise<Record<string, unknown>> {

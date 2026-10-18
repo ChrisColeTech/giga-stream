@@ -12,6 +12,8 @@ export interface TitlesPage {
   rows: BackendTitle[];
   totalPages: number;
   totalResults: number;
+  /** Rows the backend left out of this page (deleted or disabled titles): a thinned page, not the end. */
+  skipped: number;
 }
 
 /** What `read` answers: the matching title items and where reading stopped. */
@@ -48,15 +50,17 @@ export function createLibraryTitles(deps: {
             ...(query.year !== undefined && { year: query.year }),
           });
     if (!answer.ok) return undefined;
-    return { available: true, rows: answer.value.items, totalPages: answer.value.totalPages, totalResults: answer.value.totalResults };
+    const { items: rows, totalPages, totalResults, skipped = 0 } = answer.value;
+    return { available: true, rows, totalPages, totalResults, skipped };
   }
 
   /** Both kinds' `page` merged: rows concatenated, the wider page count, the summed totals. */
   async function titlesPage(query: LibraryQuery, kinds: readonly TitleKind[], page: number): Promise<TitlesPage> {
     const answers = await Promise.all(kinds.map((kind) => kindPage(query, kind, page)));
     const pages = answers.reduce<TitlesPage[]>((found, one) => (one === undefined ? found : [...found, one]), []);
-    if (pages.length === 0) return { available: false, rows: [], totalPages: 0, totalResults: 0 };
+    if (pages.length === 0) return { available: false, rows: [], totalPages: 0, totalResults: 0, skipped: 0 };
     return {
+      skipped: pages.reduce((sum, one) => sum + one.skipped, 0),
       available: pages.length === kinds.length,
       rows: pages.flatMap((one) => one.rows),
       totalPages: Math.max(...pages.map((one) => one.totalPages)),
@@ -87,8 +91,9 @@ export function createLibraryTitles(deps: {
         );
         found.push(...kept);
         nextPage = titles.available && page < titles.totalPages ? page + 1 : undefined;
-        // An upstream page the filters left whole is a page as the backend sizes it: no refill.
-        const thinned = kept.length < titles.rows.length;
+        // An upstream page the filters left whole is a page as the backend sizes it: no refill. One the backend
+        // thinned (it left out deleted or disabled titles) counts as thinned, so the next page tops it up.
+        const thinned = kept.length < titles.rows.length || titles.skipped > 0;
         if (nextPage === undefined || !thinned || found.length >= Math.min(need, LIBRARY_PAGE_SIZE)) break;
         page = nextPage;
       }

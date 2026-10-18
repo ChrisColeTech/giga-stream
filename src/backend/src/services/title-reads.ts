@@ -1,6 +1,7 @@
 import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
 import type { OmdbClient } from "./omdb-client.js";
+import type { TitleDeleted } from "./title-deleted.js";
 import type { TmdbClient } from "./tmdb-client.js";
 import { discoverParams, storedListItems, storeListItems } from "./title-list-cache.js";
 import {
@@ -14,22 +15,34 @@ import {
   listOf,
   mapTitle404,
   num,
-  omdbBlockOf,
   parseTitleId,
   rowsOf,
   str,
   storedRowOf,
 } from "./title-shapes.js";
+import { createOmdbEnricher } from "./title-omdb-enrich.js";
 
 /**
  * The fill-through reads (docs/03 section 7.6b): the store while fresh, TMDB on a miss — and the
- * OMDb enrichment the detail answer carries (docs/11 section 7.3).
+ * OMDb enrichment the detail answer carries (docs/11 section 7.3). A deleted title is never read or stored.
  */
-export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: OmdbClient; now: () => number }) {
-  const { store, tmdb, omdb, now } = deps;
+export function createTitleReads(deps: {
+  store: Store;
+  tmdb: TmdbClient;
+  omdb: OmdbClient;
+  deleted: TitleDeleted;
+  now: () => number;
+}) {
+  const { store, tmdb, omdb, deleted, now } = deps;
+
+  /** A deleted title answers as a missing one, whatever TMDB says. */
+  function assertKept(kind: Kind, tmdbId: number): void {
+    if (deleted.isDeleted(kind, tmdbId)) throw new AppError(ERRORS.titleNotFound, { titleId: `${kind}-${tmdbId}` });
+  }
 
   /** A full TMDB record, stored with its shape and its IMDb id (docs/11 section 7 needs the id). */
   async function ensureTitle(kind: Kind, tmdbId: number, force = false): Promise<Record<string, unknown>> {
+    assertKept(kind, tmdbId);
     const found = store.titles.find(kind, tmdbId);
     if (!force && found && now() - found.fetchedAt < TITLE_FRESH_MS) {
       const payload = storedRowOf(kind, tmdbId, found.payload, found.popularityReadAt ?? found.fetchedAt);
@@ -52,28 +65,7 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
     return payload;
   }
 
-  /**
-   * OMDb enrichment: after TMDB's detail, once per title per freshness window, one call by IMDb id,
-   * inside the daily budget. A miss, no id, or no key leaves the payload as it is.
-   */
-  async function enrichWithOmdb(kind: Kind, tmdbId: number, payload: Record<string, unknown>): Promise<void> {
-    const imdbId = str(payload.imdbId);
-    if (imdbId === undefined) return;
-    const fetchedAt = num(asRecord(payload.omdb).fetchedAt);
-    if (fetchedAt !== undefined && now() - fetchedAt < TITLE_FRESH_MS) return;
-    const record = await omdb.get(imdbId);
-    if (record === undefined) return;
-    payload.omdb = omdbBlockOf(record, now());
-    const stored = store.titles.find(kind, tmdbId);
-    store.titles.put({
-      kind,
-      tmdbId,
-      payload,
-      popularityScore: stored?.popularityScore ?? null,
-      popularityReadAt: stored?.popularityReadAt ?? null,
-      fetchedAt: stored?.fetchedAt ?? now(),
-    });
-  }
+  const enrichWithOmdb = createOmdbEnricher({ store, omdb, now });
 
   return {
     ensureTitle,
@@ -82,15 +74,18 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
       const key = [query.kind, query.sort, query.genre ?? "-", query.year ?? "-", query.page].join("|");
       const stored = store.titles.findList(key);
       if (stored && now() - stored.fetchedAt < LIST_FRESH_MS && query.sort !== "trending") {
-        const items = storedListItems(store, query.kind, stored.ids);
+        const live = stored.ids.filter((id) => !deleted.isDeleted(query.kind, id));
+        const items = storedListItems(store, query.kind, live);
         if (items !== undefined) {
-          return { items, page: query.page, totalPages: stored.totalPages, totalResults: stored.totalResults };
+          const skipped = stored.ids.length - live.length;
+          return { items, page: query.page, totalPages: stored.totalPages, totalResults: stored.totalResults, skipped };
         }
       }
       const answer = asRecord(await tmdb.get(`/discover/${query.kind}`, discoverParams(query)));
       const fetchedAt = now();
-      const results = rowsOf(query.kind, listOf(answer.results), fetchedAt);
-      const ids = results.map((r) => num(r.tmdbId) ?? 0);
+      const all = rowsOf(query.kind, listOf(answer.results), fetchedAt);
+      const { kept: results, skipped } = deleted.withoutDeleted(query.kind, all);
+      const ids = all.map((r) => num(r.tmdbId) ?? 0);
       storeListItems(store, query.kind, results, fetchedAt);
       store.titles.putList(key, ids, Math.min(num(answer.total_pages) ?? 1, 500), num(answer.total_results) ?? ids.length, fetchedAt);
       return {
@@ -98,14 +93,16 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
         page: query.page,
         totalPages: Math.min(num(answer.total_pages) ?? 1, 500),
         totalResults: num(answer.total_results) ?? ids.length,
+        skipped,
       };
     },
     async search(kind: Kind, q: string, page: number): Promise<ListAnswer> {
       const answer = asRecord(await tmdb.get(`/search/${kind}`, { query: q, page, include_adult: "false" }));
       const candidates = listOf(answer.results).filter((r) => asRecord(r).media_type !== "person");
-      const results = rowsOf(kind, candidates, now());
+      const { kept: results, skipped } = deleted.withoutDeleted(kind, rowsOf(kind, candidates, now()));
       return {
         items: results,
+        skipped,
         page,
         totalPages: Math.min(num(answer.total_pages) ?? 1, 500),
         totalResults: num(answer.total_results) ?? results.length,
@@ -140,6 +137,7 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
     async seasons(titleId: string, season: number): Promise<{ episodes: unknown[] }> {
       const [kind, id] = parseTitleId(titleId);
       if (kind !== "tv") throw new AppError(ERRORS.titleNotFound, { titleId });
+      assertKept(kind, id);
       try {
         const payload = await ensureTitle(kind, id);
         const known = listOf(payload.seasons).find(
@@ -177,10 +175,10 @@ export function createTitleReads(deps: { store: Store; tmdb: TmdbClient; omdb: O
 
     async recommendations(titleId: string): Promise<{ items: Record<string, unknown>[] }> {
       const [kind, id] = parseTitleId(titleId);
+      assertKept(kind, id);
       try {
         const answer = asRecord(await tmdb.get(`/${kind}/${id}/recommendations`, { page: 1 }));
-        const items = rowsOf(kind, listOf(answer.results), now());
-        return { items };
+        return { items: deleted.withoutDeleted(kind, rowsOf(kind, listOf(answer.results), now())).kept };
       } catch (error) {
         return mapTitle404(error, titleId);
       }

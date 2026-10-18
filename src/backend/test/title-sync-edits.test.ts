@@ -89,11 +89,15 @@ test("a title made by hand is never touched by a sync, even with a TMDB id of it
   assert.equal(field(await send(h.t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");
 });
 
-test("a deleted synced title is added again by the next sync, as a plain synced one", async () => {
+test("a deleted synced title stays out of a sync until it is restored, then comes back as a plain synced one", async () => {
   const h = await titleApp();
   await syncAll(h, SYNC_MOVIES);
   await send(h.t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, h.token);
   assert.equal((await send(h.t.app, "DELETE", "/api/titles/movie-603", undefined, h.token)).status, 200);
+  await syncAll(h, SYNC_MOVIES);
+  const gone = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
+  assert.equal(pick(gone.body, "data.items.0.title"), undefined, "still deleted");
+  assert.equal((await send(h.t.app, "DELETE", "/api/titles/deleted/movie-603", undefined, h.token)).status, 200);
   await syncAll(h, SYNC_MOVIES);
   const back = await send(h.t.app, "GET", "/api/titles?kind=movie&sort=newest");
   assert.deepEqual(["title", "state"].map((f) => pick(back.body, `data.items.0.${f}`)), ["The Matrix", "synced"]);
