@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpotlightRow } from "@/components/library/SpotlightRow";
+import { SpotlightBar } from "@/components/library/SpotlightBar";
 import { TypeStrip } from "@/components/library/TypeStrip";
 import { FilterField } from "@/components/library/FilterField";
 import {
@@ -116,6 +117,25 @@ describe("the markup", () => {
     const buttons = row.match(/<button[^>]*>[\s\S]*?<\/button>/g) ?? [];
     assert.equal(buttons.length, 2);
     for (const button of buttons) assert.ok(!/>[^<\s][^<]*</.test(button), "Play and Info are glyphs alone");
+  });
+
+  it("draws the spotlight as a bar: the field first, no header and no close button, one icon pair per row", () => {
+    const state = spotlightReducer(
+      spotlightReducer(
+        spotlightReducer(SPOTLIGHT_CLOSED, { type: "open" }),
+        { type: "query", query: "ti" },
+      ),
+      { type: "results", items: RESULTS },
+    );
+    const bar = html(createElement(SpotlightBar, { state, dispatch: noop, onType: noop, onPlay: noop, onInfo: noop }));
+    assert.ok(!/<h[1-6][\s>]/.test(bar), "no header");
+    assert.ok(!bar.includes("Close"), "no close button");
+    assert.ok(!PARAGRAPH.test(bar), "no text under a control");
+    const input = bar.indexOf("<input");
+    assert.ok(input > 0 && input < bar.indexOf("<ul"), "the field is the first row, before the results");
+    assert.ok(bar.includes('aria-label="Search titles"'));
+    assert.equal((bar.match(/aria-label="Play /g) ?? []).length, 3);
+    assert.equal((bar.match(/aria-label="Info /g) ?? []).length, 3);
   });
 
   it("labels the rail's field Filter, with its clear control", () => {

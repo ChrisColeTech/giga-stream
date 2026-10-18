@@ -1,9 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { keepInWindow, placePopup } from "@giga/ui/lib/popup-place";
+import { useEffect, useRef, type RefObject } from "react";
 
-/** The spotlight's frame: the family `usePopupFrame` rules (placed by `placePopup` with no anchor, so centred across the
- *  work area a fifth of the way down; kept inside the window as it grows; Escape, a press outside it or focus leaving it
- *  dismiss it), with one difference the `01` section 9 exception needs: while `paused()` answers true (Title
+/** The spotlight's frame behaviour: the card is placed by its own CSS (centred, 14% from the top), and the family
+ *  `usePopupFrame` dismissal rules apply (Escape, a press outside the card, which includes the scrim, or focus leaving
+ *  it close it), with one difference the `01` section 9 exception needs: while `paused()` answers true (Title
  *  information stands over it) none of them does anything, and Escape is left alone so the window above hears it. */
 export function useSpotlightFrame(
   open: boolean,
@@ -15,23 +14,6 @@ export function useSpotlightFrame(
   const isPaused = useRef(paused);
   close.current = onClose;
   isPaused.current = paused;
-
-  useLayoutEffect(() => {
-    if (open && panel.current !== null) placePopup(panel.current, null);
-  }, [open]);
-
-  useEffect(() => {
-    const node = panel.current;
-    if (!open || node === null || typeof ResizeObserver === "undefined") return;
-    let height = node.offsetHeight;
-    const observer = new ResizeObserver(() => {
-      if (node.offsetHeight === height) return;
-      height = node.offsetHeight;
-      keepInWindow(node);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;

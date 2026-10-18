@@ -1,20 +1,11 @@
 import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Search, X } from "lucide-react";
-import { IconButton } from "@giga/ui/controls/IconButton";
-import { Input } from "@giga/ui/controls/Input";
-import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { cn } from "@giga/ui/lib/cn";
-import { POPUP_BORDER, POPUP_CLASSES, POPUP_PAD } from "@giga/ui/lib/popup-metrics";
-import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
 import { useSpotlightFrame } from "@/hooks/useSpotlightFrame";
 import { LIBRARY_COPY } from "@/lib/library-copy";
-import { LIBRARY_FILTER_MAX } from "@/lib/library-restore";
-import { SPOTLIGHT_SKELETON_ROWS, type SpotlightAction, type SpotlightState } from "@/lib/spotlight-state";
+import type { SpotlightAction, SpotlightState } from "@/lib/spotlight-state";
 import type { LibraryItem } from "@/types/library";
-import { SpotlightRow } from "./SpotlightRow";
-
-const WIDE = POPUP_CLASSES.wide;
+import { SpotlightBar } from "./SpotlightBar";
 
 export interface TitleSpotlightProps {
   readonly state: SpotlightState;
@@ -27,11 +18,11 @@ export interface TitleSpotlightProps {
   readonly onInfo: (item: LibraryItem, opener: HTMLElement) => void;
 }
 
-/** Search titles (`06` section 4.6): a wide popup drawn as the family's `PopupPanel` (frame, title header with its edged
- *  X, a body capped at the wide class), one layer under the work windows so Title information can stand over it. */
+/** Search titles (`06` section 4.6): a Spotlight bar. One floating card near the top of the window over a light scrim;
+ *  no title bar, no close button. It sits one layer under the work windows so Title information can stand over it,
+ *  dimming it while it does. */
 export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSubmit, onPlay, onInfo }: TitleSpotlightProps) {
   const panel = useSpotlightFrame(state.open, paused, onClose);
-  const empty = state.searching || state.results.length === 0;
 
   const onKey = (event: KeyboardEvent<HTMLDivElement>): void => {
     const inField = event.target instanceof HTMLInputElement;
@@ -47,57 +38,24 @@ export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSub
   };
 
   return createPortal(
-    <div
-      ref={panel}
-      role="dialog"
-      aria-label={LIBRARY_COPY.searchTitles}
-      data-popup="wide"
-      data-spotlight
-      style={{ width: WIDE.width + 2 * (POPUP_PAD + POPUP_BORDER) }}
-      className="fixed z-47 flex flex-col overflow-hidden rounded-card border border-border bg-panel font-sans shadow-menu"
-      onKeyDown={onKey}
-    >
-      <div className="flex h-7 flex-none items-center gap-2 border-b border-hair pr-1 pl-2">
-        <h2 className="m-0 min-w-0 flex-1 truncate font-sans text-xs font-semibold text-text">
-          {LIBRARY_COPY.searchTitles}
-        </h2>
-        <IconButton bordered className="size-5.5" title={`Close ${LIBRARY_COPY.searchTitles}`}
-          aria-label={`Close ${LIBRARY_COPY.searchTitles}`} onClick={onClose}>
-          <X className="size-3.25" aria-hidden />
-        </IconButton>
-      </div>
-      <div className="flex-none border-b border-hair p-2">
-        <div className="relative flex min-w-0 items-center">
-          <Search className="pointer-events-none absolute left-3 size-3.5 text-faint" aria-hidden />
-          <Input
-            autoFocus
-            aria-label={LIBRARY_COPY.searchTitles}
-            maxLength={LIBRARY_FILTER_MAX}
-            value={state.query}
-            onChange={(event) => onType(event.target.value)}
-            className={cn(FIELD_CONTROL, "pl-8!")}
-          />
-        </div>
-      </div>
-      <div className="min-h-0 overflow-y-auto p-2" style={{ maxHeight: WIDE.body }} aria-busy={state.searching}>
-        {empty ? (
-          <SkeletonRows count={SPOTLIGHT_SKELETON_ROWS} />
-        ) : (
-          <ul className="m-0 flex list-none flex-col gap-0.5 p-0" aria-label={LIBRARY_COPY.searchResults}>
-            {state.results.map((item, index) => (
-              <SpotlightRow
-                key={`${item.ref.kind}:${item.ref.id}`}
-                item={item}
-                focused={index === state.focused}
-                onHover={() => dispatch({ type: "focus", index })}
-                onPlay={() => onPlay(item)}
-                onInfo={(opener) => onInfo(item, opener)}
-              />
-            ))}
-          </ul>
+    <>
+      <div data-spotlight-scrim aria-hidden className="fixed inset-0 z-46 bg-scrim/40" />
+      <div
+        ref={panel}
+        role="dialog"
+        aria-label={LIBRARY_COPY.searchTitles}
+        data-spotlight
+        className={cn(
+          "fixed top-[14%] left-1/2 z-47 flex w-[640px] max-w-[90vw] -translate-x-1/2 flex-col overflow-hidden",
+          "rounded-xl border border-border bg-panel font-sans shadow-[0_24px_64px_rgba(0,0,0,0.5)]",
+          "transition-opacity duration-fade ease-linear",
+          state.info !== null && "opacity-60",
         )}
+        onKeyDown={onKey}
+      >
+        <SpotlightBar state={state} dispatch={dispatch} onType={onType} onPlay={onPlay} onInfo={onInfo} />
       </div>
-    </div>,
+    </>,
     document.body,
   );
 }

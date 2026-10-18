@@ -444,21 +444,24 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 
 ### 4.6 Search titles (the spotlight popup; owner, 2026-10-18)
 
-Opened by the type strip's **Search titles** button. A wide authored popup (602px) drawn exactly as the family's
-`PopupPanel` (its frame, the `Search titles` header with its edged `X`, the body capped at the wide class's height) and
-placed by the family's `placePopup`: centred across the work area a fifth of the way down, with no scrim of its own.
-It sits one layer under the work windows' scrim, so Title information can stand over it, and its dismissal (the
-family `usePopupFrame` rules) pauses while that window is open. It searches the catalog's **titles, movies and series**, by
+Opened by the type strip's **Search titles** button. It is a Spotlight bar (owner, 2026-10-18: "it looks like a search
+modal" was the rejection), not a titled dialog: no title bar, no header text, no close button. One floating card, centred
+horizontally about 14% from the top of the window, 640px wide (at most 90vw), `rounded-xl`, a soft large shadow and the
+family's hairline border, over a light dim scrim (the app stays visible behind it; pressing the scrim closes it). Its
+first row is the search field itself (a borderless 48px input, 16px text, a leading search glyph, no field box, no
+visible label), and a hairline under it separates the results. The card and its scrim sit one layer under the work
+windows' scrim, so Title information can stand over it; while that window is open the card dims slightly and its
+dismissal pauses. It searches the catalog's **titles, movies and series**, by
 title, through the Library's own read (`GET /api/library?view=all&type=all&q=`, the backend's title search); local
 files are not results.
 
 | Part | Behaviour |
 |---|---|
-| Field | a search field with the search glyph, focused on open, labelled `Search titles`. Typing searches through the Library's debounced search session (no timer of its own); `Enter` searches at once, or, with a row focused, plays it |
-| Rows | one per result, as the list view's row: a compact poster thumbnail (or the title's colour), the title, then `year · Movie` or `year · Series` in mono; at the end two icon buttons, **Play** (`Play`, named `Play <title>`) and **Info** (`Info`, named `Info <title>`). The focused row wears the control fill |
-| Searching | six row skeletons in the row's shape; with no query or no result the body is the same skeleton rows (no sentence) |
+| Field | the borderless input that heads the card, focused on open, named `Search titles` for assistive tech only. Typing searches through the Library's debounced search session (no timer of its own); `Enter` searches at once, or, with a row focused, plays it |
+| Rows | a compact flat list, rows about 44px, at most about eight visible and then the list scrolls inside the card: a 28x42 poster thumbnail (or the title's colour), the title in the primary text, and `year · Movie` or `year · Series` in dim mono on the same line; at the right end two small ghost icon buttons, **Play** (named and tooltipped `Play <title>`) and **Info** (`Info <title>`), shown on the selected or hovered row and always focusable. The selected row wears the accent tint, like a menu row |
+| Searching | compact skeleton rows in the row's shape; with no query or no result the list is the same skeleton rows (no sentence, no hint footer) |
 | Keys | Up and Down move the focused row (Home and End to the ends); `Enter` plays the focused row; `Escape` closes |
-| Dismissal | its `X`, `Escape`, a press outside it or focus leaving it |
+| Dismissal | `Escape`, a press outside the card (the scrim) or focus leaving it; there is no close button |
 | Info | opens Title information over the spotlight without closing it (`01` section 9, Overlays exception). Closing Title information returns to the spotlight, its query, results and focused row intact |
 | Play | closes the spotlight and does exactly what a card's Play does: `requestPlay` shows the Player and loads the title (a series on its resumable episode, §5.6) |
 

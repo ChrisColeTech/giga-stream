@@ -29,7 +29,7 @@ inside each surface is `06`'s.
 | Settings | work window | statusbar **Settings** · `Ctrl+,` | its `X` · `Escape` · the statusbar button again |
 | Collections | work window | Library rail footer **Manage collections** | its `X` · `Escape` |
 | Title information | work window | a card's **Info**, or a Search titles row's **Info** (over the spotlight, `01` section 9's exception) | `Escape` · its `X` |
-| Search titles | wide popup (the spotlight, `06` section 4.6) | the Library type strip's **Search titles** | its `X` · `Escape` · an outside press · a row's **Play** · leaving Library |
+| Search titles | spotlight bar (`06` section 4.6) | the Library type strip's **Search titles** | `Escape` · an outside press · a row's **Play** · leaving Library |
 | Add to collection | `Collections ▸` submenu of the one context menu | a card's menu, Title information's Collections button, the Player's Watch block | a click toggles membership · outside press · `Escape` |
 | Events | drawer | statusbar **Events** | statusbar **Events** · `Escape` · its `X` |
 | Choose a folder | native dialog | **Attach folder** in Collections | the OS dialog |

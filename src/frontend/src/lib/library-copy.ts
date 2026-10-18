@@ -33,7 +33,7 @@ export const LIBRARY_COPY = {
   seasons: "Seasons",
   continueHeading: "Continue watching",
   listLabel: "Titles",
-  /** The spotlight (`06` section 4.6): its button, header and field. */
+  /** The spotlight (`06` section 4.6): its button and field. */
   searchTitles: "Search titles",
   searchResults: "Search results",
   movie: "Movie",
