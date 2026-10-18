@@ -7,10 +7,8 @@ import {
   draftOf,
   firstRefusal,
   newAddressOf,
-  replaceReason,
   samePlaylistDraft,
   sameNewPlaylist,
-  startReplace,
 } from "@/lib/playlist-draft";
 import { discardForm, isDirty, setFields, startForm } from "@/lib/record-form";
 import { filePlaylist, playlist } from "./support/run-kit";
@@ -19,33 +17,31 @@ const SAVED = playlist(1, { name: "Main" });
 const US = filePlaylist(2);
 const m3u = new File(["#EXTM3U\n"], "us.m3u", { type: "audio/x-mpegurl" });
 
-describe("the Replace state machine", () => {
-  it("starts locked and empty: the address is never filled from a record", () => {
-    const draft = draftOf(SAVED);
-    assert.deepEqual([draft.replacing, draft.address, replaceReason(draft, SAVED)], [false, "", undefined]);
+describe("the workspace draft", () => {
+  it("is filled from the record: a web playlist's full address, a file playlist's none", () => {
+    assert.equal(draftOf(SAVED).address, "https://iptv.example.test/list.m3u");
+    assert.equal(draftOf(US).address, "");
   });
 
-  it("unlocks empty, disables itself with its reason, and an unlocked empty field is no change", () => {
+  it("leaves the form clean until the address differs; an emptied or unchanged address is no change", () => {
     const base = startForm(draftOf(SAVED));
-    const unlocked = setFields(base, startReplace(base.draft));
-    assert.equal(unlocked.draft.replacing, true);
-    assert.equal(replaceReason(unlocked.draft, SAVED), "Type the new value, then Save.");
-    assert.equal(isDirty(unlocked, samePlaylistDraft), false);
-    assert.equal(newAddressOf(unlocked.draft), null);
-    assert.ok(isEmptyPatch(changedFields(SAVED, unlocked.draft)));
+    assert.equal(isDirty(base, samePlaylistDraft), false);
+    assert.equal(newAddressOf(SAVED, base.draft), null);
+    const emptied = setFields(base, { address: "" });
+    assert.equal(newAddressOf(SAVED, emptied.draft), null);
+    assert.ok(isEmptyPatch(changedFields(SAVED, emptied.draft)));
   });
 
-  it("is a change once a value is typed, sent as `url`, and Discard locks it again with the value gone", () => {
+  it("is a change once the address is edited, sent trimmed as `url`, and Discard puts the saved address back", () => {
     const base = startForm(draftOf(SAVED));
-    const typed = setFields(base, { ...startReplace(base.draft), address: " https://new.example.test/x " });
+    const typed = setFields(base, { address: " https://new.example.test/x " });
     assert.equal(isDirty(typed, samePlaylistDraft), true);
     assert.deepEqual(changedFields(SAVED, typed.draft), { url: "https://new.example.test/x" });
-    const discarded = discardForm(typed);
-    assert.deepEqual([discarded.draft.replacing, discarded.draft.address], [false, ""]);
+    assert.equal(discardForm(typed).draft.address, "https://iptv.example.test/list.m3u");
   });
 
-  it("is disabled for a file playlist: it has no web address, so the file is imported again", () => {
-    assert.equal(replaceReason(draftOf(US), US), "A file playlist has no web address. Import the file again.");
+  it("never sends an address for a file playlist", () => {
+    assert.equal(newAddressOf(US, { ...draftOf(US), address: "https://x.test/a" }), null);
   });
 
   it("sends only what changed; an emptied name is no change", () => {

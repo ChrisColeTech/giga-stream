@@ -8,7 +8,7 @@ import { resetStore } from "./support/store";
 
 const state = () => useAppStore.getState();
 const row = (id: number, enabled = true): AdminPlaylist =>
-  playlist(id, { host: `h${id}.test`, masked: `https://h${id}.test/…`, enabled, channels: id });
+  playlist(id, { host: `h${id}.test`, url: `https://h${id}.test/a.m3u`, enabled, channels: id });
 
 beforeEach(() => resetStore());
 

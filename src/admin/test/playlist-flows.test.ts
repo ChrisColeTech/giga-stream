@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { ApiError } from "@giga/http/api-error";
-import { draftOf, startReplace, type NewPlaylistDraft } from "@/lib/playlist-draft";
+import { draftOf, type NewPlaylistDraft } from "@/lib/playlist-draft";
 import type { JobsService } from "@/services/jobs";
 import { createPlaylistFlows } from "@/services/playlist-flows";
 import type { PlaylistsService } from "@/services/playlists";
@@ -112,12 +112,15 @@ describe("the playlist flows", () => {
     assert.deepEqual([state().stale.channels, state().playlists.items.length], [false, 0], "a refusal creates nothing");
   });
 
-  it("save: sends only the changes, a replaced address once as `url`, and says Saved", async () => {
+  it("save: sends only the changes, an edited address once as `url`, and says Saved", async () => {
     const { flows, calls } = rig();
     await flows.load();
-    const unchanged = await flows.save(1, startReplace(draftOf(row(1))));
+    const unchanged = await flows.save(1, draftOf(row(1)));
     assert.deepEqual([unchanged.ok, unchanged.ok && unchanged.value], [true, null]);
-    const saved = await flows.save(1, { ...startReplace(draftOf(row(1))), address: SECRET });
+    const bad = await flows.save(1, { ...draftOf(row(1)), address: "http://iptv.example.test/a.m3u" });
+    assert.deepEqual([bad.ok, !bad.ok && bad.field], [false, "address"], "the address rule refuses it before any call");
+    assert.deepEqual(calls.filter((call) => call.startsWith("update")), []);
+    const saved = await flows.save(1, { ...draftOf(row(1)), address: SECRET });
     assert.equal(saved.ok, true);
     assert.deepEqual(calls.filter((call) => call.startsWith("update")), ["update:1"]);
     assert.equal(notice(), "Saved List 1.");

@@ -1,5 +1,5 @@
 /* The Playlists tab's words (`38` section 3, `43` section 4.1): labels, tips, disabled reasons and notices. Copy lives
- * here, never in a component. The address is a secret: no sentence here ever takes it as a value. */
+ * here, never in a component. No sentence here ever takes the address as a value. */
 
 /** The rows' labels, so each page fixes its label column once. */
 export const NEW_PLAYLIST_LABELS: readonly string[] = ["Source", "File", "Address"];
@@ -29,17 +29,16 @@ export const SOURCE_URL = "Web address";
 export const SOURCE_TIP = "Import a playlist file from this machine, or fetch one from a web address.";
 export const FILE_TIP = "An .m3u or .m3u8 file. It is read once; the file itself is not kept.";
 export const NAME_TIP = "What the playlist is called in the list. 1 to 120 characters.";
-export const NEW_ADDRESS_TIP = "https only. The address is stored but never shown again.";
-export const ADDRESS_TIP = "https only. Never shown back. Replace it to set a new one.";
+export const NEW_ADDRESS_TIP = "https only.";
+export const ADDRESS_TIP = "https only.";
 export const FILE_ADDRESS_TIP = "A file playlist was read once and has no web address.";
 export const ENABLED_TIP = "A disabled playlist is skipped by every job and its channels are left out of what players read.";
-export const HOST_TIP = "The host of the address. The rest of the address is never shown.";
+export const HOST_TIP = "The host of the address.";
 export const FILE_NAME_TIP = "The file this playlist was imported from.";
 export const SOURCE_TYPE_TIP = "Whether the playlist came from a file or from a web address.";
 export const CHANNELS_TIP = "How many channels it has, how many are enabled, and what the checks found.";
 export const LAST_RUN_TIP = "When the playlist's job last ran.";
 export const RESULT_TIP = "What the playlist's job did the last time it ran.";
-export const REPLACE_TITLE = "Replace the stored address";
 export const CHOOSE_FILE_TITLE = "Choose a playlist file";
 export const IMPORT_FILE_ACCEPT = ".m3u,.m3u8,audio/x-mpegurl";
 
@@ -47,8 +46,6 @@ export const IMPORT_FILE_ACCEPT = ".m3u,.m3u8,audio/x-mpegurl";
 export const FILE_REQUIRED = "Choose a file first.";
 export const ADDRESS_REQUIRED = "Address is required.";
 export const IMPORTING_REASON = "Importing.";
-export const REPLACE_REASON = "Type the new value, then Save.";
-export const REPLACE_FILE_REASON = "A file playlist has no web address. Import the file again.";
 export const NO_CHANNELS_REASON = "This playlist has no channels.";
 export const NAME_LONG = "Name must be at most 120 characters.";
 export const NAME_MAX = 120;

@@ -15,7 +15,7 @@ export interface PlaylistRowProps {
   readonly onDelete: (id: number) => void;
 }
 
-/** One playlist of the list: the tick, the name, the source (the masked host or the file name, never the address), the
+/** One playlist of the list: the tick, the name, the source (the host or the file name, not the full address), the
  *  channel counts in mono on the right (all, enabled, live, dead), the last run in mono (`never`), the state word, and the
  *  end `Delete`, an armed two-step whose question names the channels that go with the playlist. A disabled playlist
  *  stays in the list, dimmed. */

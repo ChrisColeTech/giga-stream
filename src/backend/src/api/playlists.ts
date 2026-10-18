@@ -32,8 +32,8 @@ async function readUpload(request: FastifyRequest): Promise<{ fileName: string; 
 }
 
 /**
- * The playlists (docs/43 section 3.2, docs/03 section 7.2c): a signed-in admin, audited. No answer carries the web
- * address - only the host and a masked form - so these routes are not on the no-store list (`network-policy.ts`).
+ * The playlists (docs/43 section 3.2, docs/03 section 7.2c): a signed-in admin, audited. A web playlist's answer
+ * carries its address in full, so these routes are `no-store` like every private `/api` route (`network-policy.ts`).
  * The file import is multipart, registered in its own scope so no other route's parsing changes.
  */
 export function registerPlaylists(app: FastifyInstance, services: Services): void {

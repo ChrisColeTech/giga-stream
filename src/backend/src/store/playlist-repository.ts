@@ -14,8 +14,8 @@ const Row = z.object({
 const IdRow = z.object({ id: z.number().int() });
 
 /**
- * A playlist record (docs/43 section 3.1). `url` is a secret - it can carry credentials in its query - and is read
- * only by the fetch; every view shows `host` alone. A `file` playlist has a `fileName` (the upload is not kept).
+ * A playlist record (docs/43 section 3.1). `url` can carry credentials in its query: the admin's view shows it in
+ * full, but audit entries, errors and logs carry `host` alone. A `file` playlist has a `fileName` (the upload is not kept).
  */
 export interface PlaylistRecord {
   id: number;

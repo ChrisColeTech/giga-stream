@@ -129,7 +129,7 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
     if (saved === undefined) return gone();
     const patch = changedFields(saved, draft);
     if (isEmptyPatch(patch)) return done(null);
-    const bad = firstRefusal(draft.name, newAddressOf(draft));
+    const bad = firstRefusal(draft.name, newAddressOf(saved, draft));
     if (bad !== null) return refuse(bad.sentence, bad.field);
     const serial = store().serial;
     try {

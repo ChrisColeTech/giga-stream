@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { lastCounts, lastResult } from "./run-counts-schema";
 
-/* `PlaylistView` (`03` section 7.2c): the host is shown, the address is masked, and the secret never arrives. A file
- * playlist has a `fileName` and no host; a web playlist a `host` and `masked`. The last run is joined in from its job. */
+/* `PlaylistView` (`03` section 7.2c): a file playlist has a `fileName` and no host; a web playlist its address in
+ * full (`url`) and its `host`. The last run is joined in from its job. */
 export const PlaylistSchema = z.object({
   id: z.number(),
   name: z.string(),
   kind: z.enum(["file", "url"]),
+  url: z.string().optional(),
   host: z.string().optional(),
-  masked: z.string().optional(),
   fileName: z.string().optional(),
   enabled: z.boolean(),
   channels: z.number(),

@@ -65,7 +65,7 @@ export function NewPlaylistForm() {
       ) : (
         <Row label="Address" tip={NEW_ADDRESS_TIP} error={form.errors["address"]}>
           <Input
-            type="password"
+            type="text"
             value={form.draft.address}
             className={FIELD_CONTROL}
             aria-label="Address"
