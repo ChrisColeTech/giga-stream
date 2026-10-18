@@ -13,7 +13,7 @@ export function ChannelsIndex() {
   return (
     <>
       <IndexToolbar tab="channels" />
-      <Workspace labels={NEW_CHANNEL_LABELS}>
+      <Workspace labels={NEW_CHANNEL_LABELS} fill>
         <NewChannelForm working={bulk.working} />
         <ChannelsList bulk={bulk} />
       </Workspace>

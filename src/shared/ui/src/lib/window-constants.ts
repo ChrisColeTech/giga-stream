@@ -12,12 +12,6 @@ export const WINDOW_MIN_ROWS = 100;
 /** Rows per server page (the backends allow up to 200). */
 export const PAGE_SIZE = 100;
 
-/** The windowed list's scroller is never shorter than this (eight rows and the header)... */
-export const LIST_MIN_HEIGHT = 288;
-
-/** ...and otherwise the page's height less this, so the page around it keeps a margin to scroll in. */
-export const LIST_PAGE_MARGIN = 96;
-
 /** The record table's fixed numbers (`docs/45` sections 2.3 and 2.4), all in px. */
 
 /** A table is never shorter than its header and eight rows: 29 + 8 x 36. */
@@ -28,6 +22,9 @@ export const ROW_GAP = 12;
 
 /** The end column (`Delete`, `Restore`): 5.5rem. The armed question grows leftwards out of it. */
 export const END_COLUMN_PX = 88;
+
+/** The end column of a row with two actions (`Preview` icon, `Delete`): 6.5rem. The armed question still grows leftwards. */
+export const END_ACTIONS_PX = 104;
 
 /** The tick column: 1.25rem. */
 export const TICK_COLUMN_PX = 20;

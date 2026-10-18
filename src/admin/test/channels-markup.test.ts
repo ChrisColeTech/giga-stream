@@ -136,8 +136,8 @@ describe("the channels grid", () => {
     assert.ok(html.includes('data-st="preparing"') && html.includes('data-st="disabled"') && html.includes('data-st="synced"'));
     assert.ok(html.includes('data-st="held"'), "an enabled channel of a disabled playlist is held, not enabled");
     assert.ok(html.includes('title="Enabled, but its playlist is disabled, so players do not read it."'));
-    assert.ok(/<li data-st="disabled"[^>]*opacity-45/.test(html));
-    assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));
+    assert.ok(/<li[^>]*data-st="disabled"[^>]*opacity-45/.test(html));
+    assert.ok(/<li[^>]*data-st="preparing" data-ticked=""/.test(html));
     assert.ok(!html.includes(">fault</span>"));
     assert.ok(html.includes(`title="${DELETE_SYNCED_TIP}"`));
     assert.ok(!html.includes("Select all") && html.includes('aria-checked="true"'));

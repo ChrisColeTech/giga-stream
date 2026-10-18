@@ -6,7 +6,7 @@ export interface RecordTableBodyProps<TData extends object> {
   readonly table: RecordTableInstance<TData>;
   readonly ariaLabel: string;
   readonly ticks: boolean;
-  readonly rowView: (row: TData) => RecordRowView;
+  readonly rowView: (row: TData, index: number) => RecordRowView;
   /** Nothing read yet: skeleton rows in place of the rows (also when there are none to show). */
   readonly waiting: boolean;
   readonly skeletonRows?: number;
@@ -25,7 +25,7 @@ export function RecordTableBody<TData extends object>({
         ? Array.from({ length: skeletonRows }, (_, index) => (
             <RecordTableSkeletonRow key={index} cells={table.getVisibleLeafColumns().length} ticks={ticks} seed={index} />
           ))
-        : rows.map((row) => <RecordTableRow key={row.id} row={row} view={rowView(row.original)} ticks={ticks} />)}
+        : rows.map((row) => <RecordTableRow key={row.id} row={row} view={rowView(row.original, row.index)} ticks={ticks} />)}
     </ul>
   );
 }

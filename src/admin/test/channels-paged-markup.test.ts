@@ -112,11 +112,12 @@ describe("Select all M matching", () => {
 });
 
 describe("the channels grid over the paged list", () => {
-  it("at or under 100 rows is the plain grid: every row, no scroller of its own, no sortable header", () => {
+  it("at or under 100 rows maps every row (no gaps, no window) under the same sortable header", () => {
     read(0, 100);
     const html = renderLive(createElement(ChannelRows));
     assert.equal(count(html, "<li"), 100);
-    assert.ok(!html.includes("data-index") && !html.includes("aria-rowcount") && !html.includes("aria-sort"));
+    assert.equal(count(html, "data-index="), 100);
+    assert.ok(html.includes('aria-rowcount="100"') && count(html, "aria-sort=") === 3 && !html.includes('aria-hidden="true" class="flex-none"'));
   });
 
   it("above 100 rows is windowed: the total's height, a flat count of mounted rows, sortable headings", () => {

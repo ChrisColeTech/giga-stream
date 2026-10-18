@@ -108,8 +108,8 @@ describe("the Stored grid", () => {
   it("at or under 100 rows is the plain grid: every row, a disabled one dimmed, no scroller of its own", () => {
     const html = list(pageWith(100));
     assert.equal(count(html, 'aria-label="Select T movie-'), 100);
-    assert.ok(!html.includes("aria-rowcount") && !html.includes("data-index"));
-    assert.ok(html.includes('aria-label="Stored titles"'));
+    assert.equal(count(html, "data-index="), 100);
+    assert.ok(html.includes('aria-label="Stored titles"') && !html.includes('class="flex-none"'));
   });
 
   it("above 100 rows is windowed: aria-rowcount is the total and only the rows near the top are mounted", () => {
