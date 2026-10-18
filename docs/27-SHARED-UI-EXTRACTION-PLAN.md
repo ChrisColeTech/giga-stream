@@ -18,8 +18,9 @@ reconciliation is `28` Appendix A).
 ## 0. The program, and where this document sits
 
 **Order of execution:** Wave 1 first (U1, U2, U3, U4 strictly one after the other). Wave 0 (backend) may run beside Wave 1 at
-any time because it touches only `src/backend`. Then Waves 2, 3, 4, 5, 6 (visual parity, fixtures only, no network), then
-Wave 7 (needs Wave 0 landed), then 8, 9, 10 (wiring). A wave starts only when the one before it is landed and visually accepted.
+any time because it touches only `src/backend`. Then Wave 2 and 2a (done). **Superseded, owner 2026-10-17 ("no fixture waves"): the rest of the program is
+`39-ADMIN-PROGRAM-ROADMAP.md`** - the foundation F, then Wave 3a (Accounts, `35`), then 3b to 3d in parallel (Channels `36`, Providers and Titles `37`, Playlists and Jobs `38`),
+then the sweep (Wave 4). The old fixture-first Waves 3 to 6 and the wiring Waves 7 to 10 below are retired. A wave starts only when its predecessors have landed and been accepted.
 
 **This is the master progress table; `28` and `29` carry the per-wave detail and the coordinator updates all three when a
 wave changes state.** States: `Not started`, `In progress` (a worker is running), `Landed` (merged, gate green, awaiting
@@ -31,14 +32,13 @@ acceptance), `Done` (visually accepted on the real stack).
 | **1** | **this document, steps 0 to 8: the shared library** | **U1, U2, U3, U4, one after the other** | **`27`** | **done** | **Done** (interface, panes, windows and Library checked on the real stack, 2026-10-17) | `d1aa570`, `51e2cec`, `6914728`, `4f21c11` |
 | 2 | admin shell, Settings window, shared record pieces | A | `28` | Wave 1 landed and accepted | Landed (visual acceptance pending) | `4aca5f8` |
 | 2a | admin auth gate and login form, Giga Images style (owner, 2026-10-17: login gate and form only, no OAuth; plan in `34`) | A2 | `34` | Wave 2 landed | Landed (checked in Chrome at 1600 wide: gate, wrong password, demo sign-in, Channels skeleton page, console clean) | `487b934` |
-| 3 | Channels, including the Preview window's UI | A | `28` | Wave 2 landed | In progress (`admin/channels`) | |
-| 4 | Providers and Titles | A | `28` | Wave 3 accepted | Not started | |
-| 5 | Playlists, Jobs and Accounts | A | `28` | Wave 4 accepted | Not started | |
-| 6 | audit rows, sweep, tests | A | `28` | Wave 5 accepted | Not started | |
-| 7 | request layer, auth, shell wiring, Settings persistence | A | `29` | Wave 6 and Wave 0 accepted | Not started | |
-| 8 | Channels, Providers and the Preview window wired | A | `29` | Wave 7 accepted | Not started | |
-| 9 | Titles, Playlists, Jobs wired | A | `29` | Wave 8 accepted | Not started | |
-| 10 | Accounts wired, sweep | A | `29` | Wave 9 accepted | Not started | |
+| F | foundation: library `RecordGrid`/`Checkbox`/pill `ChipGroup`, channel helpers, the request layer, real auth, schemas, service stubs (the first part of the old Wave 3 and Wave 7) | A | `39` | Wave 2a landed | Landing (`admin/channels`, merging into `family-port`) | `6fcbeda`, `4386de2`, `07b60d7` |
+| 3a | real sign-in finished and the Accounts tab | A | `35` | F landed | Not started | |
+| 3b | Channels and the Preview window, wired | A | `36` | 3a landed | Not started | |
+| 3c | Providers and Titles, wired | A | `37` | 3a landed (parallel with 3b, 3d) | Not started | |
+| 3d | Playlists and Jobs, wired | A | `38` | 3a landed (parallel with 3b, 3c) | Not started | |
+| 4 | sweep: account state, About, README, no-fixtures, accessibility, both sizes, build and serve | A | `39` | 3a to 3d landed | Not started | |
+| 3 to 10 (old) | the fixture-first Waves 3 to 6 (`28`) and the wiring Waves 7 to 10 (`29`) | | | | **Retired (owner, 2026-10-17: no fixture waves); superseded by F and 3a to 4 above and `39`** | |
 
 **Step 9** (the admin-only library pieces: `Checkbox` for row selection, `RecordGrid`, `ToolbarStrip`, the `reason` prop
 that makes a disabled button explain itself, a pill `ChipGroup`, the tooltip arrow that follows its anchor, the shell's

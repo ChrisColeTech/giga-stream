@@ -1,5 +1,12 @@
 # 29 - Admin Backend Wiring Plan (Wave 0 and Waves 7 to 10 of the admin program)
 
+> **Superseded by `39-ADMIN-PROGRAM-ROADMAP.md` for the wave order (owner, 2026-10-17: no fixture waves).** Wave 0 is done. The request layer, the real auth port, the tokens, the
+> zod schemas and the typed service stubs landed in the foundation (`07b60d7`); Waves 7 to 10 below are retired and split: Accounts and the audit log are `35`, Channels and Preview `36`,
+> Providers and Titles `37`, Playlists and Jobs `38`, and account-state persistence, health and About, the README and the build/serve sweep are Wave 4 of `39`. The reference content of this
+> document - the wire shapes (5), the routes (9), the Preview rules (9.7), the persistence design (12.2), the static serving (14), the differences (17) and the backend changes (18) - still governs.
+> Corrections found since: the request layer is `services/session-api.ts` plus `services/api.ts` (not one file with a retry hook); the full-window gate replaced 6.1's "titlebar and statusbar stay";
+> `createApi` takes only `/api/` paths, so `/healthz` needs an additive option (Wave 4).
+
 **Status: PLAN, revised 2026-10-17 (Preview is a child window with no test page; Settings persist per account; the shared-UI
 extraction is Wave 1). Nothing in this document is built, except where a section says "built" (the backend's Electron host
 and its `/admin/` static serving, sections 14 and 15).** It replaces the fixtures of `28-ADMIN-VISUAL-PARITY-PLAN.md` with the
@@ -656,6 +663,8 @@ disables writes with `The admin backend cannot be reached.`; no sentence over a 
 | 15 | `AGENTS.md` ports | the backend's dev port is 8091; the owner's local `.env` sets `PORT=3001` (a stale value) and `src/backend/.env` is the coordinator's to fix (section 3, item 7) |
 | 16 | `03` 7.9 lists the backend's tables; 7.12 its auth routes | neither lists `admin_ui_state` or `GET`/`PUT /api/auth/me/state`, which the owner decided (`26` D16) and Wave 0 builds (B1) |
 | 17 | `01` 4.4 "no ... timers" in any program | the interface already runs two named timers (the 400 ms shell write-back and the 1.5 s hydration fallback, `02` 2.3); the admin takes the same two (12.2); `01` 4.4 must name them |
+| 18 | (2026-10-17) section 7: `services/api.ts` adapts `createApi` and retries after a refresh | built as `services/session-api.ts` (pure logic and tests) plus `services/api.ts` (store wiring); the foundation's `store/audit-slice.ts` also does I/O, against `01` section 6 (moved to a hook by `35`) |
+| 19 | (2026-10-17) section 9.2: the provider save is a "PUT with a partial body" | the shared `RecordService.update` is PATCH-shaped in its doc; `37` sends the `PUT` itself |
 
 ## 18. Backend changes the wiring needs
 
@@ -683,10 +692,10 @@ A wave's worker: `npm ci` in its own worktree, typecheck, lint, `node scripts/ch
 | Wave | Status | Landed in | Creates | Updates | Deletes |
 |---|---|---|---|---|---|
 | 0 | Done | `5749213`, `6432525`, `9045a8d` | `store/migrations/017-admin-ui-state.sql`, `store/ui-state-repository.ts`, `types/ui-state.ts`, `constants/ui-state.ts`, `services/ui-state-service.ts`, `api/account-state.ts`, and their tests (section 18, B1) | `store/store.ts`, `constants/errors.ts`, `services/service-registry.ts`, `app.ts` (B1); `types/provider.ts`, `services/provider-service.ts` (B2); `api/titles.ts`, `constants/limits.ts` (B3); `services/job-runner.ts`, `store/job-repository.ts` (B4); `channel-service.ts`, `provider-service.ts`, `playlist-service.ts`, `title-records.ts`, `title-overlay.ts` (B5); `scripts/check/live-smoke.mjs` (B6) | none |
-| 7 | Not started | | `services/{api,auth,health,audit,account-state}.ts`, `services/schemas/*`, `lib/{error-sentence,account-state-map}.ts`, `store/ui-state-slice.ts`, `hooks/{useAccountHydration,useShellWriteback,useSettingsWriteback}.ts`, `components/session/SessionState.tsx`, tests | `store/session-slice.ts`, `SignInForm`, `SignInPage`, Settings Session and About, the events wiring, `vite.config.mts` | `fixtures/session.ts`, `fixtures/audit.ts`, the `signedin` switch, `hooks/useFixtureLoad.ts` |
-| 8 | Not started | | `services/{channels,providers,preview-player}.ts`, schemas, `store/{channels,providers}-slice.ts`, `hooks/{usePreviewPlayer,useChannelsLoad}.ts`, tests | `usePreviewSession.ts` (real session), `PreviewWindow.tsx`, `FolderRow.tsx`, the Channels and Providers pages and components of `28` | `fixtures/channels.ts`, `fixtures/providers.ts` |
-| 9 | Not started | | `services/{titles,playlists,jobs}.ts`, schemas, slices, `lib/title-units.ts`, tests | the Titles, Playlists and Jobs components, the statusbar `N syncing` | the three fixtures |
-| 10 | Not started | | `services/accounts.ts`, schema, slice, tests | the Accounts pages, `README.md` | `constants/fixture-switches.ts`, any remaining fixture |
+| 7 | Retired: split between the foundation F (request layer, auth, schemas; `07b60d7`), `35` (actor id, audit) and Wave 4 of `39` (account state, health, About) | | `services/{api,auth,health,audit,account-state}.ts`, `services/schemas/*`, `lib/{error-sentence,account-state-map}.ts`, `store/ui-state-slice.ts`, `hooks/{useAccountHydration,useShellWriteback,useSettingsWriteback}.ts`, `components/session/SessionState.tsx`, tests | `store/session-slice.ts`, `SignInForm`, `SignInPage`, Settings Session and About, the events wiring, `vite.config.mts` | `fixtures/session.ts`, `fixtures/audit.ts`, the `signedin` switch, `hooks/useFixtureLoad.ts` |
+| 8 | Retired: superseded by `36` | | `services/{channels,providers,preview-player}.ts`, schemas, `store/{channels,providers}-slice.ts`, `hooks/{usePreviewPlayer,useChannelsLoad}.ts`, tests | `usePreviewSession.ts` (real session), `PreviewWindow.tsx`, `FolderRow.tsx`, the Channels and Providers pages and components of `28` | `fixtures/channels.ts`, `fixtures/providers.ts` |
+| 9 | Retired: superseded by `37` (Titles) and `38` (Playlists, Jobs) | | `services/{titles,playlists,jobs}.ts`, schemas, slices, `lib/title-units.ts`, tests | the Titles, Playlists and Jobs components, the statusbar `N syncing` | the three fixtures |
+| 10 | Retired: superseded by `35` (Accounts) and Wave 4 of `39` (sweep) | | `services/accounts.ts`, schema, slice, tests | the Accounts pages, `README.md` | `constants/fixture-switches.ts`, any remaining fixture |
 
 ### Wave 0 - backend changes (worker B)
 
