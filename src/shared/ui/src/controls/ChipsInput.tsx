@@ -27,6 +27,8 @@ export interface ChipsInputProps {
   /** Accepted token shape (default: a file extension) and the refusal wording. */
   pattern?: RegExp
   invalidText?: string
+  /** Extra classes for the chips box (the track), e.g. a form row's field height (`docs/28` section 4.3). */
+  className?: string
 }
 
 export function ChipsInput({
@@ -38,6 +40,7 @@ export function ChipsInput({
   onEscape,
   pattern = TOKEN_RE,
   invalidText = 'letters and digits only, up to 10',
+  className,
 }: ChipsInputProps) {
   const [typed, setTyped] = useState('')
   const [rejected, setRejected] = useState<string[]>([])
@@ -77,7 +80,7 @@ export function ChipsInput({
 
   return (
     <div>
-      <div className={TRACK}>
+      <div className={cn(TRACK, className)}>
         {value.map((token) => (
           <span key={token} className={CHIP}>
             {token}

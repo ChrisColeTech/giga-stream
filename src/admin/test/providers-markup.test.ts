@@ -92,3 +92,35 @@ describe("the toolbar", () => {
     assert.ok(page().includes('aria-label="Enable. Every ticked provider is already enabled."'));
   });
 });
+
+describe("a provider's workspace", () => {
+  it("opens from the held list: the rail, Details, Templates, Player, and Discard, Save, Titles →", () => {
+    loaded([provider(1)]);
+    state().openWorkspace("providers", "1");
+    const html = page();
+    assert.ok(html.includes('aria-label="Provider sections"'));
+    assert.ok(at(html, ">Details<") < at(html, ">Templates<") && at(html, ">Templates<") < at(html, ">Player<"));
+    assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."') && html.includes("Titles →"));
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
+    assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
+    assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));
+    assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
+  });
+
+  it("draws the frame origins as chips in a field-height box, and the message shape as a select", () => {
+    loaded([provider(1)]);
+    state().openWorkspace("providers", "1");
+    const html = page();
+    assert.ok(html.includes('aria-label="Remove https://cdn.example.test"') && html.includes("min-h-9!"));
+    assert.ok(html.includes('aria-label="Message shape"') && html.includes(">vidsrc-status<") && html.includes(">None<"));
+    assert.ok(html.includes('aria-label="Episode template"'));
+  });
+
+  it("drops the template rows for a stream provider", () => {
+    loaded([provider(1, { family: "stream", movieTemplate: undefined })]);
+    state().openWorkspace("providers", "1");
+    const html = page();
+    assert.ok(!html.includes('aria-label="Movie template"') && !html.includes('aria-label="Episode template"'));
+    assert.ok(html.includes('aria-label="Start parameter"'));
+  });
+});
