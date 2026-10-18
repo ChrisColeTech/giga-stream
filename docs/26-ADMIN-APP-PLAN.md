@@ -276,7 +276,9 @@ should be crud for titles and playlists."* So there are two new record types: a 
   catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
   (`movie` or `tv`, unused by `discover`) and `pages` (each kind's cap; up to 500 for discover). Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
   /api/jobs/:id`; `POST /api/jobs/:id/run` (one run per playlist, `409 sync.busy`; refused with `422 job.disabled`
-  and its reason only when the job's playlist is disabled, or for a disabled catalog job). A playlist job syncs only its playlist, under
+  and its reason only when the job's playlist is disabled; **a manual run never needs the job's own `Enabled` switch**: owner,
+  2026-10-18, "not letting me manually run jobs that have a disabled schedule until i enable the schedule": that switch gates
+  only the scheduled run, for catalog and playlist jobs alike). A playlist job syncs only its playlist, under
   the rules of 3.10; a catalog job syncs its scope.
 - **Seeding** (first start only, from the environment): playlists are **not** seeded (`PLAYLIST_URLS` and
   `PLAYLIST_SYNC_SCHEDULE` are retired; a playlist and its job come from an import, `43`); the catalog job - the library fill, scope `discover` - is created with
