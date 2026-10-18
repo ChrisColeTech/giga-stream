@@ -18,17 +18,22 @@ export function PlaylistsList() {
   const { flows, track } = usePlaylistActions();
   const { verbs } = usePlaylistBulk();
   const reason = status === "loading" ? LOADING_REASON : undefined;
-  const all = { label: "Select all playlists", checked: selectAll(items, ticked), onToggle: tickAll };
+  const all = {
+    label: "Select all playlists",
+    checked: selectAll(items, ticked),
+    onToggle: tickAll,
+    disabled: items.length === 0,
+  };
   const strip = (
     <TableStrip
       label="Playlists table"
       noun="playlists"
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
-      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
+      selection={{ verbs }}
     />
   );
   return (
-    <ListGroup id="pl-list" icon={List} title="Playlists" strip={strip}>
+    <ListGroup id="pl-list" icon={List} title="Playlists" strip={strip} all={all}>
       <PlaylistRows />
     </ListGroup>
   );

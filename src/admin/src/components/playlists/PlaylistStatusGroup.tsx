@@ -7,6 +7,7 @@ import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { CHANNELS_TIP, HOST_TIP, LAST_SYNCED_TIP, OUTCOME_TIP } from "@/constants/playlist-copy";
 import type { PlaylistChannels } from "@/hooks/usePlaylistChannels";
 import { formatWhen } from "@/lib/format-when";
+import { openPlaylistChannel } from "@/lib/open-playlist-channel";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { useAppStore } from "@/store/app-store";
 
@@ -32,6 +33,8 @@ export interface PlaylistStatusGroupProps {
  *  channels are read through the channels service; until it answers, or when it refuses, shimmer lines stand in their place. */
 export function PlaylistStatusGroup({ playlist, channels }: PlaylistStatusGroupProps) {
   const requestTab = useAppStore((state) => state.requestTab);
+  const channelRemember = useAppStore((state) => state.channelRemember);
+  const store = { requestTab, channelRemember };
   let list: ReactNode = (
     <span className="flex w-full flex-col">
       <Shimmer width="46%" />
@@ -43,7 +46,7 @@ export function PlaylistStatusGroup({ playlist, channels }: PlaylistStatusGroupP
       <ul className="m-0 flex list-none flex-col gap-1 p-0 py-2" aria-label="Channels from this playlist">
         {channels.items.map((channel) => (
           <li key={channel.id}>
-            <InlineLink onClick={() => requestTab("channels", channel.id)}>{channel.name}</InlineLink>
+            <InlineLink onClick={() => openPlaylistChannel(channel, store)}>{channel.name}</InlineLink>
           </li>
         ))}
       </ul>

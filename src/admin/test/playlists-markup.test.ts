@@ -3,10 +3,12 @@ import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { PlaylistDetailsGroup } from "@/components/playlists/PlaylistDetailsGroup";
 import { PlaylistStatusGroup } from "@/components/playlists/PlaylistStatusGroup";
+import { openPlaylistChannel } from "@/lib/open-playlist-channel";
 import { draftOf, startReplace } from "@/lib/playlist-draft";
 import { PlaylistsPage } from "@/pages/PlaylistsPage";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { useAppStore } from "@/store/app-store";
+import { stream } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
@@ -122,10 +124,19 @@ describe("a playlist's workspace", () => {
     const ready = renderLive(
       createElement(PlaylistStatusGroup, {
         playlist,
-        channels: { status: "ready", items: [{ id: "ch_1", name: "News One" }] },
+        channels: { status: "ready", items: [stream("ch_1", { name: "News One" })] },
       }),
     );
     assert.ok(ready.includes(">News One</button>") && ready.includes("Synced: 3 created, 12 updated."));
     assert.ok(ready.includes("h1.example.test") && ready.includes(">never<"));
+  });
+
+  it("a channel link hands the Channels tab the whole row, which is on no loaded page", () => {
+    const channel = stream("ch_far", { name: "Far Away", source: "h1.example.test" });
+    assert.equal(state().channels.items.length, 0);
+    openPlaylistChannel(channel, state());
+    assert.equal(state().channels.opened, channel);
+    assert.equal(state().tab, "channels");
+    assert.equal(state().workspaces.channels, "ch_far");
   });
 });

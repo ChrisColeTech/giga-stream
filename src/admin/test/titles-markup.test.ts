@@ -49,28 +49,28 @@ describe("the New title form", () => {
 });
 
 describe("the list group", () => {
-  it("holds the search with data-search, the Kind chips, the Sort pills, then the table strip with Newer, Older and Refresh", () => {
+  it("holds one first row (the search with data-search, the Sort select, the Kind select), then the table strip with Newer, Older and Refresh", () => {
     const html = page();
-    assert.ok(at(html, 'aria-label="Search titles"') < at(html, 'aria-label="Kind filter"'));
-    assert.ok(at(html, 'aria-label="Kind filter"') < at(html, 'aria-label="Sort"'));
+    const row = html.slice(at(html, 'aria-label="Browse titles filters"'));
+    assert.ok(at(row, 'aria-label="Search titles"') < at(row, 'aria-label="Sort"'));
+    assert.ok(at(row, 'aria-label="Sort"') < at(row, 'aria-label="Kind"'));
     assert.match(html, /<input[^>]*aria-label="Search titles"[^>]*data-search=""/);
-    assert.ok(html.includes('aria-label="Run the search"'));
+    const first = row.slice(0, at(row, 'aria-label="Titles table"'));
+    assert.ok(!first.includes("aria-pressed") && !first.includes("Kind filter") && !first.includes("Run the search"));
     for (const sort of ["Newest", "Oldest", "A-Z", "Year", "Trending"]) assert.ok(html.includes(`>${sort}<`), sort);
     assert.ok(html.includes('aria-label="Newer. This is the first page."'));
     assert.ok(html.includes('aria-label="Older. This is the last page."'));
-    assert.ok(at(html, 'aria-label="Sort"') < at(html, 'aria-label="Titles table"'));
+    assert.ok(at(row, 'aria-label="Kind"') < at(row, 'aria-label="Titles table"'));
     assert.ok(at(html, 'title="Refresh titles"') < at(html, 'aria-label="Newer. '), "Refresh first, the paging on the right");
     assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, "Jobs →") < at(html, 'id="ti-list"'));
     const heading = html.slice(at(html, 'id="ti-list"'), at(html, 'aria-label="Search titles"'));
     assert.ok(!heading.includes("Older") && !heading.includes("Refresh"), "no verb in the heading");
   });
 
-  it("locks the last lit kind chip with its reason", () => {
+  it("shows the Kind select on the one kind the view holds", () => {
     state().titlesSetView({ ...START_VIEW, kinds: ["tv"] });
     const html = page();
-    const series = html.slice(at(html, 'aria-label="Kind filter"')).match(/<button[^>]*>Series</)?.[0] ?? "";
-    assert.ok(series.includes('aria-pressed="true"') && series.includes('disabled=""'), series);
-    assert.ok(series.includes('title="At least 1 must stay on."'), series);
+    assert.match(html, /<option value="tv" selected="">Series</);
   });
 
   it("enables Older below the last page", () => {

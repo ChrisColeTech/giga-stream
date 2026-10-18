@@ -25,6 +25,12 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
   const ids = items.map((item) => item.id);
   const selection = { mode: "ids" as const, ids: new Set(ticked) };
   const offer = ticked.length >= (total ?? 0) ? null : matchingOffer(selection, ids, total ?? 0);
+  const all = {
+    label: "Select all channels",
+    checked: loadedState(selection, ids),
+    onToggle: tickAll,
+    disabled: ids.length === 0,
+  };
   const strip = (
     <TableStrip
       label="Channels table"
@@ -39,12 +45,6 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
       selection={{
         verbs: bulk.verbs,
-        all: {
-          label: "Select all channels",
-          checked: loadedState(selection, ids),
-          onToggle: tickAll,
-          disabled: ids.length === 0,
-        },
         ...(offer !== null && {
           matching: {
             label: `Select all ${offer.toLocaleString("en-US")} matching`,
@@ -57,7 +57,7 @@ export function ChannelsList({ bulk }: { readonly bulk: ChannelBulk }) {
   );
 
   return (
-    <ListGroup id="ch-list" icon={Radio} title="Channels" strip={strip}>
+    <ListGroup id="ch-list" icon={Radio} title="Channels" strip={strip} all={all}>
       <ChannelRows />
     </ListGroup>
   );

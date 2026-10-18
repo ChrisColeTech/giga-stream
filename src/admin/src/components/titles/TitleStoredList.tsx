@@ -1,4 +1,5 @@
 import { loadedState, matchingOffer } from "@giga/ui/lib/list-selection";
+import { SelectAllScope } from "@giga/ui/lists/SelectAllScope";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
 import { LOADING_REASON } from "@/constants/title-copy";
 import { SELECT_ALL_TITLES, selectAllMatching } from "@/constants/title-stored-copy";
@@ -25,8 +26,15 @@ export function TitleStoredList() {
   const offer = matchingOffer(selection, ids, paged.total ?? 0);
   const read = (call: () => Promise<unknown>): void => void track("read", call);
 
+  const all = {
+    label: SELECT_ALL_TITLES,
+    checked: loadedState(selection, ids),
+    onToggle: tickLoaded,
+    disabled: ids.length === 0,
+  };
+
   return (
-    <>
+    <SelectAllScope all={all}>
       <TitleStoredToolbar
         query={query}
         typed={typed}
@@ -41,16 +49,10 @@ export function TitleStoredList() {
         listVerbs={[sync]}
         selection={{
           verbs,
-          all: {
-            label: SELECT_ALL_TITLES,
-            checked: loadedState(selection, ids),
-            onToggle: tickLoaded,
-            disabled: ids.length === 0,
-          },
           ...(offer !== null && { matching: { label: selectAllMatching(offer), onPress: selectMatching } }),
         }}
       />
       <TitleStoredRows />
-    </>
+    </SelectAllScope>
   );
 }

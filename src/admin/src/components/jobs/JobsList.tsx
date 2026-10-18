@@ -18,17 +18,22 @@ export function JobsList() {
   const { flows, track } = useJobActions();
   const { verbs } = useJobBulk();
   const reason = status === "loading" ? LOADING_REASON : undefined;
-  const all = { label: "Select all jobs", checked: selectAll(items, ticked), onToggle: tickAll };
+  const all = {
+    label: "Select all jobs",
+    checked: selectAll(items, ticked),
+    onToggle: tickAll,
+    disabled: items.length === 0,
+  };
   const strip = (
     <TableStrip
       label="Jobs table"
       noun="jobs"
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
-      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
+      selection={{ verbs }}
     />
   );
   return (
-    <ListGroup id="jb-list" icon={Timer} title="Jobs" strip={strip}>
+    <ListGroup id="jb-list" icon={Timer} title="Jobs" strip={strip} all={all}>
       <JobRows />
     </ListGroup>
   );

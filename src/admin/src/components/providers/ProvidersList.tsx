@@ -18,18 +18,23 @@ export function ProvidersList() {
   const { flows, track } = useProviderActions();
   const { verbs } = useProviderBulk();
   const reason = status === "loading" ? LOADING_REASON : undefined;
-  const all = { label: "Select all providers", checked: providerSelectAll(items, ticked), onToggle: tickAll };
+  const all = {
+    label: "Select all providers",
+    checked: providerSelectAll(items, ticked),
+    onToggle: tickAll,
+    disabled: items.length === 0,
+  };
   const strip = (
     <TableStrip
       label="Providers table"
       noun="providers"
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
-      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
+      selection={{ verbs }}
     />
   );
 
   return (
-    <ListGroup id="pv-list" icon={Plug} title="Providers" strip={strip}>
+    <ListGroup id="pv-list" icon={Plug} title="Providers" strip={strip} all={all}>
       <ProviderRows />
     </ListGroup>
   );

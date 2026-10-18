@@ -6,6 +6,7 @@ import { CELL_NAME, CELL_NUMBER } from "../src/lists/record-grid-classes";
 import { gridColumns, TICK_TRACK, type GridLayout } from "../src/lists/record-grid-layout";
 import { RecordGrid } from "../src/lists/RecordGrid";
 import { RecordGridRow } from "../src/lists/RecordGridRow";
+import { SelectAllScope } from "../src/lists/SelectAllScope";
 import { SkeletonGrid } from "../src/lists/SkeletonGrid";
 
 const NOTHING = (): void => undefined;
@@ -23,10 +24,11 @@ const cells = [
   createElement("span", { key: "s" }, "live"),
 ];
 
+const gridElement = (rows: ReactNode, ticks = true) =>
+  createElement(RecordGrid, { ariaLabel: "Channels", layout: LAYOUT, headings: HEADINGS, ticks, children: rows });
+
 function grid(rows: ReactNode, ticks = true): string {
-  return renderToStaticMarkup(
-    createElement(RecordGrid, { ariaLabel: "Channels", layout: LAYOUT, headings: HEADINGS, ticks, children: rows }),
-  );
+  return renderToStaticMarkup(gridElement(rows, ticks));
 }
 
 const row = (extra: Record<string, unknown> = {}) =>
@@ -76,11 +78,23 @@ test("the tick and the end action sit outside the spanning button", () => {
   assert.ok(html.indexOf("END") > close);
 });
 
-test("the header's tick cell is empty: select-all is the selection toolbar's All, never a header tick", () => {
+test("without a SelectAllScope the header's tick cell is empty", () => {
   const html = grid(row());
   const header = html.slice(0, html.indexOf("<ul"));
   assert.ok(!header.includes('role="checkbox"') && !header.includes("Select all"));
   assert.ok(header.includes("<span aria-hidden=\"true\"></span><span class=\"truncate text-right\">number</span>"));
+});
+
+test("inside a SelectAllScope the header's tick cell holds the three-state All, the row tick's own box", () => {
+  const all = { label: "Select all channels", checked: "mixed" as const, onToggle: NOTHING };
+  const html = renderToStaticMarkup(createElement(SelectAllScope, { all, children: gridElement(row()) }));
+  const header = html.slice(0, html.indexOf("<ul"));
+  assert.ok(header.includes('role="checkbox"') && header.includes('aria-label="Select all channels"'));
+  assert.ok(header.includes('aria-checked="mixed"') && header.indexOf("role=\"checkbox\"") < header.indexOf(">number<"));
+  const box = (text: string) => /<button[^>]*class="([^"]*)"[^>]*role="checkbox"/.exec(text)?.[1];
+  assert.equal(box(header), box(html.slice(html.indexOf("<ul"))));
+  const none = renderToStaticMarkup(createElement(SelectAllScope, { all, children: gridElement(row(), false) }));
+  assert.ok(!none.includes('aria-label="Select all channels"'));
 });
 
 test("with no selection there is no tick column and the cells start at line 1", () => {

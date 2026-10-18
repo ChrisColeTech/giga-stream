@@ -24,7 +24,12 @@ export function DeletedTitlesGroup() {
   const { flows, track } = useTitleActions();
   const { verbs, row } = useDeletedTitles();
   const waiting = items.length === 0 || status === "idle" || session !== serial;
-  const all = { label: "Select all deleted titles", checked: deletedSelectAll(items, ticked), onToggle: tickAll };
+  const all = {
+    label: "Select all deleted titles",
+    checked: deletedSelectAll(items, ticked),
+    onToggle: tickAll,
+    disabled: items.length === 0,
+  };
 
   const strip = (
     <TableStrip
@@ -34,12 +39,12 @@ export function DeletedTitlesGroup() {
         onPress: () => void track("deleted", flows.loadDeleted),
         reason: status === "loading" ? LOADING_REASON : undefined,
       }}
-      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
+      selection={{ verbs }}
     />
   );
 
   return (
-    <ListGroup id="ti-deleted" icon={Trash2} title={DELETED_TITLES} strip={strip}>
+    <ListGroup id="ti-deleted" icon={Trash2} title={DELETED_TITLES} strip={strip} all={all}>
       <RecordGrid
         ariaLabel={DELETED_TITLES}
         layout={DELETED_GRID}

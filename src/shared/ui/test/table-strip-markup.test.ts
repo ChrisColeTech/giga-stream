@@ -15,11 +15,10 @@ const VERBS: readonly StripVerb[] = [
   { id: 'delete', label: 'Delete', icon: Check, onPress: NOTHING, question: 'Delete 2 accounts?' },
 ]
 const BASE: TableStripProps = { label: 'Accounts table', noun: 'accounts', refresh: { onPress: NOTHING } }
-const ALL = { label: 'Select all accounts', checked: 'mixed' as const, onToggle: NOTHING }
 
 const strip = (props: Partial<TableStripProps> = {}): string =>
   renderToStaticMarkup(createElement(TableStrip, { ...BASE, ...props }))
-const withVerbs = (verbs: readonly StripVerb[] = VERBS) => ({ selection: { verbs, all: ALL } })
+const withVerbs = (verbs: readonly StripVerb[] = VERBS) => ({ selection: { verbs } })
 const buttons = (html: string): string[] => html.match(/<button[^>]*>.*?<\/button>/g) ?? []
 const text = (button: string): string => button.replace(/<[^>]+>/g, '')
 
@@ -50,26 +49,24 @@ test('Delete is the armed two-step: the word alone at rest, no icon, the questio
   assert.ok(blocked.includes('aria-label="Delete. Tick an account first"') && blocked.includes('disabled=""'))
 })
 
-test('the three-state All sits right of the verbs, with no Clear selection and no count text', () => {
+test('the strip holds no All checkbox: it is the grid header tick, and no Clear selection or count text stands here', () => {
   const html = strip(withVerbs())
-  assert.ok(html.includes('aria-label="Select all accounts"') && html.includes('aria-checked="mixed"'))
-  assert.ok(html.indexOf('Select all accounts') > html.indexOf('>Delete<'))
+  assert.ok(!html.includes('role="checkbox"') && !html.includes('Select all'))
   assert.ok(!html.includes('Clear selection') && !html.includes('selected'))
 })
 
-test('a long list offers Select all M matching as its own step, a ghost word just before All, only when given', () => {
+test('a long list offers Select all M matching as its own step, a ghost word just right of the verbs, only when given', () => {
   const matching = { label: 'Select all 5,003 matching', onPress: NOTHING }
-  const html = strip({ selection: { verbs: VERBS, all: { ...ALL, checked: true }, matching } })
+  const html = strip({ selection: { verbs: VERBS, matching } })
   const offer = buttons(html).find((button) => text(button) === matching.label) ?? ''
   assert.ok(offer.includes('bg-transparent') && !offer.includes('<svg'))
-  assert.ok(html.indexOf(matching.label) > html.indexOf('>Delete<') && html.indexOf(matching.label) < html.indexOf('Select all accounts'))
+  assert.ok(html.indexOf(matching.label) > html.indexOf('>Delete<'))
   assert.ok(!strip(withVerbs()).includes('matching'))
 })
 
-test('paging is the icon pair right of All, the last controls: no forward verb in a list row', () => {
+test('paging is the icon pair, the last controls: no forward verb in a list row', () => {
   const html = strip({ ...withVerbs(), paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } } })
   assert.ok(html.includes('aria-label="Newer. This is the first page."') && html.includes('aria-label="Older"'))
-  assert.ok(html.indexOf('Select all accounts') < html.indexOf('Newer'))
   assert.ok((buttons(html).at(-1) ?? '').includes('aria-label="Older"') && !html.includes('→'))
 })
 

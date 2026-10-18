@@ -17,18 +17,23 @@ export function AccountsList() {
   const { flows, track } = useAccountActions();
   const { verbs } = useAccountBulk();
   const reason = status === "loading" ? LOADING_REASON : undefined;
-  const all = { label: "Select all accounts", checked: selectAllState(items, ticked), onToggle: tickAll };
+  const all = {
+    label: "Select all accounts",
+    checked: selectAllState(items, ticked),
+    onToggle: tickAll,
+    disabled: items.length === 0,
+  };
   const strip = (
     <TableStrip
       label="Accounts table"
       noun="accounts"
       refresh={{ onPress: () => void track("refresh", flows.refresh), reason }}
-      selection={{ verbs, all: { ...all, disabled: items.length === 0 } }}
+      selection={{ verbs }}
     />
   );
 
   return (
-    <ListGroup id="accounts-list" icon={Users} title="Accounts" strip={strip}>
+    <ListGroup id="accounts-list" icon={Users} title="Accounts" strip={strip} all={all}>
       <AccountRows />
     </ListGroup>
   );
