@@ -66,6 +66,29 @@ describe("createApi: the envelope", () => {
     assert.equal(layer.events[0]?.status, 404);
   });
 
+  it("carries details.field and the correlation id of a refusal", async () => {
+    const error = { code: "account.invalid", message: "Bad.", details: { field: "email" }, correlationId: "c-1" };
+    const layer = client(async () => json({ ok: false, error }, 422));
+    await assert.rejects(layer.api("/api/example", Answer), { field: "email", correlationId: "c-1", status: 422 });
+  });
+
+  it("leaves field undefined without details", async () => {
+    const layer = client(async () => json({ ok: false, error: { code: "title.not_found", message: "Gone." } }, 404));
+    await assert.rejects(layer.api("/api/example", Answer), (error: unknown) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.field, undefined);
+      assert.equal(error.correlationId, undefined);
+      return true;
+    });
+  });
+
+  it("ignores a field that is not a string, on the stream path too", async () => {
+    const error = { code: "account.invalid", message: "Bad.", details: { field: 7 } };
+    const layer = client(async () => json({ ok: false, error }, 422));
+    await assert.rejects(layer.api("/api/example", Answer), { field: undefined });
+    await assert.rejects(layer.apiStream("/api/example"), { field: undefined, code: "account.invalid" });
+  });
+
   it("refuses success data that does not match the schema as the invalid code, reported invalid", async () => {
     const layer = client(async () => json({ ok: true, data: { value: 1 } }));
     await assert.rejects(layer.api("/api/example", Answer), { code: "backend.bad_response" });
