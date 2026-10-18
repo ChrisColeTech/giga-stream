@@ -51,15 +51,16 @@ There is no API key (`26` D24).
 `NewProviderForm` (`NewRecordGroup`, `plus`, id prefix `pv-`): **Name**, **Family** (`Segmented` Embed / Stream, a row switcher: an embed provider
 shows the **Movie template** row, a stream provider does not), **Source**, **Movie template** (embed only). `Create` is disabled with `<Label> is required.`;
 the template needs `https` and `{tmdbId}` (client-side by `lib/provider-checks.ts`, then the backend's `422` under the named row). The list
-(`ListGroup`, `plug`, `Refresh`): `RecordGrid` with headings `order`, `name`, `source`, `family`, `state`; the state word is `enabled` or `disabled`
-(`enabledState(is_active)`), a disabled provider dimmed; ticks (select-all) arm the toolbar's forward verb `Titles →`, which has no row dependence and
-simply calls `requestTab("titles")` - so ticks only select (the same stance as `35` decision 9); row `Delete` is an `ArmedButton`; skeleton while
-loading or empty. Rows sort by `order`, then name.
+(`ListGroup`, `plug`, `Refresh`): `RecordGrid` with headings `id` (the provider's integer `id`, mono), `order`, `name`, `source`, `family`, `state`; the state word is `enabled` or `disabled`
+(`enabledState(is_active)`), a disabled provider dimmed; row `Delete` is an `ArmedButton`; skeleton while loading or empty. Rows sort by `order`, then name.
+**Bulk verbs** (owner, 2026-10-17; the mechanism is `39` section 6, consumed through `useBulkAction`): ghost verbs `Enable`, `Disable` and `Delete` beside the forward verb `Titles →`, always drawn, disabled with `Tick a row first`
+until a row is ticked (`lib/provider-bulk.ts`, pure): `Enable` / `Disable` are `PUT { enabled }`, skipping a provider already in that state (`Already enabled.` / `Already disabled.`; all skipped: `Every ticked provider is already enabled.` / `...disabled.`);
+`Delete` is `DELETE`, two-step (`Delete N providers?`), nothing skipped. A disabled provider stays in its list, dimmed.
 
 ### 3.3 Workspace (rail `‹ Providers`, `Details`, `Templates`, `Player`; toolbar `Discard changes`, `Save`, `Titles →`)
 
 - **Details** (`file-text`): Name, Family (`Segmented`; changing it is allowed and re-renders the template rows), Source, Movie template (embed),
-  **Enabled** (`Toggle` over `is_active`), Order (`NumericInput`), Created (read-only, `YYYY-MM-DD HH:mm` local).
+  **Enabled** (`Toggle` over `is_active`), Order (`NumericInput`), then read-only: Created (`YYYY-MM-DD HH:mm` local) and **Id** (the integer `id`, last).
 - **Templates** (`link`): Episode template (the info tip carries the `{tmdbId}`, `{season}`, `{episode}` placeholders), Start parameter, Subtitle parameter.
 - **Player** (`monitor-play`): Origin, **Frame origins** (`ChipsInput`: Enter or comma adds, a chip's X removes, a malformed origin or a ninth is refused inline with its sentence;
   the chips box takes the field height through the new `className`), **Message shape** (`Select`: None, `vidsrc-status`, `player-event`).
@@ -88,7 +89,7 @@ Strict bodies: a PATCH sends only changed fields; `year` 1800 to 2200, `rating` 
 
 ### 4.2 Index
 
-`NewTitleForm` (`NewRecordGroup`, `plus`, `nt-`): **Title**, **Kind** (`Segmented` Movie / Series - an ordinary row 2 that switches nothing), **Year**.
+`NewTitleForm` (`NewRecordGroup`, `plus`, `nt-`): **Title** (the record's name, so first), **Kind** (`Segmented` Movie / Series - an ordinary row 2 that switches nothing), **Year**.
 `Create` posts a manual title. The list group (`ListGroup`, `clapperboard`, title `Titles`) heading area holds, in order: the **search** field (carries
 `data-search` so `Ctrl+F` focuses it; runs on `Enter` and on its own button, never as you type), the **Kind chips** (pill `ChipGroup`, `min` 1: at least
 one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trending); the action slot holds `Older` and `Newer`, plus `Refresh`.
@@ -97,9 +98,18 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
   and `totalPages` is the larger of the two (`TitleListGroup` owns this; `lib/title-query.ts` and `lib/title-merge.ts` are pure).
 - `Older` raises `page`, `Newer` lowers it, each re-reads; `Newer` is disabled at page 1 with `This is the first page.`, `Older` at `totalPages` with `This is
   the last page.`. A search, a kind change or a sort change returns to page 1. Page, search text, kinds and sort live in the slice (and are not remembered across sessions).
-- Headings `title`, `kind`, `year`, `rating`, `state`; state words `synced`, `edited` (its tooltip `edited: plot` names the `editedFields`), `manual`, `disabled`
-  (`titleState`); a manual row's id shows as `custom-0001`-style text in the tooltip; ticks select; `Jobs →` in the toolbar; `Delete` is an `ArmedButton` whose rest title for a synced
-  title says the next sync adds it again and points to `Enabled`.
+- Headings `id`, `title`, `kind`, `year`, `rating`, `state`; **`id` is the title's real number**: the TMDB id for a synced title (TMDB's own number, which is what `tmdbId` carries) and the backend-assigned
+  `idNumber` for a manual one (Wave B2 of `39`; the string id `custom-<uuid>` stays the key). State words `synced`, `edited` (its tooltip `edited: plot` names the `editedFields`), `manual`, `disabled` (`titleState`); `Jobs →` in the toolbar;
+  `Delete` is an `ArmedButton` whose rest title for a synced title says the next sync adds it again and points to `Enabled`.
+- **Bulk verbs** (owner, 2026-10-17; `39` section 6; `lib/title-bulk.ts`, pure), ghost, beside `Jobs →`, disabled with `Tick a row first` until a row is ticked:
+
+  | Verb | Calls | Skipped, with its reason | Verb disabled when |
+  |---|---|---|---|
+  | `Enable` / `Disable` | `PATCH { enabled }` | already in that state: `Already enabled.` / `Already disabled.` | all skipped |
+  | `Revert to TMDB` | `POST .../revert` | a manual title: `A title made by hand has no TMDB copy to go back to.`; an unedited synced title: `Nothing was edited.` | nothing left: the first skipped reason |
+  | `Delete` | `DELETE` (two-step: `Delete N titles?`) | a **synced** title: `A synced title returns on the next sync; disable it instead.` (only manual titles are deleted in bulk) | no manual title ticked: that reason |
+
+  The single-row `Delete` of a synced title in the grid is unchanged. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
 
 ### 4.3 Workspace (rail `‹ Titles`, `Details`, `People and plot`, `Seasons` (series only), `Sources`; toolbar `Discard changes`, `Save`, `Jobs →`)
 
@@ -107,7 +117,7 @@ The workspace opens from the held row, then reads `GET /api/titles/:id?includeDi
 its groups wear shimmer lines in their shape until it answers.
 - **Details** (`file-text`; action slot `Revert to TMDB`, `undo-2`): Title, Kind (read-only), Year, **Enabled**, **TMDB id** (editable only on a manual title; read-only on a synced
   one), Rating, Genres (comma list, sent as `string[]`), Runtime (minutes in the form, `runtimeMs` on the wire; `lib/title-units.ts`), Poster address, Backdrop address, Stream address, State
-  (read-only word). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
+  (read-only word) and **Id** (read-only, last: the TMDB id of a synced title, the `idNumber` of a manual one). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
   otherwise posts `.../revert` (an `ArmedButton`-free ghost verb: it only drops local edits).
 - **People and plot** (`users`): Plot (`Textarea`), Cast (comma list).
 - **Seasons** (`layers`, series only): for a **manual** series an editable ordered `SeasonList` (season number, episodes with number and title, remove, `Add season`); for a **synced**
@@ -123,6 +133,7 @@ Paths under `src/admin/src/`; "C" create, "U" update. The limit is 200 lines (te
 |---|---|---|
 | U | `services/providers.ts` (80), `services/titles.ts` (130), `services/schemas/title-schema.ts` | the routes above over `request`; lenient list parsing (an unreadable row is dropped and counted); `detail`, `revert`; the schema gains the title detail's `editedFields` |
 | C | `lib/provider-checks.ts` (80), `lib/provider-body.ts` (70), `lib/provider-draft.ts` (80), `lib/provider-rows.ts` (40) | template and origin rules; create and PUT bodies; draft and `sameDraft`; row view |
+| C | `lib/provider-bulk.ts` (50), `lib/title-bulk.ts` (70) | the bulk verbs' eligibility and reasons |
 | C | `lib/title-query.ts` (70), `lib/title-merge.ts` (40), `lib/title-body.ts` (90), `lib/title-draft.ts` (100), `lib/title-units.ts` (30), `lib/title-rows.ts` (50), `lib/season-edit.ts` (50) | the list and search queries and merging; bodies; draft; minutes/`runtimeMs`, comma lists; row view; season list edits |
 | C | `store/providers-slice.ts` (90), `store/titles-slice.ts` (130) | status, items, ticks, `unreachable`; titles add `page`, `totalPages`, `search`, `kinds`, `sort`, `detail` |
 | C | `services/provider-flows.ts` (150), `services/title-flows.ts` (180) | create, save, remove, refresh, revert; `serial` guard; typed results |
@@ -147,6 +158,7 @@ No other library change, no backend change, no change to `app-store.ts` (the sli
 | `title-query.test.ts`, `title-merge.test.ts` | search by Enter only; two kinds merged by title, larger `totalPages`; a search/kind/sort change resets to page 1 |
 | `title-units.test.ts`, `title-body.test.ts`, `title-draft.test.ts`, `season-edit.test.ts` | minutes to `runtimeMs`; comma lists; changed fields only; `null` clears; season add/remove/reorder |
 | `titles-slice.test.ts`, `title-flows.test.ts`, `titles-paging.test.ts` | paging bounds (`This is the first page.`, `This is the last page.`); `Revert to TMDB` refused for manual; delete; `serial` drop; unreachable |
+| `provider-bulk.test.ts`, `title-bulk.test.ts` | each verb's skip rules and reasons, the disabled reasons, the plan over mixed ticked rows (manual/synced/edited, enabled/disabled), a run through the shared runner with one forced failure; ticks dropped for rows that leave the page |
 | `providers-markup.test.ts`, `titles-markup.test.ts` | New forms (rows in order, Family switching the Movie template row, Kind not switching anything), grids (headings, state words, dim, tick, `Delete`), the list heading controls, the workspaces' groups, a movie with no Seasons rail item, `Revert to TMDB` reasons, skeletons, `ChipsInput` for frame origins |
 | `chips-input-markup.test.ts` (library) | the `className` reaches the chips box |
 
@@ -170,7 +182,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, clean.
 
 ## 9. The coordinator's acceptance
 
-Temporary backend (`39` 7) with `TMDB_READ_TOKEN` unset (the Titles list then shows its skeleton and the notice; manual titles are still driven) and, for the synced behaviour, the backend's titles stubs (`TMDB_BASE` pointed at a local stub the backend tests already use, `test/title-stubs.ts`) - never the owner's token.
+Temporary backend (`39` 9) with `TMDB_READ_TOKEN` unset (the Titles list then shows its skeleton and the notice; manual titles are still driven) and, for the synced behaviour, the backend's titles stubs (`TMDB_BASE` pointed at a local stub the backend tests already use, `test/title-stubs.ts`) - never the owner's token.
 1. Providers: create (Embed needs the Movie template; Stream does not), edit every field, `Enabled` off and on (the row dims), frame origins (add, remove, a malformed one and a ninth refused inline), message shape, `Save` sends only changed fields by `PUT`, `null` clears; delete two-step; `Titles →`.
 2. Titles: create a manual movie and a manual series (seasons editor), search by Enter, both chips and one chip (the last cannot switch off), every sort, `Older`/`Newer` bounds, edit and save, `Enabled`, `Revert to TMDB` disabled for manual with its reason, a synced stubbed title shows `edited` after a save and reverts, Sources read-only, delete two-step with its tooltip.
 3. Both sizes, dark and light; console clean; every request carries `Authorization`; no storage; `Ctrl+F` focuses the search; records created are deleted; owner data untouched.
@@ -186,3 +198,5 @@ Temporary backend (`39` 7) with `TMDB_READ_TOKEN` unset (the Titles list then sh
 | 5 | `28` 7.2: Titles search "carries `data-search`" | the shell key hook's `Ctrl+F` already looks for `data-search` (`lib/shell-actions.ts`); the field must set it |
 | 6 | `29` 9.3 "with both Kind chips on, search makes two calls" | `GET /api/titles` already merges two kinds on the backend (`kind=all`); only search needs the admin to merge |
 | 7 | `26` 4.9b: a manual row's id `custom-0001` | the backend id is `custom-<uuid>`; the tooltip shows the id as the backend gives it |
+| 8 | `28` 7.2: Providers and Titles toolbars have only the forward verb | superseded (owner, 2026-10-17): bulk verbs on the ticked rows (3.2, 4.2) |
+| 9 | `29` 5: `AdminTitleRow.id` is `movie-603`, `tv-1399` or `custom-<uuid>` | still the key; a manual title also carries `idNumber` (Wave B2) and the grid's `id` shows it, or the TMDB id for a synced title |

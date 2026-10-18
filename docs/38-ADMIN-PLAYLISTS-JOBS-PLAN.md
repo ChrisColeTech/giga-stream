@@ -42,16 +42,26 @@ never put in an event, a notice, a log or a URL, and cleared from the form after
 
 ### 3.2 Index
 
-`NewPlaylistForm` (`NewRecordGroup`, `plus`, `pl-`): **Name**, **Address** (`type=password`, `autoComplete="off"`, `spellCheck` off). `Create` is disabled with `Address is
-required.`; Name is optional in the backend, but `28` 7.3 lists it as required, so the form requires it (`Name is required.`) and the owner may relax it (open decision in `39`).
-The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `name`, `host`, `channels`, `last synced`,
-`state` (`enabled` / `disabled`, dimmed); ticks select (the forward verb `Jobs →` needs no row); `Delete` is an `ArmedButton` whose rest title says `The channels it created stay,
+`NewPlaylistForm` (`NewRecordGroup`, `plus`, `pl-`): **Name** (first, and **optional**: owner, 2026-10-17; left empty the backend names the playlist after its host), **Address** (`type=password`, `autoComplete="off"`, `spellCheck` off). `Create` is disabled with `Address is
+required.`; Name never gates it. The address is checked client-side (`httpsAddress`) and by the backend. The list (`ListGroup`, `list`, `Refresh`): headings `id` (the integer `id`, mono), `name`, `host`, `channels`, `last synced`,
+`state` (`enabled` / `disabled`, dimmed); `Delete` is an `ArmedButton` whose rest title says `The channels it created stay,
 as hand-made rows that no sync touches.`; its notice on success reads `Deleted <name>; <released> channels kept.`.
+
+**Bulk verbs** (owner, 2026-10-17; the mechanism is `39` section 6, consumed through `useBulkAction`; `lib/playlist-bulk.ts`, pure): ghost verbs beside the forward verb `Jobs →`, always drawn, disabled with `Tick a row first` until a row is ticked:
+
+| Verb | Calls | Skipped, with its reason | Verb disabled when |
+|---|---|---|---|
+| `Sync now` | `POST /api/jobs/:id/run` on **the playlist's own job** (a single playlist is synced by its job; the job's own `dryRun` and `prune` apply, no override) | a disabled playlist: `A disabled playlist cannot sync.`; no job for it: `No job syncs this playlist; create one on the Jobs tab.`; only disabled jobs: `The job for this playlist is disabled.`; a job already running: `That job is already running.` | nothing left: the first skipped reason |
+| `Enable` / `Disable` | `PATCH { enabled }` | already in that state: `Already enabled.` / `Already disabled.` | all skipped |
+| `Delete` | `DELETE` (two-step: `Delete N playlists?`) | none | none ticked |
+
+`Sync now` runs one playlist at a time (the backend allows one playlist sync at a time, `playlist.busy`); the playlists load also reads the jobs list once (`jobs.list()`, the service, never the Jobs slice) and keeps `jobFor: Record<playlistId, { id, enabled, running }>`
+so the reasons are known before the press. `Delete` marks `jobs` and `channels` stale once at the end, and the summary reads `Deleted 2 playlists; 14 channels kept.` (the sum of `released`).
 
 ### 3.3 Workspace (rail `‹ Playlists`, `Details`, `Status`; toolbar `Discard changes`, `Save`, `Jobs →`)
 
-- **Details** (`file-text`): Name, **Address** (a read-only mono field showing `masked`, with a ghost `Replace` in `trailing`: `Replace` unlocks the field as an empty
-  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`).
+- **Details** (`file-text`): Name (first, optional), **Address** (a read-only mono field showing `masked`, with a ghost `Replace` in `trailing`: `Replace` unlocks the field as an empty
+  `type=password` input, never prefilled, and disables itself with `Type the new value, then Save.`; if the person leaves it empty, no `address` is sent), **Enabled** (`Toggle`), then read-only **Id** (the integer `id`, last).
   One `Save` sends only changed fields; an unlocked, empty address is not a change.
 - **Status** (`activity`, read-only): Host, **Channels** (the admin channels whose `source === host`, each a link that calls `requestTab("channels", id)`), Last synced
   (`lastSyncedAt`, local time or `never`), Outcome (`lastOutcome`). There is **no sync button here** - syncing is a Jobs matter (`26` 4.9c).
@@ -82,12 +92,16 @@ workspace's Last run `Refresh`). **No polling.** The refusals are `409 sync.busy
 
 ### 4.2 Index
 
-`NewJobForm` (`NewRecordGroup`, `plus`, `jb-`): **Name**, **Type** (`Segmented` Playlist / Catalog - the row switcher), then **Playlist** (`Select` of the playlist records,
+`NewJobForm` (`NewRecordGroup`, `plus`, `jb-`): **Name** (first), **Type** (`Segmented` Playlist / Catalog - the row switcher), then **Playlist** (`Select` of the playlist records,
 read from `playlists.list()`; disabled playlists are listed but marked `disabled` and refuse with the backend's reason) for a playlist job, or **Scope** (`Segmented` Trending /
 Popular) and **Kind** (`Segmented` Movies / Series) for a catalog job; the rows a Type does not use are not rendered and leave the required list. `Create` is disabled with
-`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `name`, `type`, `target` (the playlist name,
+`<Label> is required.`; a catalog job has `pages` 1 to 25 (default left to the backend). The list (`ListGroup`, `timer`, `Refresh`): headings `id` (the integer `id`, mono), `name`, `type`, `target` (the playlist name,
 or scope + kind), `schedule`, `last run`, `outcome`, `state` (`idle`, `running` with the pulsing bar, `failed`, `disabled`: `jobState`); ticks arm the toolbar; `Delete` is an `ArmedButton`
 (deleting a job changes nothing it created).
+
+**Bulk verbs** (owner, 2026-10-17; `39` section 6; `lib/job-bulk.ts`, pure): beside the filled `Run job`, ghost `Enable`, `Disable` and `Delete`, always drawn, disabled with `Tick a job first` until a row is ticked. `Enable` / `Disable` are `PATCH { enabled }`
+(skipping a job already in that state, `Already enabled.` / `Already disabled.`; all skipped: `Every ticked job is already enabled.` / `...disabled.`); `Delete` is `DELETE`, two-step (`Delete N jobs?`), nothing skipped (a job that is running is skipped:
+`A running job cannot be deleted.`). **`Run job` is itself a bulk verb**: it uses the same shared runner as the others (sequential, one failure never stops the rest, the same report), so `services/job-run-queue.ts` is not written.
 
 **Toolbar `Run job`** (the one filled verb) acts on the ticked jobs, **one after another** (the backend allows one playlist sync at a time, `playlist.busy`); a refusal on one is reported on the
 notice and the rest continue. It is disabled, in this priority order, with: `Tick a job first` (none ticked); `Jobs that are disabled cannot run.` (a ticked job is disabled);
@@ -95,7 +109,7 @@ notice and the rest continue. It is disabled, in this priority order, with: `Tic
 
 ### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Run`, `Last run`; toolbar `Discard changes`, `Save`, `Channels →` for a playlist job or `Titles →` for a catalog job)
 
-- **Details** (`file-text`): Name, Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog).
+- **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog), then read-only **Id** (the integer `id`, last).
 - **Schedule** (`clock`): Interval (text; the page checks `^[1-9]\d*[mh]$|^off$` by `lib/field-checks.ts` `schedule`, a bad value is the `Row`'s `error` and the notice; the backend normalises it
   and answers `422 job.invalid` field `schedule` otherwise). The tip lists `6h`, `30m`, `24h`, `off`.
 - **Run** (`play`): a playlist job has **Dry run** and **Prune** (`Toggle`s; the Prune tip says it deletes synced channels whose entry vanished, and that edited ones are kept) and `Run job`;
@@ -126,7 +140,8 @@ Paths under `src/admin/src/`; "C" create, "U" update; the limit is 200 lines (te
 | C | `lib/playlist-draft.ts` (70), `lib/playlist-body.ts` (50), `lib/playlist-rows.ts` (40) | draft with the replace state; changed-fields body; row view |
 | C | `lib/job-draft.ts` (100), `lib/job-body.ts` (80), `lib/job-rows.ts` (60), `lib/job-run-gate.ts` (60), `lib/job-counts.ts` (60) | draft; create and PATCH bodies (config merge); rows; the `Run job` reasons; the defensive reading of `lastCounts` |
 | C | `store/playlists-slice.ts` (90), `store/jobs-slice.ts` (110) | status, items, ticks, `unreachable`; jobs add `running` bookkeeping and write `setWork({ syncing })` |
-| C | `services/playlist-flows.ts` (130), `services/job-flows.ts` (190), `services/job-run-queue.ts` (70) | create, save, remove, refresh; run one, run the ticked ones in sequence; `serial` guard; typed results |
+| C | `services/playlist-flows.ts` (130), `services/job-flows.ts` (190) | create, save, remove, refresh, run one; `serial` guard; typed results (the ticked-rows runs go through the shared `useBulkAction`, `39` section 6) |
+| C | `lib/playlist-bulk.ts` (70), `lib/job-bulk.ts` (60) | the bulk verbs' eligibility and reasons |
 | C | `hooks/usePlaylistsLoad.ts`, `hooks/usePlaylistActions.ts`, `hooks/useJobsLoad.ts`, `hooks/useJobActions.ts` | small |
 | C | `components/playlists/PlaylistsIndex.tsx`, `NewPlaylistForm.tsx`, `PlaylistRows.tsx`, `PlaylistWorkspace.tsx`, `PlaylistDetailsGroup.tsx`, `PlaylistStatusGroup.tsx` | 3.2, 3.3 |
 | C | `components/jobs/JobsIndex.tsx`, `NewJobForm.tsx`, `JobRows.tsx`, `JobWorkspace.tsx`, `JobDetailsGroup.tsx`, `JobScheduleGroup.tsx`, `JobRunGroup.tsx`, `JobLastRunGroup.tsx` | 4.2, 4.3 |
@@ -143,7 +158,7 @@ No library change, no backend change, no change to `app-store.ts`, `index-frames
 | `playlist-draft.test.ts`, `playlist-flows.test.ts`, `playlists-slice.test.ts` | the Replace state machine (locked, unlocked and empty is no change, `Type the new value, then Save.`); create/save/remove flows and notices; delete marks `jobs` and `channels` stale; the address never reaches a notice, event or state; `serial` drop |
 | `jobs-service.test.ts` | create bodies by type; PATCH `config` merge; `run` with and without the override; `202` mapping; the refusal codes |
 | `job-run-gate.test.ts` | the reasons in priority order (none ticked, disabled, running, playlist disabled, unreachable) |
-| `job-run-queue.test.ts` | ticked jobs run one after another; a refusal does not stop the rest; each refusal is reported; a changed `serial` stops the queue |
+| `playlist-bulk.test.ts`, `job-bulk.test.ts` | each verb's skip rules and reasons (no job, disabled job, running, disabled playlist, already enabled), the disabled reasons, the plan over mixed ticked rows; `Run job` over two ticked jobs through the shared runner with a forced refusal on one: the rest continue, each refusal is reported, a changed `serial` stops the run; the `released` sum |
 | `job-counts.test.ts`, `job-schedule-field.test.ts` | reading an absent or odd `lastCounts` key; `6h`, `30m`, `24h`, `off` accepted, `x` refused |
 | `jobs-slice.test.ts` | `running` rows count into `setWork({ syncing })` after every load and write; reset on sign-out |
 | `playlists-markup.test.ts`, `jobs-markup.test.ts` | New forms (Type switching the rows, address `type=password`), grids (headings, state words, the running bar, dim), workspaces (masked address with `Replace`, the Status channel links, Schedule error, Run toggles, Last run lines, the forward verbs), skeletons |
@@ -168,7 +183,7 @@ Plus `typecheck`, `lint`, `node scripts/check-rules.mjs`, clean.
 
 ## 10. The coordinator's acceptance
 
-Temporary backend (`39` 7) with `ALLOW_LOOPBACK_STREAMS` and a local test playlist served from a throwaway static server on a free port (the owner's playlists and TMDB token are never used); `TMDB_BASE` at the backend tests' local stub for the catalog job.
+Temporary backend (`39` 9) with `ALLOW_LOOPBACK_STREAMS` and a local test playlist served from a throwaway static server on a free port (the owner's playlists and TMDB token are never used); `TMDB_BASE` at the backend tests' local stub for the catalog job.
 1. Playlists: create (the address refused unless it passes the address rule), the masked address with `Replace`, edit, `Enabled`, Status with channel links (after `36`), delete two-step with its notice.
 2. Jobs: create a playlist job and a catalog job, `Run job` with `Dry run` (counts at once), `Prune` tip, the toolbar run on two ticked jobs in sequence with a forced refusal on one, a catalog run showing `running`, `1 syncing`, the pulsing bar, then `Refresh` shows the outcome; Last run counts, refused examples, created ids as links; a bad interval as a field error; `Channels →` / `Titles →`; the disabled reasons.
 3. Both sizes, dark and light; console clean; every request carries `Authorization`; no storage; records created are deleted; owner data untouched.
@@ -180,7 +195,8 @@ Temporary backend (`39` 7) with `ALLOW_LOOPBACK_STREAMS` and a local test playli
 | 1 | `28` Wave 5: Playlists, Jobs and Accounts, from fixtures | superseded: Accounts moved to `35`; this wave is wired directly |
 | 2 | `29` 9.5: `Run job` for a playlist job carries `{ dryRun?, prune? }` once | `JobsService.run(id)` in the foundation takes no body; widened here (additive) |
 | 3 | `29` 9.4: delete answers `{ id, released }` | `RecordService.remove` types `{ id }`; widened here |
-| 4 | `28` 7.3: a playlist's Name is required | `PlaylistInputSchema` has `name` optional (the host is the default); the form requires it by the doc |
+| 4 | `28` 7.3: a playlist's Name is required | `PlaylistInputSchema` has `name` optional (the host is the default); decided (owner, 2026-10-17): optional, but still the first row |
 | 5 | `29` 9.5 / 18 B4: refusal examples and created ids may be absent | landed in the backend (`refusalExamples`, `createdIds`), but `JobSchema.lastCounts` is a loose record: read defensively |
+| 8 | `28` 7.2 / `29` 9.5: `Run job` is the only toolbar verb on ticked rows | superseded (owner, 2026-10-17): `Enable`, `Disable`, `Delete` and, on Playlists, `Sync now` (the playlist's own job); `Run job` uses the shared bulk runner |
 | 6 | `29` 9.4: a playlist's channels are found by `source === host` | the backend's channel answer has `source` but no playlist id, so the match is by host (two playlists on one host share channels) |
 | 7 | `28` Wave 5: `job-schedule-field` accepts `6h`, `30m`, `24h`, `off` | `field-checks.schedule` accepts any `<n>m` / `<n>h` and `off`; the backend normalises |

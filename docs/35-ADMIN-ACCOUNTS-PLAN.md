@@ -34,19 +34,23 @@ So this wave does **not** build a request layer, an auth port, schemas, sentence
 | 4 | The gate's refusal kinds are the foundation's `refusalFor` (`invalid` for a wrong pair and any other 4xx, `locked`, `rate_limited`, `unreachable` for transport, unreadable and 5xx answers). A session that ends under the app always shows `34`'s notice `Your session ended. Sign in again.`; the refresh failure's own sentence is not shown. |
 | 5 | Own-account effects end the session locally with a notice: a new password for yourself (`Password changed. Sign in again.`), disabling or deleting yourself (`Your account was disabled.` / `Your account was deleted.`). Changing your own email or name updates the signed-in actor and nothing else. The signed-in actor gains its **account id** (the foundation's `SessionActor` has only email and name, and an email can change). |
 | 6 | A password change of any account goes through `PATCH /api/admin-accounts/:id { password }`, never `POST /api/auth/password`: the Password group has only `New password` (`28` 7.3) and the PATCH needs no current password. Both revoke the account's sessions. |
-| 7 | The Accounts list has the tick column of the mockup (`accounts-index.html`), though Accounts has no forward verb: the ticks only select. If acceptance judges a tick that arms nothing a `01` section 9 breach, drop the grid's `selection` prop and its slice field (open decision 1 of `39`). |
+| 7 | **Ticks arm bulk verbs** (owner, 2026-10-17: "add some bulk actions when we select them"; this supersedes the earlier "ticks only select" default). The Accounts toolbar offers `Enable`, `Disable` and `Delete` on the ticked rows (5.10), through the shared bulk piece this wave builds for every tab (`39` section 6). |
 | 8 | The Events drawer reads `GET /api/audit`: the `audit` service is wired, and the I/O the foundation put inside `store/audit-slice.ts` moves into a hook (`01` section 6: the store holds no promise and does no I/O). |
 | 9 | The Accounts workspace opens from the list already held (no `GET /:id`, `29` section 8). The list `Refresh` re-reads the accounts and the audit tail together. |
 | 10 | This wave builds what every later tab shares: `StateWord`, `useRecordForm`, the per-tab slice registry and the stale registry (section 5.6), so the parallel waves of `39` never edit the same file. |
 | 11 | Verification runs on a temporary backend that serves the built admin on its own free port, with a temporary `DATA_DIR`; the owner's backend, database and `.env` are never read or written by it (section 3). |
 
-## 2. Scope, in order (five commits)
+| 12 | **Name comes first on every form** (owner, 2026-10-17): New account is `Name`, `Email`, `Password`; Details is `Name`, `Email`, `Enabled`, `Last sign-in`. This is a program rule (`39` section 5). |
+| 13 | **A real id number.** Every account shows a numeric `Id` (list column `id`, read-only `Id` row in Details). The backend assigns it (`idNumber`, migration `018`, Wave B2 of `39` section 7); the string id (`acct_<uuid>`) stays the key. 3a is cut after B2 has landed. |
+
+## 2. Scope, in order (six commits)
 
 1. **Shared request layer.** `src/shared/http` `ApiError` carries `field` and `correlationId` from `error.details` (5.1).
 2. **The session finished.** The actor's id, the sign-in serial, the resets (5.2); the slice registry and the stale registry (5.6); `StateWord` and `useRecordForm` (5.7).
 3. **Audit tail.** `services/audit.ts` wired, the audit slice made pure, `useAuditTail`, `lib/audit-merge.ts`, the drawer, `lib/event-sentence.ts` taught the account actions (5.5).
 4. **Accounts data.** The accounts list tolerant per row, `store/accounts-slice.ts`, the pure libs, `services/account-flows.ts` and `account-password-flow.ts`, the hooks.
-5. **Accounts UI.** `components/accounts/*`, `pages/AccountsPage.tsx`, the Session section.
+5. **The bulk piece** every tab uses (`39` section 6): `lib/bulk-plan.ts`, `lib/bulk-run.ts`, `hooks/useBulkAction.ts`, `components/records/BulkReport.tsx`, the toolbar's armed (two-step) verb in `ToolbarStrip`, `IndexToolbar` taking bulk verbs, the work slice's `working` count and the statusbar's `N working`.
+6. **Accounts UI.** `components/accounts/*`, `pages/AccountsPage.tsx`, the Session section, the Accounts bulk verbs (5.10).
 
 ## 3. The first sign-in, the temporary backend, and the owner's checklist
 
@@ -80,14 +84,14 @@ backs the file up, and removes that line if it is `3001` (the code default is 80
 Start it from `src/backend` with the variables in the **process environment** and without any `--env-file` (`node src/build-shared.ts && npx tsx src/server.ts`; `config.ts` reads `process.env` only), detached
 through `Win32_Process.Create` as `07` section 4 shows, keeping the PID. Do not use `npm run dev` in `src/backend`: it loads `.env`. Then check, before any browser: `GET /healthz` answers `role: "admin-backend"`;
 `Test-Path $env:TEMP\giga-accounts-verify\admin.db` is true; the owner's `~\.giga-stream-admin` has no new or modified file (timestamps before and after). The admin is served by that backend at
-`http://127.0.0.1:8391/admin/` (same origin, no Vite, no collision with the owner's 5172). Stop it by PID at the end and delete the temporary folder. The generalised recipe is `39` section 7.
+`http://127.0.0.1:8391/admin/` (same origin, no Vite, no collision with the owner's 5172). Stop it by PID at the end and delete the temporary folder. The generalised recipe is `39` section 9.
 
 ### 3.4 The owner's checklist (the real app, once this has landed)
 
 1. Start the stack as usual (`npm run dev`); open the admin in its backend window or at `http://127.0.0.1:5172/admin/`.
 2. Sign in with the existing account's email and password. A wrong try shows `The email or password is wrong.`; five wrong ones lock that account for 15 minutes, so do not guess.
 3. Press `Ctrl+6` (Accounts). The list shows your own row, state `enabled`, last sign-in a time; its `Delete` is disabled (the last enabled account).
-4. Under **New account** type the new person's email, name and a password of at least 12 characters; `Create` is disabled with `Email is required.` and its siblings until all three are filled. Press `Create`.
+4. Under **New account** type the new person's name, email and a password of at least 12 characters (in that order); `Create` is disabled with `Name is required.` and its siblings until all three are filled. Press `Create`.
 5. The row appears; the notice says `Created <email>.`; the Events drawer (statusbar `Events`) shows `<you> created account <email>`.
 6. Optional: open a second admin window, sign in as the new account, and see it in the same list. To give someone a new password later: open the row, `New password`, `Set new password` (it signs that account out everywhere).
 
@@ -196,14 +200,14 @@ puts a refusal under its row. Both are consumed unchanged by every tab; their si
 `AccountsPage` is the only reader of `workspaces.accounts`: null shows `AccountsIndex`, an id shows `AccountWorkspace`. `useAccountsLoad(active)` loads when the tab is first shown after sign-in (status `idle`) or after `stale.accounts`, and not otherwise.
 
 - **AccountsIndex** (60): `IndexToolbar` (empty strip, Accounts is the last tab), `NewAccountForm`, `AccountsList`.
-- **NewAccountForm** (110): `NewRecordGroup` (`user-plus`, `New account`), rows in this order and no others: `Email` (`type=email`, `autoComplete="off"`), `Name`, `Password` (`type=password`, `autoComplete="new-password"`). No role, no info glyph on
-  these three (`26` 4.4). `Create` is disabled with `Email is required.`, then `Name is required.`, then `Password is required.`, then `Saving.` while a call runs, or the unreachable sentence. Pressing it runs the value checks first (5.9); a refusal shows under its row with `aria-invalid`.
+- **NewAccountForm** (110): `NewRecordGroup` (`user-plus`, `New account`), rows in this order and no others: `Name`, `Email` (`type=email`, `autoComplete="off"`), `Password` (`type=password`, `autoComplete="new-password"`). No role, no info glyph on
+  these three (`26` 4.4). `Create` is disabled with `Name is required.`, then `Email is required.`, then `Password is required.`, then `Saving.` while a call runs, or the unreachable sentence. Pressing it runs the value checks first (5.9); a refusal shows under its row with `aria-invalid`.
 - **AccountsList** (60): `ListGroup` (`users`, `Accounts`) with a ghost `Refresh` in the heading slot (`refresh-cw`); `SkeletonGrid` while `idle` or `loading` or with no items (never a sentence over it, never an empty card); a failed read keeps the last rows and sets one notice.
-- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `email`, `name`, `state`, `last sign-in`, the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
+- **AccountRows / AccountRow** (110 / 70): `RecordGrid` with headings `id`, `name`, `email`, `state`, `last sign-in` (`id` is `idNumber`, mono), the select-all tick (`Select all accounts`, `mixed` over a part), rows through `RecordGridRow` with `StateWord` (`enabled` / `disabled`, a disabled row dimmed),
   the time in mono as `YYYY-MM-DD HH:mm` local (`never` if absent), tick label `Select <email>`, a press opens the workspace, the end is an `ArmedButton` `Delete`, question `Delete <email>?`; disabled with `The last enabled account cannot be deleted.` for the last
   enabled account (computed from the list by `lib/account-guard.ts`), at rest titled `Deletes the account and ends its sessions.`; also disabled with the unreachable sentence or while the call runs. The column set is `constants/account-grid.ts` (tracks in rem; the end track fits `Delete someone@example.test?`).
 - **AccountWorkspace** (90): `WorkspaceFrame` (tab `accounts`), `RecordRail` (`‹ Accounts`, `Details`, `Password`, the key list a module constant), `WorkspaceToolbar` with `Discard changes` and `Save` only. Opens from the held list; if the account is no longer in a `ready` list it closes with a notice.
-- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Email`, `Name`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), `Last sign-in` (read only). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
+- **AccountDetailsGroup** (90): `Group` `Details` (`user`): `Name`, `Email`, `Enabled` (`Toggle`, the inverse of `disabled`, tip `A disabled account cannot sign in.`), `Last sign-in` and `Id` (both read only, last). `Enabled` is disabled with `The last enabled account cannot be disabled.` while this is the last enabled account.
   One `Save` per page sends only the changed fields of `email`, `name`, `disabled`.
 - **AccountPasswordGroup** (70): `Group` `Password` (`key-round`): `New password` (`type=password`, `autoComplete="new-password"`) and a ghost `Set new password` inside the library `Tooltip` with `Signs this account out everywhere`; disabled with `Type a new password.` or the length
   refusal until valid. It is its own verb and is not part of `Save`.
@@ -213,6 +217,20 @@ puts a refusal under its row. Both are consumed unchanged by every tab; their si
 
 `lib/field-checks.ts` is frozen; the account rules live in `lib/account-checks.ts` using its primitives: `emailAddress` (`name@host.tld`, at most 254), `nameLength` (1 to 80 after trim), `passwordLength` (12 to 256, never trimmed). Sentences: `Email must look like name@example.com.`, `Name must be 1 to 80 characters.`,
 `Password must be at least 12 characters.`. The backend's own sentence for a bad field (`The password is not valid.`) is only the fallback.
+
+### 5.10 Bulk actions on the ticked accounts (the mechanism is `39` section 6)
+
+The toolbar strip carries, left of nothing else (Accounts has no forward verb), the ghost verbs **`Enable`**, **`Disable`** and **`Delete`** (two-step: the first press turns the label into `Delete N accounts?`, the second within 4 s runs it; blur or `Escape` disarms).
+They are always drawn and disabled with `Tick a row first` until a row is ticked. Each runs the single-record call on every eligible ticked row through `useBulkAction`: `Enable` and `Disable` are `PATCH { disabled }`, `Delete` is `DELETE`. `lib/account-bulk.ts` (pure) decides eligibility:
+
+| Verb | Skipped, with its reason | Verb disabled (reason) when |
+|---|---|---|
+| `Enable` | an account already enabled: `Already enabled.` | every ticked account is already enabled: `Every ticked account is already enabled.` |
+| `Disable` | an already disabled account: `Already disabled.`; the signed-in account: `You cannot disable the account you are signed in with.`; any account whose disabling would leave no enabled account (the plan keeps at least one enabled, taking the rows in list order): `The last enabled account cannot be disabled.` | nothing is left to run: the first skipped reason |
+| `Delete` | the signed-in account: `You cannot delete the account you are signed in with.`; any account whose deletion would leave no enabled account: `The last enabled account cannot be deleted.` | nothing is left to run: the first skipped reason |
+
+The signed-in account is recognised by `actor.id`. The backend's own `409 account.last_admin` and `404 account.not_found` are still handled per row as failures (a stale list). `Disable` on others revokes their sessions; the summary says so (`Disabled 2 of 3 accounts; they are signed out everywhere.`).
+The skipped and failed rows are listed under the toolbar by `BulkReport` with each sentence; the list is re-read once at the end; succeeded rows are unticked, failed and skipped rows stay ticked. A single-row action in the workspace is unchanged.
 
 ## 6. Files
 
@@ -235,6 +253,9 @@ Paths under `src/admin/src/` unless marked. "C" create, "U" update, "D" delete. 
 | C | `hooks/useAccountsLoad.ts` (40), `useAccountActions.ts` (70), `useAuditTail.ts` (50), `useRecordForm.ts` (90) | hooks |
 | U | `hooks/useSignIn.ts` | drops the `loadAudit` call |
 | C | `components/records/StateWord.tsx` (30), `components/session/SessionState.tsx` (25) | 5.7, 5.5 |
+| C | `lib/bulk-plan.ts`, `lib/bulk-run.ts`, `hooks/useBulkAction.ts`, `components/records/BulkReport.tsx` | the shared bulk piece (`39` section 6) |
+| U | `src/shared/ui/src/shell/ToolbarStrip.tsx` (+ test), `components/records/IndexToolbar.tsx`, `lib/index-verbs.ts`, `store/work-slice.ts`, `lib/running-work.ts` | the armed (two-step) toolbar verb; bulk verbs beside the forward verb; `working` count and `N working` |
+| C | `lib/account-bulk.ts` (70) | 5.10 |
 | C | `components/accounts/AccountsIndex.tsx`, `NewAccountForm.tsx`, `AccountsList.tsx`, `AccountRows.tsx`, `AccountRow.tsx`, `AccountWorkspace.tsx`, `AccountDetailsGroup.tsx`, `AccountPasswordGroup.tsx` | 5.8 |
 | U | `pages/AccountsPage.tsx`, `components/chrome/AppShell.tsx` (mounts `SessionState`), `components/chrome/AdminEventsDrawer.tsx`, `components/settings/SessionSection.tsx` | |
 | U | `README.md` | the `?signedin=0` line is gone; sign-in is real |
@@ -259,6 +280,7 @@ The request layer and the session already have their tests (`api.test.ts`, `auth
 | `account-flows.test.ts` | the table of 5.4 row by row: create success and clear; `email_taken` under Email; save own email updates the actor; save own `disabled` ends the session; other account's password notice and cleared field; own password ends the session with `Password changed. Sign in again.`; delete other; delete own; `last_admin` keeps the row; a changed `serial` drops the answer; a transport failure sets `unreachable`; **no notice, event, state or error contains the password** |
 | `audit-tail.test.ts` | per-entry validation; newest at the foot; de-dup by id; the 200 cap; local rows survive and interleave by time; the cursor rules and `before` = the smallest held id; `Load older` unavailable without a cursor; the store has no async action; account sentences use the email |
 | `event-sentence.test.ts` (updated) | `account.created` and `deleted` name the email, `updated` the held email or the name; inline entries |
+| `bulk-plan.test.ts`, `bulk-run.test.ts`, `bulk-report-markup.test.ts`, `toolbar-armed-markup.test.ts` (library), `account-bulk.test.ts`, `bulk-work.test.ts` | the shared signatures and cases of `39` section 6; the account rules of 5.10 row by row (own account, last enabled, already enabled, order); `N working` while a run is in flight |
 | `accounts-markup.test.ts` | New form rows in order with password type and `new-password`, no placeholder, `Create` reasons; the grid headings, ticks, state words, dimmed disabled row, last-account `Delete` disabled with its title, `never`; skeleton when loading; workspace groups, `Enabled` switch and its reasons, `Set new password` with its tooltip, toolbar with Discard and Save only, rail `‹ Accounts` |
 | `no-network-storage.test.ts` (kept) | still passes unchanged |
 | updated | `gate-cover.test.ts`, `chrome-markup.test.ts`, `settings-markup.test.ts`, `test/support/store.ts` for the actor id and the registry |
@@ -289,7 +311,7 @@ revocation, the ten-a-minute address limit (in memory) and the five-failure 15-m
    `src/fileserver`, `src/shared/ui`, root `package.json`, `scripts/**`, `docs/**`, every `.env`, any data folder, the other tabs' pages and services, the frozen files of `39` section 4.
 2. **Rules.** `AGENTS.md`, `07`, `01`; this plan; no fixture, no fake feature, a control works or is disabled with its reason, skeletons never a sentence over them, no browser storage, no timers, edit with the editor tools one file at a time, files at most 200 lines and tests 250, one exported component
    per file, `PascalCase.tsx` / `useThing.ts` / kebab-case, no `utils`/`helpers`/`common`, never print or copy a secret or an `.env` value, never touch the owner's data directory.
-3. **Role.** Implements sections 5 and 6 in the five commits of section 2. Writes AND runs its tests (section 7), the typecheck, the lint and `node scripts/check-rules.mjs`, all clean; starts no server or browser; edits no doc; commits on its branch, never pushes, merges or rebases; lists every gap it filled.
+3. **Role.** Implements sections 5 and 6 in the six commits of section 2. Writes AND runs its tests (section 7), the typecheck, the lint and `node scripts/check-rules.mjs`, all clean; starts no server or browser; edits no doc; commits on its branch, never pushes, merges or rebases; lists every gap it filled.
 4. **Read first.** `AGENTS.md`; `07` 6.2 to 6.4; `01` 4, 5, 6, 8, 9; this document and `39`; `29` 5 to 8 and 9.6; `34`; `28` 7.3 and Appendix A rows 4, 12, 73; `03` 7.11 to 7.13; then the code: `src/shared/http/src/*`, the foundation's `services/session-api.ts`, `api.ts`, `auth-port.ts`,
    `accounts.ts`, `audit.ts`, `store/session-slice.ts`, `audit-slice.ts`, `lib/event-sentence.ts`, `lib/auth-errors.ts`, `test/support/fake-backend.ts`, and `src/backend/src/{api/auth.ts,api/accounts.ts,services/account-service.ts,services/auth-service.ts,types/account.ts}` as read-only reference.
 5. **Scope.** Section 6, nothing more.
@@ -312,7 +334,8 @@ Pre-flight (3.2): the `PORT` line, the 401 through 5172. Landing: read the diff,
 8. **Lock.** With a throwaway account, five wrong passwords answer `The email or password is wrong.`; the sixth attempt, even with the right password, answers `This account is locked for a while after failed sign-ins.`. Eleven fast attempts in a minute: `Too many sign-in attempts; wait a minute.`; wait a minute before continuing.
 9. **Refresh.** Restart the temporary backend (same `DATA_DIR`, same port) with a different `JWT_SECRET`: the held access token is dead, the refresh token is not. In a signed-in tab press `Refresh`: the recorder shows two `401`s, **one** `POST /api/auth/refresh`, two retries answered `200`, and the list stays. Restore the first secret afterwards.
 10. **Wire and storage.** Every `/api` request except `login` and `refresh` carried `Authorization`; in the page, `localStorage.length`, `sessionStorage.length`, `document.cookie` and `indexedDB.databases()` are empty before and after; no token appears in any notice or drawer row; the console has no errors or warnings.
-11. **Look.** Both sizes, dark and light: the New form, the list (rows 36px, columns lined up with the header, horizontal scroll inside the list only), the workspace, the armed `Delete zz-second@example.test?` re-arming after 4 s, the skeleton, disabled tooltips; compared with the interface's Collections window for the pattern and with the mockup's
+11. **Bulk.** Tick two throwaway accounts and the owner: the bulk verbs enable; `Disable` skips `zz-owner` (the signed-in account) with its reason and disables the other two (their next call returns to the gate); `Enable` re-enables them; `Delete` shows `Delete 2 accounts?`, disarms on blur/`Escape`/4 s, deletes them; tick only the owner: `Delete` is disabled with the reason; a forced stale row shows a per-row failure under the toolbar while the rest complete; the list is re-read once; `N working` shows during the run; failed rows stay ticked.
+12. **Look.** Both sizes, dark and light: the New form, the list (rows 36px, columns lined up with the header, horizontal scroll inside the list only), the workspace, the armed `Delete zz-second@example.test?` re-arming after 4 s, the skeleton, disabled tooltips; compared with the interface's Collections window for the pattern and with the mockup's
     `accounts-index.html` and `account-workspace.html` for content. The Events drawer pages with `Load older`.
 
 **On the real stack (read-only):** the gate renders at 5172 and in the backend window; the anonymous `GET /api/auth/me` answers 401; **no sign-in is attempted on the owner's backend** (the coordinator holds no credentials and a wrong try would add an audit row and a failure count to the owner's data). The owner then follows 3.4.
@@ -334,7 +357,7 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 10 | `29` 6.2: own password via the Accounts workspace "or `POST /api/auth/password`" | the PATCH needs no current password, the POST does; the UI has only `New password` (decision 6) |
 | 11 | `29` 7 and 14: `/healthz` is read at the root | `vite.config.mts` proxies `/api`, `/live`, `/logos`, `/test` only; `/healthz` in dev returns Vite's page (Wave 4) |
 | 12 | `28` progress table, Wave 2 "Creates": `useRecordForm`, `useFixtureLoad` | none of them, nor `StateWord`, is in the tree (5.7) |
-| 13 | `28` 7.2 / 9: the Accounts toolbar has no verb; ticks arm the toolbar | the mockup's list has ticks that arm nothing (decision 7) |
+| 13 | `28` 7.2 / 9: the Accounts toolbar has no verb; ticks arm the toolbar | superseded (owner, 2026-10-17): the toolbar carries bulk verbs on the ticked rows (decision 7, 5.10) |
 | 14 | `29` 9.6 / `28` 9.3: the last enabled account's Delete is guarded | the backend also refuses *disabling* it, so the workspace's `Enabled` is guarded too |
 | 15 | `03` 7.12: five wrong passwords lock the account | the fifth wrong answer is still `auth.invalid_credentials`; the sixth attempt, even with the right password, is `auth.locked` |
 | 16 | `03` 7.12: refresh and logout are "anyone with a refresh token" | a used or revoked token on logout is `401 auth.refresh_invalid`; sign-out ignores it |
@@ -342,6 +365,8 @@ Then stop the temporary backend by PID, delete its folder, confirm the owner's d
 | 18 | `03` 7.11: "an email already used is `409 account.email_taken`" | emails are compared case-insensitively (`email_key`), so `A@x` and `a@x` collide; the list is sorted by that key |
 | 19 | `01` 6: the store holds no promise and does no I/O | the foundation's `store/audit-slice.ts` awaits `audit.list` inside its actions; this wave moves that into a hook |
 | 20 | `35` (first version) planned a request layer, schemas and sentences | the foundation built them; this revision removes that scope |
+| 21 | `28` 7.3: the Account New form is `Email`, `Name`, `Password`; `26` 4.8 lists Email first | superseded (owner, 2026-10-17): Name first (decision 12) |
+| 22 | `29` 5: `AdminAccount.id` is a string | `acct_<uuid>`; an `idNumber` is added by migration `018` and the shapes of `29` 5 gain it (decision 13) |
 
 ## 13. Done when
 
