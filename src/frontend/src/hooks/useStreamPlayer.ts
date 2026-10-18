@@ -55,9 +55,11 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
     return () => useAppStore.getState().setActivity("live", false);
   }, [channelsLoading, streamStarting]);
 
-  /* Stop (`50` section 2.4): the serial's change detaches the engine; the idle stage is the answer. */
+  /* Stop (`50` section 2.4): the serial's change is the stop — the store's live state returns to rest (the channel
+     list's marker with it) and the engine detaches back to the idle stage. */
   useEffect(() => {
     if (stopRequest === 0) return;
+    useAppStore.getState().stopLive();
     detachForStop(controller.current);
   }, [stopRequest]);
 

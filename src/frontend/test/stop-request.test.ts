@@ -21,6 +21,31 @@ describe("the stop serial", () => {
   });
 });
 
+describe("stop's live store action", () => {
+  it("clears the playing markers and returns the stage to its idle note, a stale failure included", () => {
+    const state = () => useAppStore.getState();
+    state().playChannel("news", "https://media.test/news.m3u8", true);
+    state().setLiveStage("failed", "The playlist failed.");
+    state().stopLive();
+    assert.equal(state().playingChannelId, null, "the channel list's marker goes out with the stream");
+    assert.equal(state().playingStreamUrl, null);
+    assert.equal(state().liveStage, "idle");
+    assert.equal(state().liveStreamError, null, "no stale failure sentence survives the stop");
+  });
+
+  it("a following play sets the markers again and bumps the serial exactly as before the stop", () => {
+    const state = () => useAppStore.getState();
+    state().playChannel("news", "https://media.test/news.m3u8", true);
+    const serial = state().livePlaySerial;
+    state().stopLive();
+    state().playChannel("sport", "https://media.test/sport.m3u8", true);
+    assert.equal(state().playingChannelId, "sport");
+    assert.equal(state().playingStreamUrl, "https://media.test/sport.m3u8");
+    assert.equal(state().liveStage, "loading");
+    assert.equal(state().livePlaySerial, serial + 1, "the play after a stop is an ordinary play");
+  });
+});
+
 describe("stop's consumers", () => {
   it("a fake video element pauses, and a missing one is tolerated", () => {
     let pauses = 0;
