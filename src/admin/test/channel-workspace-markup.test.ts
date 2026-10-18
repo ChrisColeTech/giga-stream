@@ -8,6 +8,7 @@ import { liveDraft } from "@/lib/channel-draft";
 import { ChannelsPage } from "@/pages/ChannelsPage";
 import { useAppStore } from "@/store/app-store";
 import type { LiveAdminChannel } from "@/types/admin-channel";
+import { holdChannels } from "./support/channels-hold";
 import { live } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
@@ -48,7 +49,7 @@ beforeEach(() => {
 
 describe("a live channel's workspace", () => {
   it("opens from the held list: the rail, the page toolbar (Discard, Preview →), the groups and Save details", () => {
-    state().channelsLoaded([live("a")], 1);
+    holdChannels([live("a")], 1);
     state().openWorkspace("channels", "a");
     const html = page();
     assert.ok(html.includes('aria-label="Channel sections"'));

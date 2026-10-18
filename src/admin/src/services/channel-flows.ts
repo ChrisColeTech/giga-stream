@@ -5,12 +5,11 @@ import {
   channelPreparing,
   channelReverted,
   channelSaved,
-  unreadableChannels,
 } from "@/constants/channel-copy";
 import { createBody, isEmptyBody, patchBody, type NewChannelDraft } from "@/lib/channel-body";
 import { checkChannel, newChannelRefusal } from "@/lib/channel-check";
 import { rebuilds, type ChannelDraft } from "@/lib/channel-draft";
-import { findChannel } from "@/lib/channel-list";
+import { channelById } from "@/lib/channel-list";
 import { isSynced } from "@/lib/channel-rows";
 import type { AdminChannel } from "@/types/admin-channel";
 import {
@@ -24,14 +23,12 @@ import {
   type FlowRefused,
   type FlowResult,
 } from "./channel-flow-support";
+import { createChannelReads, type ChannelReads } from "./channel-reads";
 
 export type { FlowResult } from "./channel-flow-support";
 
-export interface ChannelFlows {
-  /** Reads the list once the tab is shown. Does nothing while a read is already running. */
-  load: () => Promise<FlowResult>;
-  /** Reads the list now, whatever is running (Refresh, the Status heading's Refresh, the Preview's open and Retry). */
-  refresh: () => Promise<FlowResult>;
+/** The list's reads (`channel-reads.ts`: load, refresh, a page, a new query, select all matching) and the writes. */
+export interface ChannelFlows extends ChannelReads {
   create: (draft: NewChannelDraft) => Promise<FlowResult>;
   /** Null when nothing changed. */
   save: (id: string, draft: ChannelDraft) => Promise<FlowResult<AdminChannel | null>>;
@@ -48,24 +45,10 @@ const NOT_FOUND = "channel.not_found";
  *  unchanged after; a failure is said once as a `warn` notice and returned typed, so a form puts a field's refusal
  *  under its row. A write's answer replaces the record by id. Nothing here waits for a build: a `preparing` answer is
  *  shown as it is, and a later read shows `live`. */
-export function createChannelFlows({ service, store }: ChannelFlowDeps): ChannelFlows {
-  async function read(): Promise<FlowResult> {
-    const serial = store().serial;
-    store().channelsStartLoad();
-    try {
-      const list = await service.list();
-      if (!stillSession(store, serial)) return DROPPED;
-      store().channelsLoaded(list.items, list.revision);
-      if (list.unreadable > 0) store().say(unreadableChannels(list.unreadable), "warn", "Channel");
-      return done(undefined);
-    } catch (error: unknown) {
-      if (!stillSession(store, serial)) return DROPPED;
-      store().channelsLoadFailed(codeOf(error) === "backend.unreachable");
-      return refusal(store(), error);
-    }
-  }
-
-  const load = async (): Promise<FlowResult> => (store().channels.status === "loading" ? done(undefined) : read());
+export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
+  const { service, store } = deps;
+  const reads = createChannelReads(deps);
+  const read = reads.refresh;
 
   /** A failed write: said once; an unreadable answer may still have written, and a missing channel is gone, so the list
    *  is read again. */
@@ -78,7 +61,7 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
 
   /** One write over a held channel: the serial guard, the answer applied, the failure said. */
   async function write<T>(id: string, call: (channel: AdminChannel) => Promise<T>, apply: (answer: T, channel: AdminChannel) => T) {
-    const channel = findChannel(store().channels.items, id);
+    const channel = channelById(store().channels, id);
     if (channel === undefined) {
       store().closeWorkspace("channels");
       return rejected(store(), CHANNEL_GONE);
@@ -119,7 +102,7 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
   }
 
   async function save(id: string, draft: ChannelDraft): Promise<FlowResult<AdminChannel | null>> {
-    const held = findChannel(store().channels.items, id);
+    const held = channelById(store().channels, id);
     const bad = checkChannel(draft).refusal;
     if (held !== undefined && isEmptyBody(patchBody(held, draft))) return done(null);
     if (bad !== null) return rejected(store(), bad.sentence, bad.field);
@@ -140,6 +123,9 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
       (channel) => service.remove(id).then(() => channel),
       (channel) => {
         store().channelRemove(id);
+        // The positions after the row moved up one: unless every row is loaded, the window reads its pages again.
+        const { items, total } = store().channels;
+        if (items.length !== (total ?? 0)) store().channelsInvalidate();
         if (store().workspaces.channels === id) store().closeWorkspace("channels");
         if (isSynced(channel)) store().markStale("playlists");
         store().say(channelDeleted(channel.name), "info", "Channel");
@@ -158,8 +144,7 @@ export function createChannelFlows({ service, store }: ChannelFlowDeps): Channel
   }
 
   return {
-    load,
-    refresh: read,
+    ...reads,
     create,
     save,
     remove,

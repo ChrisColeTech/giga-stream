@@ -5,6 +5,7 @@ import { CHANNEL_BULK_WORDS, channelBulkReason, planChannelBulk } from "@/lib/ch
 import { createBulkRunner } from "@/services/bulk-run";
 import { createChannelBulkCall } from "@/services/channel-bulk";
 import { useAppStore } from "@/store/app-store";
+import { holdChannels } from "./support/channels-hold";
 import { live, stream } from "./support/channels-kit";
 import { resetStore, signInForTest } from "./support/store";
 
@@ -60,7 +61,7 @@ describe("the channels' bulk verbs", () => {
   });
 
   it("run through the shared runner: one forced failure keeps the rest, one summary, the work count back to zero", async () => {
-    state().channelsLoaded([live("a"), live("b"), live("c")], 1);
+    holdChannels([live("a"), live("b"), live("c")], 1);
     const routes: string[] = [];
     const call = createChannelBulkCall({
       service: {

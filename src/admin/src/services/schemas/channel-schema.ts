@@ -51,4 +51,20 @@ export interface ChannelList {
   readonly unreadable: number;
 }
 
+/** One PAGE of the list (`GET /api/admin-channels?limit=...`, `41` section 3.1): `total` counts the rows after the
+ *  filters, before `limit`. Rows stay `unknown`, parsed one by one like the whole list's. */
+export const ChannelPageLenientSchema = z.object({
+  items: z.array(z.unknown()),
+  revision: z.number(),
+  total: z.number().int().min(0),
+  offset: z.number().int().min(0),
+  limit: z.number().int().min(1),
+});
+
+/** The readable rows of one page, the list's revision and total, and how many rows could not be read. */
+export interface ChannelPage extends ChannelList {
+  readonly total: number;
+  readonly offset: number;
+}
+
 export const DeletedChannelSchema = z.object({ id: z.string() });

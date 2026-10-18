@@ -8,6 +8,7 @@ import { streamDraft } from "@/lib/channel-draft";
 import { ChannelsPage } from "@/pages/ChannelsPage";
 import { useAppStore } from "@/store/app-store";
 import type { StreamAdminChannel } from "@/types/admin-channel";
+import { holdChannels } from "./support/channels-hold";
 import { stream } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
@@ -35,7 +36,7 @@ beforeEach(() => {
 
 describe("a stream channel's workspace", () => {
   it("opens with the rail Details, Stream, Status, the page toolbar (Discard, Preview →) and Save details ending Stream", () => {
-    state().channelsLoaded([stream("s")], 1);
+    holdChannels([stream("s")], 1);
     state().openWorkspace("channels", "s");
     const html = page();
     assert.ok(html.indexOf(">Details<") < html.indexOf(">Stream<") && html.indexOf(">Stream<") < html.indexOf(">Status<"));
@@ -95,7 +96,7 @@ describe("a stream channel's workspace", () => {
   });
 
   it("names where a synced row came from", () => {
-    state().channelsLoaded([SYNCED], 1);
+    holdChannels([SYNCED], 1);
     state().openWorkspace("channels", "s");
     assert.ok(page().includes(">Synced from lists.example<"));
   });

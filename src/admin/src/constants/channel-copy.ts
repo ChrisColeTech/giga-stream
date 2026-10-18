@@ -82,6 +82,10 @@ export const channelDeleted = (name: string): string => `Deleted ${name}.`;
 export const channelReverted = (name: string): string => `Reverted ${name}.`;
 export const unreadableChannels = (count: number): string =>
   `${count} ${count === 1 ? "channel" : "channels"} could not be read.`;
+export const selectionCapped = (ticked: number, total: number): string =>
+  `Selected the first ${ticked.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} matching channels.`;
+/** A ticked channel the tab holds no row for: a bulk run skips it and says so. */
+export const NOT_LOADED = "Not loaded.";
 export const CHANNEL_GONE = "That channel no longer exists.";
 export const REQUEST_FAILED = "The request failed.";
 export const ADDRESS_COPIED = "Address copied.";

@@ -1,6 +1,14 @@
+import { LIVE_ROWS_PATH, pagePath, type ChannelQuery } from "@/lib/channel-query";
 import type { AdminChannel } from "@/types/admin-channel";
 import { request } from "./api";
-import { ChannelListLenientSchema, ChannelSchema, DeletedChannelSchema, type ChannelList } from "./schemas/channel-schema";
+import {
+  ChannelListLenientSchema,
+  ChannelPageLenientSchema,
+  ChannelSchema,
+  DeletedChannelSchema,
+  type ChannelList,
+  type ChannelPage,
+} from "./schemas/channel-schema";
 import type { RecordService } from "./service-types";
 
 /** The Channels routes (`29` section 9.1, `36` section 3.1), REAL. A create, update, rebuild and revert answer the channel
@@ -8,6 +16,10 @@ import type { RecordService } from "./service-types";
  *  again, since the write may have happened). The list is read row by row: an unreadable row is dropped and counted. A
  *  refusal arrives as an `ApiError` carrying the backend's `details.field` (`name`, `number`, `folder`, `videos.<n>`...). */
 export interface ChannelsService extends RecordService<AdminChannel, string, ChannelList> {
+  /** One page of the list: the rows `pageIndex * limit` on (100 by default), the query's `total` and the revision. */
+  page: (query: ChannelQuery, pageIndex: number, limit?: number) => Promise<ChannelPage>;
+  /** Every live channel, for the statusbar's count. */
+  liveRows: () => Promise<ChannelPage>;
   /** `POST /channels/:id/rebuild`: the live channel, `preparing`. */
   rebuild: (id: string) => Promise<AdminChannel>;
   /** `POST /channels/:id/revert`: a synced stream channel, its edits cleared. */
@@ -16,18 +28,40 @@ export interface ChannelsService extends RecordService<AdminChannel, string, Cha
 
 const path = (id: string, rest = ""): string => `/api/channels/${encodeURIComponent(id)}${rest}`;
 
-async function list(): Promise<ChannelList> {
-  const answer = await request("/api/admin-channels", ChannelListLenientSchema);
+function readable(rows: readonly unknown[]): AdminChannel[] {
   const items: AdminChannel[] = [];
-  for (const row of answer.items) {
+  for (const row of rows) {
     const parsed = ChannelSchema.safeParse(row);
     if (parsed.success) items.push(parsed.data);
   }
+  return items;
+}
+
+async function list(): Promise<ChannelList> {
+  const answer = await request("/api/admin-channels", ChannelListLenientSchema);
+  const items = readable(answer.items);
   return { items, revision: answer.revision, unreadable: answer.items.length - items.length };
+}
+
+/** One page of the list by the query (`GET /api/admin-channels?limit&offset&q&kind&...`); `limit` 200 is the largest. */
+async function page(query: ChannelQuery, pageIndex: number, limit?: number): Promise<ChannelPage> {
+  const answer = await request(pagePath(query, pageIndex, limit), ChannelPageLenientSchema);
+  const items = readable(answer.items);
+  const { revision, total, offset } = answer;
+  return { items, revision, total, offset, unreadable: answer.items.length - items.length };
+}
+
+/** The live channels (a handful): the rows the statusbar's `N preparing` is counted over, whatever the list shows. */
+async function liveRows(): Promise<ChannelPage> {
+  const answer = await request(LIVE_ROWS_PATH, ChannelPageLenientSchema);
+  const items = readable(answer.items);
+  return { items, revision: answer.revision, total: answer.total, offset: answer.offset, unreadable: 0 };
 }
 
 export const channels: ChannelsService = {
   list,
+  page,
+  liveRows,
   create: (input) => request("/api/channels", ChannelSchema, { method: "POST", body: input }),
   update: (id, patch) => request(path(id), ChannelSchema, { method: "PATCH", body: patch }),
   remove: (id) => request(path(id), DeletedChannelSchema, { method: "DELETE" }),

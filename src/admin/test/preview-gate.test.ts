@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { OverlayHost } from "@/components/overlays/OverlayHost";
 import { previewIndexReason, previewWorkspaceReason } from "@/lib/channel-guard";
 import { useAppStore } from "@/store/app-store";
+import { holdChannels } from "./support/channels-hold";
 import { live } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
@@ -42,7 +43,7 @@ describe("the Preview's gate and its window", () => {
   });
 
   it("draws a modal Preview window: the stage's muted video with native controls, the status line, no other control", () => {
-    state().channelsLoaded([live("a")], 1);
+    holdChannels([live("a")], 1);
     open("a");
     const html = renderLive(createElement(OverlayHost));
     assert.ok(html.includes('aria-label="Preview window"') && html.includes('aria-modal="true"'));

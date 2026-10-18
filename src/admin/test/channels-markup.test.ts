@@ -6,6 +6,7 @@ import { ChannelsIndex } from "@/components/channels/ChannelsIndex";
 import { NewChannelRows } from "@/components/channels/NewChannelRows";
 import { EMPTY_NEW_CHANNEL } from "@/lib/channel-body";
 import { useAppStore } from "@/store/app-store";
+import { holdChannels } from "./support/channels-hold";
 import { live, stream } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
@@ -80,7 +81,7 @@ describe("the channels table strip", () => {
 
   it("enables the bulk verbs once a row is ticked, with no count text and no Clear selection", () => {
     assert.ok(table().includes('title="Refresh channels"'));
-    state().channelsLoaded([live("a")], 1);
+    holdChannels([live("a")], 1);
     state().channelTick("a", true);
     const html = table();
     for (const verb of ["Enable", "Rebuild"]) assert.ok(html.includes(`${verb}</button>`), verb);
@@ -89,7 +90,7 @@ describe("the channels table strip", () => {
   });
 
   it("gates Preview on exactly one ticked row, live or stream", () => {
-    state().channelsLoaded([live("a"), stream("b")], 1);
+    holdChannels([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
     assert.ok(toolbar().includes('aria-label="Preview →. Tick only one row"'));
@@ -98,7 +99,7 @@ describe("the channels table strip", () => {
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {
-    state().channelsLoaded([stream("b")], 1);
+    holdChannels([stream("b")], 1);
     state().channelTick("b", true);
     const html = table();
     assert.ok(html.includes('aria-label="Enable. Every ticked channel is already enabled."'));
@@ -115,10 +116,10 @@ describe("the channels grid", () => {
   });
 
   it("draws the headings, the ticks, the state words, the dimmed disabled row and the synced Delete tip", () => {
-    state().channelsLoaded(
+    holdChannels(
       [
-        live("b", { enabled: false }),
         live("a", { state: "preparing" }),
+        live("b", { enabled: false }),
         stream("c", { source: "lists.example" }),
       ],
       1,
@@ -129,7 +130,7 @@ describe("the channels grid", () => {
       assert.ok(html.includes(`>${heading}</span>`), heading);
     }
     assert.ok(!html.includes(">number</span>"));
-    assert.ok(html.indexOf("Select Channel a") < html.indexOf("Select Channel b"), "by name");
+    assert.ok(html.indexOf("Select Channel a") < html.indexOf("Select Channel b"), "in the order the backend answered it");
     assert.ok(html.includes('data-st="preparing"') && html.includes('data-st="disabled"') && html.includes('data-st="synced"'));
     assert.ok(/<li data-st="disabled"[^>]*opacity-45/.test(html));
     assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));
@@ -139,7 +140,7 @@ describe("the channels grid", () => {
   });
 
   it("disables every Delete with the unreachable sentence while the backend cannot be reached", () => {
-    state().channelsLoaded([live("a")], 1);
+    holdChannels([live("a")], 1);
     state().channelsMarkUnreachable(true);
     assert.ok(renderLive(createElement(ChannelRows)).includes('title="The admin backend cannot be reached."'));
   });

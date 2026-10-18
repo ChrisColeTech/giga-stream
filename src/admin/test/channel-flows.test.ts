@@ -7,6 +7,7 @@ import { createChannelFlows } from "@/services/channel-flows";
 import type { ChannelsService } from "@/services/channels";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
+import { holdChannels } from "./support/channels-hold";
 import { live, stream } from "./support/channels-kit";
 import { resetStore, signInForTest } from "./support/store";
 
@@ -23,6 +24,8 @@ function fake(overrides: Partial<ChannelsService> = {}): { service: ChannelsServ
   };
   const service: ChannelsService = {
     list: unexpected("list"),
+    page: unexpected("page"),
+    liveRows: unexpected("liveRows"),
     create: unexpected("create"),
     update: unexpected("update"),
     remove: unexpected("remove"),
@@ -34,7 +37,8 @@ function fake(overrides: Partial<ChannelsService> = {}): { service: ChannelsServ
 }
 
 const flowsOf = (service: ChannelsService) => createChannelFlows({ service, store: () => state() });
-const hold = (...items: AdminChannel[]) => state().channelsLoaded(items, 1);
+const hold = (...items: AdminChannel[]) => holdChannels(items, 1);
+const EMPTY_PAGE = { items: [], revision: 2, total: 0, offset: 0, unreadable: 0 };
 
 beforeEach(() => {
   resetStore();
@@ -47,7 +51,7 @@ describe("the channel flows", () => {
     const flows = flowsOf(fake({ create: async () => answer }).service);
     const result = await flows.create({ ...EMPTY_NEW_CHANNEL, name: "Drive News", folder: "D:\\v" });
     assert.equal(result.ok, true);
-    assert.deepEqual(state().channels.items.map((item) => item.id), ["live-1"]);
+    assert.deepEqual([state().channels.live.map((item) => item.id), state().channels.total], [["live-1"], 1]);
     assert.equal(notice(), "Drive News is preparing.");
   });
 
@@ -95,6 +99,7 @@ describe("the channel flows", () => {
     assert.equal(notice(), "Saved New.");
     const now = state().channels.items[0];
     assert.ok(now?.kind === "live");
+    assert.equal(now.name, "New");
     await flows.save("a", { ...liveDraft(now), mode: "encode" });
     assert.equal(notice(), "New is preparing.");
     assert.deepEqual(sent, [{ name: "New" }, { mode: "encode" }]);
@@ -116,7 +121,8 @@ describe("the channel flows", () => {
     state().openWorkspace("channels", "a");
     const { service } = fake({
       remove: async (id) => (id === "a" ? { id } : Promise.reject(refuse("channel.not_found", undefined, 404))),
-      list: async () => ({ items: [], revision: 2, unreadable: 0 }),
+      page: async () => EMPTY_PAGE,
+      liveRows: async () => EMPTY_PAGE,
     });
     await flowsOf(service).remove("a");
     assert.deepEqual([state().channels.items.map((item) => item.id), state().workspaces.channels], [["b"], null]);
@@ -155,7 +161,8 @@ describe("the channel flows", () => {
     let up = false;
     const flows = flowsOf(
       fake({
-        list: async () => (up ? { items: [live("a")], revision: 3, unreadable: 1 } : Promise.reject(down)),
+        page: async () => (up ? { items: [live("a")], revision: 3, total: 2, offset: 0, unreadable: 1 } : Promise.reject(down)),
+        liveRows: async () => EMPTY_PAGE,
       }).service,
     );
     await flows.load();

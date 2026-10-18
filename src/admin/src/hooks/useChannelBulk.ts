@@ -10,7 +10,7 @@ import {
   channelBulkReason,
   planChannelBulk,
 } from "@/lib/channel-bulk";
-import { findChannel } from "@/lib/channel-list";
+import { heldTicked } from "@/lib/channel-list";
 import { isSynced } from "@/lib/channel-rows";
 import { createChannelBulkCall } from "@/services/channel-bulk";
 import { channels } from "@/services/channels";
@@ -31,15 +31,16 @@ export interface ChannelBulk {
 export function useChannelBulk(): ChannelBulk {
   const flows = useChannelFlows();
   const bulk = useBulkAction();
-  const items = useAppStore((state) => state.channels.items);
+  const held = useAppStore((state) => state.channels.held);
   const ticked = useAppStore((state) => state.channels.ticked);
   const unreachable = useAppStore((state) => state.channels.unreachable);
   const call = useMemo(() => createChannelBulkCall({ service: channels, store: () => useAppStore.getState() }), []);
+  const items = useMemo(() => heldTicked(held, ticked), [held, ticked]);
 
   const verbs = CHANNEL_BULK_VERBS.map((verb): StripVerb => {
     const plan = planChannelBulk(verb, items, ticked);
     const synced = plan.runnable.some((row) => {
-      const channel = findChannel(items, row.id);
+      const channel = held[row.id];
       return channel !== undefined && isSynced(channel);
     });
     const press = async (): Promise<void> => {

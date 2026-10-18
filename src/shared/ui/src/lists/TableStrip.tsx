@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
 import { AllCheckbox } from "../controls/AllCheckbox";
 import { ArmedButton } from "../controls/ArmedButton";
@@ -33,6 +34,9 @@ export interface TableStripProps {
   /** Verbs of the list itself that need no ticked row (the admin's `Sync now`): words right after `Refresh`, each
    *  disabled with its reason, before the hairline and the selection verbs. */
   readonly listVerbs?: readonly StripVerb[];
+  /** A long list's search, sort and filters (LoRA Studio `LibraryToolbar`): the controls that open the SAME first row,
+   *  before `Refresh`, wrapping with it when the row is narrow. Absent for a short list. */
+  readonly query?: ReactNode;
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
   /** A list whose rows are ticked: the verbs on the ticked rows, always drawn (each disabled with its reason while none
@@ -86,10 +90,11 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
  *  `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
  *  last; right, the `All` checkbox and the `‹ ›` paging of a list that pages. The page's forward verb is the page
  *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
-export function TableStrip({ label, noun, refresh, listVerbs = [], paging, selection }: TableStripProps) {
+export function TableStrip({ label, noun, refresh, query, listVerbs = [], paging, selection }: TableStripProps) {
   const verbs = selection?.verbs ?? [];
   return (
     <div role="toolbar" aria-label={label} className={STRIP}>
+      {query}
       <Button size="sm" variant="ghost" title={`${REFRESH_WORD} ${noun}`} reason={refresh.reason} onClick={refresh.onPress}>
         <RefreshCw aria-hidden />
         {REFRESH_WORD}
