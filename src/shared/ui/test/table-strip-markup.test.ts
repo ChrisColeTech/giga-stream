@@ -2,79 +2,77 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Play, Power } from 'lucide-react'
+import { Check, Play } from 'lucide-react'
 
 import { Group } from '../src/form/Group'
 import { TableStrip, type StripVerb, type TableStripProps } from '../src/lists/TableStrip'
 
 const NOTHING = (): void => undefined
 const VERBS: readonly StripVerb[] = [
-  { id: 'enable', label: 'Enable', icon: Power, onPress: NOTHING },
-  { id: 'run', label: 'Run', icon: Play, onPress: NOTHING, reason: 'Already running.' },
-  { id: 'delete', label: 'Delete', icon: Power, onPress: NOTHING, question: 'Delete 2 accounts?' },
+  { id: 'enable', label: 'Enable', icon: Check, onPress: NOTHING },
+  { id: 'rebuild', label: 'Rebuild', onPress: NOTHING },
+  { id: 'run', label: 'Run job', icon: Play, onPress: NOTHING, reason: 'Already running.' },
+  { id: 'delete', label: 'Delete', icon: Check, onPress: NOTHING, question: 'Delete 2 accounts?' },
 ]
 const BASE: TableStripProps = { label: 'Accounts table', noun: 'accounts', refresh: { onPress: NOTHING } }
+const ALL = { label: 'Select all accounts', checked: 'mixed' as const, onToggle: NOTHING }
 
 const strip = (props: Partial<TableStripProps> = {}): string =>
   renderToStaticMarkup(createElement(TableStrip, { ...BASE, ...props }))
-const withRows = (count: number) => ({ selection: { count, verbs: VERBS, onClear: NOTHING } })
+const withVerbs = (verbs: readonly StripVerb[] = VERBS) => ({ selection: { verbs, all: ALL } })
 const buttons = (html: string): string[] => html.match(/<button[^>]*>.*?<\/button>/g) ?? []
+const text = (button: string): string => button.replace(/<[^>]+>/g, '')
 
-test('forward verbs are icon buttons before Refresh, each with its tooltip and its reason', () => {
-  const forward: readonly StripVerb[] = [{ id: 'go', label: 'Go to Titles', icon: Play, onPress: NOTHING, reason: 'Tick a row first' }]
-  const html = strip({ forward })
-  assert.equal(buttons(html).length, 2)
-  assert.ok(html.includes('aria-label="Go to Titles. Tick a row first"'))
-  assert.ok(html.indexOf('Go to Titles') < html.indexOf('Refresh accounts'))
+test('Refresh is the first control: a ghost word with its icon, the tooltip naming the list', () => {
+  const [first] = buttons(strip(withVerbs()))
+  assert.ok(first?.includes('title="Refresh accounts"') && first.includes('lucide-refresh-cw'))
+  assert.equal(text(first ?? ''), 'Refresh')
 })
 
-test('with nothing ticked the strip is the Refresh icon alone, labelled and with a tooltip', () => {
-  const html = strip(withRows(0))
-  assert.ok(html.includes('role="toolbar"') && html.includes('aria-label="Accounts table"'))
-  const all = buttons(html)
-  assert.equal(all.length, 1)
-  assert.ok(all[0]?.includes('aria-label="Refresh accounts"') && all[0].includes('title="Refresh accounts"'))
-  assert.ok(!html.includes('selected'))
+test('the selection verbs are ghost words, the icon first where the family has one and none where it has not', () => {
+  const all = buttons(strip(withVerbs()))
+  const enable = all.find((button) => text(button) === 'Enable') ?? ''
+  assert.ok(enable.includes('lucide-check') && enable.includes('bg-transparent'))
+  const rebuild = all.find((button) => text(button) === 'Rebuild') ?? ''
+  assert.ok(rebuild !== '' && !rebuild.includes('<svg'))
 })
 
-test('ticked rows add the count in the strip heading style: mono 12 faint, the count dim', () => {
-  const html = strip(withRows(3))
-  assert.ok(html.includes('font-mono text-xs text-faint'))
-  assert.ok(html.includes('<span class="text-dim tabular-nums">3</span> selected'))
+test('a verb with a reason stays in place, natively disabled in the focusable tooltip', () => {
+  const html = strip(withVerbs())
+  assert.ok(html.includes('aria-label="Run job. Already running."') && !html.includes('aria-disabled'))
 })
 
-test('the bulk verbs are icon buttons with an aria-label and a tooltip, and Clear selection is an icon', () => {
-  const all = buttons(strip(withRows(2)))
-  const labelled = all.filter((button) => button.includes('size-ctl-md'))
-  for (const button of labelled) assert.ok(button.includes('aria-label="') && !/>[^<]+<\/button>/.test(button), button)
-  assert.ok(all.some((button) => button.includes('aria-label="Enable"') && button.includes('title="Enable"')))
-  assert.ok(all.some((button) => button.includes('aria-label="Clear selection"') && button.includes('title="Clear selection"')))
-})
-
-test('a verb with a reason is natively disabled in the focusable tooltip, never aria-disabled', () => {
-  const html = strip(withRows(2))
-  assert.ok(html.includes('aria-label="Run. Already running."'))
-  assert.ok(!html.includes('aria-disabled'))
-})
-
-test('Delete is the armed two-step: a ghost naming the verb at rest, the question only once armed', () => {
-  const html = strip(withRows(2))
-  assert.ok(html.includes('>Delete</button>') && !html.includes('Delete 2 accounts?'))
-  assert.ok(html.includes('bg-transparent') && !html.includes('text-st-failed'))
-  const blocked = strip({ selection: { count: 2, verbs: [{ ...VERBS[2]!, reason: 'Tick an account first' }], onClear: NOTHING } })
+test('Delete is the armed two-step: the word alone at rest, no icon, the question only once armed', () => {
+  const html = strip(withVerbs())
+  const del = buttons(html).find((button) => text(button) === 'Delete') ?? ''
+  assert.ok(del !== '' && !del.includes('<svg') && !html.includes('Delete 2 accounts?') && !del.includes('text-st-failed'))
+  const blocked = strip(withVerbs([{ ...VERBS[3]!, reason: 'Tick an account first' }]))
   assert.ok(blocked.includes('aria-label="Delete. Tick an account first"') && blocked.includes('disabled=""'))
 })
 
-test('a list that pages draws the Newer and Older icon pair, each disabled with its reason at the end', () => {
-  const html = strip({ paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } } })
-  assert.ok(html.includes('aria-label="Newer. This is the first page."'))
-  assert.ok(html.includes('aria-label="Older"') && html.includes('title="Older"'))
-  assert.ok(html.indexOf('Newer') < html.indexOf('Older') && html.indexOf('Older') < html.indexOf('Refresh accounts'))
+test('the three-state All sits right of the verbs, with no Clear selection and no count text', () => {
+  const html = strip(withVerbs())
+  assert.ok(html.includes('aria-label="Select all accounts"') && html.includes('aria-checked="mixed"'))
+  assert.ok(html.indexOf('Select all accounts') > html.indexOf('>Delete<'))
+  assert.ok(!html.includes('Clear selection') && !html.includes('selected'))
 })
 
-test('the strip carries no paragraph and no filled or edged button', () => {
-  const html = strip({ ...withRows(2), paging: { newer: { onPress: NOTHING }, older: { onPress: NOTHING } } })
-  assert.ok(!html.includes('<p>') && !html.includes('<p ') && !html.includes('text-accent-ink') && !html.includes('border-ctl-edge'))
+test('paging is the icon pair right of All, and the forward verb is the word and arrow, rightmost', () => {
+  const forward = { word: 'Titles', tip: 'Go to Titles', onPress: NOTHING }
+  const html = strip({ ...withVerbs(), paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } }, forward })
+  assert.ok(html.includes('aria-label="Newer. This is the first page."') && html.includes('aria-label="Older"'))
+  assert.ok(html.indexOf('Select all accounts') < html.indexOf('Newer') && html.indexOf('Older') < html.indexOf('Titles'))
+  const last = buttons(html).at(-1) ?? ''
+  assert.equal(text(last), 'Titles →')
+  assert.ok(last.includes('title="Go to Titles"') && last.includes('aria-label="Go to Titles"') && !last.includes('<svg'))
+  const blocked = strip({ forward: { ...forward, reason: 'Tick a row first' } })
+  assert.ok(blocked.includes('aria-label="Go to Titles. Tick a row first"'))
+})
+
+test('the strip is one row: no paragraph, no filled or edged button', () => {
+  const html = strip({ ...withVerbs(), forward: { word: 'Jobs', tip: 'Go to Jobs', onPress: NOTHING } })
+  assert.ok(!/<p[\s>]/.test(html) && !html.includes('hover:border-accent-strong') && !html.includes('--color-ctl-hi'))
+  assert.ok(html.includes('role="toolbar"') && html.includes('aria-label="Accounts table"'))
 })
 
 test('a group heading carries the tile, the title and the fold, and no verb', () => {
