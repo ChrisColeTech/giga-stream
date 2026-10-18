@@ -23,9 +23,14 @@ export const PAGER_LOOK_AHEAD = 240;
 /** Cards whose top edges differ by less than this share one row. */
 export const ROW_EPSILON = 2;
 
-/** The Rows view groups the first this many items of the query (`docs/33` section 3.1): three All pages (40 each) or
- *  six single-kind pages (20 each), far over what six genre shelves of three titles need. */
-export const ROWS_READ_ITEMS = 120;
+/** A Rows shelf asks for its next page when its end is this many pixels beyond the row's right edge (`docs/33` 2.4). */
+export const ROWS_LOOK_AHEAD = 480;
 
-/** A shelf in the Rows view mounts at most this many cards; See all opens the grid for the rest. */
-export const ROWS_SHELF_CARDS = 10;
+/** A Rows shelf mounts the cards its viewport touches plus this many each side (`docs/33` section 2.5). */
+export const ROWS_WINDOW_BUFFER = 3;
+
+/** A Rows shelf mounts its first this many cards before its row has been measured. */
+export const ROWS_FIRST_WINDOW = 9;
+
+/** A Rows shelf draws this many card skeletons at its tail while its next page loads. */
+export const ROWS_TAIL_SKELETONS = 4;

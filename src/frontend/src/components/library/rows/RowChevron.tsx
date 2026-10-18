@@ -1,11 +1,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@giga/ui/lib/cn";
 import { ROWS_COPY } from "./rows-constants";
+import type { ChevronState } from "./rows-navigation";
 
 export interface RowChevronProps {
   readonly direction: "back" | "forward";
-  /** At the row's end in this direction: the press does nothing, and the reason is the tooltip. */
-  readonly disabled: boolean;
+  /** Disabled only at the row's true end in this direction (`rows-navigation`); the tooltip is then the reason. */
+  readonly state: ChevronState;
   readonly onClick: () => void;
 }
 
@@ -19,7 +20,7 @@ const CHEVRON =
   "hover:border-dim hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none";
 
 /** One of a shelf row's two edge chevrons. It is a real button with an accessible name. */
-export function RowChevron({ direction, disabled, onClick }: RowChevronProps) {
+export function RowChevron({ direction, state, onClick }: RowChevronProps) {
   const isBack = direction === "back";
   const label = isBack ? ROWS_COPY.scrollBack : ROWS_COPY.scrollForward;
   const Icon = isBack ? ChevronLeft : ChevronRight;
@@ -35,8 +36,8 @@ export function RowChevron({ direction, disabled, onClick }: RowChevronProps) {
       <button
         type="button"
         aria-label={label}
-        title={disabled ? (isBack ? ROWS_COPY.atStart : ROWS_COPY.atEnd) : label}
-        disabled={disabled}
+        title={state.title}
+        disabled={state.disabled}
         onClick={onClick}
         className={CHEVRON}
       >
