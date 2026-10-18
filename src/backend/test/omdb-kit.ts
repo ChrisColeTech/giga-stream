@@ -20,7 +20,9 @@ after(async () => {
 
 export async function fakeOmdb() {
   const calls: string[] = [];
-  const state = { miss: new Set<string>(), limitAfter: undefined as number | undefined };
+  const state = { miss: new Set<string>(), limitAfter: undefined as number | undefined,
+    /** Fields of the answer replaced (`{ imdbRating: "N/A" }`). */
+    answer: {} as Record<string, unknown> };
   const gates = new Map<string, { wait: Promise<void>; started: () => void }>();
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -39,6 +41,7 @@ export async function fakeOmdb() {
         Ratings: [{ Source: "Internet Movie Database", Value: "8.7/10" }, { Source: "Rotten Tomatoes", Value: "83%" }],
         Awards: "Won 4 Oscars.", BoxOffice: "$177,559,005", Director: "A Director", Writer: "A Writer",
         Language: "English", Country: "United States", Plot: `A full OMDb plot for ${id}.`,
+        Runtime: "120 min", Genre: "Drama, Mystery", ...state.answer,
       });
     };
     const gate = gates.get(id);

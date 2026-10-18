@@ -28,6 +28,10 @@ export async function walkTmdb(totals: Record<Kind, number>) {
     totals, rating: 7, poster: "/p.jpg", fail: new Map<string, number>(), seasonCount: 2, noSeasonKey: new Set<string>(),
     /** Every detail carries the IMDb id `tt<id>` (the OMDb step asks by it). */
     imdb: false,
+    /** A movie's runtime in minutes (TMDB answers none by default). */
+    runtime: undefined as number | undefined,
+    /** Per detail id, the TMDB fields left out of the answer: `overview`, `genres`, `vote_average`, `runtime`. */
+    bare: new Map<number, string[]>(),
   };
   const asked: string[] = [];
   const gates = new Map<string, { wait: Promise<void>; started: () => void }>();
@@ -60,9 +64,12 @@ export async function walkTmdb(totals: Record<Kind, number>) {
       const seasonKeys = Object.fromEntries(requested.filter((n) => n >= 0 && n <= state.seasonCount && !state.noSeasonKey.has(`${id}:${n}`))
         .map((n) => [`season/${n}`, { episodes: [{ episode_number: 1, name: `Episode ${id}/${n}`, air_date: "2001-01-01", runtime: 40 }] }]));
       const withCredits = append.includes("credits");
+      const without = (full: Record<string, unknown>): Record<string, unknown> =>
+        Object.fromEntries(Object.entries(full).filter(([name]) => !(state.bare.get(id) ?? []).includes(name)));
       answer = () => ({
-        ...(withCredits ? { ...rowOf(kind, id), overview: `Plot ${id}`, genres: [{ id: 18, name: "Drama" }], credits: { cast: [] },
-          external_ids: state.imdb ? { imdb_id: `tt${id}` } : {}, ...(kind === "tv" && { seasons: seasonsOf() }) } : { id }),
+        ...(withCredits ? without({ ...rowOf(kind, id), overview: `Plot ${id}`, genres: [{ id: 18, name: "Drama" }], credits: { cast: [] },
+          external_ids: state.imdb ? { imdb_id: `tt${id}` } : {}, ...(kind === "tv" && { seasons: seasonsOf() }),
+          ...(kind === "movie" && state.runtime !== undefined && { runtime: state.runtime }) }) : { id }),
         ...seasonKeys,
       });
     } else if (walk?.[1] !== undefined) {

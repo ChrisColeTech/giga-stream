@@ -17,22 +17,25 @@ const run = async (f: FillApp): Promise<Record<string, unknown>> => {
   await f.finished();
   return f.job();
 };
-const withImdb = async () => {
+/** Every title has an IMDb id and a movie's runtime; TMDB leaves out the overview of the ids in `gapped` (all four by default). */
+const withImdb = async (gapped: number[] = [1010, 1011, 2010, 2011]) => {
   const tmdb = await walkTmdb({ movie: 1, tv: 1 });
   tmdb.state.imdb = true;
+  tmdb.state.runtime = 100;
+  for (const id of gapped) tmdb.state.bare.set(id, ["overview"]);
   return tmdb;
 };
 const read = async (f: FillApp, id: string, field: string): Promise<unknown> => pick((await f.api("GET", `/api/titles/${id}`)).body, `data.${field}`);
 
-test("the details phase gives each title its OMDb block once; the next run asks nobody, and public reads call neither service", async () => {
+test("the details phase asks OMDb for a gapped title once and fills the gap; the next run asks nobody, and public reads call neither service", async () => {
   const [tmdb, omdb] = [await withImdb(), await fakeOmdb()];
   const f = await fillApp(tmdb, 1, omdbConfig(omdb));
   const job = await run(f);
   assert.deepEqual(job.lastCounts, { titles: 4, detailed: 4, seasons: 4, enriched: 4, stale: 0 });
   assert.deepEqual([...omdb.calls].sort(), ALL, "one call per title, by its IMDb id");
   assert.deepEqual(await Promise.all(["omdb.rated", "omdb.imdbRating", "omdb.ratings.1.source", "omdb.boxOffice", "omdb.director", "imdbId", "plot"]
-    .map((k) => read(f, "movie-1010", k))), ["PG-13", "8.7", "Rotten Tomatoes", "$177,559,005", "A Director", "tt1010", "Plot 1010"],
-  "TMDB's plot is never replaced");
+    .map((k) => read(f, "movie-1010", k))), ["PG-13", "8.7", "Rotten Tomatoes", "$177,559,005", "A Director", "tt1010",
+    "A full OMDb plot for tt1010."], "the empty plot is filled from OMDb");
   assert.equal(await read(f, "tv-2010", "omdb.plot"), "A full OMDb plot for tt2010.");
 
   const [tmdbSeen, omdbSeen] = [tmdb.asked.length, omdb.calls.length];
