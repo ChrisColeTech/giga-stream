@@ -113,6 +113,19 @@ test("a live number is text on the wire: digits or an integer are accepted and k
   assert.deepEqual([answer.status, pick(answer.body, "data.number")], [201, "12"]);
 });
 
+test("a live number is optional: none sent is none stored, any number of such rows coexist, a patch keeps what is there", async () => {
+  const { t, token } = await signedInApp();
+  const first = await send(t.app, "POST", "/api/channels", liveBody({ id: "one", number: undefined }), token);
+  const second = await send(t.app, "POST", "/api/channels", liveBody({ id: "two", number: undefined }), token);
+  assert.deepEqual([first.status, second.status], [201, 201]);
+  assert.equal("number" in (first.body as { data: object }).data, false);
+  const named = await send(t.app, "PATCH", "/api/channels/one", { name: "Renamed" }, token);
+  assert.deepEqual([named.status, "number" in (named.body as { data: object }).data], [200, false]);
+  const numbered = await send(t.app, "POST", "/api/channels", liveBody({ id: "three", number: 5 }), token);
+  const kept = await send(t.app, "PATCH", "/api/channels/three", { name: "Three" }, token);
+  assert.deepEqual([numbered.status, pick(kept.body, "data.number")], [201, "5"]);
+});
+
 test("a taken id or live number is channel.taken; stream rows share numbers freely", async () => {
   const { t, token } = await signedInApp();
   assert.equal((await send(t.app, "POST", "/api/channels", liveBody(), token)).status, 201);
