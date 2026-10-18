@@ -55,7 +55,8 @@ export function createTitleSync(deps: {
   now: () => number;
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
-  const walk = createTitleWalk({ store, tmdb, storeRow: createStoreRow({ store, deleted: deps.deleted, now }) });
+  const storeRow = createStoreRow({ store, deleted: deps.deleted, now });
+  const walk = createTitleWalk({ store, tmdb, storeRow, now });
   const details = createDetailsPhase({
     store, fetchDetail: createDetailFetch({ store, tmdb, now }), omdb, enrichOmdb: createOmdbStep({ store, omdb, now }), now,
   });
@@ -81,9 +82,10 @@ export function createTitleSync(deps: {
     const signal = options.signal ?? new AbortController().signal;
     recordSyncAudit("sync.started", actor, detail);
     const seen: Seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0 };
+    const notes: string[] = [];
     let result: SyncResult;
     try {
-      const run: PhaseRun = { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped };
+      const run: PhaseRun = { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped, notes };
       // The Library fill (scope `discover`) is the whole sync: genres, the walk, then details (docs/47 3.1).
       tmdb.resetPace();
       if (request.scope === "discover") await syncGenres(signal);
@@ -100,7 +102,7 @@ export function createTitleSync(deps: {
       running = null;
     }
     const { detailed, seasons, enriched } = result;
-    const audited = { ...detail, titles: result.titles, detailed, seasons, enriched };
+    const audited = { ...detail, titles: result.titles, detailed, seasons, enriched, ...(notes.length > 0 && { notes }) };
     if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
     else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);
     else recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });

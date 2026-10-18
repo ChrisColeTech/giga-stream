@@ -1,6 +1,7 @@
 import type { SyncRequest } from "./title-shapes.js";
 
-/** What the audit trail records of a sync request: its scope and size. */
+/** What the audit trail records of a sync request: its scope and size; the Library fill is the sliced walk (docs/48). */
 export function describeRequest(request: SyncRequest): Record<string, unknown> {
+  if (request.scope === "discover") return { scope: "discover", walk: "by year, both kinds, to the last page" };
   return { scope: request.scope, kind: request.kind, pages: request.pages };
 }

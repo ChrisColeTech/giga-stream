@@ -6,6 +6,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { after } from "node:test";
 
+import { datedIn } from "./discover-dates.js";
 import { until } from "./playlist-kit.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 
@@ -67,6 +68,9 @@ export async function walkTmdb(totals: Record<Kind, number>) {
       });
     } else if (walk?.[1] !== undefined) {
       const kind = walk[1] as Kind;
+      // The sliced walk (docs/48) asks every year; every row here is dated 2001-01-01, so the other slices are empty
+      // and, being only the walk's way of looking, are not recorded.
+      if (!datedIn(url, kind, "2001-01-01")) return json({ page: 1, results: [], total_pages: 0, total_results: 0 });
       const page = Number(url.searchParams.get("page"));
       key = `${kind}:${page}`;
       answer = () => ({ page, results: idsOf(kind, page).map((id) => rowOf(kind, id)), total_pages: state.totals[kind], total_results: 99 });

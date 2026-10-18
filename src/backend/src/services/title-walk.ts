@@ -2,10 +2,12 @@ import type { Store } from "../store/store.js";
 import type { TmdbClient } from "./tmdb-client.js";
 import type { PhaseRun } from "./title-run.js";
 import type { StoreRow } from "./title-store-row.js";
+import { DISCOVER_PAGE_SIZE } from "../constants/limits.js";
+import { type Slice, labelOf, sliceList, sliceParams, splitSlice } from "./title-slices.js";
+import { isStopping } from "./title-run.js";
 import {
   type Kind,
   type SyncRequest,
-  DEFAULT_DISCOVER_PAGES,
   DEFAULT_SYNC_PAGES,
   KINDS,
   MAX_DISCOVER_PAGES,
@@ -21,12 +23,17 @@ export type WalkRun = PhaseRun;
 export const firstPhase = (request: SyncRequest): string => (request.scope === "discover" ? "movies" : "list");
 
 /**
- * The catalog walk (docs/03 section 7.6b): the Library fill pages through TMDB's discover list by popularity, both
- * kinds, each capped at `pages` and ended early by TMDB's own `total_pages`; trending and popular page one list. Each page
- * is written in one transaction, the signal is checked between pages, and progress counts pages of the kind in hand.
+ * The catalog walk (docs/03 section 7.6b, docs/48): the Library fill walks TMDB's discover list by popularity, both
+ * kinds, one slice (a year) at a time, so no query meets TMDB's 500-page limit; `pages` does not apply to it. Trending and
+ * popular page one list, capped at `pages`. Each page is written in one transaction, the signal is checked between pages.
  */
-export function createTitleWalk(deps: { store: Store; tmdb: TmdbClient; storeRow: StoreRow }) {
-  const { store, tmdb, storeRow } = deps;
+export function createTitleWalk(deps: {
+  store: Pick<Store, "transaction">;
+  tmdb: Pick<TmdbClient, "get">;
+  storeRow: StoreRow;
+  now: () => number;
+}) {
+  const { store, tmdb, storeRow, now } = deps;
 
   /** One page of `kind` into the store, in one transaction. */
   function writePage(kind: Kind, answer: Record<string, unknown>, run: WalkRun): void {
@@ -54,15 +61,49 @@ export function createTitleWalk(deps: { store: Store; tmdb: TmdbClient; storeRow
     }
   }
 
+  /**
+   * Walks one kind slice by slice (docs/48): page 1 of a slice says its `total_pages`; above TMDB's 500 the slice is split
+   * and its halves are walked in its place, otherwise its pages are written to the last one. Progress counts slices,
+   * known before any call; a split adds one. A single day above the limit is walked to page 500 and noted.
+   */
+  async function walkSlices(kind: Kind, phase: string, run: WalkRun): Promise<void> {
+    const queue = sliceList(now);
+    let total = queue.length;
+    let done = 0;
+    run.report({ phase, done, total });
+    const fetchPage = (slice: Slice, page: number) =>
+      tmdb.get(`/discover/${kind}`, sliceParams(kind, slice, page), { signal: run.signal });
+    for (let slice = queue.shift(); slice !== undefined; slice = queue.shift()) {
+      if (isStopping(run)) return;
+      let answer = asRecord(await fetchPage(slice, 1));
+      if (isStopping(run)) return;
+      const pages = num(answer.total_pages) ?? 1;
+      const halves = pages > MAX_DISCOVER_PAGES ? splitSlice(slice) : undefined;
+      if (halves !== undefined) {
+        queue.unshift(...halves);
+        run.report({ phase, done, total: ++total });
+        continue;
+      }
+      if (pages > MAX_DISCOVER_PAGES) {
+        run.notes?.push(`${kind} ${labelOf(slice)}: over ${MAX_DISCOVER_PAGES * DISCOVER_PAGE_SIZE} titles in one day`);
+      }
+      const last = Math.min(pages, MAX_DISCOVER_PAGES);
+      for (let page = 1; page <= last; page++) {
+        if (page > 1) {
+          answer = asRecord(await fetchPage(slice, page));
+          if (isStopping(run)) return;
+        }
+        writePage(kind, answer, run);
+        if (listOf(answer.results).length === 0) break;
+      }
+      run.report({ phase, done: ++done, total });
+    }
+  }
+
   return async function walk(request: SyncRequest, run: WalkRun): Promise<void> {
     const { signal } = run;
     if (request.scope === "discover") {
-      const pages = Math.min(request.pages ?? DEFAULT_DISCOVER_PAGES, MAX_DISCOVER_PAGES);
-      for (const kind of KINDS) {
-        const fetchPage = (page: number) =>
-          tmdb.get(`/discover/${kind}`, { sort_by: "popularity.desc", page }, { signal });
-        await walkKind(kind, kind === "movie" ? "movies" : "tv", pages, fetchPage, run);
-      }
+      for (const kind of KINDS) await walkSlices(kind, kind === "movie" ? "movies" : "tv", run);
       return;
     }
     const kind = request.kind ?? "movie";

@@ -3,6 +3,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { after } from "node:test";
 
+import { datedIn } from "./discover-dates.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { settled } from "./title-stubs.js";
 
@@ -49,6 +50,9 @@ export async function mutableTmdb() {
     if (p === "/tv/1399") {
       return json({ ...tvRow, genres: [{ id: 18, name: "Drama" }], credits: { cast: [] }, external_ids: {} });
     }
+    // The Library fill walks every year (docs/48): only 1999 (movies) and 2011 (series) hold the stub's row.
+    if (p === "/discover/movie" && !datedIn(url, "movie", "1999-03-31")) return json(page([]));
+    if (p === "/discover/tv" && !datedIn(url, "tv", "2011-04-17")) return json(page([]));
     if (["/discover/movie", "/search/movie", "/trending/movie/week", "/movie/popular"].includes(p)) return json(page([listRow()]));
     if (["/discover/tv", "/search/tv", "/trending/tv/week", "/tv/popular"].includes(p)) return json(page([tvRow]));
     if (p === "/movie/603/recommendations" || p === "/tv/1399/recommendations") return json(page([]));

@@ -2,6 +2,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { after } from "node:test";
 
+import { datedIn } from "./discover-dates.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 
 /** Hand-written TMDB- and OMDb-shaped answers (docs/11 section 6), served by local stubs. */
@@ -128,8 +129,9 @@ export async function stubTmdb(options: TmdbStubOptions = {}) {
       const appended = (url.searchParams.get("append_to_response") ?? "").split(",");
       return json({ ...GOT_DETAIL, ...(appended.includes("season/1") && { "season/1": SEASON }) });
     }
-    if (p === "/discover/movie") return json({ ...page(url, movieRows), page: 1 });
-    if (p === "/discover/tv") return json({ ...page(url, tvRows), page: 1 });
+    // The Library fill walks every year (docs/48): only the years of the stub's rows (1999, 2011) hold anything.
+    if (p === "/discover/movie") return json({ ...page(url, datedIn(url, "movie", "1999-03-31") ? movieRows : []), page: 1 });
+    if (p === "/discover/tv") return json({ ...page(url, datedIn(url, "tv", "2011-04-17") ? tvRows : []), page: 1 });
     if (p === "/search/movie") return json(page(url, movieRows));
     if (p === "/search/tv") return json(page(url, tvRows));
     if (p === "/trending/movie/week" || p === "/movie/popular") return json(page(url, movieRows));

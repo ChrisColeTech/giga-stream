@@ -120,6 +120,10 @@ export const PLAYLIST_LOGOS_SHARE = 0.2;
 // The Library fill's phases (docs/47 section 3.1): fixed shares of one bar - the walk 0-10% (movies, then series, a half
 // each), `details` 10-100% (a series' seasons ride its detail calls).
 export const LIBRARY_WALK_SHARE = 0.1;
+// The sliced discover walk (docs/48): the vote floor, the first year slice and TMDB's page size.
+export const DISCOVER_MIN_VOTES = 50;
+export const DISCOVER_FIRST_YEAR = 1900;
+export const DISCOVER_PAGE_SIZE = 20;
 /** A title (or season) whose fetch failed this many runs in a row is skipped until its payload changes. */
 export const TITLE_DETAIL_MAX_FAILURES = 3;
 /** The recommendations a title answers with (docs/47 section 3.2). */

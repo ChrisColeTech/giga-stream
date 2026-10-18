@@ -38,7 +38,8 @@ export const PLAYLIST_TIP = "The playlist this job syncs. The job goes with the 
 export const SCOPE_TIP = "Which TMDB list to walk: what is trending now, what is popular overall, or the whole library.";
 export const KIND_TIP = "Whether the job syncs movies or series. A discover walk covers both.";
 export const ENABLED_TIP = "A disabled job is not run by the timer. A playlist job still runs by hand while its playlist is enabled.";
-export const PAGES_TIP = "How many pages of the list to walk, 1 to 500.";
+export const PAGES_TIP =
+  "How many pages of a trending or popular list to walk, 1 to 500. The Library fill walks every year to the end.";
 export const INTERVAL_TIP = "How often the job runs by itself. Off stops it; a job also needs Enabled to run.";
 export const CUSTOM_TIP = "A number and s, m or h, like 90m or 3h.";
 export const STATUS_TIP = "Scheduled runs by itself; Not scheduled has the interval off; Disabled never runs.";
