@@ -58,8 +58,8 @@ describe("fractionOf", () => {
 describe("the words", () => {
   it("names the phase and counts", () => {
     assert.equal(progressWords(at("checking", 1204, 2598)), "Checking streams 1,204 of 2,598");
-    assert.equal(progressWords(at("movies", 12, 100)), "Walking movies 12 of 100 pages");
-    assert.equal(progressWords(at("tv", 3, 100)), "Walking series 3 of 100 pages");
+    assert.equal(progressWords(at("movies", 12, 130)), "Walking movies, year 12 of 130");
+    assert.equal(progressWords(at("tv", 3, 131)), "Walking series, year 3 of 131");
     assert.equal(progressWords(at("details", 1204, 10923)), "Fetching details 1,204 of 10,923");
     assert.equal(progressWords(at("details", 0, 0)), "Fetching details");
     assert.equal(progressWords(at("logos", 40, 312)), "Caching logos 40 of 312");

@@ -23,7 +23,7 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   await f.finished();
   await stream.waitFor((frames) => frames.some((x) => x.event === "finished"), "the finished event");
 
-  assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2", "movie:3", "tv:1", "tv:2"], "5 pages of the 10 the cap allowed");
+  assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2", "movie:3", "tv:1", "tv:2"], "every page TMDB has, whatever the job's pages");
   const job = await f.job();
   assert.deepEqual([job.lastResult, job.running, job.progress], ["ok", false, undefined]);
   assert.deepEqual(job.lastCounts, { titles: 10, detailed: 10, seasons: 8, enriched: 0, stale: 0 }, "a series' seasons ride its detail call; season 0 is not asked for");
@@ -36,8 +36,8 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   const fractions = progress.map(fractionOf);
   assert.deepEqual(fractions, [...fractions].sort((a, b) => a - b), "the bar never goes backwards");
   assert.equal(fractions.at(-1), 1);
-  assert.deepEqual(progress.filter((p) => p.phase === "movies").map((p) => p.total), [0, 5, 3, 3],
-    "the total starts at the cap and is lowered to TMDB's 3 pages once the first page answers");
+  assert.deepEqual([...new Set(progress.filter((p) => p.phase === "movies").map((p) => p.total))], [0, 130],
+    "the total is the slice count (before 1900, 1900 to 2027, after), known before any call");
   assert.deepEqual(progress.at(-1), { jobId: 1, phase: "details", done: 10, total: 10 });
   assert.deepEqual([...new Set(progress.map((p) => p.phase))], ["movies", "tv", "details"]);
   assert.deepEqual(frames.at(-1)?.data, { jobId: 1, lastResult: "ok", lastRunAt: job.lastRunAt });
@@ -51,12 +51,13 @@ test("a running job carries its progress on GET /api/jobs and GET /api/jobs/:id,
   await f.api("POST", "/api/titles/sync");
   await gate.started;
   const running = await f.job();
-  assert.deepEqual([running.running, running.progress], [true, { jobId: 1, phase: "movies", done: 1, total: 3 }]);
+  const where = { jobId: 1, phase: "movies", done: 102, total: 130 }; // 102 slices done: before 1900 and 1900 to 2000
+  assert.deepEqual([running.running, running.progress], [true, where]);
   const list = pick((await f.api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
-  assert.deepEqual(list.find((j) => j.id === 1)?.progress, { jobId: 1, phase: "movies", done: 1, total: 3 });
+  assert.deepEqual(list.find((j) => j.id === 1)?.progress, where);
   const late = await openEvents(f.base, f.token());
   await late.waitFor((frames) => frames.length > 0, "the snapshot");
-  assert.deepEqual(late.frames()[0]?.data, { running: [{ jobId: 1, phase: "movies", done: 1, total: 3 }] });
+  assert.deepEqual(late.frames()[0]?.data, { running: [where] });
   gate.release();
   await f.finished();
   await late.waitFor((frames) => frames.some((x) => x.event === "finished"), "the finished event");

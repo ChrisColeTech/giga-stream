@@ -19,6 +19,8 @@ export interface PhaseRun {
   seen: Seen;
   /** Set by shutdown: a phase ends between its calls. */
   shuttingDown: () => boolean;
+  /** Things worth knowing about the run (a day too big to walk whole), kept in the audit detail. */
+  notes?: string[];
 }
 
 /** A phase checks this between its calls: the admin's `Stop` or a shutdown ends the run where it stands. */

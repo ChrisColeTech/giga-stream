@@ -11,7 +11,9 @@ const PHASE_WORDS: Readonly<Record<string, string>> = {
   tv: "Walking series",
   details: "Fetching details",
 };
-const PAGE_PHASES: ReadonlySet<string> = new Set(["movies", "tv", "list"]);
+const PAGE_PHASES: ReadonlySet<string> = new Set(["list"]);
+/** The Library fill's walk counts slices (a year each, `48`), not pages. */
+const SLICE_PHASES: ReadonlySet<string> = new Set(["movies", "tv"]);
 const FALLBACK_WORD = "Walking titles";
 
 const whole = (value: number): string => value.toLocaleString("en-US");
@@ -19,5 +21,6 @@ const whole = (value: number): string => value.toLocaleString("en-US");
 export function progressWords({ phase, done, total }: Pick<JobProgress, "phase" | "done" | "total">): string {
   const word = PHASE_WORDS[phase] ?? FALLBACK_WORD;
   if (total <= 0 || phase === "reading") return word;
+  if (SLICE_PHASES.has(phase)) return `${word}, year ${whole(done)} of ${whole(total)}`;
   return `${word} ${whole(done)} of ${whole(total)}${PAGE_PHASES.has(phase) || !(phase in PHASE_WORDS) ? " pages" : ""}`;
 }

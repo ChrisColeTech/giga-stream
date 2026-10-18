@@ -12,7 +12,7 @@ const REFRESHED = ["rating", "posterUrl", "backdropUrl"] as const;
  * not cost a TMDB and an OMDb call again). Anything else becomes the thin row. The popularity is always read.
  * Answers whether the row was stored.
  */
-export function createStoreRow(deps: { store: Store; deleted: TitleDeleted; now: () => number }) {
+export function createStoreRow(deps: { store: Store; deleted: Pick<TitleDeleted, "isDeleted">; now: () => number }) {
   const { store, deleted, now } = deps;
 
   return function storeRow(kind: Kind, record: Record<string, unknown>): boolean {
