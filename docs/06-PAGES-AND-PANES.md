@@ -183,31 +183,29 @@ theme. A custom control bar is a later phase. It is always on the stage.
 | Control | Behaviour |
 |---|---|
 | `Channels` and the total | readout, in mono: LoRA Studio's queue head |
-| **Refresh** icon (`Refresh channels`) | calls `POST /api/channels/refresh`; the whole list and every stream's status update from the answer; the notice line says `Channels refreshed.` or why not (phase 1: the `refreshChannels` stub) |
+| **Refresh** icon (`Refresh channels`) | calls `POST /api/channels/refresh`: the fileserver forces a sync of its channel cache from the admin backend now and the list re-reads; the notice line says `Channels refreshed.` or why not |
 
-**When the status moves.** A stream's status (its strip and word) is a fact of the last read. It refreshes when
-the list is read — when Live opens, when **Refresh channels** is pressed, or when another action
-re-reads the list — and does not change on its own in between (`03` section 5.1). A channel that
-goes offline mid-session keeps its `Live` status until the next read.
+**There is no status.** Nothing on the desktop checks a stream (`46`): the admin curated the list, so a row carries no status strip,
+word or dot (owner, 2026-10-18). The list is the fileserver's cached copy, refreshed at launch and on a read when it is over 6 hours
+old (`03` section 5); **Refresh channels** forces it. The player's own failure note with `Retry` is the only truth about a channel
+that will not play.
 
 **Search and category** — both at the rail control height (24px), the same as the playback pane's selects.
 
 | Control | Behaviour |
 |---|---|
-| Search field | always present; carries `data-search` for `Ctrl+F`; asks `GET /api/channels?q=` after a 250 ms pause; a newer keystroke abandons the older request; a clear control appears when it has text (phase 1 filters the fixture) |
+| Search field | always present; carries `data-search` for `Ctrl+F`; asks `GET /api/channels?q=` after a 200 ms pause (the one-shot search debounce, `41`); a newer keystroke abandons the older request; a clear control appears when it has text |
 | Category select | the published categories with their counts (`All · 16`), All first; a category chosen and since unpublished stays listed |
 
 **Channel row**
 
 | Element | Behaviour |
 |---|---|
-| Status strip | LoRA's queue-row accent bar on the left edge: live (the done colour), offline (the failed colour), not checked (the inactive grey) |
 | Logo | a 56px 4:3 box: the logo, a shimmer while it loads, a glyph if it cannot be shown |
 | Number and name | one mono line, ellipsised |
 | Category | the second line, left, faint |
-| Status word | the second line, right: `Live`, `Offline` or `Not checked`, so the strip's colour is never the only signal |
-| Playing | on the channel the player has loaded, the status word is replaced by `Playing` in the accent (not `live`, which read as the status word) |
-| Selected | the control fill alone. The left edge already carries the status strip, and a second strip there read as one muddled mark |
+| Playing | on the channel the player has loaded, the second line's right end reads `Playing` in the accent; no other word is ever there |
+| Selected | the control fill alone |
 | Activation | a click or `Enter` plays the channel and remembers it (phase 1: marks it playing and calls the `rememberLastChannel` stub, whose refusal is said once) |
 
 - Up, Down, Home and End move the selection and focus (one tab stop on the list); they never start a
