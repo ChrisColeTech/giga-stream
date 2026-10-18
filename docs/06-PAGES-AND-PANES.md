@@ -444,14 +444,17 @@ With no collection yet, the submenu's one row says so, disabled with its reason,
 
 ### 4.6 Search titles (the spotlight popup; owner, 2026-10-18)
 
-Opened by the type strip's **Search titles** button. It is a Spotlight bar (owner, 2026-10-18: "it looks like a search
-modal" was the rejection), not a titled dialog: no title bar, no header text, no close button. One floating card, centred
-horizontally about 14% from the top of the window, 640px wide (at most 90vw), `rounded-xl`, a soft large shadow and the
-family's hairline border, over a light dim scrim (the app stays visible behind it; pressing the scrim closes it). Its
-first row is the search field itself (a borderless 48px input, 16px text, a leading search glyph, no field box, no
-visible label), and a hairline under it separates the results. The card and its scrim sit one layer under the work
-windows' scrim, so Title information can stand over it; while that window is open the card dims slightly and its
-dismissal pauses. It searches the catalog's **titles, movies and series**, by
+Opened by the type strip's **Search titles** button. **It is NOT a modal** (owner, 2026-10-18, twice: "it looks like a search
+modal", then "the spotlight search still opens a modal"): no scrim over the app, no centred card, no `role="dialog"`, no
+focus trap, no title bar, no close button. It is a **non-modal search flyout anchored to the button**: a floating panel
+directly below the type strip, its right edge aligned to the Search button, 560px wide (at most the window width minus the
+gutters), `rounded-xl`, the family's hairline border and a soft shadow, with `role="combobox"` on its field and
+`role="listbox"` on its rows. The Library underneath stays fully interactive and visible (nothing dims, no scrim, scrolling
+and clicking the grid work); it closes on `Escape`, on a press outside it, or on focus leaving it. Its first row is the
+search field itself (a borderless 40px input, 14px text, a leading search glyph, no field box, no visible label), and a
+hairline under it separates the results. A work window (Title information) opens over it as any window does without
+closing it; while that window is open the flyout ignores outside presses and Escape and returns focus to the row's Info
+when the window closes. It searches the catalog's **titles, movies and series**, by
 title, through the Library's own read (`GET /api/library?view=all&type=all&q=`, the backend's title search); local
 files are not results.
 
@@ -461,8 +464,8 @@ files are not results.
 | Rows | a compact flat list, rows about 44px, at most about eight visible and then the list scrolls inside the card: a 28x42 poster thumbnail (or the title's colour), the title in the primary text, and `year · Movie` or `year · Series` in dim mono on the same line; at the right end two small ghost icon buttons, **Play** (named and tooltipped `Play <title>`) and **Info** (`Info <title>`), shown on the selected or hovered row and always focusable. The selected row wears the accent tint, like a menu row |
 | Searching | compact skeleton rows in the row's shape; with no query or no result the list is the same skeleton rows (no sentence, no hint footer) |
 | Keys | Up and Down move the focused row (Home and End to the ends); `Enter` plays the focused row; `Escape` closes |
-| Dismissal | `Escape`, a press outside the card (the scrim) or focus leaving it; there is no close button |
-| Info | opens Title information over the spotlight without closing it (`01` section 9, Overlays exception). Closing Title information returns to the spotlight, its query, results and focused row intact |
+| Dismissal | `Escape`, a press outside the flyout or focus leaving it; there is no scrim and no close button |
+| Info | opens Title information over the flyout without closing it (`01` section 9, Overlays exception). Closing Title information returns to the flyout, its query, results and focused row intact |
 | Play | closes the spotlight and does exactly what a card's Play does: `requestPlay` shows the Player and loads the title (a series on its resumable episode, §5.6) |
 
 The spotlight never survives a restart, and leaving Library (a surface switch, Title information's own Play) closes it.
