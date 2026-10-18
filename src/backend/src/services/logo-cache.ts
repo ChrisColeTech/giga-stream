@@ -1,6 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -9,6 +9,7 @@ import {
 import type { Store } from "../store/store.js";
 import type { SyncRun } from "../types/sync-run.js";
 import { IMAGE_TYPES, sniffImage } from "./image-sniff.js";
+import { writeCacheFile } from "./logo-file.js";
 import type { RequestLimiter } from "./request-limiter.js";
 import type { SafeFetch } from "./safe-fetch.js";
 
@@ -35,13 +36,7 @@ export function createLogoCache(deps: {
     const ext = sniffImage(answer.body);
     if (answer.status < 200 || answer.status >= 300 || !type.toLowerCase().startsWith("image/") || ext === undefined) return undefined;
     const name = `${createHash("sha256").update(answer.body).digest("hex").slice(0, LOGO_CACHE_HASH_CHARS)}.${ext}`;
-    const target = path.join(dir, name);
-    if (!existsSync(target)) {
-      await mkdir(dir, { recursive: true });
-      const temp = `${target}.${randomUUID()}.tmp`;
-      await writeFile(temp, answer.body);
-      await rename(temp, target);
-    }
+    await writeCacheFile(dir, name, answer.body);
     return name;
   }
 
