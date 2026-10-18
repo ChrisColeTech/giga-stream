@@ -10,6 +10,7 @@ import {
 } from "@/lib/spotlight-state";
 import type { LibraryItem } from "@/types/library";
 import { SpotlightBar } from "./SpotlightBar";
+import { SpotlightCatcher } from "./SpotlightCatcher";
 import { SpotlightResults } from "./SpotlightResults";
 
 export interface TitleSpotlightProps {
@@ -26,7 +27,8 @@ export interface TitleSpotlightProps {
 /** Search titles (`06` section 4.6): macOS Spotlight, not a modal. One borderless rounded window floating over the
  *  app, with no scrim and no dimming of anything, no dialog semantics, no title bar and no close button. With nothing
  *  typed it is only the search bar; with a query it grows the two-column results (list and preview). It is dismissed
- *  by Escape, a press outside it or focus leaving it, and Title information stands over it without closing it. */
+ *  by Escape, a press on the invisible click-catcher behind it or focus leaving it, and Title information stands over
+ *  it without closing it. */
 export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSubmit, onPlay, onInfo }: TitleSpotlightProps) {
   const panel = useSpotlightFrame(state.open, paused, onClose);
   const searched = state.query.trim() !== "";
@@ -47,6 +49,8 @@ export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSub
   };
 
   return (
+    <>
+    <SpotlightCatcher paused={paused} onClose={onClose} />
     <div
       ref={panel}
       data-spotlight
@@ -63,5 +67,6 @@ export function TitleSpotlight({ state, dispatch, paused, onClose, onType, onSub
       />
       {searched && <SpotlightResults state={state} dispatch={dispatch} onPlay={onPlay} onInfo={onInfo} />}
     </div>
+    </>
   );
 }
