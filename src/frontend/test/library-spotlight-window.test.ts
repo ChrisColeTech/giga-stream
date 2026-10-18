@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { pressCatcher, swallowClick } from "@/components/library/SpotlightCatcher";
 import { TitleSpotlight } from "@/components/library/TitleSpotlight";
 import { SPOTLIGHT_CLOSED, spotlightReducer, type SpotlightAction, type SpotlightState } from "@/lib/spotlight-state";
 import type { LibraryItem } from "@/types/library";
@@ -35,12 +36,39 @@ describe("the spotlight window", () => {
 
   it("is not a modal: no scrim, no dialog semantics, no header, no close button, nothing dimmed", () => {
     for (const markup of [draw(OPEN), draw(LISTED), draw(WAITING)]) {
-      assert.ok(!markup.includes("data-spotlight-scrim") && !markup.includes("bg-scrim") && !markup.includes("inset-0"));
+      assert.ok(!markup.includes("data-spotlight-scrim") && !markup.includes("bg-scrim"));
       assert.ok(!markup.includes('role="dialog"') && !markup.includes("aria-modal"));
       assert.ok(!/<h[1-6][\s>]/.test(markup) && !markup.includes("Close"));
       assert.ok(!markup.includes("opacity-60"), "the window is never dimmed under Title information");
       assert.ok(!PARAGRAPH.test(markup), "no text under a control");
     }
+  });
+
+  it("has an invisible aria-hidden click-catcher below the window: no fill, tint or blur", () => {
+    for (const markup of [draw(OPEN), draw(LISTED), draw(WAITING)]) {
+      const catcher = /<div[^>]*data-spotlight-catcher[^>]*>/.exec(markup)?.[0] ?? "";
+      assert.ok(catcher.includes("fixed") && catcher.includes("inset-0") && catcher.includes('aria-hidden="true"'));
+      assert.ok(!/\b(bg-|opacity|blur|backdrop|shadow|border)/.test(catcher), "nothing visible");
+      const layer = (html: string): number => Number(/z-(\d+)/.exec(html)?.[1]);
+      const windowTag = /<div[^>]*data-spotlight="[^"]*"[^>]*>/.exec(markup)?.[0] ?? "";
+      assert.ok(layer(catcher) < layer(windowTag), "the catcher sits below the window");
+      assert.ok(layer(windowTag) < 48, "Title information's scrim (z-48) still washes over both");
+      assert.ok(markup.indexOf("data-spotlight-catcher") < markup.indexOf(windowTag));
+    }
+  });
+
+  it("closes on a press, ignores it while paused, and the press and click go no further", () => {
+    const calls: string[] = [];
+    const event = { preventDefault: () => calls.push("prevent"), stopPropagation: () => calls.push("stop") };
+    let closed = 0;
+    pressCatcher(event, () => false, () => closed++);
+    assert.equal(closed, 1);
+    assert.deepEqual(calls, ["prevent", "stop"], "the pointerdown never reaches the Library");
+    pressCatcher(event, () => true, () => closed++);
+    assert.equal(closed, 1, "paused under Title information: the press does nothing");
+    calls.length = 0;
+    swallowClick(event);
+    assert.deepEqual(calls, ["prevent", "stop"], "the click never activates the card under it");
   });
 
   it("draws the field first, then a hairline and two columns once there is a query", () => {
