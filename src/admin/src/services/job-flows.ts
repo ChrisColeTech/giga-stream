@@ -21,7 +21,7 @@ export type JobStore = Pick<
   AppState,
   | "serial" | "signedIn" | "jobs" | "workspaces" | "jobsStartLoad" | "jobsLoaded" | "jobsLoadFailed"
   | "jobsPlaylistsLoaded" | "jobUpsert" | "jobRemove" | "jobsMarkUnreachable" | "closeWorkspace" | "markStale" | "say"
-  | "setWork"
+  | "setWork" | "jobEventsReopen"
 >;
 
 export interface JobFlowDeps {
@@ -189,6 +189,7 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
   };
 
   const refresh = async (): Promise<JobResult> => {
+    store().jobEventsReopen();
     const [result] = await Promise.all([load(), audit.reload(AUDIT_PAGE)]);
     return result;
   };

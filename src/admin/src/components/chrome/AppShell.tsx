@@ -7,6 +7,7 @@ import { JobsPage } from "@/pages/JobsPage";
 import { PlaylistsPage } from "@/pages/PlaylistsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
 import { RestoreWall } from "@/components/session/RestoreWall";
+import { useJobEvents } from "@/hooks/useJobEvents";
 import { useRestoreSession } from "@/hooks/useRestoreSession";
 import { useSessionState } from "@/hooks/useSessionState";
 import { SignInPage } from "@/pages/SignInPage";
@@ -29,6 +30,7 @@ export function AppShell() {
   const restoring = useAppStore((state) => state.restoring);
   useRestoreSession();
   useSessionState(signedIn, serial);
+  useJobEvents();
 
   return (
     <>

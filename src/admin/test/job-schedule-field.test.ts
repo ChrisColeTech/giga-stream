@@ -32,13 +32,14 @@ describe("the Interval field", () => {
       sentence: "Interval is a number and s, m or h, like 30m or 6h, or off.",
     });
     assert.equal(firstSaveRefusal({ ...draftOf(catalog), name: " " }, true)?.field, "name");
-    assert.equal(firstSaveRefusal({ ...draftOf(catalog), pages: "26", schedule: "x" }, true)?.field, "pages");
-    assert.equal(firstSaveRefusal({ ...draftOf(catalog), pages: "26" }, false), null, "pages is a catalog field");
+    assert.equal(firstSaveRefusal({ ...draftOf(catalog), pages: "501", schedule: "x" }, true)?.field, "pages");
+    assert.equal(firstSaveRefusal({ ...draftOf(catalog), pages: "501" }, false), null, "pages is a catalog field");
   });
 
-  it("checks Pages from 1 to 25", () => {
+  it("checks Pages from 1 to 500 (the Library fill walks 500, TMDB's cap)", () => {
     assert.equal(pagesRefusal("1"), null);
-    assert.equal(pagesRefusal("25"), null);
-    assert.equal(pagesRefusal("0"), "Pages must be a whole number from 1 to 25.");
+    assert.equal(pagesRefusal("500"), null);
+    assert.equal(pagesRefusal("501"), "Pages must be a whole number from 1 to 500.");
+    assert.equal(pagesRefusal("0"), "Pages must be a whole number from 1 to 500.");
   });
 });

@@ -39,6 +39,8 @@ export const ERROR_SENTENCES: SentenceTable = {
   "job.not_found": "That job does not exist.",
   "job.invalid": "That job is not valid.",
   "job.disabled": "That job cannot run now.",
+  "job.not_running": "That job is not running.",
+  "job.events_busy": "Too many progress streams are open.",
   "sync.busy": "That job is already running.",
   "sync.invalid": "That sync request is not valid.",
   "request.invalid": "The request was not understood.",

@@ -12,8 +12,8 @@ export interface JobsService extends RecordService<AdminJob, number, JobList> {
   /** Starts the job now; no body. */
   run: (id: number) => Promise<AdminJob>;
   /** Stops the running job (`POST /api/jobs/:id/stop`, `202`): it answers `running: true` until the run notices, and the
-   *  result (`stopped`) is read on a refresh. `409 job.not_running` when idle; a catalog job is stoppable once the
-   *  backend accepts it (until then `422 job.invalid` arrives as an `ApiError`). */
+   *  result (`stopped`) is read on a refresh. `409 job.not_running` when idle; playlist and catalog jobs alike are
+   *  stoppable (`44` section 3.2). */
   stop: (id: number) => Promise<AdminJob>;
 }
 

@@ -30,6 +30,8 @@ export interface RowState {
   readonly dimmed: boolean;
   /** A tooltip for the word, when the word alone does not say why (`held`). */
   readonly hint?: string;
+  /** What the cell reads when it is more than the word (`running 46%`); the word stays the row's `data-st`. */
+  readonly label?: string;
 }
 
 const TONES: Readonly<Record<StateWord, StateTone>> = {
@@ -102,10 +104,13 @@ export interface JobStateInput {
   readonly failed: boolean;
   /** The last run was stopped by an admin (`43` section 3.4a). */
   readonly stopped?: boolean;
+  /** How far the running job is, in whole percent, when the stream or the job's answer says (`44` section 4). */
+  readonly percent?: number;
 }
 
 export function jobState(job: JobStateInput): RowState {
   if (!job.enabled) return state("disabled");
+  if (job.running && job.percent !== undefined) return { ...state("running"), label: `running ${job.percent}%` };
   return state(job.running ? "running" : job.failed ? "failed" : job.stopped === true ? "stopped" : "idle");
 }
 

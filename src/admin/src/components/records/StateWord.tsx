@@ -14,7 +14,7 @@ const TONE: Readonly<Record<StateTone, string>> = {
 export function StateWord({ state }: { readonly state: RowState }) {
   return (
     <span data-st={state.word} title={state.hint} className={cn("truncate font-mono text-xs", TONE[state.tone])}>
-      {state.word}
+      {state.label ?? state.word}
     </span>
   );
 }

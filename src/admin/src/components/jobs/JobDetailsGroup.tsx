@@ -20,7 +20,7 @@ export interface JobDetailsGroupProps {
 
 /** `Details` (`38` section 4.3, `43` section 3.1): Name first (a playlist job's is `Sync <playlist>`, built by the backend,
  *  so read-only), Type (read-only: it never changes), then the type's rows (the Playlist it belongs to, read-only, or
- *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 25). */
+ *  Scope and Kind), `Enabled` (the switch), and a catalog job's Pages (1 to 500). */
 export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGroupProps) {
   const catalog = job.type === "catalog";
   return (

@@ -18,3 +18,4 @@ export const sessionApi = createSessionApi({
 });
 
 export const request = sessionApi.request;
+export const stream = sessionApi.stream;
