@@ -290,6 +290,10 @@ splitter the `Group` draws itself.
 
 ### 7.3 Fields, in the order of `26` 4.4
 
+> **Superseded in part (owner, 2026-10-17; `39` section 5.0).** On every New form and every Details group **Name comes first**, then the kind / type / family switch, then the record's own fields, then the optional ones, then the read-only facts with a real **`Id`** last
+> (so the Account row below reads `Name, Email, Password` and, in Details, `Name, Email, Enabled, Last sign-in, Id`; a playlist's Name is optional but still first). Every record has an `Id` row and an `id` list column; the lists' toolbars carry bulk verbs on the ticked rows
+> (`39` section 6). The table below is kept as the reference for the rest of each row.
+
 The New form and the workspace's Details carry the same fields in the same order: **(1) required, (2) Enabled, (3) optional,
 (4) read-only**. Row 1 is always the record's name (Name, Title, Email); row 2 is the Kind, Type or Family control **when it
 switches the rows below it**. An info glyph (the `Row`'s `tip`) sits on every row except Name, Title, Email and Password.
