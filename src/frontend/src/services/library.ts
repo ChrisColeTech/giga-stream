@@ -2,7 +2,12 @@ import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
-import { CollectionLibraryPageSchema, ContinuePageSchema, LibraryPageSchema } from "./schemas/library-schema";
+import {
+  CollectionLibraryPageSchema,
+  ContinuePageSchema,
+  LibraryPageSchema,
+  LibraryRefreshSchema,
+} from "./schemas/library-schema";
 
 export interface LibrarySearchSeams {
   readonly read: typeof readLibrary;
@@ -89,6 +94,12 @@ export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: 
 
 export function readContinue(signal?: AbortSignal) {
   return api("/api/library/continue", ContinuePageSchema, { signal, area: "Catalog" }).then((answer) => answer.items);
+}
+
+/** `POST /api/library/refresh` (`46` section E): the fileserver syncs its titles from the backend now and answers once
+ *  the sync ends; a failure is the standard envelope's 503/502 with the cache still serving. */
+export function refreshLibrary(signal?: AbortSignal) {
+  return api("/api/library/refresh", LibraryRefreshSchema, { method: "POST", signal, area: "Catalog" });
 }
 
 export function libraryRowIdentity(item: LibraryItem): string {

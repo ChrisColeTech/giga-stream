@@ -8,8 +8,6 @@ export const ChannelSchema = z.object({
   number: z.string().optional(),
   revision: z.number().int().nonnegative(),
   streamUrl: z.string().url(),
-  status: z.enum(["live", "offline", "unknown"]),
-  checkedAt: z.number().int().nonnegative().optional(),
 });
 
 export const ChannelListSchema = z.object({

@@ -1,6 +1,5 @@
-/** A channel as the fileserver passes it through (`03` section 3.4). The status is a fact of the last probe. */
-export type ChannelStatus = "live" | "offline" | "unknown";
-
+/** A channel as the fileserver passes it through (`03` section 3.4). Nothing checks a stream, so it carries no status
+ *  (`46` section D.2). */
 export interface Channel {
   readonly id: string;
   readonly name: string;
@@ -11,8 +10,6 @@ export interface Channel {
   readonly revision: number;
   /** The HLS address exactly as the backend has it; the player loads it. */
   readonly streamUrl: string;
-  readonly status: ChannelStatus;
-  readonly checkedAt?: number;
 }
 
 export interface ChannelCategory {

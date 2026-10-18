@@ -21,7 +21,6 @@ const list: ChannelListAnswer = {
     number: "1",
     revision: 2,
     streamUrl: "https://stream.test/news.m3u8",
-    status: "live",
   }],
   categories: [{ value: "News", count: 1 }],
   revision: 2,
@@ -70,7 +69,7 @@ describe("channel routes", () => {
   });
 
   it("refuses malformed channel data and keeps server refusal sentences", async () => {
-    globalThis.fetch = async () => success({ ...list, items: [{ ...list.items[0], status: "future" }] });
+    globalThis.fetch = async () => success({ ...list, items: [{ ...list.items[0], streamUrl: "not an address" }] });
     await assert.rejects(readChannels(), { code: "response.invalid" });
     globalThis.fetch = async () => new Response(JSON.stringify({
       ok: false,

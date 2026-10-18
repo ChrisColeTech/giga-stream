@@ -23,9 +23,8 @@ test("a refresh fills the cache from the real backend and answers the seeded cha
   );
   assert.ok(items.some((channel) => channel.id === "fx-news" && channel.number === "1"));
   for (const channel of items) {
-    // Nothing probes streams any more: no verdict, no probe time (docs/46 section D.2). `status` is the
-    // temporary wire word the interface's schema still requires; wave W4 removes both ends.
-    assert.equal(channel.status, "unknown");
+    // Nothing probes streams any more: no status, no probe time (docs/46 section D.2).
+    assert.equal("status" in channel, false);
     assert.equal(channel.checkedAt, undefined);
   }
   const categories = pick(refresh.body, "data.categories") as Array<Record<string, unknown>>;
