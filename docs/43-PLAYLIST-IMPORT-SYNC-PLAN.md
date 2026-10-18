@@ -95,7 +95,7 @@ channel is `(sync_name, stream_url)`.
 Wire: `GET /api/admin-channels` rows gain `status?`, `checkedAt?`, `cachedLogoUrl?` (the **relative** `/logos/c/<file>`;
 the admin is same-origin; no Host-derived URL). The **public** `GET /api/channels` is unchanged. `logoUrl` stays the source
 address everywhere, and an admin form never reads the cached address back into it. `PlaylistView`:
-`{ id, name, kind, host?, masked?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?, lastResult?, lastCounts? }`
+`{ id, name, kind, url?, host?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?, lastResult?, lastCounts? }`
 (the job's values joined in). The admin channel answer also carries `published` (`channel.enabled` and (no playlist or
 `playlist.enabled`)) so a channel of a disabled playlist is not shown as simply enabled, and `source` / `playlistName`,
 **derived by a `LEFT JOIN playlists`** in the repository's `list`, `find` and `page` (read-only, never written).
@@ -112,7 +112,8 @@ at most 4096 px a side. SVG is never cached. An identical image is stored once; 
 **Garbage collection** runs only inside a sync's single flight (never in a delete handler), skips files younger than one
 hour, and a row whose `logo_file` is missing on disk is re-downloaded regardless of `logo_checked_at`.
 
-**Secrets in URLs.** The web address lives only in `playlists.url`. Reads show `host` and `masked`; audit, error details and
+**Secrets in URLs.** The web address lives only in `playlists.url`. **It is returned in full to a signed-in admin and shown
+plainly in the admin (not masked; owner, 2026-10-18)**; audit, error details and
 logs carry the **host only**; the fetch is the only reader; never a logo address in a log; never `error.message` of a fetch
 in an outcome, audit entry or log (map to a fixed code). Refusal examples carry the entry **name only**, never the
 full stream URL. A stream URL from a credentialed playlist is itself a credential: it is published by the public channel
@@ -294,7 +295,7 @@ and a logo URL pointing inward is cached and served publicly.
 |---|---|
 | `Source` | `Segmented`: `File` \| `Web address` (a one-of choice). |
 | File row (new `components/records/FileRow.tsx`, modelled on `FolderRow.tsx`) | Label `File`, a read-only mono field showing the chosen filename, trailing ghost `Choose file` button (`Upload` icon) opening a hidden `<input type="file" accept=".m3u,.m3u8,audio/x-mpegurl">`. |
-| Address row (existing) | `type=password`, `autoComplete=off`, only for `Web address`. |
+| Address row (existing) | A plain text input (not a password field, not masked), `autoComplete=off`, only for `Web address`. |
 | Name field | **Removed**: the name is the file name or the host; rename in the workspace Details. |
 | Commit | Primary `Import` through `NewRecordGroup create.label`. Disabled reasons: `Choose a file first.`, `Address is required.`, `Importing.`, or the unreachable sentence. |
 | Notice | `Imported us.m3u: 2,598 channels, all disabled. Enable them on the Channels tab.` |
@@ -305,7 +306,7 @@ Files: `NewPlaylistForm.tsx`, `lib/playlist-draft.ts`, `constants/playlist-copy.
 request-types}.ts` gains `form?: FormData` (no JSON content type); `admin/src/services/session-api.ts` `CallOptions` gains
 `"form"`; a test in `shared/http/test`.
 
-**Playlists list** (`PlaylistRows`, `PlaylistRow`, `playlist-grid.ts`, `playlist-rows.ts`): columns `name`, `source` (masked
+**Playlists list** (`PlaylistRows`, `PlaylistRow`, `playlist-grid.ts`, `playlist-rows.ts`): columns `name`, `source` (the
 host or file name), `channels`, `enabled`, `live`, `dead`, `last run`, `state`. Bulk verbs (`Sync now`, `Enable`, `Disable`,
 `Delete`) unchanged in grammar; `Sync now` always finds its job; the armed `Delete` asks `Delete <name> and its N channels?`.
 

@@ -736,7 +736,8 @@ foreign keys are enforced); an operator's hand-made rows (`playlistId` absent) a
 channels land **disabled** (`enabled: false`); the operator enables them (the admin's bulk `Enable`, `7.2`).
 
 - **Playlist record** (`playlists`): `id`, `name` (unique, case-insensitive), `kind` (`file` or `url`), `url` (a secret:
-  the web address, `url` kind only, unique; never returned, audited by host only), `fileName` (`file` kind only,
+  the web address, `url` kind only, unique; **returned in full to a signed-in admin, not masked** (owner, 2026-10-18);
+  audit and logs still carry the host only), `fileName` (`file` kind only,
   unique), `host` (`url` kind only), `enabled`. There is no stored sentence and no sync timestamp on it: the last run
   lives on the playlist's one sync job (`26` 3.11). A derived name (the file name, or for a web address the URL's last
   path segment without its extension, else the host) that clashes is suffixed ` (2)`, ` (3)`; only a typed name is
@@ -816,7 +817,7 @@ channels land **disabled** (`enabled: false`); the operator enables them (the ad
 | `GET /logos/c/<file>` | public | a cached image by its hash name (`^[0-9a-f]{32}\.(png\|jpg\|gif\|webp)$`; `immutable`, `nosniff`) |
 
 `GET /api/playlist-sync` and `POST /api/playlist-sync` no longer exist: the jobs are the sync. The playlist view is
-`{ id, name, kind, host?, masked?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?, lastResult?,
+`{ id, name, kind, url?, host?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?, lastResult?,
 lastCounts? }` (the last three joined from its job). Every import and every sync is one audit entry (`playlist.imported`,
 `playlist.synced`) with counts and each playlist's **host** only (never its query, which can carry credentials, and never
 a logo address or an exception message). A body that is not an M3U playlist is `422 playlist.invalid`; a duplicate is

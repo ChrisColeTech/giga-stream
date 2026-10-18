@@ -252,12 +252,12 @@ one off. An admin app manages **records**. The owner: *"we need a jobs tab for t
 should be crud for titles and playlists."* So there are two new record types: a **playlist** and a **job**.
 
 - **Playlists** (`playlists` table): the parent of the channels an import creates (`channels.playlist_id`). `id`, `name`
-  (unique, case-insensitive), `kind` (`file` or `url`), `url` (a secret, `url` kind only, unique: never returned, audited
-  by host only; passing the rule of `03` 7.3), `file_name` (`file` kind only, unique; the uploaded file is read and not
+  (unique, case-insensitive), `kind` (`file` or `url`), `url` (`url` kind only, unique: returned in full to a signed-in admin, not
+  masked (owner, 2026-10-18); audit and logs carry the host only; passing the rule of `03` 7.3), `file_name` (`file` kind only, unique; the uploaded file is read and not
   kept), `host`, `enabled`, `created_at`. The last run is on the playlist's one sync job, not on the playlist. Routes
   (signed in, audited): `POST /api/playlists/import` (a file, multipart), `POST /api/playlists` (a web address: the
   import), `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id`; the contract is `03` 7.2c and plan `43`. An
-  answer is `{ id, name, kind, host?, masked?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?,
+  answer is `{ id, name, kind, url?, host?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?,
   lastResult?, lastCounts? }`; `PATCH` may replace `url` for a `url` playlist only. **Deleting a playlist deletes its
   channels and its sync job with it**, through foreign keys (`ON DELETE CASCADE`), in one transaction (a child never
   outlives its parent; hand-made channels are untouched; the armed Delete says how many channels go). **Precedence of the
@@ -568,8 +568,8 @@ takes the playlist's channels with it). Where the text below and `43` differ, `4
 
 - **Index:** New playlist (Name, Address, `Create`); the list (name, host, channels, last synced, state); row end `Delete`
   as an `ArmedButton` (the tooltip says the channels it created stay, as hand-made rows). Toolbar: `Jobs →`.
-- **Workspace:** rail `‹ Playlists`, then **details · status**. Details: Name, Address (masked, with `Replace`, never
-  shown back), `Enabled`. Status (read-only): host, channels synced from it (each a link to its channel), last synced,
+- **Workspace:** rail `‹ Playlists`, then **details · status**. Details: Name, Address (the full address as an editable text field for a web playlist, saved with `Save details`; a
+  file playlist shows its file name read-only; not masked, owner 2026-10-18), `Enabled`. Status (read-only): host, channels synced from it (each a link to its channel), last synced,
   outcome. Toolbar: `Discard changes`, `Save`, `Jobs →`.
 
 **Jobs** hold the syncs. Nothing about syncing sits on the Titles or Playlists pages.
