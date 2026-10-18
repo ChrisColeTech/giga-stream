@@ -17,7 +17,7 @@ import { playlistIdOf } from "./job-rows";
 import { tickedOf } from "./playlist-rows";
 
 /* The Playlists toolbar's bulk verbs (`38` section 3.2), pure: which ticked playlists each verb runs on and why the
- * others are skipped. `Sync now` runs the playlist's own job (its own `dryRun` and `prune`, no override). */
+ * others are skipped. `Sync now` starts the playlist's own job (the backend starts it and answers at once). */
 
 export type PlaylistBulkVerb = "sync" | "enable" | "disable" | "delete";
 
@@ -31,17 +31,17 @@ export const PLAYLIST_BULK_WORDS: Readonly<Record<Exclude<PlaylistBulkVerb, "del
   disable: words("Disabled"),
 };
 
-/** Delete's words carry the channels kept: the shared summary reads them after the run, so `Deleted 2 playlists; 14
- *  channels kept.` (the sum of every `released`) is the one sentence on the notice line. */
-export function deleteWords(tally: { readonly released: number }): BulkWords {
-  const kept = (): string => `; ${tally.released} ${tally.released === 1 ? "channel" : "channels"} kept`;
+/** Delete's words carry the channels that went with the playlists: the shared summary reads them after the run, so
+ *  `Deleted 2 playlists and 14 channels.` (the sum of every `deletedChannels`) is the one sentence on the notice line. */
+export function deleteWords(tally: { readonly channels: number }): BulkWords {
+  const went = (): string => ` and ${tally.channels.toLocaleString("en-US")} ${tally.channels === 1 ? "channel" : "channels"}`;
   return {
     past: "Deleted",
     get noun() {
-      return `playlist${kept()}`;
+      return `playlist${went()}`;
     },
     get nouns() {
-      return `playlists${kept()}`;
+      return `playlists${went()}`;
     },
   };
 }

@@ -2,28 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { runGate, workspaceRunReason } from "@/lib/job-run-gate";
 import type { AdminJob } from "@/services/schemas/job-schema";
-import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
+import { catalogJob, playlist as playlistRow, playlistJob } from "./support/run-kit";
 
-const job = (id: number, extra: Partial<AdminJob> = {}): AdminJob => ({
-  id,
-  name: `Job ${id}`,
-  type: "playlist",
-  enabled: true,
-  schedule: "off",
-  config: { playlistId: id, dryRun: false, prune: false },
-  playlistName: `List ${id}`,
-  running: false,
-  createdAt: 1,
-  ...extra,
-});
-const playlist = (id: number, enabled = true): AdminPlaylist => ({
-  id,
-  name: `List ${id}`,
-  host: "h.test",
-  masked: "h.test/…",
-  enabled,
-  channels: 0,
-});
+const job = (id: number, extra: Partial<AdminJob> = {}): AdminJob => playlistJob(id, id, { name: `Job ${id}`, ...extra });
+const playlist = (id: number, enabled = true) => playlistRow(id, { enabled, channels: 0 });
 const PLAYLISTS = [playlist(1), playlist(2, false)];
 
 describe("the Run job gate", () => {
@@ -38,12 +20,11 @@ describe("the Run job gate", () => {
   });
 
   it("finds a job's playlist by its id, then by its name; a catalog job has none", () => {
-    const renamed = job(7, { config: { playlistId: 2, dryRun: false, prune: false } });
+    const renamed = job(7, { config: { playlistId: 2 }, playlistId: 2 });
     assert.equal(runGate([renamed], PLAYLISTS, false), "A ticked job's playlist is disabled.");
-    const byName = job(8, { playlistName: "List 2" });
+    const byName = job(8, { config: { playlistId: 9 }, playlistId: undefined, playlistName: "List 2" });
     assert.equal(runGate([byName], PLAYLISTS, false), "A ticked job's playlist is disabled.");
-    const catalog = job(9, { type: "catalog", config: { scope: "trending", kind: "movie", pages: 5 } });
-    assert.equal(runGate([catalog], PLAYLISTS, false), undefined);
+    assert.equal(runGate([catalogJob(9)], PLAYLISTS, false), undefined);
   });
 
   it("asks the workspace to save first, then says Running., before the toolbar's reasons", () => {

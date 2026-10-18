@@ -1,37 +1,32 @@
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { newAddressOf, type NewPlaylistDraft, type PlaylistDraft } from "./playlist-draft";
 
-/* The request bodies of the Playlists routes (`38` section 3.1), pure. The address is passed through trimmed and goes
- * nowhere else. */
+/* The request bodies of the Playlists routes (`43` section 3.2), pure. The address is passed through trimmed and goes
+ * nowhere else. A file import has no JSON body: the file goes as one multipart part (`services/playlists.ts`). */
 
 /* Type aliases, not interfaces: a request body is a plain record (`RecordInput`), which an interface cannot be. */
-export type PlaylistCreateBody = {
-  readonly name?: string;
-  readonly address: string;
+export type PlaylistUrlBody = {
+  readonly url: string;
 };
 
-/** `POST /api/playlists`: the trimmed address, and the name only when one was typed (else the backend takes the host). */
-export function createBody(draft: NewPlaylistDraft): PlaylistCreateBody {
-  const name = draft.name.trim();
-  return { address: draft.address.trim(), ...(name !== "" && { name }) };
-}
+/** `POST /api/playlists`, the web-address import: the trimmed address alone. The playlist is named after its host. */
+export const urlBody = (draft: NewPlaylistDraft): PlaylistUrlBody => ({ url: draft.address.trim() });
 
 export type PlaylistPatch = {
   readonly name?: string;
   readonly enabled?: boolean;
-  readonly address?: string;
+  readonly url?: string;
 };
 
-/** `PATCH /api/playlists/:id`: only what differs from the saved playlist. A name emptied in the workspace means what an
- *  empty Name means on create, the host; an address only when `Replace` unlocked the field and a value was typed. */
+/** `PATCH /api/playlists/:id`: only what differs from the saved playlist. A name emptied in the workspace is no change
+ *  (the playlist keeps the name it has); an address only when `Replace` unlocked the field and a value was typed. */
 export function changedFields(saved: AdminPlaylist, draft: PlaylistDraft): PlaylistPatch {
   const typed = draft.name.trim();
-  const name = typed === "" ? saved.host : typed;
-  const address = newAddressOf(draft);
+  const url = newAddressOf(draft);
   return {
-    ...(name !== saved.name && { name }),
+    ...(typed !== "" && typed !== saved.name && { name: typed }),
     ...(draft.enabled !== saved.enabled && { enabled: draft.enabled }),
-    ...(address !== null && { address }),
+    ...(url !== null && { url }),
   };
 }
 

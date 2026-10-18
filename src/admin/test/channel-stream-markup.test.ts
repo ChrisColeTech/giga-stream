@@ -27,7 +27,9 @@ const statusGroup = (channel: StreamAdminChannel, revertReason?: string) =>
     }),
   );
 const SAVE = { onPress: () => undefined, reason: "Nothing has changed." };
-const SYNCED = stream("s", { source: "lists.example", editedFields: ["name", "streamUrl"] });
+const SYNCED = stream("s", {
+  source: "lists.example", playlistId: 3, playlistName: "Example list", editedFields: ["name", "streamUrl"],
+});
 
 beforeEach(() => {
   resetStore();
@@ -95,9 +97,18 @@ describe("a stream channel's workspace", () => {
     assert.ok(/aria-label="Stream address" aria-invalid="true"/.test(html));
   });
 
-  it("names where a synced row came from", () => {
+  it("names the playlist a synced row came from, and whether players read it", () => {
     holdChannels([SYNCED], 1);
     state().openWorkspace("channels", "s");
-    assert.ok(page().includes(">Synced from lists.example<"));
+    assert.ok(page().includes(">Synced from Example list<"));
+    assert.ok(page().includes(">yes<"), "published");
+  });
+
+  it("says a channel of a disabled playlist is not published, and a hand-made row came by hand", () => {
+    holdChannels([stream("h", { published: false, playlistId: 3, playlistName: "Example list" }), stream("m")], 2);
+    state().openWorkspace("channels", "h");
+    assert.ok(page().includes(">no<"));
+    state().openWorkspace("channels", "m");
+    assert.ok(page().includes(">Added by hand<"));
   });
 });

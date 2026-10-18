@@ -29,8 +29,8 @@ describe("the Channels tab's disabled reasons", () => {
 
   it("allow Revert to playlist only on a synced row with edits", () => {
     assert.equal(revertReason(stream("s"), OPEN), "This channel was made by hand; there is nothing to revert.");
-    assert.equal(revertReason(stream("s", { source: "lists.example" }), OPEN), "Nothing was edited.");
-    assert.equal(revertReason(stream("s", { source: "lists.example", editedFields: [] }), OPEN), "Nothing was edited.");
-    assert.equal(revertReason(stream("s", { source: "lists.example", editedFields: ["name"] }), OPEN), undefined);
+    assert.equal(revertReason(stream("s", { source: "lists.example", playlistId: 3 }), OPEN), "Nothing was edited.");
+    assert.equal(revertReason(stream("s", { source: "lists.example", playlistId: 3, editedFields: [] }), OPEN), "Nothing was edited.");
+    assert.equal(revertReason(stream("s", { source: "lists.example", playlistId: 3, editedFields: ["name"] }), OPEN), undefined);
   });
 });

@@ -1,10 +1,14 @@
 import { z } from "zod";
+import { lastCounts, lastResult } from "./run-counts-schema";
 
-/* `JobView` (`29` section 5): a playlist job carries its playlist and flags, a catalog job its scope, kind and pages. */
-const PlaylistConfig = z.object({ playlistId: z.number(), dryRun: z.boolean(), prune: z.boolean() });
+/* `JobView` (`03` section 7.2c, `43` section 3.1): a playlist job is part of its playlist - it names the playlist and its
+ * config is `{ playlistId }`; a catalog job carries its scope, kind (not on a discover job) and pages. A playlist job's
+ * name is `Sync <playlist name>`, built by the backend at read time. The last run is typed: `lastResult` and
+ * `lastCounts`, never a sentence. */
+const PlaylistConfig = z.object({ playlistId: z.number() });
 const CatalogConfig = z.object({
-  scope: z.enum(["trending", "popular"]),
-  kind: z.enum(["movie", "tv"]),
+  scope: z.enum(["trending", "popular", "discover"]),
+  kind: z.enum(["movie", "tv"]).optional(),
   pages: z.number(),
 });
 
@@ -16,11 +20,12 @@ export const JobSchema = z.object({
   /** `6h`, `30m`, `24h` or `off`. */
   schedule: z.string(),
   config: z.union([PlaylistConfig, CatalogConfig]),
+  playlistId: z.number().optional(),
   playlistName: z.string().optional(),
   running: z.boolean(),
   lastRunAt: z.number().optional(),
-  lastOutcome: z.string().optional(),
-  lastCounts: z.record(z.string(), z.unknown()).optional(),
+  lastResult,
+  lastCounts,
   createdAt: z.number(),
 });
 

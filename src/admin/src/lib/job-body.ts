@@ -1,32 +1,29 @@
 import type { AdminJob, CatalogJobConfig } from "@/services/schemas/job-schema";
 import type { JobDraft, NewJobDraft } from "./job-draft";
-import { catalogConfigOf, playlistIdOf } from "./job-rows";
+import { catalogConfigOf } from "./job-rows";
 
-/* The request bodies of the Jobs routes (`29` section 9.5), pure. A create is discriminated by `type`; a catalog job's
- * `pages` is left to the backend's default. A PATCH carries only what changed, and its `config` only the changed keys:
- * the backend merges it over the job's own config and checks it against the job's type, which never changes. */
-
-export type JobCreateBody =
-  | { readonly type: "playlist"; readonly name: string; readonly config: { readonly playlistId: number } }
-  | {
-      readonly type: "catalog";
-      readonly name: string;
-      readonly config: { readonly scope: CatalogJobConfig["scope"]; readonly kind: CatalogJobConfig["kind"] };
-    };
-
-/** `POST /api/jobs`: the trimmed name and the type's own config; `playlistId` is the select's chosen value. */
-export function createBody(draft: NewJobDraft, playlistId: string): JobCreateBody {
-  const name = draft.name.trim();
-  return draft.type === "playlist"
-    ? { type: "playlist", name, config: { playlistId: Number(playlistId) } }
-    : { type: "catalog", name, config: { scope: draft.scope, kind: draft.kind } };
-}
+/* The request bodies of the Jobs routes (`03` section 7.2c, `43` section 3.1), pure. A create is a catalog job (a
+ * playlist's job is made with the playlist) and leaves `pages` to the backend's default. A PATCH carries only what
+ * changed; a playlist job takes `enabled` and `schedule` only, and a catalog job's `config` only the changed keys: the
+ * backend merges it over the job's own. */
 
 /* Type aliases, not interfaces: a request body is a plain record (`RecordInput`), which an interface cannot be. */
+export type JobCreateBody = {
+  readonly type: "catalog";
+  readonly name: string;
+  readonly config: { readonly scope: CatalogJobConfig["scope"]; readonly kind?: JobKindWord };
+};
+type JobKindWord = NonNullable<CatalogJobConfig["kind"]>;
+
+/** `POST /api/jobs`: the trimmed name and the scope; a discover walk covers both kinds, so it sends none. */
+export function createBody(draft: NewJobDraft): JobCreateBody {
+  const config = draft.scope === "discover" ? { scope: draft.scope } : { scope: draft.scope, kind: draft.kind };
+  return { type: "catalog", name: draft.name.trim(), config };
+}
+
 export type JobConfigPatch = {
-  readonly playlistId?: number;
   readonly scope?: CatalogJobConfig["scope"];
-  readonly kind?: CatalogJobConfig["kind"];
+  readonly kind?: JobKindWord;
   readonly pages?: number;
 };
 
@@ -37,29 +34,30 @@ export type JobPatch = {
   readonly config?: JobConfigPatch;
 };
 
-function configChanges(job: AdminJob, draft: JobDraft): JobConfigPatch {
-  const catalog = catalogConfigOf(job);
-  if (catalog === null) {
-    const playlistId = Number(draft.playlistId);
-    return draft.playlistId !== "" && playlistId !== playlistIdOf(job) ? { playlistId } : {};
-  }
+function configChanges(catalog: CatalogJobConfig, draft: JobDraft): JobConfigPatch {
   const pages = Number(draft.pages.trim());
+  const kind = draft.scope !== "discover" && draft.kind !== catalog.kind;
   return {
     ...(draft.scope !== catalog.scope && { scope: draft.scope }),
-    ...(draft.kind !== catalog.kind && { kind: draft.kind }),
+    ...(kind && { kind: draft.kind }),
     ...(pages !== catalog.pages && { pages }),
   };
 }
 
 /** `PATCH /api/jobs/:id`: only the fields that differ from the saved job, trimmed as the backend trims them. */
 export function changedFields(job: AdminJob, draft: JobDraft): JobPatch {
-  const name = draft.name.trim();
   const schedule = draft.schedule.trim().toLowerCase();
-  const config = configChanges(job, draft);
-  return {
-    ...(name !== job.name && { name }),
+  const scheduleAndEnabled: JobPatch = {
     ...(draft.enabled !== job.enabled && { enabled: draft.enabled }),
     ...(schedule !== job.schedule && { schedule }),
+  };
+  const catalog = catalogConfigOf(job);
+  if (catalog === null) return scheduleAndEnabled;
+  const name = draft.name.trim();
+  const config = configChanges(catalog, draft);
+  return {
+    ...(name !== job.name && { name }),
+    ...scheduleAndEnabled,
     ...(Object.keys(config).length > 0 && { config }),
   };
 }

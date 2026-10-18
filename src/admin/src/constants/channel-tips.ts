@@ -26,7 +26,8 @@ export const CHANNEL_TIPS = {
   renditions: "The qualities the channel is encoded at.",
   playlist: "The videos in play order; the one playing is lit.",
   liveAddress: "The address players load; copy it to try it elsewhere.",
-  syncedFrom: "The playlist host that owns this channel, if a sync created it.",
+  syncedFrom: "The playlist that owns this channel, if an import created it.",
+  published: "Whether players read this channel: it is enabled, and so is its playlist.",
   revision: "Raised by every change the backend saves.",
   edited: "Edited here; the next sync keeps it.",
 } as const;

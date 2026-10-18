@@ -12,6 +12,7 @@ export const live = (id: string, overrides: Partial<LiveAdminChannel> = {}): Liv
   kind: "live",
   revision: 1,
   enabled: true,
+  published: true,
   mode: "loop",
   captions: false,
   variants: ["360p", "720p"],
@@ -34,6 +35,7 @@ export const stream = (id: string, overrides: Partial<StreamAdminChannel> = {}):
   kind: "stream",
   revision: 2,
   enabled: true,
+  published: true,
   ...overrides,
 });
 

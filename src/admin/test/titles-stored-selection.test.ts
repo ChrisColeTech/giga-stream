@@ -120,7 +120,7 @@ describe("Sync now", () => {
   const idle = { jobs: null, syncing: 0, busy: false, unreachable: false };
 
   it("runs the enabled catalog jobs only, named as the Jobs tab names them", () => {
-    const jobs = [job(1), job(2, { enabled: false }), job(3, { type: "playlist", config: { playlistId: 1, dryRun: false, prune: false } })];
+    const jobs = [job(1), job(2, { enabled: false }), job(3, { type: "playlist", config: { playlistId: 1 } })];
     assert.deepEqual(enabledCatalogJobs(jobs).map((one) => one.id), [1]);
     assert.deepEqual(syncPlan(jobs).runnable, [{ id: 1, label: "Job 1" }]);
   });

@@ -15,9 +15,10 @@ export interface PlaylistRowProps {
   readonly onDelete: (id: number) => void;
 }
 
-/** One playlist of the list: the tick, the name, the host (never the address), the channel count in mono on the right,
- *  the last sync in mono (`never`), the state word, and the end `Delete`, an armed two-step whose rest title says the
- *  channels it created stay. A disabled playlist stays in the list, dimmed. */
+/** One playlist of the list: the tick, the name, the source (the masked host or the file name, never the address), the
+ *  channel counts in mono on the right (all, enabled, live, dead), the last run in mono (`never`), the state word, and the
+ *  end `Delete`, an armed two-step whose question names the channels that go with the playlist. A disabled playlist
+ *  stays in the list, dimmed. */
 export function PlaylistRow({ row, ticked, deleteReason, onTick, onOpen, onDelete }: PlaylistRowProps) {
   return (
     <RecordGridRow
@@ -28,7 +29,7 @@ export function PlaylistRow({ row, ticked, deleteReason, onTick, onOpen, onDelet
       onOpen={() => onOpen(row.id)}
       end={
         <ArmedButton
-          question={`Delete ${row.name}?`}
+          question={row.deleteQuestion}
           disabled={deleteReason !== undefined}
           title={deleteReason ?? DELETE_TITLE}
           onConfirm={() => onDelete(row.id)}
@@ -38,9 +39,12 @@ export function PlaylistRow({ row, ticked, deleteReason, onTick, onOpen, onDelet
       }
     >
       <span className={CELL_NAME}>{row.name}</span>
-      <span className={CELL_MONO}>{row.host}</span>
+      <span className={CELL_MONO}>{row.source}</span>
       <span className={CELL_NUMBER}>{row.channels}</span>
-      <span className={CELL_MONO}>{row.lastSynced}</span>
+      <span className={CELL_NUMBER}>{row.enabled}</span>
+      <span className={CELL_NUMBER}>{row.live}</span>
+      <span className={CELL_NUMBER}>{row.dead}</span>
+      <span className={CELL_MONO}>{row.lastRun}</span>
       <StateWord state={row.state} />
     </RecordGridRow>
   );

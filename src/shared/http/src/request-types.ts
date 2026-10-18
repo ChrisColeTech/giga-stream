@@ -12,6 +12,8 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 export interface RequestOptions<Area extends string> {
   readonly method?: HttpMethod;
   readonly body?: unknown;
+  /** A multipart body (a file upload): sent as is with NO content type, so the runtime adds the boundary. */
+  readonly form?: FormData;
   readonly signal?: AbortSignal;
   /** The events area of the request; the config's default when absent. */
   readonly area?: Area;

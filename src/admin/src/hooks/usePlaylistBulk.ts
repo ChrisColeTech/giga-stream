@@ -44,7 +44,7 @@ export function usePlaylistBulk(): PlaylistBulk {
     const plan = planPlaylistBulk(verb, items, ticked, jobFor);
     const count = plan.runnable.length;
     const press = (): void => {
-      const tally = { released: 0 };
+      const tally = { channels: 0, jobs: 0 };
       const words: BulkWords = verb === "delete" ? deleteWords(tally) : PLAYLIST_BULK_WORDS[verb];
       void bulk.run({
         words,

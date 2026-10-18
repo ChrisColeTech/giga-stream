@@ -30,7 +30,7 @@ export function rebuildReason(channel: AdminChannel, dirty: boolean, write: Writ
 
 /** `Revert to playlist`: only a synced row with edits has anything to go back to. */
 export function revertReason(channel: StreamAdminChannel, write: WriteState): string | undefined {
-  if (channel.source === undefined) return REVERT_HAND_MADE;
+  if (channel.playlistId === undefined) return REVERT_HAND_MADE;
   if ((channel.editedFields ?? []).length === 0) return REVERT_NONE;
   return writeReason(write);
 }

@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { ChannelRows } from "@/components/channels/ChannelRows";
 import { ChannelsIndex } from "@/components/channels/ChannelsIndex";
 import { NewChannelRows } from "@/components/channels/NewChannelRows";
+import { DELETE_SYNCED_TIP } from "@/constants/channel-copy";
 import { EMPTY_NEW_CHANNEL } from "@/lib/channel-body";
 import { useAppStore } from "@/store/app-store";
 import { holdChannels } from "./support/channels-hold";
@@ -120,7 +121,8 @@ describe("the channels grid", () => {
       [
         live("a", { state: "preparing" }),
         live("b", { enabled: false }),
-        stream("c", { source: "lists.example" }),
+        stream("c", { source: "lists.example", playlistId: 3, playlistName: "Example list" }),
+        stream("d", { published: false, playlistId: 3, playlistName: "Example list" }),
       ],
       1,
     );
@@ -132,10 +134,12 @@ describe("the channels grid", () => {
     assert.ok(!html.includes(">number</span>"));
     assert.ok(html.indexOf("Select Channel a") < html.indexOf("Select Channel b"), "in the order the backend answered it");
     assert.ok(html.includes('data-st="preparing"') && html.includes('data-st="disabled"') && html.includes('data-st="synced"'));
+    assert.ok(html.includes('data-st="held"'), "an enabled channel of a disabled playlist is held, not enabled");
+    assert.ok(html.includes('title="Enabled, but its playlist is disabled, so players do not read it."'));
     assert.ok(/<li data-st="disabled"[^>]*opacity-45/.test(html));
     assert.ok(/<li data-st="preparing" data-ticked=""/.test(html));
     assert.ok(!html.includes(">fault</span>"));
-    assert.ok(html.includes('title="The next sync adds it again. Disable it to keep it off."'));
+    assert.ok(html.includes(`title="${DELETE_SYNCED_TIP}"`));
     assert.ok(!html.includes("Select all") && html.includes('aria-checked="true"'));
   });
 

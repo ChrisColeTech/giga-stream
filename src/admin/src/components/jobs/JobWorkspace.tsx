@@ -10,11 +10,10 @@ import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useJobActions } from "@/hooks/useJobActions";
 import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
 import { useRecordForm } from "@/hooks/useRecordForm";
-import { draftOf, sameJobDraft, type RunToggles } from "@/lib/job-draft";
+import { draftOf, sameJobDraft } from "@/lib/job-draft";
 import { workspaceRunReason } from "@/lib/job-run-gate";
 import { idOf } from "@/lib/playlist-rows";
 import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
-import type { JobResult } from "@/services/job-flows";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { useAppStore } from "@/store/app-store";
 import { JobDetailsGroup } from "./JobDetailsGroup";
@@ -44,7 +43,6 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
       if (result.value !== null) form.reset(draftOf(result.value));
     } else if (result.dropped !== true && result.field !== undefined) form.setError(result.field, result.sentence);
   };
-  const run = (toggles: RunToggles): Promise<JobResult> => flows.run(job.id, toggles);
   const runReason = workspaceRunReason(job, { dirty: form.dirty, busy: isBusy(runKey), unreachable, playlists });
   const forward: ToolbarAction =
     job.type === "playlist"
@@ -68,13 +66,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={LABEL_COLUMN}>
           <div ref={spy.bind("jw-details")}>
-            <JobDetailsGroup
-              job={job}
-              draft={form.draft}
-              errors={form.errors}
-              playlists={playlists}
-              onChange={form.set}
-            />
+            <JobDetailsGroup job={job} draft={form.draft} errors={form.errors} onChange={form.set} />
           </div>
           <div ref={spy.bind("jw-schedule")}>
             <JobScheduleGroup
@@ -89,15 +81,10 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
             />
           </div>
           <div ref={spy.bind("jw-run")}>
-            <JobRunGroup job={job} reason={runReason} onRun={(toggles) => track(runKey, () => run(toggles))} />
+            <JobRunGroup reason={runReason} onRun={() => track(runKey, () => flows.run(job.id))} />
           </div>
           <div ref={spy.bind("jw-last")}>
-            <JobLastRunGroup
-              job={job}
-              loading={loading}
-              onRefresh={() => void track("refresh", flows.refresh)}
-              onOpenChannel={(id) => requestTab("channels", id)}
-            />
+            <JobLastRunGroup job={job} loading={loading} onRefresh={() => void track("refresh", flows.refresh)} />
           </div>
         </div>
       </div>

@@ -2,9 +2,20 @@
  * `disabled`, `synced`, `edited`, `manual`, `idle`, `running`, `enabled`. Always a word, never a dot or an edge strip. A
  * disabled record stays in its list, dimmed, and its word is `disabled` whatever else is true of it. Pure. */
 
+import { HELD_HINT } from "@/constants/channel-copy";
+
 export type LiveState = "preparing" | "starting" | "live" | "restarting" | "stopped" | "failed";
 
-export type StateWord = LiveState | "disabled" | "synced" | "edited" | "manual" | "idle" | "running" | "enabled";
+export type StateWord =
+  | LiveState
+  | "disabled"
+  | "held"
+  | "synced"
+  | "edited"
+  | "manual"
+  | "idle"
+  | "running"
+  | "enabled";
 
 /** The colour a word takes: the status tokens (`done`, `loading`, `failed`), the faint text, or the accent. */
 export type StateTone = "done" | "loading" | "failed" | "faint" | "accent";
@@ -15,6 +26,8 @@ export interface RowState {
   readonly tone: StateTone;
   /** A disabled record is dimmed to 45%. */
   readonly dimmed: boolean;
+  /** A tooltip for the word, when the word alone does not say why (`held`). */
+  readonly hint?: string;
 }
 
 const TONES: Readonly<Record<StateWord, StateTone>> = {
@@ -27,6 +40,7 @@ const TONES: Readonly<Record<StateWord, StateTone>> = {
   edited: "loading",
   failed: "failed",
   stopped: "faint",
+  held: "faint",
   synced: "faint",
   idle: "faint",
   disabled: "faint",
@@ -41,10 +55,13 @@ export interface ChannelStateInput {
   readonly state?: LiveState;
   /** A stream channel's origin: synced from a playlist, synced then edited, or added by hand. */
   readonly origin?: "synced" | "edited" | "manual";
+  /** What a player reads: false on an enabled channel whose playlist is disabled. Absent counts as published. */
+  readonly published?: boolean;
 }
 
 export function channelState(channel: ChannelStateInput): RowState {
   if (!channel.enabled) return state("disabled");
+  if (channel.published === false) return { ...state("held"), hint: HELD_HINT };
   return state(channel.state ?? channel.origin ?? "manual");
 }
 

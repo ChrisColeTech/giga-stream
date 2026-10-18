@@ -26,7 +26,7 @@ export interface SessionApiDeps {
   readonly end: (sentence: string) => void;
 }
 
-export type CallOptions = Pick<RequestOptions<EventArea>, "method" | "body" | "signal" | "area">;
+export type CallOptions = Pick<RequestOptions<EventArea>, "method" | "body" | "form" | "signal" | "area">;
 
 export interface SessionApi {
   /** A signed-in call: the bearer, the proactive refresh, one retry after a refresh on a 401. */

@@ -14,9 +14,9 @@ export interface StreamStatusGroupProps {
   readonly onRevert: () => void;
 }
 
-/** A stream channel's `Status` (`36` section 7), read-only: its id, where it came from (`Synced from <host>` for a row a
- *  playlist sync made, `Added by hand` otherwise, ending with the `Revert to playlist` icon that drops the admin's edits
- *  of a synced row) and its revision. */
+/** A stream channel's `Status` (`36` section 7), read-only: its id, where it came from (`Synced from <playlist>` for a row
+ *  a playlist made, `Added by hand` otherwise, ending with the `Revert to playlist` icon that drops the admin's edits of
+ *  a synced row), whether players read it (`Published`: enabled, and its playlist enabled) and its revision. */
 export function StreamStatusGroup({ channel, revertReason, onRevert }: StreamStatusGroupProps) {
   return (
     <Group id="st-status" icon={Activity} title="Status" last>
@@ -32,7 +32,12 @@ export function StreamStatusGroup({ channel, revertReason, onRevert }: StreamSta
           </IconButton>
         }
       >
-        <span className={FACT}>{channel.source === undefined ? "Added by hand" : `Synced from ${channel.source}`}</span>
+        <span className={FACT}>
+          {channel.playlistId === undefined ? "Added by hand" : `Synced from ${channel.playlistName ?? channel.source ?? ""}`}
+        </span>
+      </Row>
+      <Row label="Published" tip={CHANNEL_TIPS.published}>
+        <span className={FACT}>{channel.published ? "yes" : "no"}</span>
       </Row>
       <Row label="Revision" tip={CHANNEL_TIPS.revision}>
         <span className={FACT}>{channel.revision}</span>

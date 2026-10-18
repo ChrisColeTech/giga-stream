@@ -19,7 +19,7 @@ export interface BackendChannel {
   readonly streamUrl: string;
   readonly kind: "stream" | "live";
   readonly tvgId?: string;
-  /** The playlist host that owns a synced stream row; absent on a hand-made one. */
+  /** Derived by the backend from the parent playlist (its host, or its file name); absent on a hand-made row. */
   readonly source?: string;
   readonly revision: number;
 }
@@ -27,8 +27,18 @@ export interface BackendChannel {
 export interface StreamAdminChannel extends BackendChannel {
   readonly kind: "stream";
   readonly enabled: boolean;
+  /** `enabled` and (no playlist, or the playlist is enabled): what a player reads (`43` section 3.1). */
+  readonly published: boolean;
   /** The fields an admin edited on a synced row; the sync keeps them. */
   readonly editedFields?: readonly string[];
+  /** The parent playlist; absent on a hand-made row. */
+  readonly playlistId?: number;
+  readonly playlistName?: string;
+  /** The sync's verdict on the row's own stream address; absent until it is checked. */
+  readonly status?: "live" | "dead";
+  readonly checkedAt?: number;
+  /** The relative `/logos/c/<file>` of the cached copy; `logoUrl` stays the source address. */
+  readonly cachedLogoUrl?: string;
 }
 
 export interface PlaylistEntry {
@@ -39,6 +49,7 @@ export interface PlaylistEntry {
 export interface LiveAdminChannel extends BackendChannel {
   readonly kind: "live";
   readonly enabled: boolean;
+  readonly published: boolean;
   readonly mode: LiveMode;
   readonly captions: boolean;
   readonly variants: readonly Variant[];

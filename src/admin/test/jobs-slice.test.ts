@@ -6,6 +6,7 @@ import { createJobFlows } from "@/services/job-flows";
 import type { JobsService } from "@/services/jobs";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { useAppStore } from "@/store/app-store";
+import { playlist } from "./support/run-kit";
 import { resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
@@ -82,7 +83,7 @@ describe("the jobs slice and the statusbar's N syncing", () => {
   });
 
   it("holds the playlists for the select, and keeps the last list when that read fails", async () => {
-    state().jobsPlaylistsLoaded([{ id: 1, name: "L", host: "h", masked: "h/…", enabled: true, channels: 0 }]);
+    state().jobsPlaylistsLoaded([playlist(1)]);
     state().jobsPlaylistsLoaded(null);
     assert.deepEqual([state().jobs.playlists.length, state().jobs.playlistsStatus], [1, "failed"]);
   });

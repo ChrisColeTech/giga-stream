@@ -13,12 +13,20 @@ const base = {
   source: z.string().optional(),
   revision: z.number(),
   enabled: z.boolean(),
+  published: z.boolean(),
 };
 
+/* A stream row's playlist facts are derived by the backend's join (`43` section 3.1) and its health columns are the
+ * sync's: absent until a check has run. `cachedLogoUrl` is the relative `/logos/c/<file>` of the cached copy. */
 const StreamSchema = z.object({
   ...base,
   kind: z.literal("stream"),
   editedFields: z.array(z.string()).optional(),
+  playlistId: z.number().optional(),
+  playlistName: z.string().optional(),
+  status: z.enum(["live", "dead"]).optional(),
+  checkedAt: z.number().optional(),
+  cachedLogoUrl: z.string().optional(),
 });
 
 const LiveSchema = z.object({

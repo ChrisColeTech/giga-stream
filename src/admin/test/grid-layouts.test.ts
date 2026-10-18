@@ -54,7 +54,7 @@ describe("the index list grids", () => {
   });
 
   it("playlists and deleted titles: the time track holds a formatted time whole", () => {
-    assert.ok(rem(PLAYLIST_GRID.tracks[3] ?? "") >= 16 * MONO_12PX_REM);
+    assert.ok(rem(PLAYLIST_GRID.tracks[6] ?? "") >= 16 * MONO_12PX_REM);
     assert.ok(rem(DELETED_GRID.tracks[2] ?? "") >= 16 * MONO_12PX_REM);
   });
 });

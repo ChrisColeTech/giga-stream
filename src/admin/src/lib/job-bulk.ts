@@ -1,5 +1,7 @@
 import { ALREADY_DISABLED, ALREADY_ENABLED, UNREACHABLE_REASON } from "@/constants/account-copy";
-import { DELETE_RUNNING, EVERY_JOB_DISABLED, EVERY_JOB_ENABLED, WORKING_REASON } from "@/constants/job-copy";
+import {
+  DELETE_RUNNING, EVERY_JOB_DISABLED, EVERY_JOB_ENABLED, PLAYLIST_JOB_OWNED, WORKING_REASON,
+} from "@/constants/job-copy";
 import { TICK_JOB_FIRST } from "@/constants/record-copy";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
@@ -29,7 +31,7 @@ export const JOB_BULK_WORDS: Readonly<Record<JobBulkVerb, BulkWords>> = {
 function skip(verb: JobBulkVerb, job: AdminJob): string | null {
   if (verb === "enable") return job.enabled ? ALREADY_ENABLED : null;
   if (verb === "disable") return job.enabled ? null : ALREADY_DISABLED;
-  if (verb === "delete") return job.running ? DELETE_RUNNING : null;
+  if (verb === "delete") return job.type === "playlist" ? PLAYLIST_JOB_OWNED : job.running ? DELETE_RUNNING : null;
   return null;
 }
 
