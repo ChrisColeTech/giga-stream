@@ -1,8 +1,8 @@
 import type { FaultName, LiveCategory, LiveMode, Variant } from "@/types/admin-channel";
 
-/* The Channels tab's words and option lists (`28` sections 7.2 and 7.3): labels (also the `labelColumn` lists), the
- * rail's sections, what the pickers offer, and the sentences a disabled control gives as its reason. Tooltips on info
- * glyphs are in `channel-tips.ts`. */
+/* The Channels tab's words and option lists (`28` sections 7.2 and 7.3, `36`): labels (also the `labelColumn` lists),
+ * the rail's sections, what the pickers offer, the sentences a disabled control gives as its reason, and the notices.
+ * Tooltips on info glyphs are in `channel-tips.ts`. */
 
 export const CATEGORIES: readonly LiveCategory[] = ["News", "Sports", "Music", "Kids", "Movies", "Entertainment"];
 export const FAULTS: readonly FaultName[] = [
@@ -17,14 +17,14 @@ export const FAULTS: readonly FaultName[] = [
 export const VARIANTS: readonly Variant[] = ["360p", "720p", "1080p"];
 export const MODE_LABEL: Readonly<Record<LiveMode, string>> = { loop: "Loop", encode: "Encode" };
 
-/** The qualities a new live channel starts with, and the least a channel keeps. */
-export const DEFAULT_VARIANTS: readonly Variant[] = ["720p", "1080p"];
+/** The least number of qualities a channel keeps. */
 export const MIN_VARIANTS = 2;
+export const MIN_VARIANTS_REASON = "A channel keeps at least two qualities.";
 
 /** The longest a fault lasts or waits: 24 hours, in milliseconds (`29` section 9.1). */
 export const FAULT_MAX_MS = 86_400_000;
 
-/** The labels each page's rows carry, so a page fixes its label column once. */
+/** The labels each page's rows carry, so a page fixes its label column once. Name first on every form. */
 export const NEW_CHANNEL_LABELS = ["Name", "Kind", "Number", "Category", "Folder", "Stream address"] as const;
 export const CHANNEL_LABELS = [
   ...NEW_CHANNEL_LABELS,
@@ -45,6 +45,7 @@ export const CHANNEL_LABELS = [
   "Renditions",
   "Playlist",
   "Synced from",
+  "Revision",
 ] as const;
 
 /** The rail's sections; the ids are the groups' ids, prefixed by the page (`lv-`, `st-`). A module constant: a new array
@@ -63,35 +64,47 @@ export const STREAM_SECTIONS = [
 export const LIVE_SECTION_IDS: readonly string[] = LIVE_SECTIONS.map((section) => section.id);
 export const STREAM_SECTION_IDS: readonly string[] = STREAM_SECTIONS.map((section) => section.id);
 
-/** Reasons a control is disabled (shown as its tooltip). */
+/** Tooltips at rest and disabled reasons (shown as the control's tooltip). */
 export const DELETE_SYNCED_TIP = "The next sync adds it again. Disable it to keep it off.";
-export const REBUILD_TIP = "Read the source again and rebuild this channel";
-export const REBUILD_DISABLED = "A disabled channel cannot be rebuilt.";
-export const REBUILD_RUNNING = "This channel is already being built.";
-export const REVERT_TIP = "Drop the edits and take the playlist's values again";
-export const REVERT_NONE = "Nothing edited yet.";
-export const FAULT_NOT_LIVE = "A fault can be applied while the channel is live.";
+export const REBUILD_DISABLED = "Enable the channel to rebuild it.";
+export const STREAM_NO_REBUILD = "A stream channel has nothing to rebuild.";
+export const REVERT_HAND_MADE = "This channel was made by hand; there is nothing to revert.";
+export const REVERT_NONE = "Nothing was edited.";
+export const FAULT_NOT_LIVE = "Apply a fault only while the channel is live.";
 export const FAULT_NONE = "No fault is applied.";
-export const CHOOSE_FOLDER_TIP = "Choose a folder on the backend machine";
+export const APPLY_TIP = "A test tool: break the running stream on purpose";
 export const CHOOSE_UNAVAILABLE = "Folders can be chosen only in the backend's own window; type the path.";
-export const REFRESH_TIP = "Read the channels again";
-export const STATUS_REFRESH_TIP = "Read this channel's state again";
-export const COPY_TIP = "Copy the address";
 export const ADD_VIDEO_EMPTY = "Type a path first.";
 export const ADD_VIDEO_DUPLICATE = "That video is already in the list.";
 export const ALREADY_FIRST = "Already first";
 export const ALREADY_LAST = "Already last";
+export const UNREACHABLE_REASON = "The admin backend cannot be reached.";
+export const SAVING_REASON = "Saving.";
+export const LOADING_REASON = "Loading.";
+export const WORKING_REASON = "Working.";
 
-/** Notices. */
-export const NOTICE_SAVED = "Changes saved.";
-export const NOTICE_DISCARDED = "Changes discarded.";
-export const NOTICE_REFRESHED = "Channels refreshed.";
-export const NOTICE_REVERTED = "Reverted to the playlist.";
-export const NOTICE_FAULT_APPLIED = "Fault applied.";
-export const NOTICE_FAULT_CLEARED = "Fault cleared.";
-export const NOTICE_COPIED = "Address copied.";
-export const NOTICE_NOT_COPIED = "The address could not be copied.";
-export const noticeBuilding = (name: string): string => `${name} is preparing.`;
-export const noticeLive = (name: string): string => `${name} is live.`;
-export const noticeCreated = (name: string): string => `${name} created.`;
-export const noticeDeleted = (name: string): string => `${name} deleted.`;
+/** Refusals shown under a row. */
+export const NUMBER_TAKEN = "Another channel already has that number.";
+export const fieldRequired = (label: string): string => `${label} is required.`;
+
+/** The toolbar's bulk verbs (`36` section 5.3). */
+export const ALREADY_ENABLED = "Already enabled.";
+export const ALREADY_DISABLED = "Already disabled.";
+export const ALL_ENABLED = "Every ticked channel is already enabled.";
+export const ALL_DISABLED = "Every ticked channel is already disabled.";
+export const bulkDeleteQuestion = (count: number): string => `Delete ${count} ${count === 1 ? "channel" : "channels"}?`;
+
+/** Notices. A local path is never part of one (`36` section 10). */
+export const channelPreparing = (name: string): string => `${name} is preparing.`;
+export const channelCreated = (name: string): string => `Created ${name}.`;
+export const channelSaved = (name: string): string => `Saved ${name}.`;
+export const channelDeleted = (name: string): string => `Deleted ${name}.`;
+export const channelReverted = (name: string): string => `Reverted ${name}.`;
+export const faultApplied = (fault: string, name: string): string => `Applied ${fault} to ${name}.`;
+export const faultCleared = (name: string): string => `Cleared the fault on ${name}.`;
+export const unreadableChannels = (count: number): string =>
+  `${count} ${count === 1 ? "channel" : "channels"} could not be read.`;
+export const CHANNEL_GONE = "That channel no longer exists.";
+export const REQUEST_FAILED = "The request failed.";
+export const ADDRESS_COPIED = "Address copied.";
+export const ADDRESS_NOT_COPIED = "The address could not be copied.";

@@ -30,5 +30,6 @@ export const CHANNEL_TIPS = {
   playlist: "The videos in play order; the one playing is lit.",
   liveAddress: "The address players load; copy it to try it elsewhere.",
   syncedFrom: "The playlist host that owns this channel, if a sync created it.",
+  revision: "Raised by every change the backend saves.",
   edited: "Edited here; the next sync keeps it.",
 } as const;

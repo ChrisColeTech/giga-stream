@@ -43,4 +43,26 @@ export const ChannelSchema: z.ZodType<AdminChannel> = z.discriminatedUnion("kind
 
 export const ChannelListSchema = z.object({ items: z.array(ChannelSchema), revision: z.number() });
 
-export type ChannelList = z.infer<typeof ChannelListSchema>;
+/** The list as the service reads it: rows stay `unknown` so one unreadable row costs that row, not the list (`01`
+ *  section 8). `services/channels.ts` parses each with `ChannelSchema`. */
+export const ChannelListLenientSchema = z.object({ items: z.array(z.unknown()), revision: z.number() });
+
+/** The readable channels, the list's revision, and how many rows could not be read. */
+export interface ChannelList {
+  readonly items: AdminChannel[];
+  readonly revision: number;
+  readonly unreadable: number;
+}
+
+const FAULT = z.enum(["stall", "segment-404", "slow-segments", "playlist-500", "discontinuity", "restart", "end"]);
+
+/** `PUT|DELETE /api/channels/:id/fault`. The backend answers the applied fault as `{ fault, expiresInMs }` (or the bare
+ *  word, or null once cleared); either reads as the fault's name. */
+export const FaultAnswerSchema = z
+  .object({ id: z.string(), fault: z.union([FAULT, z.object({ fault: FAULT }), z.null()]) })
+  .transform((answer) => ({
+    id: answer.id,
+    fault: answer.fault === null || typeof answer.fault === "string" ? answer.fault : answer.fault.fault,
+  }));
+
+export const DeletedChannelSchema = z.object({ id: z.string() });

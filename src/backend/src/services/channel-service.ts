@@ -57,8 +57,8 @@ export function createChannelService(deps: {
 
   function createRecord(input: ChannelInput): ChannelRecord {
     if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`, allowLoopback);
-    if (store.channels.find(input.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
-    const record = newLiveRecord(input);
+    const record = newLiveRecord({ ...input, id: input.id ?? `live-${randomUUID()}` }); // none sent: assigned, docs/36
+    if (store.channels.find(record.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
     claimNumber(record);
     checkLiveSource(record.live);
     return record;

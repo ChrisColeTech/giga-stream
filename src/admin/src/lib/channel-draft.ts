@@ -31,7 +31,7 @@ export interface StreamDraft {
 
 export type ChannelDraft = LiveDraft | StreamDraft;
 
-function liveDraft(channel: LiveAdminChannel): LiveDraft {
+export function liveDraft(channel: LiveAdminChannel): LiveDraft {
   return {
     kind: "live",
     name: channel.name,
@@ -47,7 +47,7 @@ function liveDraft(channel: LiveAdminChannel): LiveDraft {
   };
 }
 
-function streamDraft(channel: StreamAdminChannel): StreamDraft {
+export function streamDraft(channel: StreamAdminChannel): StreamDraft {
   return {
     kind: "stream",
     name: channel.name,
@@ -109,3 +109,7 @@ export function rebuilds(channel: LiveAdminChannel, draft: LiveDraft): boolean {
     !sameList(draft.variants, base.variants)
   );
 }
+
+/** A quality chip pressed: off if it was on, else on at the end, so the list keeps the order the person chose. */
+export const toggleVariant = (variants: readonly Variant[], variant: Variant): Variant[] =>
+  variants.includes(variant) ? variants.filter((one) => one !== variant) : [...variants, variant];
