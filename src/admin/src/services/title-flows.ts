@@ -123,9 +123,7 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
     try {
       await service.remove(id);
       if (!alive(serial)) return DROPPED;
-      // A synced title stays on TMDB: its Browse row reads `deleted` rather than vanishing. A manual one has no row.
-      if (title === undefined || !isManualTitle(title)) store().titleMarkDeleted(id);
-      else store().titleRemove(id);
+      store().titleRemove(id); // a synced title's Browse row stays and reads `deleted` (the slice decides)
       if (store().titlesStored.status !== "idle") void storedFlow.loadStored(); // the rows after it moved up one
       if (store().workspaces.titles === id) store().closeWorkspace("titles");
       store().say(titleDeleted(title?.title ?? id));

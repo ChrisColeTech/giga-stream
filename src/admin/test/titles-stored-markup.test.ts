@@ -23,6 +23,12 @@ function pageWith(total: number, shown = Math.min(total, 100)): string {
   return renderLive(createElement(TitlesPage, { active: true }));
 }
 const list = (html: string): string => html.slice(at(html, 'id="ti-list"'));
+/** The Titles list group alone: the Deleted titles group below it has its own query row (a search, a Kind select). */
+const titlesGroup = (html: string): string => {
+  const from = list(html);
+  const end = from.indexOf('id="ti-deleted"');
+  return end < 0 ? from : from.slice(0, end);
+};
 
 beforeEach(() => {
   resetStore();
@@ -51,7 +57,7 @@ describe("the Stored | Browse TMDB mode", () => {
 
 describe("the Stored list's first row", () => {
   it("is a search field with its icon, a Sort select with its direction toggle and a self-labelling select each for Kind, Origin, Edited and Enabled, in one compact row", () => {
-    const html = list(pageWith(5));
+    const html = titlesGroup(pageWith(5));
     const order = ['aria-label="Search stored titles"', 'aria-label="Sort"', 'aria-label="Kind"', 'aria-label="Origin"', 'aria-label="Edited"', 'aria-label="Enabled"', 'aria-label="Titles table"'];
     order.reduce((previous, needle) => {
       const index = at(html, needle);
