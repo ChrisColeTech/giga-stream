@@ -12,11 +12,14 @@ export interface Actor {
 /** The audit log (docs/03 section 7.13). A password, token or hash is never written to it. */
 export function createAuditService(store: Store, now: () => number) {
   return {
-    record(actor: Actor, entry: Omit<AuditWrite, "actorId" | "actorEmail" | "address">): void {
+    record(actor: Actor, entry: Omit<AuditWrite, "actorId" | "actorUsername" | "address">): void {
       store.audit.append(
         {
           ...entry,
-          ...(actor.principal && { actorId: actor.principal.accountId, actorEmail: actor.principal.email }),
+          ...(actor.principal && {
+            actorId: actor.principal.accountId,
+            actorUsername: actor.principal.username,
+          }),
           ...(actor.address && { address: actor.address }),
         },
         now(),

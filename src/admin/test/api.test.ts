@@ -24,14 +24,14 @@ describe("the envelope", () => {
     const backend = scripted(() => success({ items: [ACCOUNT] }));
     const api = createSessionApi(rig(backend.fetch, TOKENS).deps);
     const list = await api.request("/api/admin-accounts", AccountListSchema);
-    assert.equal(list.items[0]?.email, "ada@example.test");
+    assert.equal(list.items[0]?.username, "ada@example.test");
   });
 
   it("turns a failure envelope into a typed ApiError with its code, status and the backend's sentence", async () => {
-    const backend = scripted(() => failure(409, "account.email_taken", "That email is in use."));
+    const backend = scripted(() => failure(409, "account.username_taken", "That username is in use."));
     const api = createSessionApi(rig(backend.fetch, TOKENS).deps);
     const error = await refusal(api.request("/api/admin-accounts", Item, { method: "POST", body: {} }));
-    assert.deepEqual([error.code, error.status, error.message], ["account.email_taken", 409, "That email is in use."]);
+    assert.deepEqual([error.code, error.status, error.message], ["account.username_taken", 409, "That username is in use."]);
   });
 
   it("answers a body that is not an envelope as backend.bad_response", async () => {
@@ -80,11 +80,11 @@ describe("the bearer", () => {
   });
 
   it("sends no bearer on login", async () => {
-    const backend = scripted(() => failure(401, "auth.invalid_credentials", "The email or password is wrong."));
+    const backend = scripted(() => failure(401, "auth.invalid_credentials", "The username or password is wrong."));
     const api = createSessionApi(rig(backend.fetch, null).deps);
     await refusal(api.login("a@b.test", "x"));
     assert.equal(backend.calls[0]?.headers.authorization, undefined);
-    assert.deepEqual(backend.calls[0]?.body, { email: "a@b.test", password: "x" });
+    assert.deepEqual(backend.calls[0]?.body, { username: "a@b.test", password: "x" });
   });
 
   it("only ever sends paths under /api/", async () => {
@@ -96,7 +96,7 @@ describe("the bearer", () => {
 describe("the sentences", () => {
   const DOCUMENTED = [
     "auth.unauthorized", "auth.invalid_credentials", "auth.refresh_invalid", "auth.rate_limited", "auth.locked",
-    "account.not_found", "account.invalid", "account.email_taken", "account.last_admin", "account_state.invalid",
+    "auth.reset_invalid", "account.not_found", "account.invalid", "account.username_taken", "account.last_admin", "account_state.invalid",
     "channel.not_found", "channel.invalid", "channel.taken", "fault.invalid", "path.invalid", "media.not_found",
     "range.unsatisfiable", "provider.not_found", "provider.invalid", "title.not_found", "title.invalid",
     "title.manual", "tmdb.unavailable", "playlist.not_found", "playlist.invalid", "playlist.unreachable",

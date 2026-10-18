@@ -9,8 +9,8 @@ import { parseInput } from "./parse-input.js";
 /** Sign-in and tokens (docs/03 section 7.12). */
 export function registerAuth(app: FastifyInstance, services: Services): void {
   app.post("/api/auth/login", async (request, reply) => {
-    const { email, password } = parseInput(LoginSchema, request.body);
-    return ok(reply, await services.auth.login(email, password, actorOf(request)));
+    const { username, password } = parseInput(LoginSchema, request.body);
+    return ok(reply, await services.auth.login(username, password, actorOf(request)));
   });
 
   app.post("/api/auth/refresh", async (request, reply) => {

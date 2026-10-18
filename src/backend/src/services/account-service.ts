@@ -25,9 +25,11 @@ export function createAccountService(deps: {
     return found;
   }
 
-  function assertEmailFree(email: string, exceptId?: string): void {
-    const holder = store.accounts.findByEmail(email);
-    if (holder && holder.account.id !== exceptId) throw new AppError(ERRORS.accountEmailTaken, { field: "email" });
+  function assertUsernameFree(username: string, exceptId?: string): void {
+    const holder = store.accounts.findByUsername(username);
+    if (holder && holder.account.id !== exceptId) {
+      throw new AppError(ERRORS.accountUsernameTaken, { field: "username" });
+    }
   }
 
   /** True when this account is enabled and no other enabled account exists. */
@@ -39,18 +41,18 @@ export function createAccountService(deps: {
     get: (id: string): AdminAccount => existing(id).account,
 
     async create(input: AccountCreate, actor: Actor): Promise<AdminAccount> {
-      assertEmailFree(input.email);
+      assertUsernameFree(input.username);
       const id = `acct_${randomUUID()}`;
       const passwordHash = await hashPassword(input.password);
-      store.accounts.insert({ id, email: input.email, name: input.name, passwordHash, disabled: false }, now());
-      audit.record(actor, { action: "account.created", subject: id, detail: { email: input.email } });
+      store.accounts.insert({ id, username: input.username, name: input.name, passwordHash, disabled: false }, now());
+      audit.record(actor, { action: "account.created", subject: id, detail: { username: input.username } });
       return existing(id).account;
     },
 
     async update(id: string, patch: AccountPatch, actor: Actor): Promise<AdminAccount> {
       const current = existing(id);
       const a = current.account;
-      if (patch.email !== undefined) assertEmailFree(patch.email, id);
+      if (patch.username !== undefined) assertUsernameFree(patch.username, id);
       const disabling = patch.disabled === true && !a.disabled;
       if (disabling && isLastAdmin(a)) throw new AppError(ERRORS.accountLastAdmin);
       const passwordHash = patch.password === undefined ? current.passwordHash : await hashPassword(patch.password);
@@ -59,7 +61,7 @@ export function createAccountService(deps: {
         store.accounts.update(
           {
             id,
-            email: patch.email ?? a.email,
+            username: patch.username ?? a.username,
             name: patch.name ?? a.name,
             disabled: patch.disabled ?? a.disabled,
             passwordHash,
@@ -82,7 +84,7 @@ export function createAccountService(deps: {
       const current = existing(id);
       if (isLastAdmin(current.account)) throw new AppError(ERRORS.accountLastAdmin);
       store.accounts.remove(id);
-      audit.record(actor, { action: "account.deleted", subject: id, detail: { email: current.account.email } });
+      audit.record(actor, { action: "account.deleted", subject: id, detail: { username: current.account.username } });
       return { id };
     },
   };

@@ -2,8 +2,15 @@
  * component, so a refusal reads the same wherever it shows. */
 
 /** The rows' labels, so each page fixes its label column once. Name first on every form (owner, 2026-10-17). */
-export const NEW_ACCOUNT_LABELS: readonly string[] = ["Name", "Email", "Password"];
-export const WORKSPACE_LABELS: readonly string[] = ["Name", "Email", "Enabled", "Last sign-in", "New password"];
+export const NEW_ACCOUNT_LABELS: readonly string[] = ["Name", "Username", "Password"];
+export const WORKSPACE_LABELS: readonly string[] = [
+  "Name",
+  "Username",
+  "Enabled",
+  "Last sign-in",
+  "Security question",
+  "New password",
+];
 
 export const ACCOUNT_SECTIONS = [
   { id: "ac-details", label: "Details" },
@@ -13,6 +20,7 @@ export const ACCOUNT_SECTION_KEYS: readonly string[] = ACCOUNT_SECTIONS.map((sec
 
 export const ENABLED_TIP = "A disabled account cannot sign in.";
 export const LAST_SIGN_IN_TIP = "When this account last signed in.";
+export const SECURITY_QUESTION_TIP = "Each account sets its own, under Settings > Account.";
 export const DELETE_TITLE = "Deletes the account and ends its sessions.";
 export const SET_PASSWORD_TIP = "Signs this account out everywhere";
 
@@ -24,17 +32,17 @@ export const LOADING_REASON = "Loading.";
 export const TYPE_PASSWORD = "Type a new password.";
 
 /** Value refusals (`35` section 5.9). */
-export const EMAIL_SHAPE = "Email must look like name@example.com.";
+export const USERNAME_LENGTH = "Username must be 1 to 254 characters.";
 export const NAME_LENGTH = "Name must be 1 to 80 characters.";
 export const PASSWORD_REQUIRED = "Password is required.";
 export const PASSWORD_LONG = "Password must be at most 256 characters.";
 
 /** Notices. A password is never part of one. */
-export const accountCreated = (email: string): string => `Created ${email}.`;
-export const accountSaved = (email: string): string => `Saved ${email}.`;
-export const accountSavedSignedOut = (email: string): string => `Saved ${email}; it is signed out everywhere.`;
-export const accountDeleted = (email: string): string => `Deleted ${email}.`;
-export const passwordSet = (email: string): string => `Password set; ${email} is signed out everywhere.`;
+export const accountCreated = (username: string): string => `Created ${username}.`;
+export const accountSaved = (username: string): string => `Saved ${username}.`;
+export const accountSavedSignedOut = (username: string): string => `Saved ${username}; it is signed out everywhere.`;
+export const accountDeleted = (username: string): string => `Deleted ${username}.`;
+export const passwordSet = (username: string): string => `Password set; ${username} is signed out everywhere.`;
 export const unreadableAccounts = (count: number): string =>
   `${count} ${count === 1 ? "account" : "accounts"} could not be read.`;
 export const OWN_DISABLED_NOTICE = "Your account was disabled.";

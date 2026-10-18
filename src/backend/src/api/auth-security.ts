@@ -21,12 +21,12 @@ export function registerAuthSecurity(app: FastifyInstance, services: Services): 
   });
 
   app.post("/api/auth/reset-start", async (request, reply) => {
-    const { email } = parseInput(ResetStartSchema, request.body, ERRORS.accountInvalid);
-    return ok(reply, services.securityQuestions.start(email, actorOf(request)));
+    const { username } = parseInput(ResetStartSchema, request.body, ERRORS.accountInvalid);
+    return ok(reply, services.securityQuestions.start(username, actorOf(request)));
   });
 
   app.post("/api/auth/reset", async (request, reply) => {
-    const { email, answer, newPassword } = parseInput(ResetSchema, request.body, ERRORS.accountInvalid);
-    return ok(reply, await services.securityQuestions.reset(email, answer, newPassword, actorOf(request)));
+    const { username, answer, newPassword } = parseInput(ResetSchema, request.body, ERRORS.accountInvalid);
+    return ok(reply, await services.securityQuestions.reset(username, answer, newPassword, actorOf(request)));
   });
 }

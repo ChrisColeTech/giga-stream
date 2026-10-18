@@ -63,7 +63,7 @@ test("TMDB_SYNC_SCHEDULE arms the warm-up, audited as system, without touching t
     (a) => a.action === "sync.started",
   );
   assert.ok(system !== undefined);
-  assert.equal(system!.actorEmail ?? null, null);
+  assert.equal(system!.actorUsername ?? null, null);
 
   await t.dispose();
 });

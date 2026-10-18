@@ -1,4 +1,4 @@
-import { pruneTicks, sortedByEmail, upsertAccount, withoutAccount } from "@/lib/account-rows";
+import { pruneTicks, sortedByUsername, upsertAccount, withoutAccount } from "@/lib/account-rows";
 import type { AccountId, AdminAccount } from "@/types/admin-account";
 import type { SliceGet, SliceSet } from "./slices/slice-host";
 
@@ -43,7 +43,7 @@ export function createAccountsSlice(set: SliceSet<AccountsSlice>, get: SliceGet<
   return {
     accounts: NO_ACCOUNTS,
     accountsStartLoad: () => patch({ status: "loading" }),
-    accountsLoaded: (items) => patch({ status: "ready", unreachable: false, ...withItems(sortedByEmail(items)) }),
+    accountsLoaded: (items) => patch({ status: "ready", unreachable: false, ...withItems(sortedByUsername(items)) }),
     accountsLoadFailed: (unreachable) => patch({ status: "failed", unreachable }),
     accountUpsert: (account) => patch(withItems(upsertAccount(get().accounts.items, account))),
     accountRemove: (id) => patch(withItems(withoutAccount(get().accounts.items, id))),

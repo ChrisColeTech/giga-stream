@@ -55,14 +55,14 @@ export function createAuthService(deps: {
     store.refreshTokens.revokeAll(accountId, now());
   }
 
-  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, email: a.email });
+  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, username: a.username });
 
   return {
     revokeAll,
 
-    async login(email: string, password: string, actor: Actor): Promise<Session> {
+    async login(username: string, password: string, actor: Actor): Promise<Session> {
       if (!limiter.allow(actor.address ?? "unknown")) throw new AppError(ERRORS.authRateLimited);
-      const stored = store.accounts.findByEmail(email.trim());
+      const stored = store.accounts.findByUsername(username.trim());
       if (stored?.lockedUntil && stored.lockedUntil > now()) throw new AppError(ERRORS.authLocked);
       const matches = await verifyPassword(password, stored?.passwordHash ?? (await decoyHash));
       if (!stored || !matches || stored.account.disabled) {
@@ -71,7 +71,7 @@ export function createAuthService(deps: {
           const locked = failures >= LOCKOUT_FAILURES;
           store.accounts.recordFailure(stored.account.id, locked ? 0 : failures, locked ? now() + LOCKOUT_MS : null);
         }
-        audit.record(actor, { action: "auth.login_failed", detail: { email: email.trim().slice(0, 254) } });
+        audit.record(actor, { action: "auth.login_failed", detail: { username: username.trim().slice(0, 254) } });
         throw new AppError(ERRORS.authInvalidCredentials);
       }
       store.accounts.recordSignIn(stored.account.id, now());

@@ -77,8 +77,8 @@ place; otherwise the fileserver's own origin. The root `npm run dev` starts Vite
 Electron app, so the development window always loads it.
 
 **Admin backend environment:** `PORT`, `HOST`, `DATA_DIR` (default `~/.giga-stream-admin`),
-`JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD`
-(the first admin account, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
+`JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_USERNAME` (`ADMIN_BOOTSTRAP_EMAIL` is read when only that old name is set) and
+`ADMIN_BOOTSTRAP_PASSWORD` (the first admin account, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
 `CORS_ORIGINS` (serving over the network, section 7.10), `TMDB_READ_TOKEN` (`11`), `TMDB_SYNC_SCHEDULE`
 (the catalog-sync interval, section 7.6b; default off), `PLAYLIST_URLS` and `PLAYLIST_SYNC_SCHEDULE`
 (the playlist sync, section 7.2c; both default off/absent), `OMDB_API_KEY` (detail enrichment, `11`
@@ -599,7 +599,7 @@ host or a cloud host (section 7.10). It holds:
   records (`14` section 5.1, `16` section 4); public reads so the fileserver can hand each title its
   playable providers, create, update and delete by a signed-in admin;
 - **the admin accounts** (section 7.11): who may sign in, and what each may do;
-- **sign-in** (section 7.12): email and password give a short-lived JWT access token and a rotating
+- **sign-in** (section 7.12): username and password give a short-lived JWT access token and a rotating
   refresh token; every change is made with an access token;
 - **the audit log** (section 7.13): who changed what, and when.
 
@@ -903,21 +903,22 @@ account, audit and admin-channel routes carry `Cache-Control: no-store`.
 ```ts
 interface AdminAccount {
   id: string;
-  email: string;            // unique, compared without case
+  username: string;         // the sign-in name: any text, trimmed, 1 to 254 characters, no format; unique without case
   name: string;
   disabled: boolean;
   createdAt: number;
   updatedAt: number;
   lastSignInAt?: number;
+  securityQuestionSet: boolean; // read only; whether the account has set its question (docs/40), never the question
 }
 ```
 
 | Route | Who | Behaviour |
 |---|---|---|
-| `GET /api/admin-accounts` | signed in | every account, by email: `{ items: AdminAccount[] }` |
+| `GET /api/admin-accounts` | signed in | every account, by username: `{ items: AdminAccount[] }` |
 | `GET /api/admin-accounts/:accountId` | signed in | one account |
-| `POST /api/admin-accounts` | signed in | `{ email, name, password }`; answers `201` with the account |
-| `PATCH /api/admin-accounts/:accountId` | signed in | any of `email`, `name`, `disabled`, `password` |
+| `POST /api/admin-accounts` | signed in | `{ username, name, password }`; answers `201` with the account |
+| `PATCH /api/admin-accounts/:accountId` | signed in | any of `username`, `name`, `disabled`, `password` |
 | `DELETE /api/admin-accounts/:accountId` | signed in | removes it; answers `{ id }` |
 
 There are no roles (owner, 2026-10-17): every signed-in account is equal and may call every write and read route.
@@ -927,21 +928,24 @@ There are no roles (owner, 2026-10-17): every signed-in account is equal and may
   once** (section 7.12).
 - The last enabled account cannot be disabled or deleted (`409 account.last_admin`), so the backend
   always has someone who can sign in.
-- An email already used is `409 account.email_taken`; an unknown id `404 account.not_found`; an invalid
+- A username already used is `409 account.username_taken`, naming the field `username`; an unknown id `404 account.not_found`; an invalid
   field `422 account.invalid`, naming the field.
-- **The first account.** When the backend starts with no accounts and `ADMIN_BOOTSTRAP_EMAIL` and
-  `ADMIN_BOOTSTRAP_PASSWORD` are set, it creates that account. With no accounts and neither set, it starts,
+- **The first account.** When the backend starts with no accounts and `ADMIN_BOOTSTRAP_USERNAME` (or the
+  old `ADMIN_BOOTSTRAP_EMAIL`, when only that is set) and `ADMIN_BOOTSTRAP_PASSWORD` are set, it creates that account. With no accounts and neither set, it starts,
   serves reads, and logs that nobody can sign in.
 
 ### 7.12 Sign-in and tokens
 
 | Route | Who | Behaviour |
 |---|---|---|
-| `POST /api/auth/login` | anyone | `{ email, password }`; answers a `Session` |
+| `POST /api/auth/login` | anyone | `{ username, password }`; answers a `Session` |
 | `POST /api/auth/refresh` | anyone with a refresh token | `{ refreshToken }`; answers a new `Session`, and the old refresh token stops working |
 | `POST /api/auth/logout` | anyone with a refresh token | `{ refreshToken }`; ends that session; answers `{ signedOut: true }` |
 | `GET /api/auth/me` | signed in | the signed-in `AdminAccount` |
 | `POST /api/auth/password` | signed in | `{ currentPassword, newPassword }`; changes it and revokes all of the account's sessions |
+| `PUT /api/auth/me/security-question` | signed in | `{ currentPassword, question (1 to 8), answer }`; sets the account's own question; `200 { set: true }`; a wrong current password is `401 auth.invalid_credentials` with `details.field: "currentPassword"`; `422 account.invalid` names `answer` or `question` |
+| `POST /api/auth/reset-start` | anyone | `{ username }`; answers `200 { question }` for every username (a stand-in for an unknown name or an account with no question); `429 auth.rate_limited` |
+| `POST /api/auth/reset` | anyone | `{ username, answer, newPassword }`; right answer: sets the password, ends every session, `200 { reset: true }`; every refusal is `401 auth.reset_invalid`; a `newPassword` outside 1 to 256 characters is `422 account.invalid` (field `newPassword`); `429 auth.rate_limited` (docs/40) |
 
 ```ts
 interface Session {
@@ -963,7 +967,7 @@ interface Session {
   once: refreshing replaces it. Presenting a refresh token that was already used revokes every session of
   that account, since only a copied token is used twice.
 - **Limits.** Ten sign-in attempts a minute from one address (`429 auth.rate_limited`); five wrong
-  passwords in a row lock the account for 15 minutes (`429 auth.locked`). An unknown email and a wrong
+  passwords in a row lock the account for 15 minutes (`429 auth.locked`). An unknown username and a wrong
   password give the same answer (`401 auth.invalid_credentials`).
 - A missing, malformed, expired or revoked access token is `401 auth.unauthorized`; a refresh token that is unknown, used, expired or revoked
   is `401 auth.refresh_invalid`.
@@ -975,7 +979,7 @@ interface Session {
 |---|---|---|
 | `GET /api/audit` | signed in | entries newest first: `limit` (1 to 200, default 50) and `before` (an entry id) page through them; `{ items, nextBefore? }` |
 
-An entry is `{ id, at, actorId?, actorEmail?, action, subject?, detail?, address? }`. Actions:
+An entry is `{ id, at, actorId?, actorUsername?, action, subject?, detail?, address? }`. Actions:
 `auth.login`, `auth.login_failed`, `auth.logout`, `auth.password_changed`, `account.created`,
 `account.updated`, `account.deleted`, `channel.created`, `channel.updated`, `channel.deleted`,
 `channel.imported`, `channel.fault_set`, `channel.fault_cleared`, `channel.rebuilt`, `channel.reverted`,
@@ -997,8 +1001,8 @@ media.not_found        playback.range_invalid image.not_found
 backend.unreachable    backend.bad_response   tmdb.unavailable
 store.open             store.newer_schema     store.migrate          store.failed
 auth.unauthorized      auth.invalid_credentials auth.refresh_invalid
-auth.rate_limited      auth.locked
-account.not_found      account.invalid        account.email_taken    account.last_admin
+auth.rate_limited      auth.locked            auth.reset_invalid
+account.not_found      account.invalid        account.username_taken account.last_admin
 ```
 
 The admin backend also owns these (not in the fileserver): `channel.taken`, `fault.invalid`, `path.invalid`,
@@ -1009,9 +1013,9 @@ The admin backend also owns these (not in the fileserver): `channel.taken`, `fau
 | Status | Used for |
 |---|---|
 | 400 | `request.invalid` |
-| 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid` |
+| 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid`, `auth.reset_invalid` |
 | 404 | the `*.not_found` codes |
-| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.email_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.busy` |
+| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.username_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.busy` |
 | 429 | `auth.rate_limited`, `auth.locked` |
 | 416 | `playback.range_invalid`, `range.unsatisfiable` |
 | 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection`, `playlist.invalid`, `job.invalid`, `job.disabled`, `title.invalid`, `provider.invalid`, `sync.invalid` |

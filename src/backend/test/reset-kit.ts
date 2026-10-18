@@ -30,22 +30,22 @@ export function setQuestion(
   return send(app, "PUT", "/api/auth/me/security-question", { currentPassword, question, answer }, token);
 }
 
-export const resetStart = (app: FastifyInstance, email: string, address = freshAddress()): Promise<Answer> =>
-  send(app, "POST", "/api/auth/reset-start", { email }, undefined, address);
+export const resetStart = (app: FastifyInstance, username: string, address = freshAddress()): Promise<Answer> =>
+  send(app, "POST", "/api/auth/reset-start", { username }, undefined, address);
 
 export const resetWith = (
   app: FastifyInstance,
-  email: string,
+  username: string,
   answer: string,
   newPassword = NEW_PASSWORD,
   address = freshAddress(),
-): Promise<Answer> => send(app, "POST", "/api/auth/reset", { email, answer, newPassword }, undefined, address);
+): Promise<Answer> => send(app, "POST", "/api/auth/reset", { username, answer, newPassword }, undefined, address);
 
-/** The attempt row of a normalised email, read from the database file the app writes. */
-export function attemptRow(dataDir: string, emailKey: string): Record<string, unknown> | undefined {
+/** The attempt row of a normalised username, read from the database file the app writes. */
+export function attemptRow(dataDir: string, usernameKey: string): Record<string, unknown> | undefined {
   const db = new DatabaseSync(path.join(dataDir, DATABASE_FILE_NAME), { readOnly: true });
   try {
-    const row = db.prepare("SELECT failed, locked_until FROM reset_attempts WHERE email_key = ?").get(emailKey);
+    const row = db.prepare("SELECT failed, locked_until FROM reset_attempts WHERE username_key = ?").get(usernameKey);
     return row === undefined ? undefined : { ...row };
   } finally {
     db.close();
@@ -53,10 +53,11 @@ export function attemptRow(dataDir: string, emailKey: string): Record<string, un
 }
 
 /** The stored answer hash of an account, read from the database file. */
-export function storedAnswerHash(dataDir: string, email: string): unknown {
+export function storedAnswerHash(dataDir: string, username: string): unknown {
   const db = new DatabaseSync(path.join(dataDir, DATABASE_FILE_NAME), { readOnly: true });
   try {
-    const row = db.prepare("SELECT security_answer_hash AS h FROM admin_accounts WHERE email_key = ?").get(email.toLowerCase());
+    const sql = "SELECT security_answer_hash AS h FROM admin_accounts WHERE username_key = ?";
+    const row = db.prepare(sql).get(username.toLowerCase());
     return row?.h;
   } finally {
     db.close();
@@ -70,9 +71,9 @@ export async function auditEntries(app: FastifyInstance, token: string): Promise
   return Array.isArray(items) ? items.filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null) : [];
 }
 
-/** Makes a second account and answers its email. */
-export async function makeAccount(app: FastifyInstance, token: string, email: string): Promise<string> {
-  const made = await send(app, "POST", "/api/admin-accounts", { email, name: "Second", password: ADMIN_PASSWORD }, token);
+/** Makes a second account and answers its id. */
+export async function makeAccount(app: FastifyInstance, token: string, username: string): Promise<string> {
+  const made = await send(app, "POST", "/api/admin-accounts", { username, name: "Second", password: ADMIN_PASSWORD }, token);
   if (made.status !== 201) throw new Error(`account not created: ${JSON.stringify(made.body)}`);
   return String(pick(made.body, "data.id"));
 }

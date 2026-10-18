@@ -19,6 +19,7 @@ import { registerPlaylists } from "./api/playlists.js";
 import { registerPlaylistSync } from "./api/playlist-sync.js";
 import { registerProviders } from "./api/providers.js";
 import { registerTitles } from "./api/titles.js";
+import { bootstrapUsername } from "./bootstrap-username.js";
 import { config, type Config } from "./config.js";
 import { DATABASE_FILE_NAME } from "./constants/deployment.js";
 import { REQUEST_BODY_LIMIT_BYTES } from "./constants/limits.js";
@@ -87,7 +88,7 @@ export async function buildApp(
     const bootstrap = await bootstrapAdmin(
       ready.accounts,
       ready.hasAccounts(),
-      settings.ADMIN_BOOTSTRAP_EMAIL,
+      bootstrapUsername(settings),
       settings.ADMIN_BOOTSTRAP_PASSWORD,
     );
     // Every saved live channel builds in the background, so the server answers at once. The seed (an empty
@@ -103,7 +104,7 @@ export async function buildApp(
     ready.scheduler.arm();
 
     if (bootstrap === "none") {
-      app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_EMAIL/PASSWORD: nobody can sign in");
+      app.log.warn("there are no admin accounts and no ADMIN_BOOTSTRAP_USERNAME/PASSWORD: nobody can sign in");
     }
     app.addHook("onClose", async () => {
       ready.scheduler.stop();

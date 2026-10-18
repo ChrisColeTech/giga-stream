@@ -67,9 +67,9 @@ describe("createApi: the envelope", () => {
   });
 
   it("carries details.field and the correlation id of a refusal", async () => {
-    const error = { code: "account.invalid", message: "Bad.", details: { field: "email" }, correlationId: "c-1" };
+    const error = { code: "account.invalid", message: "Bad.", details: { field: "username" }, correlationId: "c-1" };
     const layer = client(async () => json({ ok: false, error }, 422));
-    await assert.rejects(layer.api("/api/example", Answer), { field: "email", correlationId: "c-1", status: 422 });
+    await assert.rejects(layer.api("/api/example", Answer), { field: "username", correlationId: "c-1", status: 422 });
   });
 
   it("leaves field undefined without details", async () => {

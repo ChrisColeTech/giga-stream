@@ -13,12 +13,12 @@ import { useAppStore } from "@/store/app-store";
  * placeholder. */
 const FIELDS = [
   { key: "name", label: "Name", type: "text", autoComplete: "off" },
-  { key: "email", label: "Email", type: "email", autoComplete: "off" },
+  { key: "username", label: "Username", type: "text", autoComplete: "off" },
   { key: "password", label: "Password", type: "password", autoComplete: "new-password" },
 ] as const satisfies ReadonlyArray<{ key: keyof NewAccountDraft; label: string; type: string; autoComplete: string }>;
 
-/** `New account`: Name, Email, Password and one `Create`, disabled with the first missing field's reason (`Name is
- *  required.`, then Email, then Password), `Saving.` while a call runs, or the unreachable sentence. Pressing it (or Enter
+/** `New account`: Name, Username, Password and one `Create`, disabled with the first missing field's reason (`Name is
+ *  required.`, then Username, then Password), `Saving.` while a call runs, or the unreachable sentence. Pressing it (or Enter
  *  in a field) checks the values first; a refusal, the page's or the backend's, shows under its row with `aria-invalid`.
  *  On success the form empties; on failure it keeps every value. */
 export function NewAccountForm() {

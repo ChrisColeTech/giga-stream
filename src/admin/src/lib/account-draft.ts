@@ -6,44 +6,44 @@ import type { AdminAccount } from "@/types/admin-account";
 /** The New account form: all strings, as the fields hold them. */
 export interface NewAccountDraft {
   readonly name: string;
-  readonly email: string;
+  readonly username: string;
   readonly password: string;
 }
 
-export const EMPTY_NEW_ACCOUNT: NewAccountDraft = { name: "", email: "", password: "" };
+export const EMPTY_NEW_ACCOUNT: NewAccountDraft = { name: "", username: "", password: "" };
 
 export const sameNewAccount = (a: NewAccountDraft, b: NewAccountDraft): boolean =>
-  a.name === b.name && a.email === b.email && a.password === b.password;
+  a.name === b.name && a.username === b.username && a.password === b.password;
 
 /** The workspace's Details: `enabled` is the inverse of the stored `disabled`. */
 export interface AccountDraft {
   readonly name: string;
-  readonly email: string;
+  readonly username: string;
   readonly enabled: boolean;
 }
 
 export const draftOf = (account: AdminAccount): AccountDraft => ({
   name: account.name,
-  email: account.email,
+  username: account.username,
   enabled: !account.disabled,
 });
 
 export const sameAccountDraft = (a: AccountDraft, b: AccountDraft): boolean =>
-  a.name === b.name && a.email === b.email && a.enabled === b.enabled;
+  a.name === b.name && a.username === b.username && a.enabled === b.enabled;
 
 /** The fields of a PATCH: only what differs from the saved account, with the values trimmed as the backend trims them. */
 export type AccountPatch = {
   readonly name?: string;
-  readonly email?: string;
+  readonly username?: string;
   readonly disabled?: boolean;
 };
 
 export function changedFields(saved: AdminAccount, draft: AccountDraft): AccountPatch {
   const name = draft.name.trim();
-  const email = draft.email.trim();
+  const username = draft.username.trim();
   return {
     ...(name !== saved.name && { name }),
-    ...(email !== saved.email && { email }),
+    ...(username !== saved.username && { username }),
     ...(draft.enabled === saved.disabled && { disabled: !draft.enabled }),
   };
 }

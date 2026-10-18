@@ -44,7 +44,7 @@ describe("the stale registry", () => {
     state().finishSignIn({
       ok: true,
       session: {
-        actor: { id: 1, email: "a@b.test", name: "A" },
+        actor: { id: 1, username: "a@b.test", name: "A" },
         tokens: { accessToken: "a", accessExpiresAt: 9e12, refreshToken: "r", refreshExpiresAt: 9e12 },
       },
     });

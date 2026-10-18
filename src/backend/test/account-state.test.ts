@@ -17,14 +17,14 @@ const SHELL = {
   eventsOpen: true,
   windows: { settings: { x: 10, y: 20, width: 640, height: 480 }, preview: { x: 0, y: 0, width: 1, height: 20_000 } },
 };
-const ED = { email: "ed@example.test", name: "Ed", password: "ed-password-12345" };
+const ED = { username: "ed@example.test", name: "Ed", password: "ed-password-12345" };
 const STATE = "/api/auth/me/state";
 
 /** A second account, signed in, with its id. */
 async function edAccount(t: TestApp, adminToken: string) {
   const made = await send(t.app, "POST", "/api/admin-accounts", ED, adminToken);
   assert.equal(made.status, 201);
-  const session = await signIn(t.app, ED.email, ED.password);
+  const session = await signIn(t.app, ED.username,ED.password);
   return { id: String(pick(made.body, "data.id")), token: session.access };
 }
 

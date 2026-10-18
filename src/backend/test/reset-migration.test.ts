@@ -1,5 +1,5 @@
-// Migration 018 (docs/40 section 3.1): it applies on a 017 database with accounts, the version reads 18, the existing
-// accounts have no question, and an 018 database is refused by a program that knows only 017.
+// Migration 018 (docs/40 section 3.1): it applies on a 017 database with accounts, the existing accounts have no
+// question, and a database newer than the newest migration is refused. With 019 (username) the version reads 19.
 import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -52,7 +52,7 @@ function inFolder(work: (dataDir: string) => void): void {
   }
 }
 
-test("018 applies on a 017 database: version 18, the existing account has no question, the attempt table exists", () => {
+test("018 applies on a 017 database: version 19 after 019, the existing account has no question, the attempt table exists", () => {
   inFolder((dataDir) => {
     const file = database017(dataDir);
     const store = createStore(file);
@@ -65,9 +65,9 @@ test("018 applies on a 017 database: version 18, the existing account has no que
     assert.equal(store.resetAttempts.find("boss@example.test"), undefined);
     store.close();
     readOnly(file, (db) => {
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 18 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 19 });
       const columns = db.prepare("PRAGMA table_info(reset_attempts)").all().map((row) => String(row.name));
-      assert.deepEqual(columns, ["email_key", "failed", "locked_until"]);
+      assert.deepEqual(columns, ["username_key", "failed", "locked_until"]);
     });
   });
 });
@@ -83,16 +83,15 @@ test("the question column accepts 1 to 8 only", () => {
   });
 });
 
-test("an 018 database opens again, and a program that knows only 017 refuses it", () => {
+test("a migrated database opens again, and a newer one than the newest migration is refused", () => {
   inFolder((dataDir) => {
     const file = database017(dataDir);
     createStore(file).close();
     createStore(file).close();
-    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 18);
-    // A 017 program sees an 018 database exactly as this program sees a 019 one: newer than its newest migration.
+    assert.equal(readOnly(file, (db) => Number(Object.values(db.prepare("PRAGMA user_version").get() ?? {})[0])), 19);
     const db = new DatabaseSync(file);
     try {
-      db.exec("PRAGMA user_version = 19");
+      db.exec("PRAGMA user_version = 20");
     } finally {
       db.close();
     }

@@ -190,7 +190,7 @@ test("PLAYLIST_SYNC_SCHEDULE arms a system run; without playlists it stays unarm
   assert.deepEqual(pick(status.body, "data.playlists"), [{ id: 1, name: "cdn.example", host: "cdn.example", masked: "https://cdn.example/…" }]);
   const imported = (await auditOf(t, access)).find((e) => e.action === "channel.imported");
   assert.ok(imported !== undefined);
-  assert.equal(imported.actorEmail ?? null, null, "a scheduled run is audited as system");
+  assert.equal(imported.actorUsername ?? null, null, "a scheduled run is audited as system");
   await t.dispose();
   const idle = await makeApp({ config: { PLAYLIST_SYNC_SCHEDULE: "120ms" } });
   const idleAccess = (await signIn(idle.app)).access;

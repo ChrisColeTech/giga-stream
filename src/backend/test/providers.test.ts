@@ -87,7 +87,7 @@ test("a second admin account can manage providers, and no answer carries an API 
   const firstAccess = (await signIn(t.app)).access;
   await send(t.app, "POST", "/api/admin-accounts", {
     name: "Second",
-    email: "second@example.test",
+    username: "second@example.test",
     password: "second-password-123",
   }, firstAccess);
 

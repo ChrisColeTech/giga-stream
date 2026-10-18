@@ -38,7 +38,7 @@ export function bulkVerbReason(
 
 /** The ticked accounts in list order, as the plan's items. */
 export function tickedItems(items: readonly AdminAccount[], ticked: readonly AccountId[]): BulkItem<AccountId>[] {
-  return items.filter((item) => isTicked(ticked, item.id)).map((item) => ({ id: item.id, label: item.email }));
+  return items.filter((item) => isTicked(ticked, item.id)).map((item) => ({ id: item.id, label: item.username }));
 }
 
 /** Which ticked accounts a bulk verb can run on. The signed-in account is never disabled or deleted in bulk (the session

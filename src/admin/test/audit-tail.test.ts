@@ -17,10 +17,10 @@ const state = () => useAppStore.getState();
 const entry = (id: number, extra: Partial<AuditEntry> = {}): AuditEntry => ({
   id,
   at: id * 1000,
-  actorEmail: "ada@example.test",
+  actorUsername: "ada@example.test",
   action: "account.created",
   subject: `acct_${id}`,
-  detail: { email: `u${id}@x.test` },
+  detail: { username: `u${id}@x.test` },
   ...extra,
 });
 /* The backend answers newest first. */
@@ -123,8 +123,8 @@ describe("the audit tail", () => {
     assert.deepEqual(state().events, []);
   });
 
-  it("names accounts by the held email and never shows a password field", async () => {
-    state().accountsLoaded([{ id: "acct_5", email: "held@x.test", name: "H", disabled: false, createdAt: 1, updatedAt: 1 }]);
+  it("names accounts by the held username and never shows a password field", async () => {
+    state().accountsLoaded([{ id: "acct_5", username: "held@x.test", name: "H", disabled: false, createdAt: 1, updatedAt: 1 }]);
     const updated = entry(5, { action: "account.updated", detail: { name: "Hal", fields: ["name"], password: "hunter2" } });
     await tailOf(fakeService([{ items: [updated], unreadable: 0 }])).reload();
     assert.equal(state().events[0]?.sentence, "ada@example.test updated account held@x.test");

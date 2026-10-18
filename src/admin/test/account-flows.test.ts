@@ -8,8 +8,8 @@ import type { AdminAccount } from "@/types/admin-account";
 import { resetStore, signInForTest } from "./support/store";
 
 const PASSWORD = "correct horse battery";
-const ME = { id: 7, email: "ada@example.test", name: "Ada", disabled: false, createdAt: 1, updatedAt: 1 };
-const account = (id: string, disabled = false): AdminAccount => ({ ...ME, id, email: `${id}@x.test`, name: id, disabled });
+const ME = { id: 7, username: "ada@example.test", name: "Ada", disabled: false, createdAt: 1, updatedAt: 1 };
+const account = (id: string, disabled = false): AdminAccount => ({ ...ME, id, username: `${id}@x.test`, name: id, disabled });
 const state = () => useAppStore.getState();
 const refuse = (code: string, status: number, field?: string) =>
   new ApiError(code, `sentence for ${code}`, status, field === undefined ? {} : { field });
@@ -21,7 +21,7 @@ function rig(script: Script = {}) {
   const reloads: Array<number | undefined> = [];
   const service: AccountsService = {
     list: async () => (calls.push("list"), { items: [ME, account("a"), account("b")], unreadable: 0 }),
-    create: async (input) => (calls.push("create"), { ...account("n"), email: String(input["email"]) }),
+    create: async (input) => (calls.push("create"), { ...account("n"), username: String(input["username"]) }),
     /* The real backend never echoes a password; neither does this fake. */
     update: async (id, patch) => (calls.push(`update:${String(id)}`), { ...account(String(id)), disabled: patch["disabled"] === true }),
     remove: async (id) => (calls.push(`remove:${String(id)}`), { id }),
@@ -45,33 +45,33 @@ beforeEach(() => {
 describe("create", () => {
   it("upserts, says Created, reloads the audit tail with limit 10 and returns ok", async () => {
     const { flows, reloads } = rig();
-    const result = await flows.create({ name: "New", email: "new@x.test", password: PASSWORD });
+    const result = await flows.create({ name: "New", username: "new@x.test", password: PASSWORD });
     assert.equal(result.ok, true);
-    assert.ok(state().accounts.items.some((item) => item.email === "new@x.test"));
+    assert.ok(state().accounts.items.some((item) => item.username === "new@x.test"));
     assert.equal(notice(), "Created new@x.test.");
     assert.deepEqual(reloads, [10]);
   });
 
   it("refuses a bad value under its row before sending anything", async () => {
     const { flows, calls } = rig();
-    const result = await flows.create({ name: "New", email: "nope", password: PASSWORD });
-    assert.deepEqual(result, { ok: false, field: "email", sentence: "Email must look like name@example.com." });
+    const result = await flows.create({ name: "New", username: "u".repeat(255), password: PASSWORD });
+    assert.deepEqual(result, { ok: false, field: "username", sentence: "Username must be 1 to 254 characters." });
     assert.deepEqual(calls, []);
   });
 
-  it("puts email_taken under Email and keeps the notice a warning", async () => {
-    const { flows } = rig({ create: async () => Promise.reject(refuse("account.email_taken", 409, "email")) });
-    const result = await flows.create({ name: "N", email: "a@x.test", password: PASSWORD });
-    assert.deepEqual([result.ok, !result.ok && result.field], [false, "email"]);
+  it("puts username_taken under Username and keeps the notice a warning", async () => {
+    const { flows } = rig({ create: async () => Promise.reject(refuse("account.username_taken", 409, "username")) });
+    const result = await flows.create({ name: "N", username: "a@x.test", password: PASSWORD });
+    assert.deepEqual([result.ok, !result.ok && result.field], [false, "username"]);
     assert.equal(state().notice?.tone, "warn");
   });
 
   it("marks the backend unreachable on a transport failure, and reads the list again on an unreadable answer", async () => {
     const down = rig({ create: async () => Promise.reject(new ApiError("backend.unreachable", "The admin backend cannot be reached.")) });
-    await down.flows.create({ name: "N", email: "a@x.test", password: PASSWORD });
+    await down.flows.create({ name: "N", username: "a@x.test", password: PASSWORD });
     assert.equal(state().accounts.unreachable, true);
     const bad = rig({ create: async () => Promise.reject(new ApiError("backend.bad_response", "Unreadable.", 201)) });
-    await bad.flows.create({ name: "N", email: "a@x.test", password: PASSWORD });
+    await bad.flows.create({ name: "N", username: "a@x.test", password: PASSWORD });
     assert.ok(bad.calls.includes("list"));
   });
 });
@@ -79,10 +79,10 @@ describe("create", () => {
 describe("save", () => {
   it("updates the signed-in actor when the account saved is its own, comparing ids", async () => {
     loaded();
-    const { flows } = rig({ update: async (_id, patch) => ({ ...ME, ...patch, email: "ada@new.test" }) });
-    const result = await flows.save(7, { name: "Ada", email: "ada@new.test", enabled: true });
+    const { flows } = rig({ update: async (_id, patch) => ({ ...ME, ...patch, username: "ada@new.test" }) });
+    const result = await flows.save(7, { name: "Ada", username: "ada@new.test", enabled: true });
     assert.equal(result.ok, true);
-    assert.deepEqual(state().actor, { id: 7, email: "ada@new.test", name: "Ada" });
+    assert.deepEqual(state().actor, { id: 7, username: "ada@new.test", name: "Ada" });
     assert.equal(notice(), "Saved ada@new.test.");
     assert.equal(state().signedIn, true);
   });
@@ -90,7 +90,7 @@ describe("save", () => {
   it("ends the session with the disabled notice when the account disables itself", async () => {
     loaded();
     const { flows } = rig();
-    await flows.save(7, { name: "Ada", email: ME.email, enabled: false });
+    await flows.save(7, { name: "Ada", username: ME.username, enabled: false });
     assert.equal(state().signedIn, false);
     assert.deepEqual(state().gate, { phase: "idle", notice: "Your account was disabled." });
   });
@@ -98,7 +98,7 @@ describe("save", () => {
   it("says another account is signed out everywhere when it is disabled", async () => {
     loaded();
     const { flows, reloads } = rig();
-    await flows.save("a", { name: "a", email: "a@x.test", enabled: false });
+    await flows.save("a", { name: "a", username: "a@x.test", enabled: false });
     assert.equal(notice(), "Saved a@x.test; it is signed out everywhere.");
     assert.deepEqual(reloads, [10]);
   });
@@ -106,18 +106,18 @@ describe("save", () => {
   it("sends nothing when nothing changed", async () => {
     loaded();
     const { flows, calls } = rig();
-    const result = await flows.save("a", { name: "a", email: "a@x.test", enabled: true });
+    const result = await flows.save("a", { name: "a", username: "a@x.test", enabled: true });
     assert.deepEqual([result.ok, calls], [true, []]);
   });
 
   it("puts last_admin under Enabled, and closes the workspace of an account that is gone", async () => {
     loaded();
     const last = rig({ update: async () => Promise.reject(refuse("account.last_admin", 409)) });
-    const result = await last.flows.save("a", { name: "a", email: "a@x.test", enabled: false });
+    const result = await last.flows.save("a", { name: "a", username: "a@x.test", enabled: false });
     assert.deepEqual([result.ok, !result.ok && result.field], [false, "enabled"]);
     state().openWorkspace("accounts", "a");
     const gone = rig({ update: async () => Promise.reject(refuse("account.not_found", 404)) });
-    await gone.flows.save("a", { name: "a", email: "a@x.test", enabled: false });
+    await gone.flows.save("a", { name: "a", username: "a@x.test", enabled: false });
     assert.equal(state().workspaces.accounts, null);
     assert.ok(gone.calls.includes("list"), "the list is read again");
   });
@@ -217,7 +217,7 @@ describe("a late answer", () => {
           release = () => resolve(account("late"));
         }),
     });
-    const pending = slow.flows.create({ name: "L", email: "late@x.test", password: PASSWORD });
+    const pending = slow.flows.create({ name: "L", username: "late@x.test", password: PASSWORD });
     state().signOut();
     release();
     const result = await pending;

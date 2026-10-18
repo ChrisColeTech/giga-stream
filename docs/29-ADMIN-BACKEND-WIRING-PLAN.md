@@ -120,11 +120,11 @@ interface JobView { id: number; name; type: "playlist" | "catalog"; enabled: boo
   playlistName?: string; running: boolean; lastRunAt?: number; lastOutcome?: string; lastCounts?: Record<string, unknown>; createdAt: number }
 
 // accounts and session (types/account.ts)
-interface AdminAccount { id; email; name; disabled: boolean; createdAt: number; updatedAt: number; lastSignInAt?: number }
+interface AdminAccount { id; username; name; disabled: boolean; createdAt: number; updatedAt: number; lastSignInAt?: number; securityQuestionSet: boolean }
 interface Session { accessToken; accessExpiresAt: number; refreshToken; refreshExpiresAt: number; account: AdminAccount }
 
 // audit (store/audit-repository.ts)
-interface AuditEntry { id: number; at: number; actorId?; actorEmail?; action: string; subject?; detail?: Record<string, unknown>; address?: string }
+interface AuditEntry { id: number; at: number; actorId?; actorUsername?; action: string; subject?; detail?: Record<string, unknown>; address?: string }
 // GET /api/audit -> { items: AuditEntry[] /* newest first */, nextBefore?: number }
 
 // health (api/health.ts, services/service-registry.ts)
@@ -147,10 +147,10 @@ interface AdminShell { tab: TabId; panes: Partial<Record<TabId, PaneState>>; eve
 ### 6.1 The gate and the session
 
 - **Gate.** `AppShell` shows the sign-in page (`28`) while `session` is null; the titlebar and statusbar stay, in the default theme and accent (dark, amber): the signed-in account's saved appearance is not known until it signs in. The pages are not mounted until a session exists, so no read is sent signed-out. A reload starts here.
-- **Sign in.** `POST /api/auth/login { email, password }` (no token) answers a `Session`. The store keeps it in `session-slice`
+- **Sign in.** `POST /api/auth/login { username, password }` (no token) answers a `Session`. The store keeps it in `session-slice`
   (`accessToken`, `accessExpiresAt`, `refreshToken`, `refreshExpiresAt`, `account`). On success: close nothing, mount the pages **invisible**, read the account state and apply it once (section 12.2), reveal, load the active tab (the restored one), read the audit tail (section 11), say `Signed in.`
 - **Failures** (`401 auth.invalid_credentials`, `429 auth.rate_limited`, `429 auth.locked`) show their sentences under the form's Password row and on
-  the notice line; the form keeps the email and clears the password. The backend answers the same sentence for an unknown email
+  the notice line; the form keeps the username and clears the password. The backend answers the same sentence for an unknown username
   and a wrong password.
 - **Sign out** (Settings > Session): first the pending shell write is flushed once (section 12.2; a failure is ignored), then `POST /api/auth/logout { refreshToken }`, then clear the session whatever the answer is
   (`401 auth.refresh_invalid` is ignored: the session is gone either way). Every page's loaded records are dropped, the account-state slice is reset and the appearance returns to the defaults (dark, amber, motion following the system, zoom 1), so the sign-in page never wears the previous account's theme.
@@ -205,13 +205,14 @@ reads below instead, which need the token.
 | Code | Status | Sentence the admin shows |
 |---|---|---|
 | `auth.unauthorized` | 401 | Sign in to do that. |
-| `auth.invalid_credentials` | 401 | The email or password is wrong. |
+| `auth.invalid_credentials` | 401 | The username or password is wrong. |
 | `auth.refresh_invalid` | 401 | That session has ended; sign in again. |
 | `auth.rate_limited` | 429 | Too many sign-in attempts; wait a minute. |
 | `auth.locked` | 429 | This account is locked for a while after failed sign-ins. |
 | `account.not_found` | 404 | That account does not exist. |
 | `account.invalid` | 422 | the backend's sentence (names the field) |
-| `account.email_taken` | 409 | Another account already uses that email. |
+| `account.username_taken` | 409 | Another account already uses that username. |
+| `auth.reset_invalid` | 401 | That answer is not right, or the reset is not available for this username. |
 | `account.last_admin` | 409 | This is the last enabled account; another one is needed first. |
 | `account_state.invalid` | 422 | the backend's sentence (names the field) |
 | `channel.not_found` | 404 | That channel does not exist. |
@@ -382,11 +383,11 @@ Status: Host, Channels (the admin channels with `source === host`, each a link),
 | Action | Route | Body | Answer |
 |---|---|---|---|
 | list | `GET /admin-accounts` | - | `{ items: AdminAccount[] }` |
-| create | `POST /admin-accounts` | `{ email, name, password }` (password 1 to 256 characters) | `201` account |
-| save | `PATCH /admin-accounts/:id` | any of `email name password disabled` (`Enabled` is `!disabled`) | account |
+| create | `POST /admin-accounts` | `{ username, name, password }` (password 1 to 256 characters) | `201` account |
+| save | `PATCH /admin-accounts/:id` | any of `username name password disabled` (`Enabled` is `!disabled`) | account |
 | delete | `DELETE /admin-accounts/:id` | - | `{ id }` |
 
-`409 account.email_taken` shows under Email; `409 account.last_admin` is the refusal of the last enabled account's Delete or disable, and the page disables those two controls
+`409 account.username_taken` shows under Username; `409 account.last_admin` is the refusal of the last enabled account's Delete or disable, and the page disables those two controls
 for it with the reason up front (computed from the list). `password` set on another account revokes that account's sessions.
 
 ### 9.7 Preview (`26` section 4.5a; the window's UI is `28` section 7.4)
@@ -446,13 +447,13 @@ design.
 - **Audit rows.** `GET /audit?limit=50` is read after sign-in, when the drawer opens, after each of the page's own writes (once, `limit=10`), and by `Refresh`; it returns newest first. The drawer stores rows
   **oldest first, newest at the foot** (it reverses the page), de-duplicated by `id`, at most 200. `Load older` reads `GET /audit?limit=50&before=<smallest id held>` and prepends; it is
   disabled with `No older events.` when the last answer had no `nextBefore`. `Clear` empties the list on screen only.
-- **Sentence and tone** (`lib/event-sentence.ts`, built in `28`, unchanged): `actor = actorEmail ?? "system"`; `<actor> <verb> <area> <name>` where the name is `detail.name` (created, deleted), else the
+- **Sentence and tone** (`lib/event-sentence.ts`, built in `28`, unchanged): `actor = actorUsername ?? "system"`; `<actor> <verb> <area> <name>` where the name is `detail.name` (created, deleted), else the
   name the admin holds for `subject`, else the id. Actions to area and verb:
 
 | Action | Area | Sentence | Tone |
 |---|---|---|---|
 | `auth.login` / `auth.logout` | Session | `<actor> signed in` / `signed out` | info |
-| `auth.login_failed` | Session | `Sign-in failed for <detail.email>` | warn |
+| `auth.login_failed` | Session | `Sign-in failed for <detail.username>` | warn |
 | `auth.password_changed` | Session | `<actor> changed a password` | info |
 | `account.created` / `updated` / `deleted` | Account | `<actor> created / updated / deleted account <name or id>` | info |
 | `channel.created` / `updated` / `deleted` / `rebuilt` / `reverted` | Channel | `<actor> created / updated / deleted / rebuilt / reverted channel <name>` | info |
@@ -474,7 +475,7 @@ design.
 ### 12.1 The three pages
 
 - **Appearance** is the store's (`28`): each choice applies at once and is saved by the write-back of section 12.2.
-- **Session** shows `session.account.email` and `name`, and `Sign out` (6.1).
+- **Session** shows `session.account.username` and `name`, and `Sign out` (6.1).
 - **About** shows the app version (`__ADMIN_VERSION__` defined by Vite from `package.json`), the backend's `version` and `revision` from `GET /healthz`, the backend address (`location.origin`),
   `TMDB: configured / absent`, and the runtime (`Electron` when `window.adminHost` exists, else `Browser`). Facts that failed to load draw the dash and a skeleton, never an error sentence.
 

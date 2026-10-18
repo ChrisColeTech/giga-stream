@@ -23,7 +23,7 @@ export function SessionSection() {
       <Group id="settings.session" title="Session" icon={User} last>
         <Row label="Signed in as" tip="The account this window is signed in with.">
           <span className={FACT} title={unknown}>
-            {actor?.email ?? FACT_UNKNOWN}
+            {actor?.username ?? FACT_UNKNOWN}
           </span>
         </Row>
         <Row label="Name">

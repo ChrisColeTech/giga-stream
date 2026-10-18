@@ -4,6 +4,7 @@ import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 import { SettingsFrame } from "@giga/ui/windows/SettingsFrame";
 import { AboutSection } from "@/components/settings/AboutSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
+import { SecurityQuestionSection } from "@/components/settings/SecurityQuestionSection";
 import { SessionSection } from "@/components/settings/SessionSection";
 import { SETTINGS_LABELS, SETTINGS_SECTIONS, type SettingsSectionId } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
@@ -23,6 +24,7 @@ export function SettingsWindow() {
       <SettingsFrame sections={SETTINGS_SECTIONS} selected={section} onSelect={setSection} labels={SETTINGS_LABELS}>
         {section === "appearance" && <AppearanceSection />}
         {section === "session" && <SessionSection />}
+        {section === "account" && <SecurityQuestionSection />}
         {section === "about" && <AboutSection />}
       </SettingsFrame>
     </ChildWindow>

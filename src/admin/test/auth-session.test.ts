@@ -21,7 +21,7 @@ describe("login", () => {
     const result = await port.signIn("ada@example.test", "secret");
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.deepEqual(result.session.actor, { id: 7, email: "ada@example.test", name: "Ada" });
+    assert.deepEqual(result.session.actor, { id: 7, username: "ada@example.test", name: "Ada", securityQuestionSet: false });
     assert.deepEqual(result.session.tokens, {
       accessToken: "a1", accessExpiresAt: 5000, refreshToken: "r1", refreshExpiresAt: 6000,
     });
@@ -132,7 +132,7 @@ describe("logout", () => {
 });
 
 describe("the session in the store", () => {
-  const session: AuthSession = { actor: { id: 7, email: "ada@example.test", name: "Ada" }, tokens: TOKENS };
+  const session: AuthSession = { actor: { id: 7, username: "ada@example.test", name: "Ada" }, tokens: TOKENS };
   const state = () => useAppStore.getState();
   const signIn = (): void => {
     state().beginSignIn();

@@ -1,19 +1,24 @@
-import { refusalFor } from "@/lib/auth-errors";
+import { refusalFor, resetRefusalFor } from "@/lib/auth-errors";
 import type { AuthPort } from "@/types/auth";
 import { tokensOf } from "./schemas/session-schema";
 import type { SessionApi } from "./session-api";
 
-/** The sign-in seam (`34` section 5) over the request layer: `POST /api/auth/login` and `/logout`. It keeps no state; the
- *  store holds the tokens the answer carries. Never rejects. */
-export function createAuthPort(api: Pick<SessionApi, "login" | "logout">): AuthPort {
+/** The sign-in seam (`34` section 5) over the request layer: `POST /api/auth/login` and `/logout`, and the reset's
+ *  `reset-start` and `reset` (`40`). It keeps no state; the store holds the tokens the answer carries. Never rejects. */
+export function createAuthPort(api: Pick<SessionApi, "login" | "logout" | "resetStart" | "reset">): AuthPort {
   return {
-    signIn: async (email, password) => {
+    signIn: async (username, password) => {
       try {
-        const session = await api.login(email, password);
+        const session = await api.login(username, password);
         return {
           ok: true,
           session: {
-            actor: { id: session.account.id, email: session.account.email, name: session.account.name },
+            actor: {
+              id: session.account.id,
+              username: session.account.username,
+              name: session.account.name,
+              securityQuestionSet: session.account.securityQuestionSet === true,
+            },
             tokens: tokensOf(session),
           },
         };
@@ -22,5 +27,21 @@ export function createAuthPort(api: Pick<SessionApi, "login" | "logout">): AuthP
       }
     },
     signOut: () => api.logout(),
+    resetStart: async (username) => {
+      try {
+        return { ok: true, question: await api.resetStart(username) };
+      } catch (error: unknown) {
+        const refusal = resetRefusalFor(error);
+        return { ok: false, refusal: refusal === "rate_limited" ? refusal : "unreachable" };
+      }
+    },
+    resetPassword: async (username, answer, newPassword) => {
+      try {
+        await api.reset(username, answer, newPassword);
+        return { ok: true };
+      } catch (error: unknown) {
+        return { ok: false, refusal: resetRefusalFor(error) };
+      }
+    },
   };
 }

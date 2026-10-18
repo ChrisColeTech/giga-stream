@@ -1,16 +1,16 @@
 import {
-  EMAIL_MAX,
   NAME_MAX,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  USERNAME_MAX,
 } from "@/constants/account-limits";
 import {
-  EMAIL_SHAPE,
   NAME_LENGTH,
   PASSWORD_LONG,
   PASSWORD_REQUIRED,
   SAVING_REASON,
   UNREACHABLE_REASON,
+  USERNAME_LENGTH,
 } from "@/constants/account-copy";
 import type { NewAccountDraft } from "./account-draft";
 import { required, type Refusal } from "./field-checks";
@@ -18,12 +18,10 @@ import { required, type Refusal } from "./field-checks";
 /* The account rules (`35` section 5.9), mirroring the backend's (`03` section 7.11) so a form refuses before it sends.
  * They use the frozen primitives of `field-checks.ts`; an empty value passes every rule except `required`. */
 
-const ADDRESS = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function emailAddress(value: string): Refusal {
-  const text = value.trim();
-  if (text === "") return null;
-  return text.length <= EMAIL_MAX && ADDRESS.test(text) ? null : EMAIL_SHAPE;
+/** A username is any text: trimmed it is 1 to 254 characters, and no format is checked. */
+export function usernameLength(value: string): Refusal {
+  const length = value.trim().length;
+  return length === 0 || length <= USERNAME_MAX ? null : USERNAME_LENGTH;
 }
 
 export function nameLength(value: string): Refusal {
@@ -37,7 +35,7 @@ export function passwordLength(value: string): Refusal {
 }
 
 export interface FieldRefusal {
-  readonly field: "name" | "email" | "password";
+  readonly field: "name" | "username" | "password";
   readonly sentence: string;
 }
 
@@ -47,7 +45,7 @@ const passwordRequired = (value: string): Refusal => (value.length < PASSWORD_MI
 export function createReason(draft: NewAccountDraft, busy: boolean, unreachable: boolean): string | undefined {
   return (
     required("Name", draft.name) ??
-    required("Email", draft.email) ??
+    required("Username", draft.username) ??
     passwordRequired(draft.password) ??
     (busy ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined)
   );
@@ -57,7 +55,7 @@ export function createReason(draft: NewAccountDraft, busy: boolean, unreachable:
 export function firstCreateRefusal(draft: NewAccountDraft): FieldRefusal | null {
   const checks: Array<[FieldRefusal["field"], Refusal]> = [
     ["name", nameLength(draft.name)],
-    ["email", emailAddress(draft.email)],
+    ["username", usernameLength(draft.username)],
     ["password", passwordLength(draft.password)],
   ];
   const found = checks.find(([, sentence]) => sentence !== null);
@@ -65,11 +63,12 @@ export function firstCreateRefusal(draft: NewAccountDraft): FieldRefusal | null 
 }
 
 /** The refusal of a workspace save, for the fields that are being changed. */
-export function firstSaveRefusal(patch: { name?: string; email?: string }): FieldRefusal | null {
+export function firstSaveRefusal(patch: { name?: string; username?: string }): FieldRefusal | null {
   const name = patch.name === undefined ? null : (required("Name", patch.name) ?? nameLength(patch.name));
   if (name !== null) return { field: "name", sentence: name };
-  const email = patch.email === undefined ? null : (required("Email", patch.email) ?? emailAddress(patch.email));
-  return email === null ? null : { field: "email", sentence: email };
+  const username =
+    patch.username === undefined ? null : (required("Username", patch.username) ?? usernameLength(patch.username));
+  return username === null ? null : { field: "username", sentence: username };
 }
 
 /** Why `Set new password` is disabled, or undefined once the value is valid. */

@@ -1,18 +1,20 @@
-import { Info, Palette, User } from "lucide-react";
+import { Info, KeyRound, Palette, User } from "lucide-react";
 import type { SettingsSection } from "@giga/ui/windows/SettingsRail";
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "@giga/ui/lib/settings-zoom";
 import type { ChromeDefaults } from "@giga/ui/store/chrome-slice";
 
-export type SettingsSectionId = "appearance" | "session" | "about";
+export type SettingsSectionId = "appearance" | "session" | "account" | "about";
 
-/** Settings' rail, top to bottom (`28` section 7.1): the admin has three pages. */
+/** Settings' rail, top to bottom (`28` section 7.1): the admin has four pages (Account holds the security question,
+ *  `40` section 4.2). */
 export const SETTINGS_SECTIONS: readonly SettingsSection<SettingsSectionId>[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "session", label: "Session", icon: User },
+  { id: "account", label: "Account", icon: KeyRound },
   { id: "about", label: "About", icon: Info },
 ];
 
-/** Every row label Settings renders, across all three pages. The frame sizes one label column from the longest, so the
+/** Every row label Settings renders, across all four pages. The frame sizes one label column from the longest, so the
  *  column stays put as the rail moves from page to page. A new row's label is added here. */
 export const SETTINGS_LABELS: readonly string[] = [
   "Theme",
@@ -21,6 +23,9 @@ export const SETTINGS_LABELS: readonly string[] = [
   "UI zoom",
   "Signed in as",
   "Name",
+  "Security question",
+  "Answer",
+  "Current password",
   "Version",
   "Backend version",
   "Backend revision",

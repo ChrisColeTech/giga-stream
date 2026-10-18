@@ -14,7 +14,7 @@ import { fakeScan } from "./fake-scan.js";
 const PROGRAM_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BACKEND_ROOT = path.resolve(PROGRAM_ROOT, "..", "backend");
 
-export const OWNER_EMAIL = "owner@example.test";
+export const OWNER_USERNAME ="owner@example.test";
 export const OWNER_PASSWORD = "owner-password-123";
 
 /** Longest the fixture waits for the real backend to answer `/healthz`. */
@@ -95,7 +95,7 @@ export async function startBackend(): Promise<RealBackend> {
         HOST: "127.0.0.1",
         DATA_DIR: dataDir,
         JWT_SECRET: "test-secret-that-is-at-least-32-characters",
-        ADMIN_BOOTSTRAP_EMAIL: OWNER_EMAIL,
+        ADMIN_BOOTSTRAP_USERNAME: OWNER_USERNAME,
         ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
         SEED_TEST_CHANNELS: "true",
         ALLOW_LOOPBACK_STREAMS: "true",
@@ -217,7 +217,7 @@ export async function backendToken(backendUrl: string): Promise<string> {
   const response = await fetch(`${backendUrl}/api/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email: OWNER_EMAIL, password: OWNER_PASSWORD }),
+    body: JSON.stringify({ username: OWNER_USERNAME, password: OWNER_PASSWORD }),
   });
   const answer = (await response.json()) as { data?: { accessToken?: string } };
   if (answer.data?.accessToken === undefined) throw new Error("the fixture backend would not sign in");
