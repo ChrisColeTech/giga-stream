@@ -5,10 +5,11 @@ import test from "node:test";
 
 import type { StreamRecord } from "../src/types/channel.js";
 import { VIDEOS, liveBody } from "./live-channel-kit.js";
-import { pageOf, seededDataDir, streamRows } from "./paging-kit.js";
+import { pageOf, seedStreams, seededDataDir, streamRows } from "./paging-kit.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 
 interface Model { id: string; name: string; number: string | null; tvgId: string | null; source: string | null;
+  playlist: number | null; playlistName: string | null;
   kind: "live" | "stream"; enabled: boolean; edited: boolean; category: string }
 
 const streams = streamRows();
@@ -19,15 +20,17 @@ const LIVE = [
 ];
 const model: Model[] = [
   ...streams.map((s: StreamRecord): Model => ({ id: s.id, name: s.name, number: s.number, tvgId: s.tvgId, source: s.source,
+    playlist: s.playlistId, playlistName: s.playlistName,
     kind: "stream", enabled: s.enabled, edited: s.editedFields.length > 0, category: s.category })),
   ...LIVE.map((l): Model => ({ id: String(l.id), name: String(l.name), number: String(l.number), tvgId: null, source: null,
+    playlist: null, playlistName: null,
     kind: "live", enabled: true, edited: false, category: "Entertainment" })),
 ];
 
 let shared: { t: TestApp; token: string } | undefined;
 async function setup(): Promise<{ t: TestApp; token: string }> {
   if (shared) return shared;
-  const dataDir = seededDataDir((store) => streams.forEach((row) => store.channels.insert(row, 1)));
+  const dataDir = seededDataDir(seedStreams);
   const t = await makeApp({ dataDir });
   const token = (await signIn(t.app)).access;
   for (const body of LIVE) assert.equal((await send(t.app, "POST", "/api/channels", body, token)).status, 201);
@@ -75,6 +78,7 @@ test("each filter alone and combined keeps exactly the matching rows; total coun
     ["&q=137", (m) => m.name.includes("137") || m.number === "137"],
     ["&q=tvg.42", (m) => m.tvgId === "tvg.42"],
     ["&q=B.EXAM", (m) => m.source === "b.example"],
+    ["&q=beta", (m) => m.playlistName === "Beta list"],
     ["&q=%25", (m) => m.name.includes("%")],
     ["&q=_", () => false],
     ["&kind=live", (m) => m.kind === "live"],
@@ -88,8 +92,12 @@ test("each filter alone and combined keeps exactly the matching rows; total coun
     ["&state=live", (m) => m.id === "home" || m.id === "fold"],
     ["&state=failed", (m) => m.id === "bad"],
     ["&state=stopped", () => false],
-    ["&source=a.example", (m) => m.source === "a.example"],
-    ["&source=a.example&enabled=false&q=channel%201", (m) => m.source === "a.example" && !m.enabled && m.name.includes("Channel 1")],
+    ["&playlist=1", (m) => m.playlist === 1],
+    ["&playlist=2&enabled=false&q=channel%201", (m) => m.playlist === 2 && !m.enabled && m.name.includes("Channel 1")],
+    ["&playlist=99", () => false],
+    ["&status=unchecked", (m) => m.kind === "stream"],
+    ["&status=live", () => false],
+    ["&status=dead&playlist=1", () => false],
     ["&q=%20%20", () => true],
   ];
   for (const [query, keep] of cases) {
@@ -117,7 +125,7 @@ test("every sort holds both ways across pages, ties by name then id, each row on
     name: (row) => String(row.name).toLowerCase(),
     category: (row) => String(row.category).toLowerCase(),
     kind: (row) => String(row.kind),
-    source: (row) => (row.source === undefined ? "￿" : String(row.source)),
+    playlist: (row) => (row.playlistName === undefined ? "￿" : String(row.playlistName).toLowerCase()),
   };
   for (const [sort, key] of Object.entries(keyOf)) {
     for (const dir of ["asc", "desc"] as const) {
@@ -126,7 +134,7 @@ test("every sort holds both ways across pages, ties by name then id, each row on
       assert.equal(new Set(idsOf(rows)).size, 253, `${sort} ${dir}`);
       for (let i = 1; i < rows.length; i++) {
         const [a, b] = [rows[i - 1], rows[i]].map((row) => (row ? key(row) : ""));
-        const nulls = sort === "source" && (a === "￿" || b === "￿");
+        const nulls = sort === "playlist" && (a === "￿" || b === "￿");
         const ordered = nulls ? !(a === "￿" && b !== "￿") : dir === "asc" ? (a ?? "") <= (b ?? "") : (a ?? "") >= (b ?? "");
         assert.ok(ordered, `${sort} ${dir} at ${i}: ${a} then ${b}`);
       }
@@ -138,7 +146,8 @@ test("invalid values are 400 request.invalid naming the field; a filter without 
   const cases: Array<[string, string]> = [
     ["?limit=0", "limit"], ["?limit=201", "limit"], ["?limit=x", "limit"], ["?limit=10&offset=-1", "offset"],
     ["?limit=10&kind=radio", "kind"], ["?limit=10&origin=x", "origin"], ["?limit=10&enabled=yes", "enabled"],
-    ["?limit=10&state=dead", "state"], ["?limit=10&sort=id", "sort"], ["?limit=10&dir=up", "dir"],
+    ["?limit=10&state=dead", "state"], ["?limit=10&status=maybe", "status"], ["?limit=10&playlist=x", "playlist"],
+    ["?limit=10&sort=source", "sort"], ["?limit=10&sort=id", "sort"], ["?limit=10&dir=up", "dir"],
     [`?limit=10&q=${"x".repeat(121)}`, "q"], ["?kind=live", "limit"], ["?offset=5", "limit"], ["?sort=name", "limit"],
   ];
   for (const [query, field] of cases) {

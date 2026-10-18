@@ -1,6 +1,6 @@
 import { AppError, ERRORS } from "../constants/errors.js";
 import { CHANNEL_NUMBER_MAX } from "../constants/limits.js";
-import type { StreamRecord } from "../types/channel.js";
+import { NOT_SYNCED, type StreamRecord } from "../types/channel.js";
 import type { ChannelPatch, StreamChannelInput } from "../types/channel-input.js";
 import { addressRefusal, isAcceptedAddress } from "./address-rule.js";
 
@@ -17,9 +17,10 @@ function checkAddresses(record: StreamRecord, allowLoopback: boolean): void {
   }
 }
 
-/** A hand-created stream row is never owned by the playlist sync (docs/03 section 7.2c). */
+/** A hand-created stream row has no parent playlist, so no sync touches it (docs/03 section 7.2c). */
 export function newStreamRecord(input: StreamChannelInput, id: string, allowLoopback: boolean): StreamRecord {
   const record: StreamRecord = {
+    ...NOT_SYNCED,
     kind: "stream",
     id,
     name: input.name,
@@ -27,13 +28,11 @@ export function newStreamRecord(input: StreamChannelInput, id: string, allowLoop
     number: input.number ?? null,
     logoUrl: input.logoUrl ?? null,
     tvgId: null,
-    source: null,
     streamUrl: input.streamUrl,
-    syncName: null,
-    playlistId: null,
     editedFields: [],
     revision: 0,
     enabled: true,
+    published: true,
   };
   checkAddresses(record, allowLoopback);
   return record;
@@ -46,7 +45,7 @@ const TRACKED = ["name", "category", "number", "logoUrl", "streamUrl"] as const;
  * rule 1). Only fields the change really altered are added; a hand-made row records nothing.
  */
 export function withEdits(before: StreamRecord, after: StreamRecord): StreamRecord {
-  if (before.source === null) return after;
+  if (before.playlistId === null) return after;
   const changed = TRACKED.filter((field) => before[field] !== after[field]);
   return { ...after, editedFields: [...new Set([...before.editedFields, ...changed])] };
 }

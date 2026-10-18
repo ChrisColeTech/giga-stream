@@ -2,6 +2,9 @@ import type { LiveEngine } from "../live/engine/live-engine.js";
 import type { AdminChannel, BackendChannel, ChannelRecord, LiveRecord } from "../types/channel.js";
 import type { LiveSpec } from "../types/live-stream.js";
 
+/** The relative address a cached logo is served at; the admin is same-origin, so no Host-derived URL (docs/43 3.1). */
+const CACHED_LOGO_PREFIX = "/logos/c/";
+
 /** What the engine builds a live row from: its encoding and exactly one of a folder or the listed videos. */
 export function liveSpecOf(record: LiveRecord): LiveSpec {
   const { mode, captions, variants, folder, videos } = record.live;
@@ -47,7 +50,13 @@ export function adminChannel(record: ChannelRecord, base: string, engine: LiveEn
       ...view,
       kind: "stream",
       enabled: record.enabled,
+      published: record.published,
       ...(record.editedFields.length > 0 && { editedFields: record.editedFields }),
+      ...(record.playlistId !== null && { playlistId: record.playlistId }),
+      ...(record.playlistName !== null && { playlistName: record.playlistName }),
+      ...(record.status !== null && { status: record.status }),
+      ...(record.checkedAt !== null && { checkedAt: record.checkedAt }),
+      ...(record.logoFile !== null && { cachedLogoUrl: `${CACHED_LOGO_PREFIX}${record.logoFile}` }),
     };
   }
   const { mode, captions, variants, folder, videos } = record.live;
@@ -55,6 +64,7 @@ export function adminChannel(record: ChannelRecord, base: string, engine: LiveEn
     ...view,
     kind: "live",
     enabled: record.enabled,
+    published: record.published,
     mode,
     captions,
     variants,

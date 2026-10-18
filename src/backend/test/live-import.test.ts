@@ -102,7 +102,7 @@ test("a channel whose number a live row already holds is skipped with the reason
 
 test("the plan keeps a number once per run and skips what the target holds", () => {
   const record = (id: string, number: string) => ({
-    kind: "live" as const, id, name: id, category: "News", number, logoUrl: null, revision: 0, enabled: true,
+    kind: "live" as const, id, name: id, category: "News", number, logoUrl: null, revision: 0, enabled: true, published: true,
     live: { mode: "loop" as const, captions: false, variants: ["360p" as const, "720p" as const], folder: null, videos: ["/a"] },
   });
   const plan = planImport(

@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { createStore } from "../src/store/store.js";
-import type { StreamRecord } from "../src/types/channel.js";
+import { NOT_SYNCED, type StreamRecord } from "../src/types/channel.js";
 import { itemOf, itemsOf } from "./live-channel-kit.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 
@@ -23,9 +23,8 @@ function placeholderFixtures(dataDir: string): string {
 
 /** A row as the retired standalone live server's import left it in a database that predates the merge. */
 const legacyRow = (id: string, overrides: Partial<StreamRecord> = {}): Omit<StreamRecord, "revision"> => ({
-  kind: "stream", id, name: `Old ${id}`, category: "News", number: null, logoUrl: null, enabled: true,
-  streamUrl: `http://127.0.0.1:8097/live/${id}/master.m3u8`,
-  tvgId: null, source: null, syncName: null, playlistId: null, editedFields: [],
+  ...NOT_SYNCED, kind: "stream", id, name: `Old ${id}`, category: "News", number: null, logoUrl: null, enabled: true,
+  published: true, streamUrl: `http://127.0.0.1:8097/live/${id}/master.m3u8`, tvgId: null, editedFields: [],
   ...overrides,
 });
 

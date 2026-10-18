@@ -60,15 +60,15 @@ export function createChannelService(deps: {
   }
 
   return {
-    /** The public read: a disabled channel is not in it (docs/26 section 3.11). */
+    /** The public read: a channel that is not published (itself or its playlist disabled) is not in it (docs/43 3.1). */
     list: (base: string): ChannelList => ({
-      items: store.channels.list().filter((record) => record.enabled).map((record) => publicChannel(record, base)),
+      items: store.channels.list().filter((record) => record.published).map((record) => publicChannel(record, base)),
       revision: store.revisions.current(),
     }),
 
     get(id: string, base: string): BackendChannel {
       const record = existing(id);
-      if (!record.enabled) throw new AppError(ERRORS.channelNotFound);
+      if (!record.published) throw new AppError(ERRORS.channelNotFound);
       return publicChannel(record, base);
     },
 
@@ -128,8 +128,8 @@ export function createChannelService(deps: {
      */
     revert(id: string, actor: Actor, base: string): AdminChannel {
       const current = existing(id);
-      if (current.kind !== "stream" || current.source === null) {
-        throw invalid("source", "Only a channel the playlist sync owns can be reverted.");
+      if (current.kind !== "stream" || current.playlistId === null) {
+        throw invalid("playlistId", "Only a channel that belongs to a playlist can be reverted.");
       }
       store.transaction(() => store.channels.update({ ...current, editedFields: [] }));
       named(actor, "channel.reverted", id, current.name, { fields: current.editedFields });

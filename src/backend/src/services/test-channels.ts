@@ -36,7 +36,7 @@ function liveInput(c: (typeof TEST_CHANNELS)[number], fixtureDir: string): LiveC
  */
 function isLegacyTestRow(record: ChannelRecord | undefined, id: string): boolean {
   if (record?.kind !== "stream" || !record.enabled) return false;
-  if (record.editedFields.length > 0 || record.source !== null || record.playlistId !== null) return false;
+  if (record.editedFields.length > 0 || record.playlistId !== null) return false;
   const address = URL.canParse(record.streamUrl) ? new URL(record.streamUrl) : undefined;
   return address !== undefined && LOOPBACK_HOSTS.has(address.hostname) && address.pathname === `/live/${id}/master.m3u8`;
 }

@@ -1,32 +1,57 @@
 import { z } from "zod";
 
-import { ADDRESS_MAX } from "../constants/limits.js";
+import { ADDRESS_MAX, PLAYLIST_NAME_MAX } from "../constants/limits.js";
+import type { RunCounts, RunResult } from "./job-counts.js";
 
-const NAME_MAX = 120;
-const name = z.string().trim().min(1).max(NAME_MAX);
-const address = z.string().trim().min(1).max(ADDRESS_MAX);
+const name = z.string().trim().min(1).max(PLAYLIST_NAME_MAX);
+const url = z.string().trim().min(1).max(ADDRESS_MAX);
 
-/** `POST /api/playlists`: the name defaults to the address's host. The address rule is checked by the service. */
-export const PlaylistInputSchema = z
-  .object({ name: name.optional(), address, enabled: z.boolean().optional() })
-  .strict();
+/** `POST /api/playlists`, the web-address import: a typed name is kept as typed (`409 playlist.taken` when held). */
+export const PlaylistInputSchema = z.object({ url, name: name.optional(), enabled: z.boolean().optional() }).strict();
 export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;
 
-/** `PATCH /api/playlists/:id`: any field; an `address` replaces the stored one. */
-export const PlaylistPatchSchema = z
-  .object({ name: name.optional(), address: address.optional(), enabled: z.boolean().optional() })
-  .strict();
+/** `PATCH /api/playlists/:id`: rename, enable, or - for a web playlist only - rotate its address. */
+export const PlaylistPatchSchema = z.object({ name: name.optional(), url: url.optional(), enabled: z.boolean().optional() }).strict();
 export type PlaylistPatch = z.infer<typeof PlaylistPatchSchema>;
 
-/** A playlist as a read answers it (docs/26 section 3.11): never its address, only its host and a masked form. */
+/**
+ * A playlist as a read answers it (docs/03 section 7.2c): never its address, only the host and a masked form; the
+ * last run is joined in from its one sync job.
+ */
 export interface PlaylistView {
   id: number;
   name: string;
-  host: string;
-  masked: string;
+  kind: "file" | "url";
+  host?: string;
+  masked?: string;
+  fileName?: string;
   enabled: boolean;
-  /** How many channels it created or last updated. */
   channels: number;
-  lastSyncedAt?: number;
-  lastOutcome?: string;
+  enabledChannels: number;
+  live: number;
+  dead: number;
+  lastRunAt?: number;
+  lastResult?: RunResult;
+  lastCounts?: RunCounts;
+}
+
+/** What an import did to the playlist's channels. */
+export interface ImportCounts {
+  created: number;
+  updated: number;
+  skipped: number;
+  refused: number;
+  refusalExamples: string[];
+}
+
+/** The answer of an import: the playlist, whether it is new, and what the import did. */
+export interface ImportAnswer extends PlaylistView {
+  created: boolean;
+  imported: ImportCounts;
+}
+
+export interface PlaylistDeleted {
+  id: number;
+  deletedChannels: number;
+  deletedJobs: number;
 }
