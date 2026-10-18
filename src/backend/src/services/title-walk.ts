@@ -1,6 +1,6 @@
 import type { Store } from "../store/store.js";
-import type { ProgressReport } from "../types/job-progress.js";
 import type { TmdbClient } from "./tmdb-client.js";
+import type { PhaseRun } from "./title-run.js";
 import type { StoreRow } from "./title-store-row.js";
 import {
   type Kind,
@@ -15,15 +15,7 @@ import {
   num,
 } from "./title-shapes.js";
 
-/** What one run shares with its walk: its stop signal, its progress report and the count of rows seen so far. */
-export interface WalkRun {
-  signal: AbortSignal;
-  report: ProgressReport;
-  /** Rows TMDB listed so far (stored or skipped); it is read after an error too, so a failed run keeps its count. */
-  seen: { titles: number };
-  /** Set by shutdown: the walk ends between pages. */
-  shuttingDown: () => boolean;
-}
+export type WalkRun = PhaseRun;
 
 /** The phase a request starts in (docs/44 section 3.1): the Library fill walks `movies` then `tv`; other scopes one. */
 export const firstPhase = (request: SyncRequest): string => (request.scope === "discover" ? "movies" : "list");

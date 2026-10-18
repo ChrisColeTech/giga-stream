@@ -8,6 +8,10 @@ import { type TmdbClient } from "./tmdb-client.js";
 import { describeRequest } from "./title-sync-request.js";
 import { createStoreRow } from "./title-store-row.js";
 import { TITLE_FRESH_MS, type SyncRequest } from "./title-shapes.js";
+import { createDetailFetch } from "./title-detail-fetch.js";
+import { createDetailsPhase } from "./title-details-phase.js";
+import { createGenreSync } from "./title-genre-sync.js";
+import { type PhaseRun, type Seen, isStopping } from "./title-run.js";
 import { createTitleWalk } from "./title-walk.js";
 
 /** How one finished run ended (docs/44 section 3.2): `titles` counts the rows seen before the end. */
@@ -16,6 +20,9 @@ export interface SyncResult {
   /** The `AppError` code of a failed run; `internal.failure` for anything unexpected. */
   code?: string;
   titles: number;
+  /** Titles given their detail, and seasons given their episodes, this run (docs/47 section 3.1). */
+  detailed: number;
+  seasons: number;
 }
 
 /** What a caller hands one run: its stop signal and where its progress goes. */
@@ -46,6 +53,8 @@ export function createTitleSync(deps: {
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
   const walk = createTitleWalk({ store, tmdb, storeRow: createStoreRow({ store, deleted: deps.deleted, now }) });
+  const details = createDetailsPhase({ store, fetchDetail: createDetailFetch({ store, tmdb, now }), now });
+  const syncGenres = createGenreSync({ store, tmdb });
 
   let running: Running | null = null;
   let lastRun: { finishedAt: number; outcome: string } | null = null;
@@ -66,21 +75,27 @@ export function createTitleSync(deps: {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
     const signal = options.signal ?? new AbortController().signal;
     recordSyncAudit("sync.started", actor, detail);
-    const seen = { titles: 0 };
+    const seen: Seen = { titles: 0, detailed: 0, seasons: 0 };
     let result: SyncResult;
     try {
-      await walk(request, { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped });
-      result = { result: signal.aborted || stopped ? "stopped" : "ok", titles: seen.titles };
+      const run: PhaseRun = { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped };
+      // The Library fill (scope `discover`) is the whole sync: genres, the walk, then details (docs/47 3.1).
+      tmdb.resetPace();
+      if (request.scope === "discover") await syncGenres(signal);
+      await walk(request, run);
+      if (request.scope === "discover" && !isStopping(run)) await details(run);
+      result = { result: isStopping(run) ? "stopped" : "ok", ...seen };
     } catch (error: unknown) {
-      if (signal.aborted || stopped) result = { result: "stopped", titles: seen.titles };
+      if (signal.aborted || stopped) result = { result: "stopped", ...seen };
       else {
         const code = error instanceof AppError ? error.code : ERRORS.internalFailure.code;
-        result = { result: "failed", code, titles: seen.titles };
+        result = { result: "failed", code, ...seen };
       }
     } finally {
       running = null;
     }
-    const audited = { ...detail, titles: result.titles };
+    const { detailed, seasons } = result;
+    const audited = { ...detail, titles: result.titles, detailed, seasons };
     if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
     else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);
     else recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });

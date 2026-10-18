@@ -1,4 +1,4 @@
-import { PLAYLIST_LOGOS_SHARE, PROGRESS_MIN_GAP_MS } from "../constants/limits.js";
+import { LIBRARY_WALK_SHARE, PLAYLIST_LOGOS_SHARE, PROGRESS_MIN_GAP_MS } from "../constants/limits.js";
 import type { JobEvent, JobFinished, JobProgress, ProgressReport, ProgressUpdate } from "../types/job-progress.js";
 
 const unit = (update: ProgressUpdate): number =>
@@ -6,8 +6,8 @@ const unit = (update: ProgressUpdate): number =>
 
 /**
  * How far a run is, 0 to 1, from its latest report (docs/44 section 3.1). Fixed phase weights: a playlist run reads (0),
- * fills logos (0 to 20%) and checks streams (20 to 100%); the Library fill walks movies then series, a half each; any
- * other phase fills the whole bar. Before a phase's total is known it reads its lower bound. The admin keeps its own
+ * fills logos (0 to 20%) and checks streams (20 to 100%); the Library fill walks movies then series (0 to 10%, a half
+ * each) and fetches `details` (10 to 100%; a series' episodes ride its detail calls); any other phase fills the whole bar. Before a phase's total is known it reads its lower bound. The admin keeps its own
  * copy of these weights (the programs never import each other).
  */
 export function fractionOf(update: ProgressUpdate): number {
@@ -16,8 +16,9 @@ export function fractionOf(update: ProgressUpdate): number {
     case "reading": return 0;
     case "logos": return PLAYLIST_LOGOS_SHARE * share;
     case "checking": return PLAYLIST_LOGOS_SHARE + (1 - PLAYLIST_LOGOS_SHARE) * share;
-    case "movies": return 0.5 * share;
-    case "tv": return 0.5 + 0.5 * share;
+    case "movies": return (LIBRARY_WALK_SHARE / 2) * share;
+    case "tv": return LIBRARY_WALK_SHARE / 2 + (LIBRARY_WALK_SHARE / 2) * share;
+    case "details": return LIBRARY_WALK_SHARE + (1 - LIBRARY_WALK_SHARE) * share;
     default: return share;
   }
 }

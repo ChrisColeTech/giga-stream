@@ -7,7 +7,7 @@ import type { AddressInfo } from "node:net";
 import test, { after } from "node:test";
 
 import { AppError } from "../src/constants/errors.js";
-import { TMDB_RETRIES } from "../src/constants/limits.js";
+import { TMDB_MIN_GAP_MS, TMDB_MIN_REQUESTS_PER_SECOND, TMDB_REQUESTS_PER_SECOND, TMDB_RETRIES } from "../src/constants/limits.js";
 import { createTmdbClient } from "../src/services/tmdb-client.js";
 
 const closers: Array<() => Promise<void>> = [];
@@ -56,6 +56,26 @@ test("a 5xx that clears is retried into an answer; a 4xx is not retried", async 
   const refusing = await stub((response) => json(response, {}, 404));
   await assert.rejects(createTmdbClient({ token: "t", base: refusing.base, minGapMs: 0, backoffMs: 1 }).get("/x"));
   assert.equal(refusing.hits(), 1);
+});
+
+test("the pace is TMDB_REQUESTS_PER_SECOND; each 429 halves it for the rest of the run, down to 2 a second; resetPace restores it", async () => {
+  assert.equal(TMDB_MIN_GAP_MS, 1000 / TMDB_REQUESTS_PER_SECOND);
+  const throttled = await stub((response) => json(response, {}, 429));
+  const client = createTmdbClient({ token: "t", base: throttled.base, backoffMs: 1 });
+  assert.equal(client.paceMs(), TMDB_MIN_GAP_MS, "the full pace at first");
+  await assert.rejects(client.get("/x", {}, { signal: new AbortController().signal }));
+  // 1 + TMDB_RETRIES answers of 429: the gap doubled each time, capped at 20 / 2 = 10 times the full gap.
+  assert.equal(client.paceMs(), TMDB_MIN_GAP_MS * (TMDB_REQUESTS_PER_SECOND / TMDB_MIN_REQUESTS_PER_SECOND));
+  assert.equal(1000 / client.paceMs(), TMDB_MIN_REQUESTS_PER_SECOND, "never below 2 a second");
+  client.resetPace();
+  assert.equal(client.paceMs(), TMDB_MIN_GAP_MS);
+});
+
+test("one 429 that clears halves the pace once", async () => {
+  const flaky = await stub((response, hit) => (hit === 1 ? json(response, {}, 429) : json(response, { ok: true })));
+  const client = createTmdbClient({ token: "t", base: flaky.base, minGapMs: 100, backoffMs: 1 });
+  await client.get("/x");
+  assert.equal(client.paceMs(), 200);
 });
 
 test("an abort during a backoff sleep ends the call at once and nothing is retried", async () => {

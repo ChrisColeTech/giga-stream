@@ -1,5 +1,7 @@
-// A fake TMDB for the Library fill (docs/44 sections 3.5 and 6): `/discover/<kind>` pages of two rows each, a total_pages per
-// kind, a page that fails or is held until released, and `/movie/<id>` details. Plus an app on it that listens on a free port.
+// A fake TMDB for the Library fill (docs/44 sections 3.5 and 6, docs/47): `/discover/<kind>` pages of two rows each, a
+// total_pages per kind, `/movie|tv/<id>` details, a series' `append_to_response=season/N` episodes and the genre lists. Any request can
+// fail with a status or be held until released (keys: `movie:2` a page, `movie:detail:1010`).
+// Plus an app on it that listens on a free port.
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { after } from "node:test";
@@ -22,13 +24,18 @@ export const idsOf = (kind: Kind, page: number): number[] =>
   Array.from({ length: ROWS_PER_PAGE }, (_, row) => (kind === "movie" ? 1000 : 2000) + page * 10 + row);
 
 export async function walkTmdb(totals: Record<Kind, number>) {
-  const state = { totals, rating: 7, poster: "/p.jpg", fail: new Map<string, number>() };
+  const state = {
+    totals, rating: 7, poster: "/p.jpg", fail: new Map<string, number>(), seasonCount: 2, noSeasonKey: new Set<string>(),
+  };
   const asked: string[] = [];
   const gates = new Map<string, { wait: Promise<void>; started: () => void }>();
   const rowOf = (kind: Kind, id: number) => ({
     id, [kind === "movie" ? "title" : "name"]: `${kind} ${id}`, release_date: "2001-01-01", first_air_date: "2001-01-01",
     vote_average: state.rating, popularity: 50 + (id % 7), poster_path: state.poster, genre_ids: [18],
   });
+  /** A series has `state.seasonCount` seasons (plus the specials), one episode each; `state.noSeasonKey` is never answered. */
+  const seasonsOf = () => Array.from({ length: state.seasonCount + 1 }, (_, n) => ({ season_number: n, episode_count: 1 }));
+  const appends: string[] = [];
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     const json = (body: unknown, status = 200): void => {
@@ -37,21 +44,35 @@ export async function walkTmdb(totals: Record<Kind, number>) {
     };
     const walk = /^\/discover\/(movie|tv)$/.exec(url.pathname);
     const detail = /^\/(movie|tv)\/(\d+)$/.exec(url.pathname);
+    const genres = /^\/genre\/(movie|tv)\/list$/.test(url.pathname);
+    let key = "";
+    let answer: () => unknown = () => ({});
+    if (genres) return json({ genres: [{ id: 18, name: "Drama" }] });
     if (detail?.[1] !== undefined && detail[2] !== undefined) {
-      const id = Number(detail[2]);
-      asked.push(`${detail[1]}:detail:${id}`);
-      return json({ ...rowOf(detail[1] as Kind, id), overview: `Plot ${id}`, genres: [{ id: 18, name: "Drama" }],
-        credits: { cast: [] }, external_ids: {} });
-    }
-    if (walk?.[1] === undefined) return json({}, 404);
-    const kind = walk[1] as Kind;
-    const page = Number(url.searchParams.get("page"));
-    const key = `${kind}:${page}`;
+      const [kind, id] = [detail[1] as Kind, Number(detail[2])];
+      key = `${kind}:detail:${id}`;
+      const append = (url.searchParams.get("append_to_response") ?? "").split(",").filter((a) => a !== "");
+      appends.push(`${id}|${append.join(",")}`);
+      // Each appended `season/N` that exists is answered under its own key, as TMDB does.
+      const requested = append.flatMap((a) => (/^season\/(\d+)$/.exec(a)?.[1] ? [Number(a.slice(7))] : []));
+      const seasonKeys = Object.fromEntries(requested.filter((n) => n >= 0 && n <= state.seasonCount && !state.noSeasonKey.has(`${id}:${n}`))
+        .map((n) => [`season/${n}`, { episodes: [{ episode_number: 1, name: `Episode ${id}/${n}`, air_date: "2001-01-01", runtime: 40 }] }]));
+      const withCredits = append.includes("credits");
+      answer = () => ({
+        ...(withCredits ? { ...rowOf(kind, id), overview: `Plot ${id}`, genres: [{ id: 18, name: "Drama" }], credits: { cast: [] },
+          external_ids: {}, ...(kind === "tv" && { seasons: seasonsOf() }) } : { id }),
+        ...seasonKeys,
+      });
+    } else if (walk?.[1] !== undefined) {
+      const kind = walk[1] as Kind;
+      const page = Number(url.searchParams.get("page"));
+      key = `${kind}:${page}`;
+      answer = () => ({ page, results: idsOf(kind, page).map((id) => rowOf(kind, id)), total_pages: state.totals[kind], total_results: 99 });
+    } else return json({}, 404);
     asked.push(key);
     const respond = (): void => {
       const status = state.fail.get(key);
-      if (status !== undefined) return json({ status_message: "fault" }, status);
-      json({ page, results: idsOf(kind, page).map((id) => rowOf(kind, id)), total_pages: state.totals[kind], total_results: 99 });
+      return status !== undefined ? json({ status_message: "fault" }, status) : json(answer());
     };
     const gate = gates.get(key);
     if (gate === undefined) return respond();
@@ -64,16 +85,20 @@ export async function walkTmdb(totals: Record<Kind, number>) {
     base: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     state,
     asked,
-    /** A request for this page is held until `release`; `started` says it arrived. */
-    hold(kind: Kind, page: number) {
+    /** A request for this key is held until `release`; `started` says it arrived. */
+    hold(kind: Kind, page: number | string) {
+      const key = `${kind}:${page}`;
       let started!: () => void;
       let release!: () => void;
       const arrived = new Promise<void>((resolve) => (started = resolve));
-      gates.set(`${kind}:${page}`, { wait: new Promise<void>((resolve) => (release = resolve)), started });
-      return { started: arrived, release: () => { gates.delete(`${kind}:${page}`); release(); } };
+      gates.set(key, { wait: new Promise<void>((resolve) => (release = resolve)), started });
+      return { started: arrived, release: () => { gates.delete(key); release(); } };
     },
-    /** The walk requests (not details) so far, as `kind:page`. */
+    /** The walk requests (not details or seasons) so far, as `kind:page`. */
     pages: (): string[] => asked.filter((entry) => !entry.includes("detail")),
+    /** The detail calls so far, as `kind:detail:id`, and what each asked to append, as `id|credits,external_ids,season/1,...`. */
+    details: (): string[] => asked.filter((entry) => entry.includes("detail")),
+    appends,
   };
 }
 

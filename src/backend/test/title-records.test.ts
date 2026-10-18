@@ -50,7 +50,9 @@ test("a title made by hand is created, read, edited, cleared and deleted; the re
 });
 
 test("a bad title is refused with the field named", async () => {
-  const { t, token } = await titleApp();
+  const h = await titleApp();
+  const { t, token } = h;
+  await syncAll(h);
   const refusal = async (body: unknown) => {
     const answer = await send(t.app, "POST", "/api/titles", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
@@ -67,7 +69,6 @@ test("a bad title is refused with the field named", async () => {
   assert.deepEqual(await refusal({ ...HOME, backdropUrl: "ftp://x" }), invalid("backdropUrl"));
   assert.deepEqual(await refusal({ ...HOME, streamUrl: "ftp://s.example/a.m3u8" }), invalid("streamUrl"));
   assert.deepEqual(await refusal({ ...HOME, kind: "tv", seasons: [{ season: 1, episodes: [{ episode: 1, streamUrl: "ftp://s.example/e.m3u8" }] }] }), invalid("seasons"));
-  assert.equal((await send(t.app, "GET", "/api/titles?kind=movie")).status, 200);
   const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
   const patch = async (target: string, body: unknown) => {
     const answer = await send(t.app, "PATCH", `/api/titles/${target}`, body, token);
@@ -107,35 +108,14 @@ test("a manual series carries its seasons; a manual title with a TMDB id gets pr
   assert.equal(pick((await send(t.app, "GET", `/api/titles/${without}`)).body, "data.sources.0.url"), "https://first.example/movie/603");
 });
 
-test("manual titles join the lists: filtered by kind, genre, year and search, sorted, last under trending", async () => {
-  const { t, token } = await titleApp();
-  await send(t.app, "POST", "/api/titles", HOME, token);
-  await send(t.app, "POST", "/api/titles", { kind: "movie", title: "Alpha Tape", year: 1990, genres: ["Comedy"] }, token);
-  await send(t.app, "POST", "/api/titles", { kind: "tv", title: "Home Show" }, token);
-  const titles = async (query: string) => itemsOf((await send(t.app, "GET", `/api/titles?${query}`)).body).map((i) => i.title);
-  assert.deepEqual(await titles("kind=movie&sort=newest"), ["Home Movie", "The Matrix", "Alpha Tape"]);
-  assert.deepEqual(await titles("kind=movie&sort=oldest"), ["Alpha Tape", "The Matrix", "Home Movie"]);
-  assert.deepEqual(await titles("kind=movie&sort=az"), ["Alpha Tape", "Home Movie", "The Matrix"]);
-  const trending = await titles("kind=movie&sort=trending");
-  assert.deepEqual([trending[0], trending.slice(1).sort()], ["The Matrix", ["Alpha Tape", "Home Movie"]], "no popularity: after TMDB's");
-  assert.deepEqual(await titles("kind=movie&sort=newest&genre=comedy"), ["The Matrix", "Alpha Tape"], "a genre name matches the manual title");
-  assert.deepEqual(await titles("kind=movie&sort=newest&year=1999"), ["The Matrix"]);
-  assert.deepEqual((await titles("kind=tv&sort=newest")).sort(), ["Game of Thrones", "Home Show"]);
-  assert.deepEqual((await titles("kind=all&sort=az")).length, 5);
-  const search = itemsOf((await send(t.app, "GET", "/api/titles/search?kind=movie&q=alpha")).body).map((i) => i.title);
-  assert.ok(search.includes("Alpha Tape"));
-  const page = await send(t.app, "GET", "/api/titles?kind=movie&sort=newest&page=1");
-  assert.equal(pick(page.body, "data.totalResults"), 3);
-  assert.equal((itemsOf((await send(t.app, "GET", "/api/titles?kind=movie&sort=newest&page=2")).body).map((i) => i.state)).includes("manual"), false, "page one only");
-});
-
-test("without TMDB the list shows the titles made by hand; with none it is still the outage", async () => {
+test("without TMDB the store still answers: a title made by hand reads and the public browse and search routes are gone", async () => {
   const { t, token } = await titleApp({ tmdb: false });
-  const outage = await send(t.app, "GET", "/api/titles?kind=movie&sort=newest");
-  assert.equal(pick(outage.body, "error.code"), "tmdb.unavailable");
-  await send(t.app, "POST", "/api/titles", HOME, token);
-  const shown = await send(t.app, "GET", "/api/titles?kind=movie&sort=newest");
-  assert.deepEqual([shown.status, itemsOf(shown.body).map((i) => i.title)], [200, ["Home Movie"]]);
+  const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
+  assert.equal(field(await send(t.app, "GET", `/api/titles/${id}`), "title"), "Home Movie");
+  for (const url of ["/api/titles?kind=movie&sort=newest", "/api/titles/search?kind=movie&q=home"]) {
+    const gone = await send(t.app, "GET", url);
+    assert.deepEqual([gone.status, pick(gone.body, "error.code")], [404, url.startsWith("/api/titles?") ? "route.not_found" : "title.not_found"], url);
+  }
 });
 
 test("every item carries its state: synced, edited or manual", async () => {
@@ -143,7 +123,8 @@ test("every item carries its state: synced, edited or manual", async () => {
   const { t, token } = h;
   await syncAll(h);
   await send(t.app, "POST", "/api/titles", HOME, token);
-  const states = async () => itemsOf((await send(t.app, "GET", "/api/titles?kind=movie&sort=az")).body).map((i) => [i.title, i.state]);
+  const states = async () =>
+    itemsOf((await send(t.app, "GET", "/api/titles/stored?kind=movie&sort=title", undefined, token)).body).map((i) => [i.title, i.state]);
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "synced"]]);
   await send(t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, token);
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "edited"]]);
@@ -172,14 +153,10 @@ test("enabled is a field of the title: a disabled title leaves the public reads,
     const off = await send(t.app, "PATCH", `/api/titles/${id}`, { enabled: false }, token);
     assert.deepEqual([off.status, field(off, "enabled"), field(off, "state")], [200, false, id === manual ? "manual" : "synced"], "enabled is not an edit");
   }
-  const titles = async (query: string, token?: string) =>
-    itemsOf((await send(t.app, "GET", `/api/titles?kind=movie&sort=az${query}`, undefined, token)).body).map((i) => [i.title, i.enabled]);
-  assert.deepEqual(await titles(""), [], "public: nothing disabled");
-  assert.deepEqual(await titles("&includeDisabled=true"), [], "the option is ignored without a token");
-  assert.deepEqual(await titles("&includeDisabled=true", "not-a-token"), []);
-  assert.deepEqual(await titles("&includeDisabled=true", token), [["Home Movie", false], ["The Matrix", false]]);
-  const search = await send(t.app, "GET", "/api/titles/search?kind=movie&q=home");
-  assert.deepEqual(itemsOf(search.body).map((i) => i.title), []);
+  const catalog = itemsOf((await send(t.app, "GET", "/api/titles/catalog")).body).map((i) => i.id);
+  assert.deepEqual(catalog, ["tv-1399"], "the public catalog leaves the disabled titles out");
+  const stored = itemsOf((await send(t.app, "GET", "/api/titles/stored?kind=movie", undefined, token)).body);
+  assert.deepEqual(stored.map((i) => [i.title, i.enabled]), [["Home Movie", false], ["The Matrix", false]], "the admin's list keeps them");
   for (const id of ["movie-603", manual]) {
     assert.equal((await send(t.app, "GET", `/api/titles/${id}`)).status, 404, id);
     assert.equal((await send(t.app, "GET", `/api/titles/${id}?includeDisabled=true`)).status, 404, `${id} without a token`);

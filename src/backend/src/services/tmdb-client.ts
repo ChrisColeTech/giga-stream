@@ -1,5 +1,7 @@
 import { AppError, ERRORS } from "../constants/errors.js";
-import { TMDB_BACKOFF_MS, TMDB_MIN_GAP_MS, TMDB_RETRIES, TMDB_TIMEOUT_MS } from "../constants/limits.js";
+import {
+  TMDB_BACKOFF_MS, TMDB_MIN_GAP_MS, TMDB_MIN_REQUESTS_PER_SECOND, TMDB_REQUESTS_PER_SECOND, TMDB_RETRIES, TMDB_TIMEOUT_MS,
+} from "../constants/limits.js";
 
 type Params = Record<string, string | number | undefined>;
 
@@ -31,8 +33,8 @@ function untilAborted<T>(call: Promise<T>, signal: AbortSignal): Promise<T> {
 }
 
 /**
- * The TMDB client (docs/03 section 7.6): read token in the `Authorization` header, at most about five requests a
- * second, backing off on `429` and `5xx`, and merging identical in-flight requests. Every call answers parsed JSON or
+ * The TMDB client (docs/03 section 7.6): read token in the `Authorization` header, at most `TMDB_REQUESTS_PER_SECOND`
+ * requests a second (halved by each 429 until `resetPace`, floor 2 a second), backing off on `429` and `5xx`, and merging identical in-flight requests. Every call answers parsed JSON or
  * `503 tmdb.unavailable`. A caller that passes a `signal` (docs/44 section 3.2) can stop its call at any moment - during
  * the pacing wait, the request or a backoff sleep - and is never retried after; it does not join or share a merged
  * request, so its abort cannot cancel another caller's.
@@ -43,6 +45,8 @@ export function createTmdbClient(options: { token: string; base?: string; now?: 
   const minGapMs = options.minGapMs ?? TMDB_MIN_GAP_MS;
   const backoffMs = options.backoffMs ?? TMDB_BACKOFF_MS;
   let lastStart = 0;
+  /** How many times slower than the full pace the client now goes: 1, doubled by each 429, at most 10 (2 a second). */
+  let slow = 1;
   let chained: Promise<void> = Promise.resolve();
   const inflight = new Map<string, Promise<unknown>>();
 
@@ -61,7 +65,7 @@ export function createTmdbClient(options: { token: string; base?: string; now?: 
     for (let attempt = 0; ; attempt++) {
       if (signal?.aborted) throw aborted();
       // Pace every call behind the last one, about five a second.
-      const gap = lastStart + minGapMs - now();
+      const gap = lastStart + minGapMs * slow - now();
       if (gap > 0) await sleep(gap, signal);
       if (signal?.aborted) throw aborted();
       lastStart = now();
@@ -76,6 +80,8 @@ export function createTmdbClient(options: { token: string; base?: string; now?: 
         if (attempt < 1) continue;
         throw new AppError(ERRORS.tmdbUnavailable, { reason: "unreachable" });
       }
+      // A 429 halves the pace for the rest of the run (`resetPace` starts the next run at full speed).
+      if (response.status === 429) slow = Math.min(slow * 2, TMDB_REQUESTS_PER_SECOND / TMDB_MIN_REQUESTS_PER_SECOND);
       if ((response.status === 429 || response.status >= 500) && attempt < TMDB_RETRIES) {
         await sleep(backoffMs * (attempt + 1), signal);
         continue;
@@ -117,6 +123,12 @@ export function createTmdbClient(options: { token: string; base?: string; now?: 
       const call = queued(() => raw(path, params)).finally(() => inflight.delete(key));
       inflight.set(key, call);
       return call as Promise<T>;
+    },
+    /** The pause between two requests now (the full pace's, lengthened by any 429 this run). */
+    paceMs: (): number => minGapMs * slow,
+    /** A new run starts at the full pace again. */
+    resetPace(): void {
+      slow = 1;
     },
     /** Count of identical requests currently being merged. Exposed for tests. */
     merging(): number {

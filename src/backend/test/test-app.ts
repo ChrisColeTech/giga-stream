@@ -88,6 +88,7 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       ALLOW_INSECURE_HTTP: false,
       CORS_ORIGINS: "",
       TMDB_READ_TOKEN: "",
+      TMDB_MIN_GAP_MS: 0,
       SEED_TEST_CHANNELS: options.seed ?? false,
       ...options.config,
     },

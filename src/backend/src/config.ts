@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-import { PLAYLIST_IMPORT_MAX_BYTES } from "./constants/limits.js";
+import { PLAYLIST_IMPORT_MAX_BYTES, TMDB_MIN_GAP_MS } from "./constants/limits.js";
 
 /** Env parsing (docs/03 section 1) — the only place `process.env` is read. */
 const BooleanFlag = z
@@ -44,6 +44,8 @@ const EnvSchema = z.object({
   // The catalog-sync interval, e.g. "6h" or "30m"; empty or "off" disables it (docs/03 section 7.6b).
   TMDB_SYNC_SCHEDULE: z.string().default(""),
   TMDB_BASE: z.string().default("https://api.themoviedb.org/3"),
+  // The pause between TMDB requests (about five a second); a test knob, so a fake TMDB is not paced.
+  TMDB_MIN_GAP_MS: z.coerce.number().int().min(0).max(10_000).default(TMDB_MIN_GAP_MS),
   // OMDb detail enrichment (docs/11 section 7). The base and limit are test knobs; the key is real.
   OMDB_API_KEY: z.string().default(""),
   OMDB_BASE: z.string().default("https://www.omdbapi.com/"),

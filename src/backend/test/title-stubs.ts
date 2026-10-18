@@ -123,7 +123,11 @@ export async function stubTmdb(options: TmdbStubOptions = {}) {
     calls.push(url.pathname + url.search);
     const p = url.pathname;
     if (p === "/movie/603") return json(MATRIX);
-    if (p === "/tv/1399") return json(GOT_DETAIL);
+    if (p === "/tv/1399") {
+      // TMDB's append_to_response=season/N answers each appended season under its `season/N` key.
+      const appended = (url.searchParams.get("append_to_response") ?? "").split(",");
+      return json({ ...GOT_DETAIL, ...(appended.includes("season/1") && { "season/1": SEASON }) });
+    }
     if (p === "/discover/movie") return json({ ...page(url, movieRows), page: 1 });
     if (p === "/discover/tv") return json({ ...page(url, tvRows), page: 1 });
     if (p === "/search/movie") return json(page(url, movieRows));
@@ -131,12 +135,23 @@ export async function stubTmdb(options: TmdbStubOptions = {}) {
     if (p === "/trending/movie/week" || p === "/movie/popular") return json(page(url, movieRows));
     if (p === "/trending/tv/week" || p === "/tv/popular") return json(page(url, tvRows));
     if (p === "/genre/movie/list") return json({ genres: [{ id: 878, name: "Science Fiction" }] });
+    if (p === "/genre/tv/list") return json({ genres: [{ id: 18, name: "Drama" }] });
     if (p === "/tv/1399/season/1") return json(SEASON);
     if (p === "/movie/603/recommendations" || p === "/tv/1399/recommendations") {
       const results = options.recommendationRows ?? [{ ...LIST_ROW, id: 1399, title: "Game of Thrones" }];
       return json({ page: 1, results, total_pages: 1, total_results: results.length });
     }
     return json({ status_message: "not found" }, 404);
+  });
+  return { base, calls };
+}
+
+/** A TMDB that answers 500 to anything and records the call: a test asserts `calls` stays empty. */
+export async function forbiddenTmdb() {
+  const calls: string[] = [];
+  const base = await serve((url, json) => {
+    calls.push(url.pathname + url.search);
+    json({ status_message: "no TMDB call is allowed here" }, 500);
   });
   return { base, calls };
 }
@@ -160,6 +175,15 @@ export const omdbOn = (tmdb: { base: string }, omdb: { base: string }) => ({
   OMDB_API_KEY: "omdb-test-key",
   OMDB_BASE: omdb.base,
 });
+
+/** The Library fill, run and waited for: job 1 is enabled at one page a kind and started as `POST /api/titles/sync` does. */
+export async function fillLibrary(t: Awaited<ReturnType<typeof makeApp>>): Promise<void> {
+  const access = (await signIn(t.app)).access;
+  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, access);
+  const started = await send(t.app, "POST", "/api/titles/sync", undefined, access);
+  if (started.status !== 202) throw new Error(`sync refused: ${JSON.stringify(started.body)}`);
+  await settled(t);
+}
 
 /** Resolves once no sync job is running (reads the status endpoint with a sign-in). */
 export async function settled(t: Awaited<ReturnType<typeof makeApp>>): Promise<void> {

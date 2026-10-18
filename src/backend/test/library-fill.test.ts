@@ -25,7 +25,8 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
 
   assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2", "movie:3", "tv:1", "tv:2"], "5 pages of the 10 the cap allowed");
   const job = await f.job();
-  assert.deepEqual([job.lastResult, pick(job, "lastCounts.titles"), job.running, job.progress], ["ok", 10, false, undefined]);
+  assert.deepEqual([job.lastResult, job.running, job.progress], ["ok", false, undefined]);
+  assert.deepEqual(job.lastCounts, { titles: 10, detailed: 10, seasons: 8, stale: 0 }, "a series' seasons ride its detail call; season 0 is not asked for");
   assert.equal(await f.stored(), 10);
 
   const frames = stream.frames();
@@ -37,7 +38,8 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   assert.equal(fractions.at(-1), 1);
   assert.deepEqual(progress.filter((p) => p.phase === "movies").map((p) => p.total), [0, 5, 3, 3],
     "the total starts at the cap and is lowered to TMDB's 3 pages once the first page answers");
-  assert.deepEqual(progress.at(-1), { jobId: 1, phase: "tv", done: 2, total: 2 });
+  assert.deepEqual(progress.at(-1), { jobId: 1, phase: "details", done: 10, total: 10 });
+  assert.deepEqual([...new Set(progress.map((p) => p.phase))], ["movies", "tv", "details"]);
   assert.deepEqual(frames.at(-1)?.data, { jobId: 1, lastResult: "ok", lastRunAt: job.lastRunAt });
   stream.destroy();
 });
@@ -71,7 +73,7 @@ test("Stop between pages ends the run stopped with the rows seen kept, audited s
   assert.deepEqual([stopped.status, pick(stopped.body, "data.running")], [202, true]);
   await f.finished();
   const job = await f.job();
-  assert.deepEqual([job.lastResult, job.lastCounts], ["stopped", { titles: 2, stale: 0, stopped: true }]);
+  assert.deepEqual([job.lastResult, job.lastCounts], ["stopped", { titles: 2, detailed: 0, seasons: 0, stale: 0, stopped: true }]);
   assert.equal(await f.stored(), 2, "page one stays");
   gate.release();
   assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2"], "no further page and no series");
@@ -123,12 +125,12 @@ test("POST /api/titles/sync with no Library fill is 409 job.no_library_fill", as
   assert.deepEqual([refused.status, pick(refused.body, "error.code")], [409, "job.no_library_fill"]);
 });
 
-test("a stale stored full detail is kept when a thin list row arrives: only the rating and images refresh", async () => {
+test("a stale stored full detail is fetched again by the next run's details phase, its own fields standing", async () => {
   const tmdb = await walkTmdb({ movie: 1, tv: 1 });
   const f = await fillApp(tmdb, 1);
   await f.api("POST", "/api/jobs/1/run");
   await f.finished();
-  assert.equal((await f.api("GET", "/api/titles/movie-1010")).status, 200, "opening it stores the full detail");
+  assert.equal((await f.api("GET", "/api/titles/movie-1010")).status, 200, "the first run stored the full detail");
   const row = (): { payload: Record<string, unknown>; fetched_at: number } => {
     const db = new DatabaseSync(path.join(f.t.dataDir, DATABASE_FILE_NAME), { readOnly: true });
     try {
@@ -149,6 +151,7 @@ test("a stale stored full detail is kept when a thin list row arrives: only the 
   const after = row();
   assert.equal(after.payload.shape, "detail");
   assert.equal(after.payload.plot, "Plot 1010", "the detail's own fields stand");
-  assert.equal(after.fetched_at, before.fetched_at, "its age stays");
+  assert.equal(after.fetched_at - before.fetched_at, FOUR_DAYS_MS, "its age restarts: the detail was fetched again");
+  assert.equal(tmdb.details().filter((d) => d === "movie:detail:1010").length, 2);
   assert.deepEqual([after.payload.rating, after.payload.posterUrl], [9.1, "https://image.tmdb.org/t/p/w500/new.jpg"]);
 });

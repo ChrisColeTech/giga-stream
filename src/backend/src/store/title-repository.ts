@@ -3,7 +3,9 @@ import { z } from "zod";
 
 import { applyFields } from "./title-edits.js";
 import { createTitleCatalog } from "./title-catalog.js";
+import { createTitleDetails } from "./title-details.js";
 import { createTitlePage } from "./title-page.js";
+import { createTitleRelated } from "./title-related.js";
 
 /** A stored title: the `7.4` answer plus its freshness facts (docs/03 section 7.6b) and its record facts (docs/26 D20). */
 export interface StoredTitle {
@@ -45,13 +47,6 @@ const TitleRow = z.object({
   fetched_at: z.number(),
 });
 
-const ListRow = z.object({
-  ids: z.string(),
-  total_pages: z.number(),
-  total_results: z.number(),
-  fetched_at: z.number(),
-});
-
 const editedOf = (json: string | null): string[] => {
   if (json === null) return [];
   const parsed = z.array(z.string()).safeParse(JSON.parse(json));
@@ -76,6 +71,9 @@ function stored(row: z.infer<typeof TitleRow>): StoredTitle {
 const COLUMNS =
   "id, kind, tmdb_id, origin, edited_fields, enabled, payload, popularity_score, popularity_read_at, fetched_at";
 
+/** A rewrite that changes nothing but the popularity read keeps a title's detail-failure record (docs/47 section 3.1). */
+const SAME_PAYLOAD = "json_remove(excluded.payload, '$.popularity') IS json_remove(titles.payload, '$.popularity')";
+
 /**
  * The title store (docs/03 section 7.6b): `titles` and `title_lists`. A TMDB title is written whole on every sync or
  * fill-through, but `put` is the one place that decides what a write may change: it merges TMDB's payload under the
@@ -92,19 +90,14 @@ export function createTitleRepository(db: DatabaseSync) {
       payload = excluded.payload,
       popularity_score = COALESCE(excluded.popularity_score, titles.popularity_score),
       popularity_read_at = COALESCE(excluded.popularity_read_at, titles.popularity_read_at),
-      fetched_at = excluded.fetched_at`);
+      fetched_at = excluded.fetched_at,
+      detail_failed_at = CASE WHEN ${SAME_PAYLOAD} THEN titles.detail_failed_at END,
+      detail_failures = CASE WHEN ${SAME_PAYLOAD} THEN titles.detail_failures END`);
   const insertManual = db.prepare(`
     INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES (?, ?, ?, 'manual', ?, ?)`);
   const update = db.prepare("UPDATE titles SET payload = ?, edited_fields = ?, tmdb_id = ?, enabled = ? WHERE id = ?");
   const clearEdits = db.prepare("UPDATE titles SET edited_fields = NULL WHERE id = ?");
   const remove = db.prepare("DELETE FROM titles WHERE id = ?");
-  const oneList = db.prepare("SELECT ids, total_pages, total_results, fetched_at FROM title_lists WHERE key = ?");
-  const upsertList = db.prepare(`
-    INSERT INTO title_lists (key, ids, total_pages, total_results, fetched_at)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT (key) DO UPDATE SET
-      ids = excluded.ids, total_pages = excluded.total_pages,
-      total_results = excluded.total_results, fetched_at = excluded.fetched_at`);
   const counts = db.prepare("SELECT COUNT(*) AS total, SUM(fetched_at < ?) AS stale FROM titles WHERE origin = 'tmdb'");
 
   function findById(id: string): StoredTitle | undefined {
@@ -115,7 +108,15 @@ export function createTitleRepository(db: DatabaseSync) {
 
   const catalog = createTitleCatalog(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
 
+  const related = createTitleRelated(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
+
   return {
+    /** The Library fill's work queues (docs/47 section 3.1). */
+    queue: createTitleDetails(db),
+    /** The stored genre dictionary and the recommendations computed from the store (docs/47 section 3.2). */
+    genres: related.genres,
+    replaceGenres: related.replaceGenres,
+    recommendations: related.recommendations,
     /** The fileserver's catalog read (docs/03 section 7.4): enabled rows by id after a cursor. */
     catalog: catalog.catalog,
     /** The stored-titles list (docs/41 section 3.2): one page and its filtered count; the whole store's inventory. */
@@ -150,21 +151,6 @@ export function createTitleRepository(db: DatabaseSync) {
     },
     remove(id: string): boolean {
       return Number(remove.run(id).changes) > 0;
-    },
-    /** A stored list answer: its title ids in order, or undefined. */
-    findList(key: string): { ids: number[]; totalPages: number; totalResults: number; fetchedAt: number } | undefined {
-      const row = oneList.get(key);
-      if (row === undefined) return undefined;
-      const parsed = ListRow.parse(row);
-      return {
-        ids: z.array(z.unknown()).parse(JSON.parse(parsed.ids)).map(Number),
-        totalPages: parsed.total_pages,
-        totalResults: parsed.total_results,
-        fetchedAt: parsed.fetched_at,
-      };
-    },
-    putList(key: string, ids: number[], totalPages: number, totalResults: number, fetchedAt: number): void {
-      upsertList.run(key, JSON.stringify(ids), totalPages, totalResults, fetchedAt);
     },
     /** `{ total, stale }` of the TMDB titles against the freshness age, for the sync status. */
     counts(staleAgeMs: number): { total: number; stale: number } {
