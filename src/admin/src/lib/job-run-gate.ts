@@ -8,7 +8,8 @@ import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { playlistIdOf } from "./job-rows";
 
 /* Why `Run job` cannot run (`38` section 4.2), pure, in this priority order: nothing ticked, a ticked job already
- * running (a job's own Enabled switch gates only its schedule, never a manual run), a ticked job's playlist disabled, the backend unreachable. The playlist is found by the
+ * running (a job's own Enabled switch gates only its schedule, never a manual run), a ticked job's playlist disabled,
+ * the backend unreachable. The playlist is found by the
  * job's own `playlistId` in the playlists list, then by its `playlistName`. */
 
 /** The playlist a job syncs, from the held list, or undefined (a catalog job, or a list not read). */

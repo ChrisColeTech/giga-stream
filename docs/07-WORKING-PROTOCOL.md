@@ -50,8 +50,8 @@ rules are in `01`; this document is about process.
 
 ## 4. Running things
 
-- **Ask before starting a program** the owner did not ask for. Restarting the owner's own stack when
-  asked is fine.
+- **Restarting the owner's own dev stack needs no permission** (owner, 2026-10-18): back up the database
+  first, stop processes by PID, restart, sign in again. Other programs the task does not need are not started.
 - **The dev stack runs from the root, in the background, during development and testing** (owner,
   2026-10-17). `npm run dev` is the only launcher (the backend, the interface's Vite on 5171, the
   Electron app with its fileserver 8090; kill-ports frees the development ports
@@ -84,9 +84,10 @@ rules are in `01`; this document is about process.
   sees) runs against the owner's real `npm run dev` stack: the real fileserver, backend and data, in the real
   Electron window through its debug port (9222) or a Chrome tab on the Vite port (5171). An isolated copy
   hides real problems: stale data, state the owner's window really holds, and paint and hydration timing. On
-  the real stack the coordinator changes only UI state (surface, panes, Theatre) and restores it, never
-  deletes or overwrites the owner's records without asking, and reports every real problem it sees, not only
-  the one it was asked about.
+  the real stack the coordinator runs the real pipelines (syncs, caches, jobs) and runs them again, because an
+  idempotent re-run is how a sync is tested (owner, 2026-10-18); it backs the database up first, restores UI
+  state (surface, panes, Theatre) as found, and reports every real problem it sees, not only the one it was
+  asked about.
 - **Page-level fakes** (a socket hello, a fetch) live in a harness outside the repository and never
   write to a real server.
 - **Stop processes by PID**, never by image name; killing `electron.exe` or `node.exe` by name takes

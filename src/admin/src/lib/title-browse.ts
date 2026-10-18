@@ -18,7 +18,10 @@ export function addSkip(title: AdminTitleRow): string | null {
 }
 
 /** Why the row's own `Add` is disabled, or undefined. */
-export function addReason(title: AdminTitleRow, state: { readonly busy: boolean; readonly unreachable: boolean }): string | undefined {
+export function addReason(
+  title: AdminTitleRow,
+  state: { readonly busy: boolean; readonly unreachable: boolean },
+): string | undefined {
   return addSkip(title) ?? (state.busy ? ADDING_REASON : state.unreachable ? UNREACHABLE_REASON : undefined);
 }
 

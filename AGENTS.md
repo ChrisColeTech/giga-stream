@@ -101,10 +101,11 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   the real fileserver and real backend and find real problems"): the owner's running `npm run dev` stack, with its
   real fileserver (8090), real backend and real data, seen in the real Electron window through its debug port
   (9222) or in a Chrome tab on the Vite port (5171). An isolated copy hides real problems (it hid stale channel
-  rows pointing at a dead port, and a video that painted stale after a pane collapsed). On the real stack: change
-  only UI state (surface, panes, Theatre) and put it back as found, never delete or overwrite the owner's records
-  without asking, and report every real problem seen, whether or not it was the thing asked about.
-  Ask before starting a program the owner did not ask for. Stop processes by PID, never by name.
+  rows pointing at a dead port, and a video that painted stale after a pane collapsed). On the real stack: run the
+  real pipelines (syncs, caches, jobs) and run them again, since idempotent re-runs are the test of a sync (owner,
+  2026-10-18); back the database up first, restore UI state (surface, panes, Theatre) as found, and report every real
+  problem seen, whether or not it was the thing asked about.
+  Restarting the dev stack needs no permission (back up the database first). Stop processes by PID, never by name.
 - **Fix the obvious bug you find; never park it in a report** (owner, 2026-10-17: holding back a stale `.env` URL
   and stale test constants was "brain dead"). A wrong port, a dead URL in a test, a stale env value or a
   fixture that no longer matches the code is fixed in the same change, by the coordinator or by a worker whose
