@@ -109,8 +109,12 @@ panes to them without a tween, and becomes visible two animation frames later, o
    its tooltip. No text is printed under a control. Missing media, missing history, loading and failure are
    enablement conditions, not permission to remove the pane's controls or section headers. This includes
    the inspector's Resume / Start over footer (owner clarification, 2026-10-17).
-4. **Pane toolbars are icons**, each with an accessible name and the family tooltip; ghost by default, no
-   filled accent toolbar action. Search fields sit in the pane's strip, not in a header.
+4. **A narrow pane's toolbar is icons**, each with an accessible name and the family tooltip; ghost by default,
+   no filled accent toolbar action. Search fields sit in the pane's strip, not in a header. A table's selection
+   toolbar is not a pane toolbar: its verbs are ghost words with their icon, always drawn and disabled with a
+   reason, the three-state `All` checkbox on its right and the forward verb (`Titles →`) rightmost (`01` section 9,
+   Selection toolbar and Icon vocabulary; LoRA Trainer `pages/gallery/GalleryToolbar.tsx`). *(Corrected
+   2026-10-17.)*
 5. **Selected and playing are different states.** One primary selection per pane. A refresh keeps the
    selection by id while the row still exists.
 6. **Each pane has one scroll container.** A surface switch keeps every pane's scroll. Keyboard row
