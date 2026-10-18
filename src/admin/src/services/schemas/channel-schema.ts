@@ -24,7 +24,7 @@ const StreamSchema = z.object({
   editedFields: z.array(z.string()).optional(),
   playlistId: z.number().optional(),
   playlistName: z.string().optional(),
-  status: z.enum(["live", "dead"]).optional(),
+  status: z.enum(["online", "offline"]).optional(),
   checkedAt: z.number().optional(),
   cachedLogoUrl: z.string().optional(),
 });
@@ -87,5 +87,5 @@ export const ChannelSwitchedSchema = z.object({
 export type ChannelSwitched = z.infer<typeof ChannelSwitchedSchema>;
 
 /** `PUT /api/channels/:id/status` (`36` section 8.1): the body is `{ status }`, the answer the channel row. */
-export const ChannelVerdictSchema = z.enum(["live", "dead"]);
+export const ChannelVerdictSchema = z.enum(["online", "offline"]);
 export type ChannelVerdict = z.infer<typeof ChannelVerdictSchema>;

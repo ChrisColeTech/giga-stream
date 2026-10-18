@@ -183,14 +183,14 @@ describe("a stopped run in the words", () => {
 
   it("words every count of a sync, and a stopped run with its partial counts", () => {
     const full = counts({
-      created: 2, updated: 1, skipped: 3, refused: 4, logosCached: 312, logosFailed: 7, live: 1904, dead: 640, unchecked: 55,
+      created: 2, updated: 1, skipped: 3, refused: 4, logosCached: 312, logosFailed: 7, online: 1904, offline: 640, unchecked: 55,
     });
     assert.equal(
       runWords("ok", full),
-      "Synced: 2 created, 1 updated, 3 skipped, 4 refused, 312 logos cached, 7 logos failed, 1,904 live, 640 dead, 55 not checked.",
+      "Synced: 2 created, 1 updated, 3 skipped, 4 refused, 312 logos cached, 7 logos failed, 1,904 online, 640 offline, 55 not checked.",
     );
     assert.equal(runWords("stopped", counts({ logosCached: 40, unchecked: 2598, stopped: true })), "Stopped: 40 logos cached, 2,598 not checked.");
-    assert.equal(runWords("ok", counts({ live: 1, stopped: true })), "Stopped: 1 live.", "the typed flag alone says it");
+    assert.equal(runWords("ok", counts({ online: 1, stopped: true })), "Stopped: 1 online.", "the typed flag alone says it");
     assert.equal(runWords("stopped", { titles: 12, stale: 0, stopped: true }), "Stopped: 12 titles.");
   });
 });

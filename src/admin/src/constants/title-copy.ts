@@ -97,7 +97,6 @@ export const SEASON_TAKEN = "Each season number is used once.";
 /** Notices. */
 export const TITLE_GONE = "That title no longer exists.";
 export const titleCreated = (name: string): string => `Created ${name}.`;
-export const titleSaved = (name: string): string => `Saved ${name}.`;
 export const titleDeleted = (name: string): string => `Deleted ${name}.`;
 export const titleReverted = (name: string): string => `Reverted ${name} to TMDB.`;
 export const titleRestored = (name: string): string => `Restored ${name}. It returns on the next browse or sync.`;

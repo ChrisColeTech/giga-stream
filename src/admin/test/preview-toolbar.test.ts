@@ -5,10 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PreviewToolbar, type PreviewToolbarProps } from "@/components/channels/PreviewToolbar";
 import { PreviewWindow } from "@/components/channels/PreviewWindow";
 import { UNREACHABLE_REASON } from "@/constants/channel-copy";
-import { RETRY_READING } from "@/constants/preview-copy";
+import { RETRY_READING, UNCHECKED_TITLE } from "@/constants/preview-copy";
 import { previewChannel } from "@/lib/channel-list";
 import { queryKey } from "@/lib/channel-query";
-import { previewVerbs, verdictToSet, type VerbContext } from "@/lib/preview-verbs";
+import { previewVerbs, type VerbContext } from "@/lib/preview-verbs";
 import { FIRST_REASON } from "@/lib/preview-walk";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
@@ -16,7 +16,7 @@ import { live, stream } from "./support/channels-kit";
 import { renderLive, resetStore, signInForTest } from "./support/store";
 
 const state = () => useAppStore.getState();
-const CALM: VerbContext = { reading: false, unreachable: false, busy: false, playerFailed: false };
+const CALM: VerbContext = { reading: false, unreachable: false, busy: false };
 const noop = (): void => undefined;
 
 function props(channel: AdminChannel | undefined, over: Partial<PreviewToolbarProps> = {}): PreviewToolbarProps {
@@ -37,30 +37,57 @@ beforeEach(() => {
   signInForTest();
 });
 
-describe("the Preview toolbar", () => {
-  it("draws the verbs left (Disable, Mark, Retry), then Previous and Next; no name, state word, count or Close", () => {
-    const html = toolbar(stream("a", { name: "Talk", status: "live" }), { retry: true });
-    const at = order(html, [" Disable<", ">Mark dead<", ">Retry<", 'aria-label="Previous"', 'aria-label="Next"']);
-    assert.ok(!html.includes("2 / 5") && !html.includes('role="status"'), "the state and the count are the status bar's");
-    assert.ok(!html.includes("Talk"), "the name is the window's title now");
-    assert.ok(!html.includes("Close"), "the window header owns the close");
-    assert.ok(html.includes("lucide-x"), "Disable carries the X icon");
-    assert.ok(toolbar(stream("a", { enabled: false })).includes("lucide-check"), "Enable carries the Check icon");
+describe("the Preview toolbar's two toggles (`51` section 2.6)", () => {
+  it("draws `Enabled` and `Online` as family switches with plain labels beside them, then Retry; no Enable/Disable or Mark button", () => {
+    const html = toolbar(stream("a", { name: "Talk", status: "online" }), { retry: true });
+    const at = order(html, [
+      'aria-label="Enabled"', ">Enabled</span>", 'aria-label="Online"', ">Online</span>", ">Retry<",
+      'aria-label="Previous"', 'aria-label="Next"',
+    ]);
+    assert.ok(!html.includes(">Enable<") && !html.includes(">Disable<"), "no prose verb for the enabled boolean");
+    assert.ok(!html.includes("Mark "), "no Mark button at all");
     assert.ok(at.every((index) => index >= 0), JSON.stringify(at));
-    assert.deepEqual([...at].sort((x, y) => x - y), at, "the order is the specified one");
+    assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'), "the family Toggle");
+    assert.ok(html.includes("lucide-check") === false, "no Check/X icon on a switch");
     assert.ok(html.includes("border-b border-hair"), "the shared pinned strip");
   });
 
-  it("shows the action the channel can take, and the other verdict than its own (a stream channel only)", () => {
-    assert.ok(toolbar(stream("a", { enabled: false, status: "dead" })).includes(" Enable<"));
-    assert.ok(toolbar(stream("a", { enabled: false, status: "dead" })).includes(">Mark live<"));
-    assert.ok(toolbar(stream("a", { status: "live" })).includes(">Mark dead<"));
-    const liveHtml = toolbar(live("a"));
-    assert.ok(liveHtml.includes(" Disable<") && !liveHtml.includes("Mark "), "a live channel has no Mark button at all");
+  it("reads each switch from the channel: Enabled from `enabled`, Online from `status`", () => {
+    const both = toolbar(stream("a", { enabled: false, status: "online" }));
+    assert.ok(both.includes('aria-checked="false"'), "Enabled off");
+    const on = toolbar(stream("a", { status: "online" }));
+    const off = toolbar(stream("a", { status: "offline" }));
+    const checked = (html: string): string[] =>
+      [...html.matchAll(/aria-checked="(\w+)"[^>]*aria-label="(Enabled|Online)"/g)].map((hit) => `${hit[2]}=${hit[1]}`);
+    assert.deepEqual(checked(on), ["Enabled=true", "Online=true"]);
+    assert.deepEqual(checked(off), ["Enabled=true", "Online=false"], "a disabled channel still shows its own switch state");
   });
 
-  it("takes the player's word for a stream nobody has checked", () => {
-    assert.deepEqual([verdictToSet(stream("a"), false), verdictToSet(stream("a"), true)], ["live", "dead"]);
+  it("Online is absent, not disabled, for a live-kind channel or no channel", () => {
+    const liveHtml = toolbar(live("a"));
+    assert.ok(liveHtml.includes('aria-label="Enabled"') && !liveHtml.includes('aria-label="Online"'));
+    assert.equal(previewVerbs(live("a"), CALM).online, null);
+    assert.equal(previewVerbs(undefined, CALM).online, null);
+  });
+
+  it("a stream nobody has checked shows Online off, with the note as the switch's title", () => {
+    const plan = previewVerbs(stream("a"), CALM);
+    assert.deepEqual([plan.online?.checked, plan.online?.reason, plan.online?.title], [false, undefined, UNCHECKED_TITLE]);
+    assert.ok(toolbar(stream("a")).includes(`title="${UNCHECKED_TITLE}"`));
+    const checked = previewVerbs(stream("a", { status: "online" }), CALM);
+    assert.equal(checked.online?.title, undefined, "a checked stream needs no note");
+  });
+
+  it("disables the switches with their reasons as wrapper tooltips: reading, no channel, unreachable, busy", () => {
+    const s = stream("a");
+    assert.equal(previewVerbs(s, { ...CALM, reading: true }).enabled.reason, RETRY_READING);
+    assert.equal(previewVerbs(undefined, CALM).enabled.reason, "That channel does not exist.");
+    assert.equal(previewVerbs(s, { ...CALM, unreachable: true }).online?.reason, UNREACHABLE_REASON);
+    assert.equal(previewVerbs(s, { ...CALM, busy: true }).enabled.reason, "Saving.");
+    assert.equal(previewVerbs(s, CALM).enabled.reason, undefined);
+    const html = toolbar(s, { verbs: { plan: previewVerbs(s, { ...CALM, unreachable: true }), toggleEnabled: noop, mark: noop } });
+    assert.ok(html.includes(`Enabled. ${UNREACHABLE_REASON}`) && html.includes(`Online. ${UNREACHABLE_REASON}`));
+    assert.ok(html.split('disabled=""').length - 1 === 2, "both switches natively disabled");
   });
 
   it("offers Retry only when told to, and disables Previous with its reason as the tooltip", () => {
@@ -69,19 +96,6 @@ describe("the Preview toolbar", () => {
     assert.ok(html.includes(`Previous. ${FIRST_REASON}`));
     assert.ok(!html.includes(">Retry<"));
   });
-
-  it("disables the verbs with their reasons: reading, no channel, unreachable, busy", () => {
-    const s = stream("a");
-    assert.equal(previewVerbs(s, { ...CALM, reading: true }).enable.reason, RETRY_READING);
-    assert.equal(previewVerbs(undefined, CALM).enable.reason, "That channel does not exist.");
-    assert.equal(previewVerbs(undefined, CALM).mark, null);
-    assert.equal(previewVerbs(s, { ...CALM, unreachable: true }).mark?.reason, UNREACHABLE_REASON);
-    assert.equal(previewVerbs(s, { ...CALM, busy: true }).enable.reason, "Saving.");
-    assert.equal(previewVerbs(s, CALM).enable.reason, undefined);
-    const html = toolbar(s, { verbs: { plan: previewVerbs(s, { ...CALM, unreachable: true }), toggleEnabled: noop, mark: noop } });
-    assert.ok(html.includes(`Disable. ${UNREACHABLE_REASON}`) && html.includes(`Mark live. ${UNREACHABLE_REASON}`));
-  });
-
 });
 
 describe("the Preview window", () => {
@@ -115,6 +129,37 @@ describe("the Preview window", () => {
     const below = html.slice(html.indexOf("</video>"));
     assert.ok(!below.includes("<button"), "no controls under the stage");
   });
+
+  it("the status bar's health word stands before the play state, separated as the line separates (`51` section 2.5)", () => {
+    state().channelsPageLoaded(queryKey(state().channels.query), 0, [stream("a", { status: "online" }), stream("b")], 2, 1);
+    state().channelsOpenPreview("a");
+    const html = renderLive(createElement(PreviewWindow));
+    const left = (page: string, closes: 1 | 2): string => {
+      const at = page.indexOf('role="status"');
+      let end = at;
+      for (let rest = closes; rest > 0; rest -= 1) end = page.indexOf("</span>", end) + 7;
+      return page.slice(at, end);
+    };
+    assert.equal(left(html, 2), '<span role="status"><span>online</span> · loading</span>');
+    state().channelUpsert(stream("b", { status: "offline" }));
+    state().channelsOpenPreview("b");
+    const off = renderLive(createElement(PreviewWindow));
+    assert.equal(left(off, 2), '<span role="status"><span class="text-st-failed">offline</span> · loading</span>');
+    state().channelUpsert(stream("a"));
+    state().channelsOpenPreview("a");
+    const unchecked = renderLive(createElement(PreviewWindow));
+    assert.equal(left(unchecked, 2), '<span role="status"><span class="text-faint">not checked</span> · loading</span>');
+  });
+
+  it("a live-kind channel shows no health word: its engine word stands alone", () => {
+    state().channelsPageLoaded(queryKey(state().channels.query), 0, [live("a")], 1, 1);
+    state().channelsOpenPreview("a");
+    const html = renderLive(createElement(PreviewWindow));
+    const at = html.indexOf('role="status"');
+    const left = html.slice(at, html.indexOf("</span>", at) + 7);
+    assert.equal(left, '<span role="status">loading</span>', "no health word, no separator");
+    assert.ok(!/online|offline|not checked/.test(left));
+  });
 });
 
 describe("the toolbar's flows update the row and the window together", () => {
@@ -122,8 +167,8 @@ describe("the toolbar's flows update the row and the window together", () => {
     state().channelsPageLoaded(queryKey(state().channels.query), 0, [stream("a"), stream("b")], 500, 1);
     state().channelsOpenPreview("a");
     state().channelsInvalidate();
-    state().channelUpsert(stream("a", { status: "dead", checkedAt: 9, enabled: false }));
+    state().channelUpsert(stream("a", { status: "offline", checkedAt: 9, enabled: false }));
     const held = previewChannel(state().channels, "a");
-    assert.deepEqual([held?.kind === "stream" && held.status, held?.enabled], ["dead", false]);
+    assert.deepEqual([held?.kind === "stream" && held.status, held?.enabled], ["offline", false]);
   });
 });

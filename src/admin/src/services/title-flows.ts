@@ -1,5 +1,5 @@
 import { AUDIT_AFTER_WRITE, AUDIT_PAGE } from "@/constants/audit-limits";
-import { TITLE_GONE, titleCreated, titleDeleted, titleReverted, titleSaved } from "@/constants/title-copy";
+import { TITLE_GONE, titleCreated, titleDeleted, titleReverted } from "@/constants/title-copy";
 import { isEmptyTitleBody, titleChanges, titleCreateBody } from "@/lib/title-body";
 import { firstCreateRefusal, firstSaveRefusal, type TitleField } from "@/lib/title-checks";
 import type { NewTitleDraft, TitleDraft } from "@/lib/title-draft";
@@ -105,7 +105,6 @@ export function createTitleFlows(deps: TitleFlowDeps): TitleFlows {
       const answer = await service.update(id, body);
       if (!alive(serial)) return DROPPED;
       adopt(answer);
-      store().say(titleSaved(answer.title));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(answer);
     } catch (error: unknown) {

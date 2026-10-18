@@ -4,8 +4,6 @@ import {
   OWN_DISABLED_NOTICE,
   accountCreated,
   accountDeleted,
-  accountSaved,
-  accountSavedSignedOut,
   unreadableAccounts,
 } from "@/constants/account-copy";
 import { AUDIT_AFTER_WRITE, AUDIT_PAGE } from "@/constants/audit-limits";
@@ -113,8 +111,6 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
         return done(account);
       }
       if (isOwn(account)) store().updateActor(account);
-      const signedOut = patch.disabled === true;
-      store().say(signedOut ? accountSavedSignedOut(account.username) : accountSaved(account.username));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(account);
     } catch (error: unknown) {

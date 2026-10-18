@@ -8,8 +8,8 @@ import type { PlaylistRowView } from "@/lib/playlist-rows";
 const column = createColumnHelper<typeof recordFeatures, PlaylistRowView>();
 
 /** The Playlists list's columns (`43` section 4.1, `45` section 2.3): name, source (the host or the file name), the four
- *  counts, last run, state. `size` is the minimum width in px. Hidden in a narrow pane in this order: dead, live, enabled,
- *  source, last run, channels; the name and the state word always stay. A count sorts by its value. */
+ *  counts, last run, state. `size` is the minimum width in px. Hidden in a narrow pane in this order: offline, online,
+ *  enabled, source, last run, channels; the name and the state word always stay. A count sorts by its value. */
 export const playlistColumns = column.columns([
   column.accessor((row) => row.name, {
     id: "name",
@@ -43,21 +43,21 @@ export const playlistColumns = column.columns([
     meta: { kind: "number", priority: 4 },
     cell: (info) => info.row.original.enabled,
   }),
-  column.accessor((row) => countValue(row.live), {
-    id: "live",
-    header: "live",
+  column.accessor((row) => countValue(row.online), {
+    id: "online",
+    header: "online",
     size: 64,
     sortFn: "basic",
     meta: { kind: "number", priority: 5 },
-    cell: (info) => info.row.original.live,
+    cell: (info) => info.row.original.online,
   }),
-  column.accessor((row) => countValue(row.dead), {
-    id: "dead",
-    header: "dead",
+  column.accessor((row) => countValue(row.offline), {
+    id: "offline",
+    header: "offline",
     size: 64,
     sortFn: "basic",
     meta: { kind: "number", priority: 6 },
-    cell: (info) => info.row.original.dead,
+    cell: (info) => info.row.original.offline,
   }),
   column.accessor((row) => row.lastRun, {
     id: "last-run",

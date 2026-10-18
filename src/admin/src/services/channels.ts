@@ -29,7 +29,7 @@ export interface ChannelsService extends RecordService<AdminChannel, string, Cha
   revert: (id: string) => Promise<AdminChannel>;
   /** `GET /api/admin-channels/:id` (`36` section 8.2): ONE channel, the list's own admin view; the Preview reads this. */
   readOne: (id: string) => Promise<AdminChannel>;
-  /** `PUT /api/channels/:id/status` (`36` section 8.1): a hand-set live or dead verdict on a stream channel; answers the row. */
+  /** `PUT /api/channels/:id/status` (`36` section 8.1): a hand-set online or offline verdict on a stream channel; answers the row. */
   setStatus: (id: string, status: ChannelVerdict) => Promise<AdminChannel>;
   /** `PATCH /api/channels` `{ enabled, ids }`: ONE call for up to 5,000 stream ids (no chunking); live-kind and unknown
    *  ids are skipped by the backend and counted. */

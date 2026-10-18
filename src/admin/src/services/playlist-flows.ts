@@ -5,7 +5,6 @@ import {
   SYNC_NO_JOB,
   playlistDeleted,
   playlistImported,
-  playlistSaved,
   unreadablePlaylists,
 } from "@/constants/playlist-copy";
 import type { BulkItem } from "@/lib/bulk-plan";
@@ -139,7 +138,6 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
       store().playlistUpsert(playlist);
       store().markStale("jobs");
       store().markStale("channels");
-      say(playlistSaved(playlist.name));
       void audit.reload(AUDIT_AFTER_WRITE);
       return done(playlist);
     } catch (error: unknown) {

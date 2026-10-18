@@ -1,7 +1,6 @@
-/* The notices of the statusbar's Stop (`44` section 4), in the voice of the Jobs notices (`Stopping <name>.`). */
+/* The notices of the statusbar's Stop (`44` section 4), in the voice of the Jobs notices (`Stopping <name>.`). A clean
+ * stop says nothing (`50` section 2.1): the readout and the Stop state carry it; only a refusal is said. */
 const syncs = (count: number): string => `${count} ${count === 1 ? "sync" : "syncs"}`;
-
-export const stoppingSyncs = (count: number): string => `Stopping ${syncs(count)}.`;
 
 /** Some or all of the stop calls were refused; `sentence` is the first refusal's own words. */
 export const stopRefused = (failed: number, total: number, sentence: string): string =>

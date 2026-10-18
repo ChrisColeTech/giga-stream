@@ -1,5 +1,5 @@
 import { AUDIT_AFTER_WRITE } from "@/constants/audit-limits";
-import { stopRefused, stoppingSyncs } from "@/constants/progress-copy";
+import { stopRefused } from "@/constants/progress-copy";
 import { codeOf, sentenceOf } from "@/lib/playlist-flow-result";
 import type { AppState } from "@/store/app-store";
 import type { JobsService } from "./jobs";
@@ -32,8 +32,9 @@ export function createStopSyncing(deps: StopSyncingDeps): () => Promise<void> {
         one.status === "rejected" && codeOf(one.reason) !== "job.not_running" ? [sentenceOf(one.reason)] : [],
       );
       const [first] = refused;
-      if (first === undefined) store().say(stoppingSyncs(ids.length), "info", "Job");
-      else store().say(stopRefused(refused.length, ids.length, first), "warn", "Job");
+      /* A clean stop says nothing: the statusbar's readout and Stop state carry the stopping (`50` section 2.1); a
+       * refused one is said as the warn it is. */
+      if (first !== undefined) store().say(stopRefused(refused.length, ids.length, first), "warn", "Job");
       void audit.reload(AUDIT_AFTER_WRITE);
     } finally {
       pressed = false;

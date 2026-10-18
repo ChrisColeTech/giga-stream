@@ -10,7 +10,7 @@ export interface ChannelRowView {
   /** `Live` or `Stream`. */
   readonly kind: string;
   readonly state: RowState;
-  /** The sync's verdict on a stream row's address (`live`, `dead`, `not checked`); null on a live-kind row (blank). */
+  /** The sync's verdict on a stream row's address (`online`, `offline`, `not checked`); null on a live-kind row (blank). */
   readonly stream: RowState | null;
   /** `Loop` or `Encode`; blank for a stream channel, which has no engine. */
   readonly mode: string;

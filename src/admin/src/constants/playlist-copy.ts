@@ -71,7 +71,6 @@ export const playlistImported = (name: string, created: boolean, counts: { creat
   created
     ? `Imported ${name}: ${plural(counts.created)}, all disabled. Enable them on the Channels tab.`
     : `Imported ${name} again: ${counts.created.toLocaleString("en-US")} created, ${counts.updated.toLocaleString("en-US")} updated.`;
-export const playlistSaved = (name: string): string => `Saved ${name}.`;
 export const playlistDeleted = (name: string, deleted: { channels: number }): string =>
   `Deleted ${name} and ${plural(deleted.channels)}.`;
 export const unreadablePlaylists = (count: number): string =>

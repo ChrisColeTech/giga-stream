@@ -5,7 +5,6 @@ import {
   channelMarked,
   channelPreparing,
   channelReverted,
-  channelSaved,
 } from "@/constants/channel-copy";
 import { createBody, isEmptyBody, patchBody, type NewChannelDraft } from "@/lib/channel-body";
 import { checkChannel, newChannelRefusal } from "@/lib/channel-check";
@@ -39,7 +38,8 @@ export interface ChannelFlows extends ChannelReads {
   revert: (id: string) => Promise<FlowResult>;
   /** The single-row Enable / Disable (a `PATCH { enabled }` through `save`: its notice, its audit). */
   setEnabled: (id: string, enabled: boolean) => Promise<FlowResult<AdminChannel | null>>;
-  /** `Mark live` / `Mark dead` on a stream channel (`36` section 8.1): the row answers with the verdict and the time. */
+  /** The verdict verb on a stream channel (`36` section 8.1, `51` section 2.6): the explicit `online` / `offline` the
+   *  switch sent; the row answers with the verdict and the time. */
   mark: (id: string, verdict: ChannelVerdict) => Promise<FlowResult>;
 }
 
@@ -65,7 +65,8 @@ export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
     return result;
   }
 
-  /** One write over a held channel: the serial guard, the answer applied, the failure said. */
+  /** One write over a held channel: the serial guard, the answer applied, the failure said. `say` of null keeps the
+   *  quiet: the saved form is on screen and the audit carries the record (`50` section 2.1). */
   async function write<T>(id: string, call: (channel: AdminChannel) => Promise<T>, apply: (answer: T, channel: AdminChannel) => T) {
     const channel = channelById(store().channels, id);
     if (channel === undefined) {
@@ -87,9 +88,9 @@ export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
     }
   }
 
-  const settled = (channel: AdminChannel, sentence: string): AdminChannel => {
+  const settled = (channel: AdminChannel, sentence: string | null): AdminChannel => {
     store().channelUpsert(channel);
-    store().say(sentence, "info", "Channel");
+    if (sentence !== null) store().say(sentence, "info", "Channel");
     return channel;
   };
 
@@ -118,7 +119,7 @@ export function createChannelFlows(deps: ChannelFlowDeps): ChannelFlows {
       (answer, channel) => {
         if (answer === null) return null;
         const preparing = channel.kind === "live" && draft.kind === "live" && rebuilds(channel, draft);
-        return settled(answer, preparing ? channelPreparing(answer.name) : channelSaved(answer.name));
+        return settled(answer, preparing ? channelPreparing(answer.name) : null);
       },
     );
   }

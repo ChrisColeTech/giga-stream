@@ -48,8 +48,8 @@ export const STATE_OPTIONS: readonly QueryOption<LiveStateFilter>[] = [
 
 export const STATUS_OPTIONS: readonly QueryOption<StatusFilter>[] = [
   { value: "all", label: "Any status" },
-  { value: "live", label: "Live" },
-  { value: "dead", label: "Dead" },
+  { value: "online", label: "Online" },
+  { value: "offline", label: "Offline" },
   { value: "unchecked", label: "Not checked" },
 ];
 

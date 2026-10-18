@@ -10,7 +10,7 @@ export type KindFilter = "all" | "live" | "stream";
 export type OriginFilter = "all" | "synced" | "edited" | "manual";
 export type EnabledFilter = "all" | "true" | "false";
 /** The sync's verdict on a stream row's address; `unchecked` is `not checked` in the list. */
-export type StatusFilter = "all" | "live" | "dead" | "unchecked";
+export type StatusFilter = "all" | "online" | "offline" | "unchecked";
 export type LiveStateFilter = "all" | "preparing" | "starting" | "live" | "restarting" | "stopped" | "failed";
 
 export interface ChannelQuery {
@@ -44,6 +44,12 @@ export const DEFAULT_CHANNEL_QUERY: ChannelQuery = {
 export const CHANNEL_SORT_KEYS: readonly ChannelSortKey[] = ["name", "category", "kind", "playlist"];
 
 export const isSortKey = (key: string): key is ChannelSortKey => CHANNEL_SORT_KEYS.some((one) => one === key);
+
+/** The status filter as the request carries it (`51` sections 2.3 and 2.4): the API takes `online, offline, unchecked`
+ *  and refuses the legacy words, so a stale saved query holding `live` or `dead` falls back to `all` — state, not data
+ *  (`51` section 2.3). This is the one place the filter is read for a request. */
+export const statusFilterOf = (value: string): StatusFilter =>
+  value === "online" || value === "offline" || value === "unchecked" ? value : "all";
 
 /** The same query, to the byte: a result for another key is dropped, and a key change scrolls the list to the top. */
 export const queryKey = (query: ChannelQuery): string =>
@@ -100,7 +106,8 @@ export function pagePath(query: ChannelQuery, pageIndex: number, limit: number =
   if (query.origin !== "all") params.set("origin", query.origin);
   if (query.enabled !== "all") params.set("enabled", query.enabled);
   if (query.state !== "all") params.set("state", query.state);
-  if (query.status !== "all") params.set("status", query.status);
+  const status = statusFilterOf(query.status);
+  if (status !== "all") params.set("status", status);
   if (query.playlist !== "") params.set("playlist", query.playlist);
   params.set("sort", query.sort);
   params.set("dir", query.dir);

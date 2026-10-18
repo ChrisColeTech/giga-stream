@@ -7,7 +7,7 @@ import type { PlaylistCounts } from "@/services/schemas/run-counts-schema";
 
 /** A playlist run's typed counts: all zero, a file playlist, unless overridden. */
 export const counts = (extra: Partial<PlaylistCounts> = {}): PlaylistCounts => ({
-  created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, live: 0, dead: 0,
+  created: 0, updated: 0, skipped: 0, refused: 0, source: "file", logosCached: 0, logosFailed: 0, online: 0, offline: 0,
   unchecked: 0, refusalExamples: [], ...extra,
 });
 
@@ -21,8 +21,8 @@ export const playlist = (id: number, extra: Partial<AdminPlaylist> = {}): AdminP
   enabled: true,
   channels: 3,
   enabledChannels: 0,
-  live: 0,
-  dead: 0,
+  online: 0,
+  offline: 0,
   ...extra,
 });
 
@@ -35,8 +35,8 @@ export const filePlaylist = (id: number, extra: Partial<AdminPlaylist> = {}): Ad
   enabled: true,
   channels: 3,
   enabledChannels: 0,
-  live: 0,
-  dead: 0,
+  online: 0,
+  offline: 0,
   ...extra,
 });
 

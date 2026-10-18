@@ -1,5 +1,4 @@
 import { focusFirstShown } from "@giga/ui/hooks/useShellKeys";
-import { ZOOM_RESET_NOTICE } from "@/constants/record-copy";
 import type { ShellAction } from "@/constants/shell-keys";
 import type { AppState } from "@/store/app-store";
 
@@ -19,7 +18,6 @@ export function runShellAction(action: ShellAction, state: AppState): boolean {
       return focusFirstShown(SEARCH_FIELD);
     case "zoom-reset":
       state.setZoom(ZOOM_RESET);
-      state.say(ZOOM_RESET_NOTICE);
       return true;
     case "close-events":
       state.toggleEvents();

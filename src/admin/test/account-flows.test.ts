@@ -85,7 +85,7 @@ describe("save", () => {
     const result = await flows.save(7, { username: "ada@new.test", enabled: true });
     assert.equal(result.ok, true);
     assert.deepEqual(state().actor, { id: 7, username: "ada@new.test" });
-    assert.equal(lastEvent(), "Saved ada@new.test.");
+    assert.equal(lastEvent(), undefined, "a save says nothing (`50` section 2.1)");
     assert.equal(state().signedIn, true);
   });
 
@@ -101,7 +101,7 @@ describe("save", () => {
     loaded();
     const { flows, reloads } = rig();
     await flows.save("a", {username: "a@x.test", enabled: false });
-    assert.equal(lastEvent(), "Saved a@x.test; it is signed out everywhere.");
+    assert.equal(lastEvent(), undefined, "a save says nothing, even one that signs the account out (`50` section 2.1)");
     assert.deepEqual(reloads, [10]);
   });
 

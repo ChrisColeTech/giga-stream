@@ -63,8 +63,8 @@ export interface PlaylistRowView {
   readonly channels: string;
   /** How many of its channels are enabled. */
   readonly enabled: string;
-  readonly live: string;
-  readonly dead: string;
+  readonly online: string;
+  readonly offline: string;
   /** `YYYY-MM-DD HH:mm`, or `never`. */
   readonly lastRun: string;
   readonly state: RowState;
@@ -79,8 +79,8 @@ export function playlistRow(playlist: AdminPlaylist): PlaylistRowView {
     source: sourceOf(playlist),
     channels: num(playlist.channels),
     enabled: num(playlist.enabledChannels),
-    live: num(playlist.live),
-    dead: num(playlist.dead),
+    online: num(playlist.online),
+    offline: num(playlist.offline),
     lastRun: formatWhen(playlist.lastRunAt),
     state: enabledState(playlist.enabled),
     deleteQuestion: deleteQuestion(playlist.name, playlist.channels),

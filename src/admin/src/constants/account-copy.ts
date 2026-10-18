@@ -41,8 +41,6 @@ export const PASSWORD_LONG = "Password must be at most 256 characters.";
 
 /** Notices. A password is never part of one. */
 export const accountCreated = (username: string): string => `Created ${username}.`;
-export const accountSaved = (username: string): string => `Saved ${username}.`;
-export const accountSavedSignedOut = (username: string): string => `Saved ${username}; it is signed out everywhere.`;
 export const accountDeleted = (username: string): string => `Deleted ${username}.`;
 export const passwordSet = (username: string): string => `Password set; ${username} is signed out everywhere.`;
 export const unreadableAccounts = (count: number): string =>

@@ -66,14 +66,14 @@ describe("the statusbar's Stop", () => {
   };
   const job = (id: number) => ({ id }) as AdminJob;
 
-  it("stops every running job and says so", async () => {
+  it("stops every running job and says nothing: the readout and the Stop state carry the stopping (`50` 2.1)", async () => {
     state().jobProgressUpdate(at(1, "checking", 1, 10));
     state().jobProgressUpdate(at(2, "movies", 1, 10));
     const called: number[] = [];
     const { run, reloads } = stopper(async (id) => (called.push(id), job(id)));
     await run();
     assert.deepEqual(called.sort(), [1, 2]);
-    assert.deepEqual([state().events.at(-1)?.sentence, reloads.length], ["Stopping 2 syncs.", 1]);
+    assert.deepEqual([state().notice, state().events.length, reloads.length], [null, 0, 1], "no notice, no events row");
   });
 
   it("words a refusal honestly, counts one that had just ended as no failure, and does nothing when nothing runs", async () => {
@@ -139,7 +139,7 @@ describe("the new code", () => {
   const FILES = [
     "services/job-events.ts", "services/sse-parser.ts", "services/stop-syncing.ts", "hooks/useJobEvents.ts",
     "hooks/useStopSyncing.ts", "lib/job-events-plan.ts", "lib/live-jobs.ts", "lib/job-fraction.ts",
-    "store/job-progress-slice.ts", "components/chrome/AdminRunningWork.tsx", "components/chrome/AdminStatusbar.tsx",
+    "store/job-progress-slice.ts", "components/chrome/AdminStatusbar.tsx",
   ];
 
   it("runs no timer, no interval and no EventSource, and calls no fetch", () => {
