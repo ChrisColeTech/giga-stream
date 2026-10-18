@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
-import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
+import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
   PROVIDER_GONE,
   PROVIDER_SECTIONS,
@@ -30,6 +30,7 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
   const { flows, saving, track } = useProviderActions();
   const unreachable = useAppStore((state) => state.providers.unreachable);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
+  const requestTab = useAppStore((state) => state.requestTab);
   const spy = useScrollSpy(PROVIDER_SECTION_KEYS, PROVIDER_SECTION_KEYS[0] ?? "pv-details");
 
   useFollowRecord(form, provider, draftOfProvider, sameProviderDraft);
@@ -55,8 +56,14 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
           spy={spy}
         />
       }
+      toolbar={
+        <WorkspaceToolbar
+          dirty={form.dirty}
+          onDiscard={form.discard}
+          forward={{ label: "Titles", onPress: () => requestTab("titles") }}
+        />
+      }
     >
-      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div
           className="flex flex-col px-6 pb-8"
@@ -89,7 +96,7 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
 }
 
 /** One provider's workspace (`37` section 3.3), opened from the list already held: the rail (`‹ Providers`, Details,
- *  Templates, Player), a toolbar with the `Titles` arrow, the pinned `Discard changes` and one scrolling page. One `Save
+ *  Templates, Player), the page toolbar (`Discard changes` left, `Titles →` rightmost) and one scrolling page. One `Save
  *  details`, ending Player, sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
  *  notice. */
 export function ProviderWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {

@@ -10,6 +10,7 @@ const frame = (active: boolean) =>
     tab: "channels",
     active,
     rail: createElement("nav", null, "RAIL"),
+    toolbar: createElement("div", { role: "toolbar" }, "TOOLBAR"),
     children: createElement("main", null, "PAGE"),
   });
 
@@ -18,12 +19,12 @@ beforeEach(() => {
 });
 
 describe("a workspace", () => {
-  it("places the rail in the engine's left pane and the page alone in its centre: no toolbar bar above it", () => {
+  it("places the rail in the engine's left pane and, in its centre, the page toolbar first, then the page", () => {
     const html = renderLive(frame(true));
     assert.ok(html.indexOf('aria-label="Left pane"') < html.indexOf("RAIL"));
     assert.ok(html.indexOf("RAIL") < html.indexOf('aria-label="Centre"'));
-    assert.ok(html.indexOf('aria-label="Centre"') < html.indexOf("PAGE"));
-    assert.ok(!html.includes('role="toolbar"'));
+    assert.ok(html.indexOf('aria-label="Centre"') < html.indexOf("TOOLBAR"));
+    assert.ok(html.indexOf("TOOLBAR") < html.indexOf("PAGE"), "the toolbar sits above the scrolling page");
   });
 
   it("has no right or bottom pane", () => {

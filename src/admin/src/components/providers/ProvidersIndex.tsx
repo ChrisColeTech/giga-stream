@@ -1,15 +1,19 @@
 import { Workspace } from "@giga/ui/form/Workspace";
+import { IndexToolbar } from "@/components/records/IndexToolbar";
 import { NEW_PROVIDER_LABELS } from "@/constants/provider-copy";
 import { NewProviderForm } from "./NewProviderForm";
 import { ProvidersList } from "./ProvidersList";
 
-/** The Providers index: `New provider` and the list, whose table strip holds the bulk verbs and the `Go to Titles`
- *  icon. No page toolbar sits above them. */
+/** The Providers index: the page toolbar with `Titles →` on the right, over `New provider` and the list, whose first row
+ *  holds the bulk verbs. */
 export function ProvidersIndex() {
   return (
-    <Workspace labels={NEW_PROVIDER_LABELS}>
-      <NewProviderForm />
-      <ProvidersList />
-    </Workspace>
+    <>
+      <IndexToolbar tab="providers" />
+      <Workspace labels={NEW_PROVIDER_LABELS}>
+        <NewProviderForm />
+        <ProvidersList />
+      </Workspace>
+    </>
   );
 }

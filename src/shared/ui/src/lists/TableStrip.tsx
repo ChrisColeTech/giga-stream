@@ -3,6 +3,8 @@ import { AllCheckbox } from "../controls/AllCheckbox";
 import { ArmedButton } from "../controls/ArmedButton";
 import { Button } from "../controls/Button";
 import { IconButton } from "../controls/IconButton";
+import { Sep } from "../layout/Sep";
+import { STRIP } from "../layout/strip-class";
 
 /** One verb of the strip: a ghost word with its icon first (`01` section 9, Icon vocabulary), or the word alone when the
  *  family has no icon for it. With a `question` it is the inline two-step instead (`ArmedButton`: the word at rest, the
@@ -22,20 +24,12 @@ export interface StripPress {
   readonly reason?: string;
 }
 
-/** The page's ONE forward verb: the destination's word (`Titles`), drawn with `→`, and a tooltip saying what it does. */
-export interface StripForward extends StripPress {
-  readonly word: string;
-  readonly tip: string;
-}
-
 export interface TableStripProps {
   /** The strip's accessible name (`Accounts table`). */
   readonly label: string;
   /** What the list is called in the Refresh tooltip (`Refresh accounts`). */
   readonly noun: string;
   readonly refresh: StripPress;
-  /** The page's ONE forward verb, drawn rightmost as its word and `→` (`Titles →`). */
-  readonly forward?: StripForward;
   /** A list that still pages: `Newer` before `Older`, each disabled with its reason at the end it cannot go. */
   readonly paging?: { readonly newer: StripPress; readonly older: StripPress };
   /** A list whose rows are ticked: the verbs on the ticked rows, always drawn (each disabled with its reason while none
@@ -54,14 +48,6 @@ export interface TableStripProps {
 }
 
 export const REFRESH_WORD = "Refresh";
-export const FORWARD_ARROW = "→";
-
-const STRIP = "flex flex-none flex-wrap items-center gap-2 border-b border-hair px-3 py-2";
-
-/** A hairline between the strip's clusters (LoRA Trainer `components/layout/Toolbar.tsx` `Sep`). */
-function Sep() {
-  return <span className="mx-1 h-5 w-px flex-none bg-hair" aria-hidden />;
-}
 
 function Verb({ verb }: { readonly verb: StripVerb }) {
   if (verb.question !== undefined && verb.reason === undefined) {
@@ -88,11 +74,12 @@ function Step({ press, label, glyph: Glyph }: { readonly press: StripPress; read
   );
 }
 
-/** THE SELECTION TOOLBAR of a table (`01` section 9; LoRA Trainer `pages/gallery/GalleryToolbar.tsx`): the one strip
- *  directly above the table, inside its list group. Left, `Refresh` then a hairline and the selection verbs, the armed
- *  `Delete` last; right, the `All` checkbox, the `‹ ›` paging of a list that pages, a hairline and the forward verb
- *  rightmost. No text: no count, no status (the count is in the armed question, the outcome on the notice line). */
-export function TableStrip({ label, noun, refresh, forward, paging, selection }: TableStripProps) {
+/** THE SELECTION TOOLBAR of a table (`01` section 9): the list's own first row, inside its list group, holding only what
+ *  acts on the list (LoRA Studio `components/library/LibraryToolbar.tsx`), drawn with LoRA Trainer's
+ *  `pages/gallery/GalleryToolbar.tsx` grammar. Left, `Refresh` then a hairline and the selection verbs, the armed `Delete`
+ *  last; right, the `All` checkbox and the `‹ ›` paging of a list that pages. The page's forward verb is the page
+ *  toolbar's (`layout/Toolbar`), never here. No text: no count, no status. */
+export function TableStrip({ label, noun, refresh, paging, selection }: TableStripProps) {
   const verbs = selection?.verbs ?? [];
   return (
     <div role="toolbar" aria-label={label} className={STRIP}>
@@ -117,21 +104,6 @@ export function TableStrip({ label, noun, refresh, forward, paging, selection }:
         <>
           <Step press={paging.newer} label="Newer" glyph={ChevronLeft} />
           <Step press={paging.older} label="Older" glyph={ChevronRight} />
-        </>
-      )}
-      {forward !== undefined && (
-        <>
-          <Sep />
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-label={forward.tip}
-            title={forward.tip}
-            reason={forward.reason}
-            onClick={forward.onPress}
-          >
-            {forward.word} {FORWARD_ARROW}
-          </Button>
         </>
       )}
     </div>

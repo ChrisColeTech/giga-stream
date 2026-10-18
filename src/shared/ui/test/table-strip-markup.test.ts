@@ -57,20 +57,15 @@ test('the three-state All sits right of the verbs, with no Clear selection and n
   assert.ok(!html.includes('Clear selection') && !html.includes('selected'))
 })
 
-test('paging is the icon pair right of All, and the forward verb is the word and arrow, rightmost', () => {
-  const forward = { word: 'Titles', tip: 'Go to Titles', onPress: NOTHING }
-  const html = strip({ ...withVerbs(), paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } }, forward })
+test('paging is the icon pair right of All, the last controls: no forward verb in a list row', () => {
+  const html = strip({ ...withVerbs(), paging: { newer: { onPress: NOTHING, reason: 'This is the first page.' }, older: { onPress: NOTHING } } })
   assert.ok(html.includes('aria-label="Newer. This is the first page."') && html.includes('aria-label="Older"'))
-  assert.ok(html.indexOf('Select all accounts') < html.indexOf('Newer') && html.indexOf('Older') < html.indexOf('Titles'))
-  const last = buttons(html).at(-1) ?? ''
-  assert.equal(text(last), 'Titles →')
-  assert.ok(last.includes('title="Go to Titles"') && last.includes('aria-label="Go to Titles"') && !last.includes('<svg'))
-  const blocked = strip({ forward: { ...forward, reason: 'Tick a row first' } })
-  assert.ok(blocked.includes('aria-label="Go to Titles. Tick a row first"'))
+  assert.ok(html.indexOf('Select all accounts') < html.indexOf('Newer'))
+  assert.ok((buttons(html).at(-1) ?? '').includes('aria-label="Older"') && !html.includes('→'))
 })
 
 test('the strip is one row: no paragraph, no filled or edged button', () => {
-  const html = strip({ ...withVerbs(), forward: { word: 'Jobs', tip: 'Go to Jobs', onPress: NOTHING } })
+  const html = strip(withVerbs())
   assert.ok(!/<p[\s>]/.test(html) && !html.includes('hover:border-accent-strong') && !html.includes('--color-ctl-hi'))
   assert.ok(html.includes('role="toolbar"') && html.includes('aria-label="Accounts table"'))
 })

@@ -43,10 +43,22 @@ describe("a heading carries no button", () => {
   });
 });
 
-describe("there is no page toolbar", () => {
-  it("has no ToolbarStrip, IndexToolbar or WorkspaceToolbar anywhere in the admin: the table strip is the only bar", () => {
-    assert.deepEqual(offenders(SOURCES, /ToolbarStrip|IndexToolbar|WorkspaceToolbar|ChannelsToolbar/), []);
-    assert.deepEqual(COMPONENTS.filter((source) => source.path.endsWith("Toolbar.tsx")), []);
+describe("every page has its page toolbar (LoRA Trainer Toolbar.tsx, DatasetsIndex.tsx)", () => {
+  it("opens every index with IndexToolbar and every workspace frame with a toolbar, both on the family Toolbar", () => {
+    const indexes = COMPONENTS.filter((source) => /[\\/]\w+Index\.tsx$/.test(source.path) && !/IndexSkeleton/.test(source.path));
+    assert.equal(indexes.length, 6);
+    assert.deepEqual(indexes.filter((source) => !/<IndexToolbar tab=/.test(source.text)).map((source) => rel(source.path)), []);
+    const frame = read(join(SRC, "components", "chrome", "WorkspaceFrame.tsx")).text;
+    assert.ok(/\{toolbar\}\s*\{children\}/.test(frame), "the toolbar comes first in the centre");
+    for (const name of ["IndexToolbar.tsx", "WorkspaceToolbar.tsx"]) {
+      assert.ok(/<Toolbar\b/.test(read(join(SRC, "components", "records", name)).text), name);
+    }
+    assert.deepEqual(offenders(SOURCES, /ToolbarStrip|ChannelsToolbar/), []);
+  });
+
+  it("keeps the forward verb out of the list's first row: no TableStrip is given a forward verb", () => {
+    assert.deepEqual(offenders(COMPONENTS, /<TableStrip\b[^>]*\bforward=/), []);
+    assert.ok(!/\bforward\b/.test(read(join(SHARED, "lists", "TableStrip.tsx")).text.replace(/\/\*[\s\S]*?\*\//g, "")));
   });
 
   it("draws no one-of choice at the field size: no `field` prop on Segmented or ChipGroup", () => {

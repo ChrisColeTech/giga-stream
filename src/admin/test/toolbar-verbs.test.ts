@@ -24,9 +24,9 @@ describe("Save details and Discard changes", () => {
 });
 
 describe("an index's forward verb", () => {
-  it("is the destination's word with its tooltip, the arrow drawn by the strip", () => {
+  it("is the destination's word, the arrow and tooltip drawn by the page toolbar's button", () => {
     const verb = indexForward(INDEX_FRAMES.providers.forward, NOTHING);
-    assert.deepEqual([verb?.word, verb?.tip, verb?.reason], ["Titles", "Go to Titles", undefined]);
+    assert.deepEqual([verb?.label, verb?.reason], ["Titles", undefined]);
   });
 
   it("switches to the named tab when it is pressed", () => {

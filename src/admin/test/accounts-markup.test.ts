@@ -121,6 +121,8 @@ describe("an account's workspace", () => {
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(!html.includes(">Save<") && !html.includes("Titles →"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
+    const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="ac-details"'));
+    assert.ok(bar.includes("Discard changes") && !bar.includes("→"), "the page toolbar: Discard, no forward verb");
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
     assert.ok(at(html, "Save details") > at(html, 'id="ac-details"') && at(html, "Save details") < at(html, 'id="ac-password"'));    assert.ok(html.includes('autoComplete="new-password"'));
     assert.ok(html.includes('aria-label="Set new password. Type a new password."'));
