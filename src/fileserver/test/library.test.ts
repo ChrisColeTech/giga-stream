@@ -1,42 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
-import os from "node:os";
-import path from "node:path";
 
 import { makeApp, pick, send, type FileserverApp } from "./app-fixture.js";
+import { localFile } from "./library-fixture.js";
 
 const at = Date.UTC(2026, 9, 16, 12);
-
-/**
- * One local_files row with probe facts and a still, written over the app's database directly (the
- * media.test.ts pattern: real rows without a real scan); the file on disk is real but never read.
- */
-function localFile(
-  t: FileserverApp,
-  name: string,
-  input: { height?: number; posterId?: string; addedAt?: number; collectionId?: string } = {},
-): string {
-  const db = new DatabaseSync(path.join(t.dataDir, "giga-stream.db"));
-  try {
-    const folderId = crypto.randomUUID();
-    const collectionId = input.collectionId ?? crypto.randomUUID();
-    const id = crypto.randomUUID();
-    const dir = mkdtempSync(path.join(os.tmpdir(), "giga-lib-"));
-    writeFileSync(path.join(dir, name), "bytes");
-    if (input.collectionId === undefined) {
-      db.prepare("INSERT INTO collections (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)").run(collectionId, "Direct", at, at);
-    }
-    db.prepare("INSERT INTO collection_folders (id, collection_id, path, name, created_at) VALUES (?, ?, ?, ?, ?)").run(folderId, collectionId, dir, name, at);
-    db.prepare(
-      "INSERT INTO local_files (id, folder_id, collection_id, path, title, size_bytes, mtime_ms, height, poster_id, playable, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)",
-    ).run(id, folderId, collectionId, path.join(dir, name), name, 5, at, input.height ?? null, input.posterId ?? null, input.addedAt ?? at);
-    return id;
-  } finally {
-    db.close();
-  }
-}
 
 /** The app pointed at a port nothing listens on, so the backend is honestly unreachable. */
 async function closedApp(): Promise<FileserverApp> {
@@ -101,7 +69,7 @@ test("the cursor pages a second page", async () => {
   await t.dispose();
 });
 
-test("view=favorites lists the tables' rows; without the backend a title degrades to a skeleton", async () => {
+test("view=favorites lists the tables' rows; a title the empty cache does not hold degrades to a skeleton", async () => {
   const t = await closedApp();
   const id = localFile(t, "Concert.mkv", { height: 1080 });
   await send(t.app, "PUT", `/api/favorites/local/${id}`);
@@ -210,7 +178,7 @@ test("continue answers the watching rows, most recently watched first, at most t
   await t.dispose();
 });
 
-test("trending while titles are unavailable is 422 library.invalid", async () => {
+test("trending while the cache holds no popularity is 422 library.invalid", async () => {
   const t = await closedApp();
   const refused = await send(t.app, "GET", "/api/library?sort=trending");
   assert.equal(refused.status, 422);

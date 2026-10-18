@@ -21,7 +21,10 @@ export interface TitleSource {
   messageShape?: "vidsrc-status" | "player-event";
 }
 
-/** `GET /api/titles/:titleId` (docs/03 section 3.6); nothing here is stored. */
+/**
+ * `GET /api/titles/:titleId` (docs/03 section 3.6). `streamUrl` and `sources` ride on a live answer only and are
+ * never stored; `fromCache` marks an answer built from the cache while the backend could not give the live one.
+ */
 export interface TitleDetail {
   id: string;
   kind: "movie" | "tv";
@@ -44,6 +47,8 @@ export interface TitleDetail {
   streamUrl?: string;
   /** The playable provider sources, in preference order (7.5); provider records stop at the fileserver. */
   sources?: TitleSource[];
+  /** True when answered from the cache without sources (the backend was unreachable or no longer lists the title). */
+  fromCache?: true;
 }
 
 /** One episode of a season (docs/03 section 3.6). */
@@ -107,15 +112,21 @@ export interface LibraryItem {
 /** `GET /api/library` (docs/03 section 3.5). */
 export interface LibraryPage {
   items: LibraryItem[];
-  /** When known: TMDB reports its own totals. */
+  /** Exact: the matching files plus the matching cached titles. */
   total?: number;
   nextCursor?: string;
   /** The choices for the Genre and Year filters. */
   facets: { genres: string[]; years: number[] };
-  /** Whether the trending sort can be offered (`11` section 4). */
+  /** Whether the trending sort can be offered: some cached title has a stored popularity. */
   trending: boolean;
-  /** False while the backend cannot be reached: title regions are skeletons. */
+  /** False only while the cache holds no title row: title regions are skeletons. */
   titlesAvailable: boolean;
+}
+
+/** `POST /api/library/refresh` (docs/03 section 5.1): the titles were synced; `readAt` is when that sync began. */
+export interface LibraryRefreshAnswer {
+  titlesAvailable: boolean;
+  readAt?: number;
 }
 
 /** `GET /api/library/continue` (docs/03 section 3.5, `06` section 4.2): the items only. */

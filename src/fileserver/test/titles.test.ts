@@ -77,6 +77,13 @@ const TV_GENRES = { ok: true, data: [{ id: 18, name: "Drama" }] };
 const FIGHT_CLUB_ROW = { id: "movie-550", kind: "movie", title: "Fight Club", year: 1999, genres: ["878"], rating: 8.4, posterUrl: POSTER };
 const LATE_TV_ROW = { id: "tv-9999", kind: "tv", title: "Late Row", year: 2020, genres: ["18"], rating: 7.1, posterUrl: POSTER };
 const RECOMMENDED = { ok: true, data: { items: [{ ...FIGHT_CLUB_ROW }] } };
+/** The catalog read the sync walks (`GET /api/titles/catalog`): thin rows with TMDB genre ids and the stored popularity. */
+const CATALOG_ROWS = [
+  { id: "movie-603", kind: "movie", title: "The Matrix", year: 1999, genres: ["878"], rating: 8.2, popularity: 90, posterUrl: POSTER },
+  FIGHT_CLUB_ROW,
+  { id: "tv-1399", kind: "tv", title: "Game of Thrones", year: 2011, genres: ["18"], rating: 8.4, popularity: 80, posterUrl: POSTER },
+  LATE_TV_ROW,
+];
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -94,12 +101,7 @@ function titlesSeam(overrides: Record<string, unknown> = {}): typeof fetch {
     if (at === "/api/titles/tv-1399") return json(GOT);
     if (at === "/api/titles/tv-1399/seasons/1") return json(SEASON);
     if (at === "/api/titles/movie-603/recommendations") return json(RECOMMENDED);
-    if (at === "/api/titles") {
-      if (url.searchParams.get("genre") !== null) return json({ ok: true, data: { items: [FIGHT_CLUB_ROW], page: 1, totalPages: 1, totalResults: 1 } });
-      const page = Number(url.searchParams.get("page") ?? "1");
-      const rows = url.searchParams.get("kind") === "tv" ? [{ id: "tv-1399", kind: "tv", title: "Game of Thrones", year: 2011, genres: ["18"], rating: 8.4, posterUrl: POSTER }, LATE_TV_ROW] : [{ id: "movie-603", kind: "movie", title: "The Matrix", year: 1999, genres: ["878"], rating: 8.2, posterUrl: POSTER }, FIGHT_CLUB_ROW];
-      return json({ ok: true, data: { items: page === 1 ? [rows[0]] : [rows[1]], page, totalPages: 2, totalResults: 2 } });
-    }
+    if (at === "/api/titles/catalog") return json({ ok: true, data: { items: CATALOG_ROWS } });
     return json({ ok: false, error: { code: "title.not_found", message: "no such title" } }, 404);
   }) as typeof fetch;
 }
@@ -143,6 +145,7 @@ test("a series answers seasons; a season answers episodes in order with rewritte
 
 test("related answers TMDB's recommendations, the row's genres decoded", async () => {
   const t = await seamApp();
+  await send(t.app, "POST", "/api/library/refresh");
   const related = await send(t.app, "GET", "/api/titles/movie-603/related");
   assert.equal(pick(related.body, "data.basis"), "tmdb");
   assert.equal(pick(related.body, "data.items.0.ref.id"), "movie-550");
@@ -151,8 +154,9 @@ test("related answers TMDB's recommendations, the row's genres decoded", async (
   await t.close();
 });
 
-test("with no recommendations the band falls back to genre and year", async () => {
+test("with no recommendations the band falls back to genre and year, read from the cache", async () => {
   const t = await seamApp({ "/api/titles/movie-603/recommendations": { ok: true, data: { items: [] } } });
+  assert.equal((await send(t.app, "POST", "/api/library/refresh")).status, 200);
   const related = await send(t.app, "GET", "/api/titles/movie-603/related");
   assert.equal(pick(related.body, "data.basis"), "genre-year");
   assert.equal(pick(related.body, "data.items.0.ref.id"), "movie-550");
@@ -167,23 +171,19 @@ test("an unknown title is 404 title.not_found", async () => {
   await t.close();
 });
 
-test("the library browses the backend's pages with flags, facets and a cursor", async () => {
+test("the library lists the synced catalog with flags, decoded genres, facets and an exact total", async () => {
   const t = await seamApp();
   const first = await send(t.app, "GET", "/api/library");
   assert.equal(pick(first.body, "data.titlesAvailable"), true);
   assert.equal(pick(first.body, "data.trending"), true);
   assert.equal(pick(first.body, "data.total"), 4);
-  assert.deepEqual(pick(first.body, "data.facets.genres"), ["Science Fiction", "Drama"]);
-  assert.equal(pick(first.body, "data.items.0.ref.id"), "movie-603");
-  assert.equal(pick(first.body, "data.items.0.posterUrl"), `/api/images/${imageIdOf(POSTER)}`);
-  assert.equal(pick(first.body, "data.items.1.ref.id"), "tv-1399");
-  assert.equal(pick(first.body, "data.items.0.rating"), 8.2, "the card carries the rating, unrounded");
-  assert.equal(pick(first.body, "data.items.1.rating"), 8.4);
-  const cursor = pick(first.body, "data.nextCursor");
-  assert.ok(typeof cursor === "string");
-  const second = await send(t.app, "GET", `/api/library?cursor=${encodeURIComponent(String(cursor))}`);
-  assert.deepEqual((pick(second.body, "data.items") as Array<{ ref: { id: string } }>).map((one) => one.ref.id), ["movie-550", "tv-9999"]);
-  assert.equal(pick(second.body, "data.nextCursor"), undefined);
+  assert.deepEqual(pick(first.body, "data.facets.genres"), ["Drama", "Science Fiction"]);
+  const ids = (pick(first.body, "data.items") as Array<{ ref: { id: string } }>).map((one) => one.ref.id);
+  assert.deepEqual(ids, ["tv-9999", "tv-1399", "movie-603", "movie-550"], "newest: year, then popularity");
+  assert.equal(pick(first.body, "data.items.2.posterUrl"), `/api/images/${imageIdOf(POSTER)}`);
+  assert.equal(pick(first.body, "data.items.2.rating"), 8.2, "the card carries the rating, unrounded");
+  assert.deepEqual(pick(first.body, "data.items.2.genres"), ["Science Fiction"], "ids decoded through the stored dictionary");
+  assert.equal(pick(first.body, "data.nextCursor"), undefined);
   await t.close();
 });
 
@@ -206,8 +206,8 @@ test("against the real backend (TMDB absent) the pass-through answers honestly",
   const t = await makeApp();
   await pointAt(t, backend.url);
   const title = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.equal(title.status, 503);
-  assert.equal(pick(title.body, "error.code"), "backend.unreachable");
+  // 503 while the backend still asks TMDB for a detail, 404 once its public reads are store-only (docs/47 section 3.2).
+  assert.ok([404, 503].includes(title.status), `an uncached title is an honest error, not ${title.status}`);
   const library = await send(t.app, "GET", "/api/library");
   assert.equal(pick(library.body, "data.titlesAvailable"), false);
   assert.equal(pick(library.body, "data.trending"), false);

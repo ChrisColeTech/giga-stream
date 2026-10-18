@@ -131,18 +131,19 @@ test("a restart on the same data folder serves the cache with the backend down",
   await first.dispose();
 
   backend.setDown(true);
-  const calls = backend.calls.length;
+  // The launch also checks the (never synced) titles; this fake serves channels only, so count the channel reads.
+  const calls = backend.channelCalls().length;
   const second = await makeApp({ dataDir, clock, adminFetch: backend.fetch, syncOnStart: true });
   const read = await send(second.app, "GET", "/api/channels");
   assert.deepEqual(idsOf(read.body), ["a", "b", "c"]);
   assert.equal(pick((await send(second.app, "GET", "/api/state")).body, "data.backend.connected"), true);
-  assert.equal(backend.calls.length, calls, "inside the window the launch check makes no request");
+  assert.equal(backend.channelCalls().length, calls, "inside the window the launch check makes no channel request");
   await second.dispose();
 
   clock.advance(CACHE_WINDOW_MS);
   const third = await makeApp({ dataDir, clock, adminFetch: backend.fetch, syncOnStart: true });
   assert.deepEqual(idsOf((await send(third.app, "GET", "/api/channels")).body), ["a", "b", "c"]);
-  assert.ok(backend.calls.length > calls, "a stale cache is checked at launch, detached");
+  assert.ok(backend.channelCalls().length > calls, "a stale channels cache is checked at launch, detached");
   await third.dispose();
   rmSync(dataDir, { recursive: true, force: true });
 });

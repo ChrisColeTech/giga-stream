@@ -12,6 +12,7 @@ import { createLocalFileRepository } from "../store/local-file-repository.js";
 import { createSettingsRepository } from "../store/settings-repository.js";
 import { createShellStateRepository } from "../store/shell-state-repository.js";
 import { createWatchRepository } from "../store/watch-repository.js";
+import { createAdminCatalog } from "./admin-catalog.js";
 import { createAdminClient } from "./admin-client.js";
 import { createAdminTitles } from "./admin-titles.js";
 import { createBackendCache } from "./backend-cache-setup.js";
@@ -22,17 +23,13 @@ import {
 import { createFsDialogService, type FsDialogService } from "./fs-dialog-service.js";
 import { createImageCacheService, rewriteImageUrl, type ImageCacheService } from "./image-cache-service.js";
 import { createJobService, type JobService } from "./job-service.js";
-import { createLibraryItems } from "./library-items.js";
-import { createLibraryLists } from "./library-lists.js";
-import { createLibraryService } from "./library-service.js";
+import { createLibrary } from "./library-setup.js";
 import { createLiveChannelsService, type LiveChannelsService } from "./live-channels-service.js";
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
 import { createPosterFetchService, type PosterFetchService } from "./poster-fetch.js";
 import { createScanService, type FolderScanner, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
-import { createTitleSession } from "./title-session.js";
-import { createTitlesService } from "./titles-service.js";
 import { createFavoritesService, createWatchService, type FavoritesService, type WatchService } from "./watch-service.js";
 
 export interface ServiceOptions {
@@ -76,7 +73,18 @@ export function createAppServices(options: ServiceOptions) {
     return rewriteImageUrl(source) ?? source;
   };
   const admin = createAdminClient({ fetch: options.adminFetch });
-  const { cache, channels: cachedChannels } = createBackendCache({ database, admin, adminUrl, now: options.now });
+  const {
+    cache,
+    channels: cachedChannels,
+    titles: cachedTitles,
+    titleQuery,
+  } = createBackendCache({
+    database,
+    admin,
+    catalog: createAdminCatalog({ fetch: options.adminFetch }),
+    adminUrl,
+    now: options.now,
+  });
   const live: LiveChannelsService = createLiveChannelsService({
     cache,
     channels: cachedChannels,
@@ -84,12 +92,6 @@ export function createAppServices(options: ServiceOptions) {
     rewriteImageUrl: rewrite,
   });
   const titlesAdmin = createAdminTitles({ fetch: options.adminFetch });
-  const titleSession = createTitleSession({
-    admin: titlesAdmin,
-    adminUrl,
-    health: () => admin.health(adminUrl()),
-    now: options.now,
-  });
   const collectionsRepo = createCollectionRepository(database);
   const filesRepo = createLocalFileRepository(database);
   const jobRepo = createJobRepository(database);
@@ -127,29 +129,16 @@ export function createAppServices(options: ServiceOptions) {
     watchedPercent: () => settings.get().watchedPercent,
     paused: () => settings.get().pauseHistory,
   });
-  const libraryRepo = createLibraryRepository(database);
-  const libraryItems = createLibraryItems({
+  const { titles, library } = createLibrary({
+    cache,
+    cachedTitles,
+    titleQuery,
+    titlesAdmin,
+    adminUrl,
+    libraryRepo: createLibraryRepository(database),
     favorites: favoritesRepo,
-    newestEntry: (kind, itemId) => libraryRepo.newestWatchEntry(kind, itemId),
-    genreView: (kind) => titleSession.genreView(kind),
-    rewriteImageUrl: rewrite,
-  });
-  const titles = createTitlesService({
-    admin: titlesAdmin,
-    adminUrl,
-    session: titleSession,
-    items: libraryItems,
-    rewriteImageUrl: rewrite,
-  });
-  const libraryLists = createLibraryLists({ repo: libraryRepo, items: libraryItems, titles });
-  const library = createLibraryService({
-    admin: titlesAdmin,
-    adminUrl,
-    session: titleSession,
-    items: libraryItems,
-    repo: libraryRepo,
     collections: collectionsRepo,
-    lists: libraryLists,
+    rewriteImageUrl: rewrite,
     now: options.now,
   });
 

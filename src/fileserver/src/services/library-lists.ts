@@ -1,4 +1,4 @@
-import { CONTINUE_MAX, LIST_FACTS_MAX } from "../constants/library.js";
+import { CONTINUE_MAX } from "../constants/library.js";
 import {
   decodeCursor,
   facetsOf,
@@ -9,10 +9,10 @@ import {
   type LibraryQuery,
   type RowOrder,
 } from "../lib/library-query.js";
+import type { CachedTitleRepository } from "../store/cached-title-repository.js";
 import type { LibraryFileRow, LibraryRepository, LibraryWatchRow } from "../store/library-repository.js";
 import type { LibraryItem } from "../types/library.js";
 import type { LibraryItems } from "./library-items.js";
-import type { TitlesService } from "./titles-service.js";
 
 /** One materialized row: the item the interface sees, and the keys its sorts compare. */
 interface Row {
@@ -33,42 +33,42 @@ const lostFile = (id: string): LibraryFileRow => ({ id, title: id, addedAt: 0 })
 
 /**
  * The library's own views (docs/03 section 3.5): history, favorites and a collection, listed from
- * the fileserver's tables. A title's card facts come from the session's details — one bounded
- * fetch per row, degraded to a skeleton when the read fails — and Continue Watching's rows.
+ * the fileserver's tables. A title's card facts come from the cached list rows (docs/46): no backend call is
+ * made, and a title the cache does not hold degrades to a skeleton row, never fails the page.
  */
 export function createLibraryLists(deps: {
   repo: LibraryRepository;
   items: LibraryItems;
-  titles: TitlesService;
+  titles: CachedTitleRepository;
 }) {
   const { repo, items, titles } = deps;
 
   const filesById = (): Map<string, LibraryFileRow> => new Map(repo.listLocalFiles().map((row) => [row.id, row]));
 
-  /** Title rows with card facts: the session's details, or one bounded fetch per view (03 3.5). */
-  async function titleRows(ids: readonly string[]): Promise<Map<string, Row>> {
-    const facts = await Promise.all(ids.slice(0, LIST_FACTS_MAX).map((id) => titles.cardFacts(id)));
+  /** Title rows with card facts from the cache; an id the cache does not hold is a skeleton. */
+  function titleRows(ids: readonly string[]): Map<string, Row> {
+    const held = new Map(titles.byIds(ids).map((row) => [row.id, row]));
     const rows = new Map<string, Row>();
-    ids.forEach((id, at) => {
-      const detail = at < LIST_FACTS_MAX ? facts[at] : undefined;
-      rows.set(
-        id,
-        detail === undefined
-          ? { item: items.skeletonTitle(id), order: {} }
-          : { item: items.detailItem(detail), order: { year: detail.year } },
-      );
-    });
+    for (const id of ids) {
+      const row = held.get(id);
+      rows.set(id, row === undefined ? { item: items.skeletonTitle(id), order: {} } : { item: items.titleItem(row), order: { year: row.year } });
+    }
     return rows;
   }
 
   const localRows = (rows: readonly LibraryFileRow[]): Row[] =>
     rows.map((row) => ({ item: items.localItem(row), order: { foundAt: row.addedAt } }));
 
+  /** The distinct title ids of the entries that are titles. */
+  const titleIdsOf = (entries: readonly LibraryWatchRow[]): string[] => [
+    ...new Set(entries.filter((entry) => entry.itemKind === "title").map((entry) => entry.itemId)),
+  ];
+
   /** `history`: the watch entries, newest first, one row per entry, each with its watch id. */
-  async function historyRows(): Promise<Row[]> {
+  function historyRows(): Row[] {
     const entries = repo.listWatchEntries();
     const files = filesById();
-    const facts = await titleRows([...new Set(entries.filter((e) => e.itemKind === "title").map((e) => e.itemId))]);
+    const facts = titleRows(titleIdsOf(entries));
     return entries.map((entry) => {
       const base =
         entry.itemKind === "local"
@@ -81,15 +81,20 @@ export function createLibraryLists(deps: {
     });
   }
 
-  /** Items whose newest watch entry is in `state`, one row each: the history-backed `watched` answer set. */
-  async function stateRows(state: "watching" | "watched"): Promise<Row[]> {
+  /** Each item's newest watch entry, newest first (an item with several episodes counts once). */
+  function newestPerItem(): LibraryWatchRow[] {
     const seen = new Set<string>();
-    const entries = repo.listWatchEntries().filter((entry) => {
+    return repo.listWatchEntries().filter((entry) => {
       const key = `${entry.itemKind}:${entry.itemId}`;
-      return !seen.has(key) && seen.add(key) && entry.state === state;
+      return !seen.has(key) && seen.add(key);
     });
+  }
+
+  /** Items whose newest watch entry is in `state`, one row each: the history-backed `watched` answer set. */
+  function stateRows(state: "watching" | "watched"): Row[] {
+    const entries = newestPerItem().filter((entry) => entry.state === state);
     const files = filesById();
-    const facts = await titleRows([...new Set(entries.filter((e) => e.itemKind === "title").map((e) => e.itemId))]);
+    const facts = titleRows(titleIdsOf(entries));
     return entries.flatMap((entry) => {
       const order = { watchedAt: entry.updatedAt };
       if (entry.itemKind === "local") {
@@ -102,16 +107,16 @@ export function createLibraryLists(deps: {
   }
 
   /** `favorites`: the favorited items, locals and titles alike. */
-  async function favoriteRows(): Promise<Row[]> {
+  function favoriteRows(): Row[] {
     const members = repo.listFavorites();
     const files = filesById();
     const local = localRows(members.flatMap((m) => (m.kind === "local" ? [files.get(m.itemId) ?? lostFile(m.itemId)] : [])));
-    const title = [...(await titleRows(members.flatMap((m) => (m.kind === "title" ? [m.itemId] : [])))).values()];
+    const title = [...titleRows(members.flatMap((m) => (m.kind === "title" ? [m.itemId] : []))).values()];
     return [...local, ...title];
   }
 
   /** `collection`: the manual members plus the files of its folders, one row per item. */
-  async function collectionRows(collectionId: string): Promise<Row[]> {
+  function collectionRows(collectionId: string): Row[] {
     const members = repo.listCollectionMembers(collectionId);
     const files = filesById();
     const local = members.flatMap((member) => {
@@ -120,7 +125,7 @@ export function createLibraryLists(deps: {
       return row === undefined ? [] : [{ ...row, item: { ...row.item, collectionSource: member.source } }];
     });
     const titleMembers = members.filter((member) => member.kind === "title");
-    const titleById = await titleRows(titleMembers.map((member) => member.itemId));
+    const titleById = titleRows(titleMembers.map((member) => member.itemId));
     const title = titleMembers.flatMap((member) => {
       const row = titleById.get(member.itemId);
       return row === undefined ? [] : [{ ...row, item: { ...row.item, collectionSource: member.source } }];
@@ -128,8 +133,7 @@ export function createLibraryLists(deps: {
     return [...local, ...title];
   }
 
-  async function view(query: LibraryQuery, rowsOf: () => Promise<Row[]>): Promise<ListPage> {
-    const rows = await rowsOf();
+  function view(query: LibraryQuery, rows: Row[]): ListPage {
     const kept = rows.filter((row) => inList(row.item, query) && matchesFilters(row.item, query));
     const sorted = orderRows(kept, query.sort, (row) => row.order, (row) => row.item.title);
     const paged = pageOf(
@@ -148,13 +152,13 @@ export function createLibraryLists(deps: {
   }
 
   return {
-    history: (query: LibraryQuery) => view(query, historyRows),
-    favorites: (query: LibraryQuery) => view(query, favoriteRows),
-    collection: (query: LibraryQuery) => view(query, () => collectionRows(query.collectionId ?? "")),
+    history: (query: LibraryQuery) => view(query, historyRows()),
+    favorites: (query: LibraryQuery) => view(query, favoriteRows()),
+    collection: (query: LibraryQuery) => view(query, collectionRows(query.collectionId ?? "")),
 
     /** `view=all&watched=watching|watched` over the history only: locals first, then titles; `total` is whole. */
-    async watchedSet(query: LibraryQuery, state: "watching" | "watched"): Promise<Omit<ListPage, "facets">> {
-      const kept = (await stateRows(state)).filter((row) => inList(row.item, query) && matchesFilters(row.item, query));
+    watchedSet(query: LibraryQuery, state: "watching" | "watched"): Omit<ListPage, "facets"> {
+      const kept = stateRows(state).filter((row) => inList(row.item, query) && matchesFilters(row.item, query));
       const sortedOf = (rows: Row[]): LibraryItem[] =>
         orderRows(rows, query.sort, (row) => row.order, (row) => row.item.title).map((row) => row.item);
       const sorted = [
@@ -170,18 +174,10 @@ export function createLibraryLists(deps: {
     },
 
     /** `GET /api/library/continue` (03 section 3.5): the watching rows, newest first, at most ten. */
-    async continueItems(): Promise<LibraryItem[]> {
+    continueItems(): LibraryItem[] {
       const files = filesById();
-      const watching: LibraryWatchRow[] = [];
-      const seen = new Set<string>();
-      for (const entry of repo.listWatchEntries()) {
-        const key = `${entry.itemKind}:${entry.itemId}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if (entry.state === "watching") watching.push(entry);
-        if (watching.length === CONTINUE_MAX) break;
-      }
-      const facts = await titleRows([...new Set(watching.filter((e) => e.itemKind === "title").map((e) => e.itemId))]);
+      const watching = newestPerItem().filter((entry) => entry.state === "watching").slice(0, CONTINUE_MAX);
+      const facts = titleRows(titleIdsOf(watching));
       return watching.map((entry) => {
         const base =
           entry.itemKind === "local"

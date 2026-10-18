@@ -1,155 +1,45 @@
-import { LIBRARY_PAGE_SIZE } from "../constants/library.js";
-import {
-  decodeCursor,
-  encodeCursor,
-  inList,
-  matchesFilters,
-  orderRows,
-  yearFacets,
-  type LibraryQuery,
-} from "../lib/library-query.js";
 import { AppError } from "../lib/app-error.js";
+import type { LibraryQuery } from "../lib/library-query.js";
 import type { CollectionRepository } from "../store/collection-repository.js";
-import type { LibraryRepository } from "../store/library-repository.js";
-import type { ContinuePage, LibraryItem, LibraryPage } from "../types/library.js";
-import type { AdminTitles, TitleKind } from "./admin-titles.js";
-import type { LibraryItems } from "./library-items.js";
-import type { ListPage, LibraryLists } from "./library-lists.js";
-import { createLibraryTitles } from "./library-titles.js";
-import type { TitleSession } from "./title-session.js";
+import type { ContinuePage, LibraryPage, LibraryRefreshAnswer } from "../types/library.js";
+import type { BackendCacheService } from "./backend-cache-service.js";
+import type { LibraryAllView } from "./library-all-view.js";
+import type { LibraryLists, ListPage } from "./library-lists.js";
 
 const invalid = (): AppError => new AppError("library.invalid", 422, "That library request cannot be used.");
 const collectionMissing = (): AppError => new AppError("collection.not_found", 404, "There is no such collection.");
 
 /**
- * The library query (docs/03 section 3.5): `view=all` combines the user's matching files with
- * TMDB's pages browsed through the backend, in the chosen sort, narrowed by genre and year; the
- * other views list the fileserver's own tables. The local parts always answer, whatever the
- * backend does: `titlesAvailable: false` says the title regions are skeletons.
+ * The library query (docs/03 section 3.5, docs/46): every view is answered from the fileserver's own database,
+ * the cached titles included. A read checks the titles' freshness first (one indexed row): a cold cache is awaited
+ * once, a stale one refreshes in the background while this answer is served. `refresh` forces the sync.
  */
 export function createLibraryService(deps: {
-  admin: AdminTitles;
-  adminUrl: () => string;
-  session: TitleSession;
-  items: LibraryItems;
-  repo: LibraryRepository;
+  cache: BackendCacheService;
+  all: LibraryAllView;
   collections: CollectionRepository;
   lists: LibraryLists;
-  now: () => number;
+  /** Whether the cache holds title rows (`titlesAvailable`). */
+  titlesAvailable: () => boolean;
 }) {
-  const { adminUrl, session, items, repo, collections, lists, now } = deps;
-  const titleReader = createLibraryTitles({ admin: deps.admin, adminUrl, session, items });
+  const { cache, all, collections, lists, titlesAvailable } = deps;
 
-  const kindsOf = (type: LibraryQuery["type"]): TitleKind[] =>
-    type === "movie" || type === "tv" ? [type] : type === "all" ? ["movie", "tv"] : [];
-
-  /** The local part of `view=all`: the user's matching files, narrowed and sorted on their own. */
-  function localPart(query: LibraryQuery): LibraryItem[] {
-    const rows = repo.listLocalFiles().map((row) => ({ item: items.localItem(row), order: { foundAt: row.addedAt } }));
-    const kept = rows.filter((row) => inList(row.item, query) && matchesFilters(row.item, query));
-    return orderRows(kept, query.sort, (row) => row.order, (row) => row.item.title).map((row) => row.item);
-  }
-
-  /** The genre names the asked kinds offer, and the years: the `all` view's facets. */
-  async function allFacets(kinds: readonly TitleKind[]): Promise<{ genres: string[]; years: number[] }> {
-    const genreFacets = new Set<string>();
-    for (const kind of kinds) {
-      const view = await session.genreView(kind);
-      if (view !== undefined) for (const name of view.names) genreFacets.add(name);
-    }
-    return { genres: [...genreFacets], years: yearFacets(now) };
-  }
-
-  /**
-   * `view=all` with `watched=watching|watched` (docs/03 section 3.5): the answer is the history's
-   * items, not a page of the catalog, so a page is full until the set is exhausted.
-   */
-  async function historyBackedView(query: LibraryQuery, state: "watching" | "watched"): Promise<LibraryPage> {
-    const health = await session.health();
-    const kinds = kindsOf(query.type);
-    if (query.sort === "trending" && !(health.reachable && health.tmdbConfigured && kinds.length > 0)) throw invalid();
-    const listed = await lists.watchedSet(query, state);
-    const available = health.reachable && health.tmdbConfigured;
-    const trending = available && kinds.length > 0;
-    session.noteAvailability({ available, trending });
-    return {
-      items: listed.items,
-      ...(listed.nextCursor !== undefined && { nextCursor: listed.nextCursor }),
-      total: listed.total,
-      facets: await allFacets(kinds),
-      trending,
-      titlesAvailable: available,
-    };
-  }
-
-  /** `view=all` (docs/03 section 3.5): the matching files first, then the titles. */
-  async function allView(query: LibraryQuery): Promise<LibraryPage> {
-    if (query.watched === "watching" || query.watched === "watched") return historyBackedView(query, query.watched);
-    const health = await session.health();
-    const kinds = kindsOf(query.type);
-    const canTrend = health.reachable && health.tmdbConfigured && kinds.length > 0;
-    if (query.sort === "trending" && !canTrend) throw invalid();
-
-    const locals = localPart(query);
-    const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
-    const localOffset = cursor?.localOffset ?? 0;
-    const titlePage = Math.max(1, cursor?.titlePage ?? 1);
-    const localSlice = locals.slice(localOffset, localOffset + LIBRARY_PAGE_SIZE);
-    const localsRemain = localOffset + localSlice.length < locals.length;
-
-    // The titles are read only when the page has room for them (03 section 3.5).
-    const read =
-      kinds.length > 0 && localSlice.length < LIBRARY_PAGE_SIZE
-        ? await titleReader.read(query, kinds, titlePage, LIBRARY_PAGE_SIZE - localSlice.length)
-        : undefined;
-    const titles = read?.first;
-    const available = read === undefined ? health.reachable && health.tmdbConfigured : read.available;
-    const pageRows = read?.items ?? [];
-
-    // Past the reader's bound (library-titles.ts) the cursor still continues from where it stopped.
-    const moreTitles = read?.nextPage !== undefined;
-    const nextCursor =
-      localsRemain || moreTitles
-        ? encodeCursor({ localOffset: localOffset + localSlice.length, titlePage: read?.nextPage ?? titlePage })
-        : undefined;
-    const facets = await allFacets(kinds);
-    const trending = available && health.tmdbConfigured && kinds.length > 0;
-    session.noteAvailability({ available, trending });
-    // The whole matching count, wherever it is known; TMDB's totals only when they were read
-    // whole (03 section 3.5: "when known").
-    const total =
-      kinds.length === 0
-        ? { total: locals.length }
-        : titles !== undefined && titles.available && query.watched === "all" && query.genres.length <= 1
-          ? { total: locals.length + titles.totalResults }
-          : {};
-    return {
-      items: [...localSlice, ...pageRows],
-      ...total,
-      ...(nextCursor !== undefined && { nextCursor }),
-      facets,
-      trending,
-      titlesAvailable: available,
-    };
-  }
-
-  /** One of the table views; no backend read is made for the list itself (docs/03 section 3.5). */
-  async function listView(query: LibraryQuery): Promise<LibraryPage> {
+  /** One of the table views; the cached title rows are its card facts. */
+  function listView(query: LibraryQuery): LibraryPage {
     if (query.sort === "trending") throw invalid();
     const listed: ListPage =
       query.view === "history"
-        ? await lists.history(query)
+        ? lists.history(query)
         : query.view === "favorites"
-          ? await lists.favorites(query)
-          : await lists.collection(query);
-    const availability = session.availability();
+          ? lists.favorites(query)
+          : lists.collection(query);
     return {
       items: listed.items,
       ...(listed.nextCursor !== undefined && { nextCursor: listed.nextCursor }),
       total: listed.total,
       facets: listed.facets,
       trending: false,
-      titlesAvailable: availability.available,
+      titlesAvailable: titlesAvailable(),
     };
   }
 
@@ -160,12 +50,22 @@ export function createLibraryService(deps: {
         if (query.collectionId === undefined) throw invalid();
         if (collections.findCollection(query.collectionId) === null) throw collectionMissing();
       }
-      return query.view === "all" ? allView(query) : listView(query);
+      await cache.ensureFresh("titles");
+      return query.view === "all" ? all.page(query) : listView(query);
     },
 
     /** `GET /api/library/continue` (docs/03 section 3.5, `06` section 4.2). */
     async continuePage(): Promise<ContinuePage> {
-      return { items: await lists.continueItems() };
+      await cache.ensureFresh("titles");
+      return { items: lists.continueItems() };
+    },
+
+    /** `POST /api/library/refresh` (docs/03 section 5.1): sync the titles now, joining a run in flight. */
+    async refresh(): Promise<LibraryRefreshAnswer> {
+      const outcome = await cache.refresh("titles");
+      if (!outcome.ok) throw new AppError(outcome.failure.code, outcome.failure.status, outcome.failure.message);
+      const readAt = cache.rowOf("titles")?.syncedAt ?? undefined;
+      return { titlesAvailable: titlesAvailable(), ...(readAt !== undefined && { readAt }) };
     },
   };
 }

@@ -31,6 +31,7 @@ function manualSeam(seen: string[]): typeof fetch {
     const at = url.pathname;
     if (at === "/healthz") return json({ ok: true, data: { role: "admin-backend", version: "t", revision: 1, tmdb: "configured" } });
     if (at === "/api/titles/genres") return json({ ok: true, data: [] });
+    if (at === "/api/titles/catalog") return json({ ok: true, data: { items: [] } });
     seen.push(at);
     if (at === `/api/titles/${MANUAL_ID}`) return json(MANUAL);
     if (at === `/api/titles/${MANUAL_ID}/seasons/1`) return json(SEASON);
