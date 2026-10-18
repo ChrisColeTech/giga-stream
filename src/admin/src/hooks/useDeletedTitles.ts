@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import type { BulkNote } from "@/lib/bulk-plan";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
+import { BULK_ICONS } from "@/constants/bulk-icons";
 import { planRestore, restoreReason, RESTORE_WORDS } from "@/lib/title-restore";
 import { createTitleRestoreCall } from "@/services/title-bulk";
 import { titles } from "@/services/titles";
@@ -8,10 +9,8 @@ import { useBulkAction } from "./useBulkAction";
 import { useTitleActions } from "./useTitleActions";
 
 export interface DeletedTitles {
-  /** Bulk `Restore` over the ticked rows: why it is disabled (or undefined) and the press. */
-  readonly bulk: { readonly reason: string | undefined; readonly press: () => void };
-  readonly notes: readonly BulkNote[];
-  readonly dismiss: () => void;
+  /** The table strip's bulk verbs: `Restore` over the ticked rows, disabled with its reason. */
+  readonly verbs: readonly StripVerb[];
   /** One row's `Restore`: why it is disabled (or undefined) and the press. */
   readonly row: (id: string) => { readonly reason: string | undefined; readonly press: () => void };
 }
@@ -41,9 +40,15 @@ export function useDeletedTitles(): DeletedTitles {
     });
   };
   return {
-    bulk: { reason: restoreReason(ticked.length, { busy, unreachable }), press },
-    notes: bulk.notes,
-    dismiss: bulk.dismiss,
+    verbs: [
+      {
+        id: "restore",
+        label: "Restore",
+        icon: BULK_ICONS.restore,
+        reason: restoreReason(ticked.length, { busy, unreachable }),
+        onPress: press,
+      },
+    ],
     row: (id) => ({
       reason: restoreReason(1, { busy: busy || isBusy(`restore:${id}`), unreachable }),
       press: () => void track(`restore:${id}`, () => flows.restore(id)),

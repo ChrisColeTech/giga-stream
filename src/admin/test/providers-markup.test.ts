@@ -80,30 +80,35 @@ describe("the providers list", () => {
   });
 });
 
-describe("the toolbar", () => {
-  it("draws Enable, Disable and Delete disabled with Tick a row first, beside an enabled Titles →", () => {
+describe("the toolbar and table strip", () => {
+  it("draws an enabled Titles arrow in the toolbar; Refresh is the table strip's and the bulk verbs wait for a tick", () => {
     const html = page();
-    for (const verb of ["Enable", "Disable"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
-    assert.match(html, /<button[^>]*disabled=""[^>]*title="Tick a row first"[^>]*>Delete</);
-    const forward = html.match(/<button[^>]*>Titles →/)?.[0] ?? "";
+    const forward = html.match(/<button[^>]*aria-label="Titles"[^>]*>/)?.[0] ?? "";
     assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
+    const table = html.slice(html.indexOf('aria-label="Providers table"'));
+    assert.ok(table.includes('aria-label="Refresh providers"'));
+    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
   });
 
-  it("names every ticked provider already enabled", () => {
+  it("names every ticked provider already enabled, with a Delete that is the armed two-step", () => {
     loaded([provider(1)]);
     state().providerTick(1, true);
-    assert.ok(page().includes('aria-label="Enable. Every ticked provider is already enabled."'));
+    const html = page();
+    assert.ok(html.includes('aria-label="Enable. Every ticked provider is already enabled."'));
+    assert.ok(html.includes(">Delete</button>") && html.includes('aria-label="Clear selection"'));
   });
 });
 
 describe("a provider's workspace", () => {
-  it("opens from the held list: the rail, Details, Templates, Player, and Discard, Save, Titles →", () => {
+  it("opens from the held list: the rail, Details, Templates, Player, the pinned Discard, Save details and the Titles arrow", () => {
     loaded([provider(1)]);
     state().openWorkspace("providers", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Provider sections"'));
     assert.ok(at(html, ">Details<") < at(html, ">Templates<") && at(html, ">Templates<") < at(html, ">Player<"));
-    assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."') && html.includes("Titles →"));
+    assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
+    assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Player<"));
+    assert.ok(/<button[^>]*aria-label="Titles"/.test(html) && !html.includes("Titles →"));
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
     assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));

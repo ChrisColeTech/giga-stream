@@ -1,8 +1,10 @@
 import { useMemo } from "react";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { BULK_DELETE, BULK_DISABLE, BULK_ENABLE } from "@/constants/account-copy";
+import { BULK_ICONS } from "@/constants/bulk-icons";
 import { BULK_WORDS, bulkVerbReason, planAccountBulk, type AccountBulkVerb } from "@/lib/account-bulk";
 import { sameId } from "@/lib/account-rows";
-import type { BulkNote, BulkPlan } from "@/lib/bulk-plan";
+import type { BulkPlan } from "@/lib/bulk-plan";
 import { accounts } from "@/services/accounts";
 import { createAccountBulkCall } from "@/services/account-bulk";
 import { useAppStore } from "@/store/app-store";
@@ -10,20 +12,9 @@ import type { AccountId } from "@/types/admin-account";
 import { useAccountFlows } from "./useAccountFlows";
 import { useBulkAction } from "./useBulkAction";
 
-export interface BulkVerbView {
-  readonly verb: AccountBulkVerb;
-  readonly label: string;
-  /** Why it cannot run now; undefined when at least one ticked row can. */
-  readonly reason: string | undefined;
-  /** The armed question for Delete: it names how many die. */
-  readonly question?: string;
-  readonly press: () => void;
-}
-
 export interface AccountBulk {
-  readonly verbs: readonly BulkVerbView[];
-  readonly notes: readonly BulkNote[];
-  readonly dismiss: () => void;
+  /** The table strip's verbs: icons with their reasons, and the armed Delete naming how many die. */
+  readonly verbs: readonly StripVerb[];
 }
 
 const LABELS: Readonly<Record<AccountBulkVerb, string>> = {
@@ -48,7 +39,7 @@ export function useAccountBulk(): AccountBulk {
     [],
   );
 
-  const verbs = ORDER.map((verb): BulkVerbView => {
+  const verbs = ORDER.map((verb): StripVerb => {
     const plan: BulkPlan<AccountId> = planAccountBulk(verb, items, ticked, ownId);
     const count = plan.runnable.length;
     const press = (): void => {
@@ -65,12 +56,13 @@ export function useAccountBulk(): AccountBulk {
       });
     };
     return {
-      verb,
+      id: verb,
       label: LABELS[verb],
+      icon: BULK_ICONS[verb],
       reason: bulkVerbReason(plan, ticked.length, { busy: bulk.running, unreachable }),
       ...(verb === "delete" && { question: `Delete ${count} ${count === 1 ? "account" : "accounts"}?` }),
-      press,
+      onPress: press,
     };
   });
-  return { verbs, notes: bulk.notes, dismiss: bulk.dismiss };
+  return { verbs };
 }

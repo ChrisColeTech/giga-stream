@@ -2,6 +2,7 @@ import { useEffect, type CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
+import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
@@ -16,6 +17,7 @@ import { useProviderActions } from "@/hooks/useProviderActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { saveRequiredReason } from "@/lib/provider-checks";
 import { draftOfProvider, sameProviderDraft } from "@/lib/provider-draft";
+import { changeReason } from "@/lib/workspace-verbs";
 import type { AdminProvider } from "@/services/schemas/provider-schema";
 import { useAppStore } from "@/store/app-store";
 import { ProviderDetailsGroup } from "./ProviderDetailsGroup";
@@ -58,16 +60,9 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
           spy={spy}
         />
       }
-      toolbar={
-        <WorkspaceToolbar
-          label="Provider toolbar"
-          dirty={form.dirty}
-          discard={{ label: "Discard changes", onPress: form.discard }}
-          save={{ label: "Save", onPress: () => void save(), reason }}
-          forward={{ label: "Titles →", onPress: () => requestTab("titles") }}
-        />
-      }
+      toolbar={<WorkspaceToolbar label="Provider toolbar" forward={{ label: "Titles", onPress: () => requestTab("titles") }} />}
     >
+      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div
           className="flex flex-col px-6 pb-8"
@@ -85,7 +80,13 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
             <ProviderTemplatesGroup draft={form.draft} errors={form.errors} onChange={form.set} />
           </div>
           <div ref={spy.bind("pv-player")}>
-            <ProviderPlayerGroup draft={form.draft} errors={form.errors} onChange={form.set} onRefuse={form.setError} />
+            <ProviderPlayerGroup
+              draft={form.draft}
+              errors={form.errors}
+              onChange={form.set}
+              onRefuse={form.setError}
+              save={{ onPress: () => void save(), reason: changeReason(form.dirty, reason) }}
+            />
           </div>
         </div>
       </div>
@@ -94,8 +95,8 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
 }
 
 /** One provider's workspace (`37` section 3.3), opened from the list already held: the rail (`‹ Providers`, Details,
- *  Templates, Player), a toolbar with `Discard changes`, `Save` and `Titles →`, and one scrolling page. One Save
- *  sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
+ *  Templates, Player), a toolbar with the `Titles` arrow, the pinned `Discard changes` and one scrolling page. One `Save
+ *  details`, ending Player, sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
  *  notice. */
 export function ProviderWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const provider = useAppStore((state) => state.providers.items.find((item) => String(item.id) === id));

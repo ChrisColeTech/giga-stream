@@ -67,15 +67,15 @@ describe("the playlists list", () => {
   });
 });
 
-describe("the Playlists toolbar", () => {
-  it("draws Sync now, Enable, Disable and Delete disabled with `Tick a row first`, then the filled Jobs →", () => {
+describe("the Playlists toolbar and table strip", () => {
+  it("keeps the Jobs arrow alone in the page toolbar; Refresh is the table strip's, the bulk verbs wait for a tick", () => {
     state().playlistsLoaded([row(1)], {});
     const html = page();
-    for (const verb of ["Sync now", "Enable", "Disable"]) {
-      assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
-    }
-    assert.ok(html.includes('title="Tick a row first"'));
-    assert.ok(at(html, "Sync now") < at(html, "Jobs →"));
+    const toolbar = html.slice(html.indexOf('role="toolbar"'), html.indexOf("New playlist"));
+    assert.ok(/<button[^>]*aria-label="Jobs"/.test(toolbar) && !toolbar.includes("Sync now"));
+    const table = html.slice(html.indexOf('aria-label="Playlists table"'));
+    assert.ok(table.includes('aria-label="Refresh playlists"'));
+    for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
   });
 
   it("gives Sync now its reason for a ticked playlist that no job syncs, and arms the others", () => {
@@ -84,12 +84,12 @@ describe("the Playlists toolbar", () => {
     const html = page();
     assert.ok(html.includes('aria-label="Sync now. No job syncs this playlist; create one on the Jobs tab."'));
     assert.ok(html.includes('aria-label="Enable. Every ticked playlist is already enabled."'));
-    assert.ok(html.includes(">Disable</button>") && html.includes(">Delete</button>"));
+    assert.ok(/<button[^>]*aria-label="Disable"/.test(html) && html.includes(">Delete</button>"));
   });
 });
 
 describe("a playlist's workspace", () => {
-  it("opens with the rail, Details then Status, the masked address with Replace, and Discard, Save, Jobs →", () => {
+  it("opens with the rail, Details then Status, the masked address with Replace, the pinned Discard and Save details", () => {
     state().playlistsLoaded([row(1)], {});
     state().openWorkspace("playlists", "1");
     const html = page();
@@ -98,14 +98,15 @@ describe("a playlist's workspace", () => {
     assert.ok(/<input[^>]*readOnly=""[^>]*aria-label="Address"[^>]*value="h1\.example\.test\/…"/.test(html));
     assert.ok(html.includes(" Replace</button>") && !html.includes('type="password"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
-    assert.ok(html.includes("Discard changes") && html.includes(">Save<") && html.includes("Jobs →"));
+    assert.ok(html.includes("Discard changes") && html.includes("Save details") && !html.includes(">Save<"));
+    assert.ok(/<button[^>]*aria-label="Jobs"/.test(html) && !html.includes("Jobs →"));
     assert.ok(!html.includes("Sync now"), "no sync verb in a playlist's workspace");
   });
 
   it("Replace unlocks an empty password field and disables itself with its reason", () => {
     const playlist = row(1);
     const draft = startReplace(draftOf(playlist));
-    const props = { playlist, draft, errors: {}, onChange: () => undefined };
+    const props = { playlist, draft, errors: {}, onChange: () => undefined, save: { onPress: () => undefined } };
     const html = renderLive(createElement(PlaylistDetailsGroup, props));
     assert.ok(/<input[^>]*type="password"[^>]*aria-label="Address"[^>]*value=""/.test(html));
     assert.ok(html.includes('aria-label="Replace. Type the new value, then Save."'));

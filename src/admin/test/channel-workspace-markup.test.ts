@@ -18,21 +18,28 @@ const at = (html: string, text: string): number => {
   assert.ok(index >= 0, `missing: ${text}`);
   return index;
 };
-const details = (channel: LiveAdminChannel, overrides: Partial<ReturnType<typeof liveDraft>> = {}, rebuildReason?: string) =>
+const details = (channel: LiveAdminChannel, overrides: Partial<ReturnType<typeof liveDraft>> = {}) =>
   renderLive(
     createElement(LiveDetailsGroup, {
       channel,
       draft: { ...liveDraft(channel), ...overrides },
       errors: {},
       onChange: () => undefined,
-      rebuildReason,
-      onRebuild: () => undefined,
       chooseReason: undefined,
       onChoose: () => undefined,
     }),
   );
-const status = (channel: LiveAdminChannel) =>
-  renderLive(createElement(LiveStatusGroup, { channel, refreshReason: undefined, onRefresh: () => undefined, onCopy: () => undefined }));
+const status = (channel: LiveAdminChannel, rebuildReason?: string, refreshReason?: string) =>
+  renderLive(
+    createElement(LiveStatusGroup, {
+      channel,
+      refreshReason,
+      onRefresh: () => undefined,
+      rebuildReason,
+      onRebuild: () => undefined,
+      onCopy: () => undefined,
+    }),
+  );
 
 beforeEach(() => {
   resetStore();
@@ -40,7 +47,7 @@ beforeEach(() => {
 });
 
 describe("a live channel's workspace", () => {
-  it("opens from the held list: the rail, the four groups, Discard, Save and Preview →", () => {
+  it("opens from the held list: the rail, the groups, the pinned Discard, Save details and the Preview arrow", () => {
     state().channelsLoaded([live("a")], 1);
     state().openWorkspace("channels", "a");
     const html = page();
@@ -52,8 +59,9 @@ describe("a live channel's workspace", () => {
       assert.ok(at(html, before) < at(html, after), `${before} before ${after}`);
     }
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(html.includes('aria-label="Save. Nothing has changed."'));
-    assert.ok(/<button[^>]*>Preview →<\/button>/.test(html), "a saved channel previews");
+    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
+    assert.ok(at(html, "Save details") > at(html, 'id="lv-playback"') && at(html, "Save details") < at(html, 'id="lv-status"'));
+    assert.ok(/<button[^>]*aria-label="Preview"[^>]*>/.test(html), "a saved channel previews, by the arrow icon");
   });
 
   it("draws Details in order: Name, Kind, Category, Plays, Folder, Enabled, Logo, Id", () => {
@@ -73,13 +81,19 @@ describe("a live channel's workspace", () => {
     assert.ok(!html.includes('aria-label="Folder"'));
   });
 
-  it("gives Rebuild its reason in the heading's action slot", () => {
-    assert.ok(details(live("a"), {}, "Save the channel first").includes('aria-label="Rebuild. Save the channel first"'));
-    assert.ok(/<button[^>]*>.*?Rebuild<\/button>/.test(details(live("a"))));
+  it("gives Rebuild its reason as the Status group's ghost verb, and Refresh status its icon; none is in a heading", () => {
+    assert.ok(status(live("a"), "Save the channel first").includes('aria-label="Rebuild. Save the channel first"'));
+    assert.ok(/<button[^>]*>.*?Rebuild<\/button>/.test(status(live("a"))));
+    assert.ok(status(live("a"), undefined, "Loading.").includes('aria-label="Refresh status. Loading."'));
+    assert.ok(/<button[^>]*aria-label="Refresh status"[^>]*title="Refresh status"/.test(status(live("a"))));
+    assert.ok(!details(live("a")).includes("Rebuild"));
   });
 
   it("keeps two qualities: the last two lit chips are locked with the reason", () => {
-    const html = renderLive(createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined }));
+    const html = renderLive(
+      createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined, save: { onPress: () => undefined } }),
+    );
+    assert.ok(html.includes(">Save details<"), "the form's commit ends this last editable group");
     assert.ok(html.includes('aria-label="Mode"') && html.includes(">Encode</button>") && html.includes('aria-label="Captions"'));
     assert.equal((html.match(/title="A channel keeps at least two qualities\."/g) ?? []).length, 2);
     assert.ok(/aria-pressed="false"[^>]*>1080p/.test(html), "an unlit quality can be added");

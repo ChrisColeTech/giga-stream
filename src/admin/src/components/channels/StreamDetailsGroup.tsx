@@ -1,5 +1,4 @@
-import { FileText, Undo2 } from "lucide-react";
-import { Button } from "@giga/ui/controls/Button";
+import { FileText } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { cn } from "@giga/ui/lib/cn";
@@ -17,9 +16,6 @@ export interface StreamDetailsGroupProps {
   readonly draft: StreamDraft;
   readonly errors: FormErrors;
   readonly onChange: (patch: Partial<StreamDraft>) => void;
-  /** `Revert to playlist`'s reason (a hand-made row, nothing edited), or undefined. */
-  readonly revertReason: string | undefined;
-  readonly onRevert: () => void;
 }
 
 const FIELDS = [
@@ -28,20 +24,15 @@ const FIELDS = [
 ] as const;
 
 /** A stream channel's `Details` (`36` section 7): Name, Kind (read-only), Category (free text), Enabled. A field an
- *  admin changed on a synced row wears `Edited` after it, and its tip says the next sync keeps it. The heading's action
- *  slot is `Revert to playlist`, one press, which drops those edits. */
-export function StreamDetailsGroup({ channel, draft, errors, onChange, revertReason, onRevert }: StreamDetailsGroupProps) {
+ *  admin changed on a synced row wears `Edited` after it, and its tip says the next sync keeps it. `Revert to playlist`
+ *  (which drops those edits) is the icon on the Status group's `Synced from` row. */
+export function StreamDetailsGroup({ channel, draft, errors, onChange }: StreamDetailsGroupProps) {
   const edited = new Set(channel.editedFields ?? []);
   const tipOf = (key: string, tip: string | undefined): string | undefined =>
     edited.has(key) ? [tip, CHANNEL_TIPS.edited].filter((part) => part !== undefined).join(" ") : tip;
-  const revert = (
-    <Button variant="ghost" size="sm" reason={revertReason} onClick={onRevert}>
-      <Undo2 aria-hidden /> Revert to playlist
-    </Button>
-  );
 
   return (
-    <Group id="st-details" icon={FileText} title="Details" action={revert}>
+    <Group id="st-details" icon={FileText} title="Details">
       {FIELDS.map((field, index) => (
         <div key={field.key} className="contents">
           <Row

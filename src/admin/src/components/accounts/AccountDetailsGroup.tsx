@@ -5,6 +5,8 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
+import { SaveDetails } from "@/components/records/SaveDetails";
+import type { SaveVerb } from "@/lib/workspace-verbs";
 import { ENABLED_TIP, LAST_SIGN_IN_TIP, SECURITY_QUESTION_TIP } from "@/constants/account-copy";
 import type { AccountDraft } from "@/lib/account-draft";
 import { formatWhen } from "@/lib/format-when";
@@ -18,12 +20,14 @@ export interface AccountDetailsGroupProps {
   readonly onChange: (patch: Partial<AccountDraft>) => void;
   /** Why the Enabled switch cannot be turned off (the last enabled account); undefined when it can. */
   readonly lockReason: string | undefined;
+  /** The form's one commit, ending this group. */
+  readonly save: SaveVerb;
 }
 
 /** `Details`: Username, the Enabled switch (the inverse of the stored `disabled`), the last sign-in and whether a
  *  security question is set (`Set` or `Not set`), both read only. The username is the identity and comes first; an
  *  account has no name. The switch is disabled with its reason while this is the last enabled account. */
-export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason }: AccountDetailsGroupProps) {
+export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason, save }: AccountDetailsGroupProps) {
   const toggle = (
     <Toggle
       checked={draft.enabled}
@@ -63,6 +67,7 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
           {account.securityQuestionSet === true ? "Set" : "Not set"}
         </span>
       </Row>
+      <SaveDetails save={save} />
     </Group>
   );
 }

@@ -1,9 +1,8 @@
 import { FileText, Undo2 } from "lucide-react";
-import { Button } from "@giga/ui/controls/Button";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { Tooltip } from "@giga/ui/form/Tooltip";
 import { StateWord } from "@/components/records/StateWord";
 import {
   ENABLED_TIP,
@@ -29,7 +28,7 @@ export interface TitleDetailsGroupProps {
   readonly draft: TitleDraft;
   readonly errors: FormErrors;
   readonly onChange: (patch: Partial<TitleDraft>) => void;
-  /** `Revert to TMDB` in the action slot, disabled with its reason. */
+  /** `Revert to TMDB`, the icon ending the State row, disabled with its reason. */
   readonly revert: { readonly reason: string | undefined; readonly onPress: () => void };
 }
 
@@ -37,7 +36,7 @@ type TextKey = "year" | "rating" | "genres" | "runtime" | "streamUrl";
 
 /** `Details` (`37` section 4.3): Title, Kind (read-only), Year, the Enabled switch, TMDB id (editable only on a title
  *  made by hand), Rating, Genres (a comma list), Runtime (minutes, a movie only), the Stream address and the State
- *  word, read-only. `Revert to TMDB` sits in the action slot. */
+ *  word, read-only, which ends with the `Revert to TMDB` icon. */
 export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: TitleDetailsGroupProps) {
   const manual = isManualTitle(detail);
   const text = (key: TextKey, label: string, tip: string, inputMode?: "numeric" | "decimal") => (
@@ -51,18 +50,13 @@ export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: T
     />
   );
   const verb = (
-    <Button variant="ghost" size="sm" reason={revert.reason} onClick={revert.onPress}>
-      <Undo2 aria-hidden /> Revert to TMDB
-    </Button>
+    <IconButton aria-label="Revert to TMDB" title={REVERT_TIP} reason={revert.reason} onClick={revert.onPress}>
+      <Undo2 className="size-3.5" aria-hidden />
+    </IconButton>
   );
 
   return (
-    <Group
-      id="tw-details"
-      icon={FileText}
-      title="Details"
-      action={revert.reason === undefined ? <Tooltip text={REVERT_TIP}>{verb}</Tooltip> : verb}
-    >
+    <Group id="tw-details" icon={FileText} title="Details">
       <TitleTextRow
         label="Title"
         value={draft.title}
@@ -87,7 +81,7 @@ export function TitleDetailsGroup({ detail, draft, errors, onChange, revert }: T
       {text("genres", "Genres", GENRES_TIP)}
       {detail.kind === "movie" && text("runtime", "Runtime", RUNTIME_TIP, "numeric")}
       {text("streamUrl", "Stream address", STREAM_TIP)}
-      <Row label="State" tip={STATE_TIP}>
+      <Row label="State" tip={STATE_TIP} trailing={verb}>
         <span className="flex h-9 items-center">
           <StateWord state={titleStateOf(detail)} />
         </span>

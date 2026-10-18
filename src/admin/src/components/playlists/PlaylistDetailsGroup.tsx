@@ -6,6 +6,8 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
+import { SaveDetails } from "@/components/records/SaveDetails";
+import type { SaveVerb } from "@/lib/workspace-verbs";
 import { ADDRESS_TIP, ENABLED_TIP, REPLACE_TITLE } from "@/constants/playlist-copy";
 import { replaceReason, startReplace, type PlaylistDraft } from "@/lib/playlist-draft";
 import type { FormErrors } from "@/lib/record-form";
@@ -16,13 +18,15 @@ export interface PlaylistDetailsGroupProps {
   readonly draft: PlaylistDraft;
   readonly errors: FormErrors;
   readonly onChange: (patch: Partial<PlaylistDraft>) => void;
+  /** The form's one commit, ending this group. */
+  readonly save: SaveVerb;
 }
 
 /** `Details` (`38` section 3.3): Name (first, optional), Address, Enabled. The Address shows the backend's `masked`,
  *  read-only and mono, with a ghost `Replace` at the row's end. `Replace` unlocks it as an EMPTY password field (never
  *  prefilled: the address is never shown back) and disables itself with `Type the new value, then Save.`; left empty,
  *  nothing is sent. Masking is display only: the stored address changes only when a new one is saved. */
-export function PlaylistDetailsGroup({ playlist, draft, errors, onChange }: PlaylistDetailsGroupProps) {
+export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }: PlaylistDetailsGroupProps) {
   const locked = !draft.replacing;
   const reason = replaceReason(draft);
   const replace = (
@@ -74,6 +78,7 @@ export function PlaylistDetailsGroup({ playlist, draft, errors, onChange }: Play
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
         <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
       </Row>
+      <SaveDetails save={save} />
     </Group>
   );
 }

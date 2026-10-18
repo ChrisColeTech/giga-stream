@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
+import { DiscardBar } from "@/components/records/DiscardBar";
 import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { CHANNEL_LABELS, CHOOSE_UNAVAILABLE, LIVE_SECTION_IDS, LIVE_SECTIONS, LOADING_REASON } from "@/constants/channel-copy";
@@ -13,11 +14,11 @@ import { LiveDetailsGroup } from "./LiveDetailsGroup";
 import { LiveStatusGroup } from "./LiveStatusGroup";
 import { PlaybackGroup } from "./PlaybackGroup";
 
-/** A live channel's workspace (`36` section 6): the rail (`‹ Channels`, Details, Playback, Status), the strip
- *  (`Discard changes`, `Save`, `Preview →`) and one scrolling page. `Rebuild` and the Status `Refresh` are
- *  their own verbs; everything else is the one Save. */
+/** A live channel's workspace (`36` section 6): the rail (`‹ Channels`, Details, Playback, Status), the
+ *  toolbar (the `Preview` arrow), the pinned `Discard changes` and one scrolling page. `Save details` ends Playback; the
+ *  Status group's `Refresh status` and `Rebuild` are their own verbs. */
 export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdminChannel; readonly active: boolean }) {
-  const { form, actions, unreachable, toolbar } = useChannelEditor(channel);
+  const { form, actions, unreachable, save, forward } = useChannelEditor(channel);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
   const loading = useAppStore((state) => state.channels.status === "loading");
   const spy = useScrollSpy(LIVE_SECTION_IDS, LIVE_SECTION_IDS[0] ?? "lv-details");
@@ -43,8 +44,9 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar label="Channel toolbar" {...toolbar} />}
+      toolbar={<WorkspaceToolbar label="Channel toolbar" forward={forward} />}
     >
+      <DiscardBar dirty={form.dirty} onDiscard={form.discard} />
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(CHANNEL_LABELS) } as CSSProperties}>
           <div ref={spy.bind("lv-details")}>
@@ -53,20 +55,20 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
               draft={draft}
               errors={form.errors}
               onChange={form.set}
-              rebuildReason={rebuildReason(channel, form.dirty, write)}
-              onRebuild={() => void track("rebuild", () => flows.rebuild(channel.id))}
               chooseReason={actions.canChoose ? undefined : CHOOSE_UNAVAILABLE}
               onChoose={() => void choose()}
             />
           </div>
           <div ref={spy.bind("lv-playback")}>
-            <PlaybackGroup draft={draft} onChange={form.set} />
+            <PlaybackGroup draft={draft} onChange={form.set} save={save} />
           </div>
           <div ref={spy.bind("lv-status")}>
             <LiveStatusGroup
               channel={channel}
               refreshReason={loading ? LOADING_REASON : undefined}
               onRefresh={() => void track("refresh", flows.refresh)}
+              rebuildReason={rebuildReason(channel, form.dirty, write)}
+              onRebuild={() => void track("rebuild", () => flows.rebuild(channel.id))}
               onCopy={actions.copyAddress}
             />
           </div>

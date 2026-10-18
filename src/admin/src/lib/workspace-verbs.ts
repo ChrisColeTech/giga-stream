@@ -1,38 +1,38 @@
+import { ArrowRight } from "lucide-react";
 import type { ToolbarVerb } from "@giga/ui/shell/ToolbarStrip";
 import { NOTHING_CHANGED } from "@/constants/record-copy";
 
-/** One verb of a workspace's strip: what it says, what it does, and why it cannot be used now. */
+/** One verb of a workspace: what it says, what it does, and why it cannot be used now. */
 export interface ToolbarAction {
   readonly label: string;
   readonly onPress: () => void;
   readonly reason?: string;
 }
 
-export interface WorkspaceVerbs {
-  /** Whether the draft differs from the saved record. */
-  readonly dirty: boolean;
-  readonly discard: ToolbarAction;
-  readonly save: ToolbarAction;
-  /** The one forward verb (`Titles →`), filled; absent on a page that has none (Accounts). */
-  readonly forward?: ToolbarAction;
+/** What a form's last editable group ends with (`SaveDetails`): the press and the reason it cannot be used yet. */
+export interface SaveVerb {
+  readonly onPress: () => void;
+  readonly reason?: string;
 }
 
-const verb = (id: string, tone: ToolbarVerb["tone"], action: ToolbarAction, reason?: string): ToolbarVerb => ({
-  id,
-  tone,
-  label: action.label,
-  onPress: action.onPress,
-  reason,
-});
-
-/** A workspace's strip, in order: `Discard changes` (ghost), `Save` (edged), the forward verb (filled). Discard and Save
- *  are disabled with `Nothing has changed.` while the draft equals its baseline; a reason the page gives (a refused
- *  value) takes the place of that once something has changed. The forward verb carries only its own reason. */
-export function workspaceVerbs({ dirty, discard, save, forward }: WorkspaceVerbs): readonly ToolbarVerb[] {
-  const idle = dirty ? undefined : NOTHING_CHANGED;
+/** A workspace's page toolbar (`01` section 9): only its forward verb, an arrow icon whose tooltip names the tab it goes
+ *  to (`Titles`), or nothing (Accounts). Save and Discard are not here: Save ends the form's body and Discard is the form's
+ *  ghost verb (`changeReason`). The forward verb carries only its own reason. */
+export function forwardVerbs(forward: ToolbarAction | undefined): readonly ToolbarVerb[] {
+  if (forward === undefined) return [];
   return [
-    verb("discard", "ghost", discard, idle ?? discard.reason),
-    verb("save", "edged", save, idle ?? save.reason),
-    ...(forward === undefined ? [] : [verb("forward", "filled", forward, forward.reason)]),
+    {
+      id: "forward",
+      label: forward.label,
+      icon: ArrowRight,
+      onPress: forward.onPress,
+      ...(forward.reason !== undefined && { reason: forward.reason }),
+    },
   ];
+}
+
+/** Why `Save details` and `Discard changes` cannot be used: `Nothing has changed.` while the draft equals its baseline;
+ *  once something has changed, the page's own reason (a refused value, a call going), else undefined. */
+export function changeReason(dirty: boolean, own?: string): string | undefined {
+  return dirty ? own : NOTHING_CHANGED;
 }

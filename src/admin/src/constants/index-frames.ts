@@ -1,8 +1,8 @@
 import { Clapperboard, List, Plug, Plus, Radio, Timer, UserPlus, Users, type LucideIcon } from "lucide-react";
-import { TICK_FIRST, TICK_JOB_FIRST } from "@/constants/record-copy";
+import { TICK_FIRST } from "@/constants/record-copy";
 import type { Tab } from "@/types/shell";
 
-/** An index's forward verb (`28` section 7.2): filled, in the toolbar strip. `to` switches to that tab; `reason` is why it
+/** An index's forward verb (`28` section 7.2): an arrow icon in the toolbar strip, its label the tooltip. `to` switches to that tab; `reason` is why it
  *  cannot be used yet (a verb on the ticked rows, with no row to tick). */
 export interface ForwardVerb {
   readonly label: string;
@@ -30,7 +30,7 @@ export const INDEX_FRAMES: Readonly<Record<Tab, IndexFrame>> = {
     listIcon: Radio,
     listTitle: "Channels",
     newRows: 5,
-    forward: { label: "Preview →", reason: TICK_FIRST },
+    forward: { label: "Preview", reason: TICK_FIRST },
   },
   providers: {
     tab: "providers",
@@ -39,7 +39,7 @@ export const INDEX_FRAMES: Readonly<Record<Tab, IndexFrame>> = {
     listIcon: Plug,
     listTitle: "Providers",
     newRows: 4,
-    forward: { label: "Titles →", to: "titles" },
+    forward: { label: "Titles", to: "titles" },
   },
   titles: {
     tab: "titles",
@@ -48,7 +48,7 @@ export const INDEX_FRAMES: Readonly<Record<Tab, IndexFrame>> = {
     listIcon: Clapperboard,
     listTitle: "Titles",
     newRows: 3,
-    forward: { label: "Jobs →", to: "jobs" },
+    forward: { label: "Jobs", to: "jobs" },
   },
   playlists: {
     tab: "playlists",
@@ -57,7 +57,7 @@ export const INDEX_FRAMES: Readonly<Record<Tab, IndexFrame>> = {
     listIcon: List,
     listTitle: "Playlists",
     newRows: 2,
-    forward: { label: "Jobs →", to: "jobs" },
+    forward: { label: "Jobs", to: "jobs" },
   },
   jobs: {
     tab: "jobs",
@@ -66,7 +66,7 @@ export const INDEX_FRAMES: Readonly<Record<Tab, IndexFrame>> = {
     listIcon: Timer,
     listTitle: "Jobs",
     newRows: 3,
-    forward: { label: "Run job", reason: TICK_JOB_FIRST },
+    forward: null,
   },
   accounts: {
     tab: "accounts",

@@ -1,9 +1,10 @@
 import { useEffect } from "react";
+import { DiscardBar } from "@/components/records/DiscardBar";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { MANUAL_NO_TMDB, NOTHING_EDITED, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/title-copy";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { useTitleActions } from "@/hooks/useTitleActions";
-import type { ToolbarAction } from "@/lib/workspace-verbs";
+import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
 import { formKeyOf, saveRequiredReason } from "@/lib/title-checks";
 import { draftOfTitle, sameTitleDraft } from "@/lib/title-draft";
 import { isManualTitle } from "@/lib/title-rows";
@@ -29,8 +30,8 @@ function revertReason(detail: AdminTitleDetail, saving: boolean, unreachable: bo
 }
 
 /** A title's workspace once its detail has answered: the form over the detail, ONE Save sending only the changed fields
- *  (`lib/title-body.ts`; an emptied optional field is `null`), whose answer replaces the row and the baseline, and
- *  `Revert to TMDB` in Details' action slot. */
+ *  (`lib/title-body.ts`; an emptied optional field is `null`), whose answer replaces the row and the baseline. `Save
+ *  details` ends the page's last group; `Revert to TMDB` is the icon on Details' State row. */
 export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
   const form = useRecordForm({ initial: draftOfTitle(detail), same: sameTitleDraft });
   const { flows, saving, track } = useTitleActions();
@@ -60,20 +61,14 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
     if (result.ok && next !== null && next !== undefined) form.reset(draftOfTitle(next));
   };
   const reason = saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : saveRequiredReason(form.draft);
+  const saveVerb = { onPress: () => void save(), reason: changeReason(form.dirty, reason) };
 
   return (
     <TitleFrame
       series={series}
       active={active}
-      toolbar={
-        <WorkspaceToolbar
-          label="Title toolbar"
-          dirty={form.dirty}
-          discard={{ label: "Discard changes", onPress: form.discard }}
-          save={{ label: "Save", onPress: () => void save(), reason }}
-          forward={jobs}
-        />
-      }
+      toolbar={<WorkspaceToolbar label="Title toolbar" forward={jobs} />}
+      bar={<DiscardBar dirty={form.dirty} onDiscard={form.discard} />}
     >
       {(spy) => (
         <>
@@ -90,7 +85,12 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
             <TitlePlotGroup draft={form.draft} errors={form.errors} onChange={form.set} />
           </div>
           <div ref={spy.bind("tw-images")}>
-            <TitleImagesGroup draft={form.draft} errors={form.errors} onChange={form.set} last={!series} />
+            <TitleImagesGroup
+              draft={form.draft}
+              errors={form.errors}
+              onChange={form.set}
+              save={series ? undefined : saveVerb}
+            />
           </div>
           {series && (
             <div ref={spy.bind("tw-seasons")}>
@@ -98,8 +98,8 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
                 detail={detail}
                 manual={manual}
                 seasons={form.draft.seasons}
-                error={form.errors["seasons"]}
                 onChange={(seasons) => form.set({ seasons })}
+                save={saveVerb}
               />
             </div>
           )}

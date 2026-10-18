@@ -79,30 +79,38 @@ describe("the accounts list", () => {
   });
 });
 
-describe("the bulk toolbar", () => {
-  it("offers Enable, Disable and Delete, each disabled with `Tick an account first` until something is ticked", () => {
+describe("the accounts table strip", () => {
+  const strip = (html: string): string => html.slice(html.indexOf('aria-label="Accounts table"'));
+
+  it("holds Refresh always, in the strip and not in the heading, and no bulk verb until a row is ticked", () => {
     state().accountsLoaded([account("a"), account("b")]);
     const html = page();
-    for (const verb of ["Enable", "Disable"]) assert.ok(html.includes(`aria-label="${verb}. Tick an account first"`), verb);
-    assert.ok(html.includes('title="Tick an account first"'), "Delete is the armed two-step");
+    const table = strip(html);
+    assert.ok(table.includes('aria-label="Refresh accounts"') && table.includes('title="Refresh accounts"'));
+    assert.ok(html.indexOf('aria-label="Accounts table"') > html.indexOf(">Accounts</h2>"));
+    for (const verb of ["Enable", "Disable"]) assert.ok(!table.includes(`aria-label="${verb}`), verb);
+    assert.ok(!table.includes("selected"));
+    assert.ok(!html.includes(">Refresh</button>"), "no text Refresh");
   });
 
-  it("arms the verbs for ticked rows, and refuses the signed-in account with its reason", () => {
+  it("shows the count and the verbs for ticked rows, and refuses the signed-in account with its reason", () => {
     state().accountsLoaded([account(7), account("b"), account("c")]);
     state().accountTick("b", true);
-    let html = page();
-    assert.ok(html.includes(">Disable</button>") && html.includes(">Delete</button>"));
-    assert.ok(!html.includes("Tick an account first"));
+    let table = strip(page());
+    assert.ok(table.includes('<span class="text-dim tabular-nums">1</span> selected'));
+    assert.ok(table.includes('aria-label="Enable"') && table.includes('aria-label="Disable"'));
+    assert.ok(table.includes(">Delete</button>") && table.includes('aria-label="Clear selection"'));
+    assert.ok(!table.includes("Tick an account first"));
     state().accountTick("b", false);
     state().accountTick(7, true);
-    html = page();
-    assert.ok(html.includes('aria-label="Disable. Your own account cannot be disabled here."'));
-    assert.ok(html.includes('title="Your own account cannot be deleted here."'));
+    table = strip(page());
+    assert.ok(table.includes('aria-label="Disable. Your own account cannot be disabled here."'));
+    assert.ok(table.includes('aria-label="Delete. Your own account cannot be deleted here."'));
   });
 });
 
 describe("an account's workspace", () => {
-  it("opens from the held list with the rail, Details, Password and a toolbar of Discard and Save only", () => {
+  it("opens from the held list with the rail, Details, Password, the pinned Discard and Save details ending Details", () => {
     state().accountsLoaded([account("a"), account("b")]);
     state().openWorkspace("accounts", "a");
     const html = page();
@@ -111,9 +119,10 @@ describe("an account's workspace", () => {
     assert.ok(!html.includes('aria-label="Name"') && html.includes('aria-label="Username"'));
     assert.ok(html.includes("Security question") && html.includes("Not set"), "the read-only fact");
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
-    assert.ok(html.includes("Discard changes") && html.includes(">Save<") && !html.includes("Titles →"));
+    assert.ok(!html.includes(">Save<") && !html.includes("Titles →"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(html.includes('autoComplete="new-password"'));
+    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
+    assert.ok(at(html, "Save details") > at(html, 'id="ac-details"') && at(html, "Save details") < at(html, 'id="ac-password"'));    assert.ok(html.includes('autoComplete="new-password"'));
     assert.ok(html.includes('aria-label="Set new password. Type a new password."'));
   });
 

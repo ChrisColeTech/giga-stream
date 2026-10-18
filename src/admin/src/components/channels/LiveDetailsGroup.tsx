@@ -1,5 +1,4 @@
-import { FileText, Hammer } from "lucide-react";
-import { Button } from "@giga/ui/controls/Button";
+import { FileText } from "lucide-react";
 import { Input } from "@giga/ui/controls/Input";
 import { Segmented } from "@giga/ui/controls/Segmented";
 import { Select } from "@giga/ui/controls/Select";
@@ -28,18 +27,15 @@ export interface LiveDetailsGroupProps {
   readonly draft: LiveDraft;
   readonly errors: FormErrors;
   readonly onChange: (patch: Partial<LiveDraft>) => void;
-  /** `Rebuild`'s reason (`Save the channel first`, `Enable the channel to rebuild it.`), or undefined. */
-  readonly rebuildReason: string | undefined;
-  readonly onRebuild: () => void;
   readonly chooseReason: string | undefined;
   readonly onChoose: () => void;
 }
 
 /** A live channel's `Details` (`36` section 6): Name, Kind (read-only), Category (one of six), Plays (Folder or
  *  Videos) and the folder or the ordered videos, Enabled, the logo the backend draws and the Id, both read-only. The
- *  heading's action slot is `Rebuild`. */
+ *  heading carries nothing; `Rebuild` is in the Status group. */
 export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
-  const { channel, draft, errors, onChange, rebuildReason, onRebuild, chooseReason, onChoose } = props;
+  const { channel, draft, errors, onChange, chooseReason, onChoose } = props;
   const field = (key: "name", label: string) => (
     <Input
       value={draft[key]}
@@ -51,14 +47,9 @@ export function LiveDetailsGroup(props: LiveDetailsGroupProps) {
       onChange={(event) => onChange({ [key]: event.target.value })}
     />
   );
-  const rebuild = (
-    <Button variant="ghost" size="sm" reason={rebuildReason} onClick={onRebuild}>
-      <Hammer aria-hidden /> Rebuild
-    </Button>
-  );
 
   return (
-    <Group id="lv-details" icon={FileText} title="Details" action={rebuild}>
+    <Group id="lv-details" icon={FileText} title="Details">
       <Row label="Name" error={errors["name"]}>
         {field("name", "Name")}
       </Row>

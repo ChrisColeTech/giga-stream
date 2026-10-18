@@ -5,16 +5,16 @@ import { ChannelsList } from "./ChannelsList";
 import { ChannelsToolbar } from "./ChannelsToolbar";
 import { NewChannelForm } from "./NewChannelForm";
 
-/** The Channels index (`36` section 5): the toolbar strip (the bulk verbs and `Preview →`) over `New channel` and the
- *  list. A bulk run holds the New form's `Create` too. */
+/** The Channels index (`36` section 5): the page toolbar (the `Preview` arrow) over `New channel` and the list, whose table
+ *  strip holds the bulk verbs. A bulk run holds the New form's `Create` too. */
 export function ChannelsIndex() {
   const bulk = useChannelBulk();
   return (
     <>
-      <ChannelsToolbar bulk={bulk} />
+      <ChannelsToolbar />
       <Workspace labels={NEW_CHANNEL_LABELS}>
         <NewChannelForm working={bulk.working} />
-        <ChannelsList />
+        <ChannelsList bulk={bulk} />
       </Workspace>
     </>
   );

@@ -1,6 +1,6 @@
 import { History, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "@giga/ui/controls/Button";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { InlineLink } from "@giga/ui/controls/InlineLink";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
@@ -34,17 +34,12 @@ export interface JobLastRunGroupProps {
   readonly onOpenChannel: (id: string) => void;
 }
 
-/** `Last run` (`38` section 4.3), read-only, with a heading `Refresh` (how a catalog run's end is learnt: nothing
- *  polls): State (the word, with the pulsing bar while running), When, Outcome; a playlist job's Counts, Refused (the
+/** `Last run` (`38` section 4.3), read-only. The State row ends with a `Refresh last run` icon (how a catalog run's end
+ *  is learnt: nothing polls): State (the word, with the pulsing bar while running), When, Outcome; a playlist job's Counts, Refused (the
  *  refusal examples) and Created (each id a link to its channel); a catalog job's Titles and Stale. `lastCounts` is
  *  read defensively: an absent key is a shimmer line. */
 export function JobLastRunGroup({ job, loading, onRefresh, onOpenChannel }: JobLastRunGroupProps) {
   const state = stateOfJob(job);
-  const refresh = (
-    <Button variant="ghost" size="sm" reason={loading ? LOADING_REASON : undefined} onClick={onRefresh}>
-      <RefreshCw aria-hidden /> Refresh
-    </Button>
-  );
   const playlist = playlistCounts(job);
   const catalog = catalogCounts(job);
   const list = (items: readonly string[] | undefined, open?: (item: string) => void): ReactNode => {
@@ -61,8 +56,20 @@ export function JobLastRunGroup({ job, loading, onRefresh, onOpenChannel }: JobL
   };
 
   return (
-    <Group id="jw-last" icon={History} title="Last run" action={refresh} last>
-      <Row label="State">
+    <Group id="jw-last" icon={History} title="Last run" last>
+      <Row
+        label="State"
+        trailing={
+          <IconButton
+            aria-label="Refresh last run"
+            title="Refresh last run"
+            reason={loading ? LOADING_REASON : undefined}
+            onClick={onRefresh}
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+          </IconButton>
+        }
+      >
         <span className="flex h-9 items-center gap-2">
           <StateWord state={state} />
           {state.word === "running" && <RunningBar />}
