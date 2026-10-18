@@ -259,14 +259,15 @@ should be crud for titles and playlists."* So there are two new record types: a 
   playlist is skipped by every job.
 - **Jobs** (`sync_jobs` table): `id`, `name`, `type` (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`,
   `"24h"` or `"off"`), `config` JSON, `last_run_at`, `last_outcome`, `last_counts` JSON, `created_at`. A playlist job's
-  config is `playlistId`, `dryRun` and `prune`; a catalog job's is `scope` (`trending` or `popular`), `kind` (`movie` or
-  `tv`) and `pages`. Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
+  config is `playlistId`, `dryRun` and `prune`; a catalog job's is `scope` (`trending`, `popular` or `discover`), `kind`
+  (`movie` or `tv`, unused by `discover`) and `pages` (each kind's cap; up to 500 for discover). Routes (signed in, audited): `GET` and `POST /api/jobs`; `GET`, `PATCH`, `DELETE
   /api/jobs/:id`; `POST /api/jobs/:id/run` (single-flight per job, `409 sync.busy`; a disabled job or a job whose
   playlist is disabled is refused with `422 job.disabled` and its reason). A playlist job syncs only its playlist, under
   the rules of 3.10; a catalog job syncs its scope.
 - **Seeding** (first start only, from the environment): each `PLAYLIST_URLS` entry becomes a playlist and a playlist job
-  for it (schedule `PLAYLIST_SYNC_SCHEDULE`); the four catalog jobs (trending and popular, movies and series) are created,
-  enabled when `TMDB_SYNC_SCHEDULE` is set. The existing `POST/GET /api/titles/sync` and `POST/GET /api/playlist-sync`
+  for it (schedule `PLAYLIST_SYNC_SCHEDULE`); the catalog job - the library fill, scope `discover` - is created with
+  schedule `TMDB_SYNC_SCHEDULE` when that is set, else `off` (runnable on demand). The four per-slice catalog jobs
+  (trending and popular, movies and series) are retired (owner, 2026-10-17): no longer seeded, existing records deleted. The existing `POST/GET /api/titles/sync` and `POST/GET /api/playlist-sync`
   keep working as thin wrappers over the same services the jobs use; they do not go through the job records.
 - **Scheduling:** one timer for the whole backend, armed for the earliest due `enabled` job with a schedule; it runs that
   job, then re-arms (`01` section 4.4 still names two env-armed schedulers and must be amended to this one timer). A change to a job's `enabled` or `schedule`, or a
@@ -414,7 +415,7 @@ the Titles or Playlists pages.
 | Title | Title*, Kind*, Year* | `Enabled` | TMDB id, Rating, Genres, Runtime, Poster, Backdrop, Plot, Cast, Stream address, Seasons | State, Sources |
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
-| Catalog job | Name*, Type*, Scope*, Kind* | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
+| Catalog job | Name*, Type*, Scope* (Trending, Popular or Library), Kind* (not asked for Library) | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
 | Account | Username*, Password* (New only; no Name: removed, owner, 2026-10-17) | `Enabled` | none | Last sign-in, Security question (`Set` or `Not set`) |
 
 ### 4.5 Channels index (proposed)
@@ -555,7 +556,8 @@ A title is a record, like a channel. There is no sync panel on this tab; syncing
 **Jobs** hold the syncs. Nothing about syncing sits on the Titles or Playlists pages.
 
 - **Index:** New job (Type Segmented Playlist or Catalog; Name; then, for a playlist job, Playlist (a select of the
-  playlist records), and for a catalog job, Scope Segmented Trending or Popular and Kind Segmented Movies or Series;
+  playlist records), and for a catalog job, Scope Segmented Trending, Popular or Library — Kind Segmented Movies or
+  Series, not asked for Library;
   `Create`); the list (name, type, target, schedule, last run, outcome, state: `idle`, `running`, `failed` or
   `disabled`); row end `Delete` as an `ArmedButton`. Toolbar: `Run job`, the verb in the filled accent, acting on the
   ticked jobs (like `Start training`); disabled, with its reason, when none is ticked or a ticked job is disabled, already

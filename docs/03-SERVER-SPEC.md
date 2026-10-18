@@ -865,15 +865,27 @@ nobody "adds a title" — the store only ever mirrors TMDB.
   is missing a field the contract gives its shape — a series detail without `seasons` — is refetched
   whole once, and the refetched payload replaces it. Later reads are ordinary fill-through again.
 - **Bulk sync (admin).** `POST /api/titles/sync` — body `{ scope: "trending" | "popular", kind:
-  "movie" | "tv", pages? }`, or `{ scope: "titles", ids: [...] }` — walks TMDB's trending or popular
-  lists for that kind (first `pages`, default 5), storing each title and its popularity, and refetching
-  stale details. Signed in only. It runs as one background job: a second start is `409
+  "movie" | "tv", pages? }`, `{ scope: "discover", pages? }`, or `{ scope: "titles", ids: [...] }`.
+  Trending and popular walk TMDB's lists for that kind (first `pages`, default 5) — freshness slices
+  for the browse rows. Discover is the **library fill** (owner, 2026-10-17): one run walks TMDB's
+  `/discover/movie` then `/discover/tv` sorted by popularity — `kind` is not part of the request, the
+  walk covers both kinds. `pages` caps each kind's walk (default 100, at most `DISCOVER_PAGES_MAX`
+  500, TMDB's own page cap; ≈ 10,000 titles per kind), so a run lifts the store toward the ~27,000
+  library target (`32`, `41`). Each scope stores each title and its popularity, and refetches stale
+  details. Signed in only. It runs as one background job: a second start is `409
   sync.busy`, and `GET /api/titles/sync` answers `{ running, startedAt, lastRunAt, lastOutcome,
-  titles, stale, schedule }`. The job honours the `7.6` rate limit and backoff.
+  titles, stale, schedule }`. The job honours the `7.6` rate limit and backoff, and stops between
+  pages on shutdown.
 - **Schedule hook.** `TMDB_SYNC_SCHEDULE` (default off) accepts an interval such as `6h` or `24h`;
-  when set, the backend runs the trending and popular warm-up for both kinds on that interval after
-  start-up and every interval after. A scheduled run is audited with the actor `system`; a manual run
+  when set, it arms the discover job (the library fill) on that interval after start-up and every
+  interval after. A scheduled run is audited with the actor `system`; a manual run
   with the admin's account.
+- **The freshness jobs are retired (owner, 2026-10-17).** The four seeded catalog jobs (trending and
+  popular, movies and series) warmed browse slices the title routes fill through on demand anyway;
+  nothing read from them and they never ran. The backend seeds one catalog job - the discover library
+  fill - and no longer seeds the four; existing records can be deleted. The trending and popular
+  scopes stay available (the New Job form, a manual `POST /api/titles/sync`) for an occasional
+  warm-up.
 - **Outcome.** A finished sync is reported only by `GET /api/titles/sync` (`lastRunAt`, `lastOutcome`,
   `titles`, `stale`) and its audit entries. The revision counter is untouched: titles
   are not channel data. The fileserver reads titles on demand (`3.5`, `3.6`) and warms its image cache
