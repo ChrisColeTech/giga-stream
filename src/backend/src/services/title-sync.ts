@@ -10,6 +10,7 @@ import { createStoreRow } from "./title-store-row.js";
 import { TITLE_FRESH_MS, type SyncRequest } from "./title-shapes.js";
 import { createDetailFetch } from "./title-detail-fetch.js";
 import { createDetailsPhase } from "./title-details-phase.js";
+import { createOmdbStep } from "./title-omdb-step.js";
 import { createGenreSync } from "./title-genre-sync.js";
 import { type PhaseRun, type Seen, isStopping } from "./title-run.js";
 import { createTitleWalk } from "./title-walk.js";
@@ -23,6 +24,8 @@ export interface SyncResult {
   /** Titles given their detail, and seasons given their episodes, this run (docs/47 section 3.1). */
   detailed: number;
   seasons: number;
+  /** Titles given an OMDb block, this run (docs/11 section 7.3). */
+  enriched: number;
 }
 
 /** What a caller hands one run: its stop signal and where its progress goes. */
@@ -53,7 +56,9 @@ export function createTitleSync(deps: {
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
   const walk = createTitleWalk({ store, tmdb, storeRow: createStoreRow({ store, deleted: deps.deleted, now }) });
-  const details = createDetailsPhase({ store, fetchDetail: createDetailFetch({ store, tmdb, now }), now });
+  const details = createDetailsPhase({
+    store, fetchDetail: createDetailFetch({ store, tmdb, now }), omdb, enrichOmdb: createOmdbStep({ store, omdb, now }), now,
+  });
   const syncGenres = createGenreSync({ store, tmdb });
 
   let running: Running | null = null;
@@ -75,7 +80,7 @@ export function createTitleSync(deps: {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
     const signal = options.signal ?? new AbortController().signal;
     recordSyncAudit("sync.started", actor, detail);
-    const seen: Seen = { titles: 0, detailed: 0, seasons: 0 };
+    const seen: Seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0 };
     let result: SyncResult;
     try {
       const run: PhaseRun = { signal, report: options.report ?? noReport, seen, shuttingDown: () => stopped };
@@ -94,8 +99,8 @@ export function createTitleSync(deps: {
     } finally {
       running = null;
     }
-    const { detailed, seasons } = result;
-    const audited = { ...detail, titles: result.titles, detailed, seasons };
+    const { detailed, seasons, enriched } = result;
+    const audited = { ...detail, titles: result.titles, detailed, seasons, enriched };
     if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
     else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);
     else recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });

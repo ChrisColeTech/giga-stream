@@ -1,5 +1,5 @@
 // The Library fill's `details` phase (docs/47 section 3.1) against a fake TMDB: popularity order, Stop between titles and
-// resuming by query, per-title failures with the three-strike skip, edited titles kept, no OMDb, and a series' seasons
+// resuming by query, per-title failures with the three-strike skip, edited titles kept, and a series' seasons
 // riding its detail call through append_to_response.
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -35,7 +35,7 @@ test("details are fetched by popularity, highest first, then by id; counts say w
   assert.deepEqual([...new Set(tmdb.details())], [
     "movie:detail:1021", "movie:detail:1020", "movie:detail:1011", "movie:detail:1010", "tv:detail:2011", "tv:detail:2010",
   ]);
-  assert.deepEqual(job.lastCounts, { titles: 6, detailed: 6, seasons: 4, stale: 0 });
+  assert.deepEqual(job.lastCounts, { titles: 6, detailed: 6, seasons: 4, enriched: 0, stale: 0 });
   assert.deepEqual(await shapeOf(f, "movie-1010"), "detail");
 });
 
@@ -58,7 +58,7 @@ test("Stop between titles keeps what was written; running again continues with t
   assert.deepEqual([resumed.lastResult, pick(resumed, "lastCounts.detailed")], ["ok", 4]);
   assert.deepEqual([...new Set(tmdb.details().slice(before))], ["movie:detail:1011", "movie:detail:1010", "tv:detail:2011", "tv:detail:2010"],
     "the two stored details are not fetched again");
-  assert.deepEqual((await run(f)).lastCounts, { titles: 6, detailed: 0, seasons: 0, stale: 0 }, "nothing is left to fetch");
+  assert.deepEqual((await run(f)).lastCounts, { titles: 6, detailed: 0, seasons: 0, enriched: 0, stale: 0 }, "nothing is left to fetch");
 });
 
 test("a title TMDB 404s is recorded and the run goes on; three failed runs in a row skip it until its payload changes", async () => {
@@ -108,7 +108,7 @@ test("an edited title keeps its edits, a manual title is never fetched, and a re
   assert.equal(pick((await f.api("GET", `/api/titles/${pick(manual.body, "data.id")}`)).body, "data.plot"), "Mine");
 });
 
-test("the Library fill makes no OMDb call", async () => {
+test("a title without an IMDb id gets no OMDb call (the enrichment itself: title-omdb-sync.test.ts)", async () => {
   const omdb = await stubOmdb();
   const f = await fillApp(await walkTmdb({ movie: 1, tv: 1 }), 1, { OMDB_API_KEY: "omdb-test-key", OMDB_BASE: omdb.base });
   await run(f);

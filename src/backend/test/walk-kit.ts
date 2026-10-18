@@ -26,6 +26,8 @@ export const idsOf = (kind: Kind, page: number): number[] =>
 export async function walkTmdb(totals: Record<Kind, number>) {
   const state = {
     totals, rating: 7, poster: "/p.jpg", fail: new Map<string, number>(), seasonCount: 2, noSeasonKey: new Set<string>(),
+    /** Every detail carries the IMDb id `tt<id>` (the OMDb step asks by it). */
+    imdb: false,
   };
   const asked: string[] = [];
   const gates = new Map<string, { wait: Promise<void>; started: () => void }>();
@@ -60,7 +62,7 @@ export async function walkTmdb(totals: Record<Kind, number>) {
       const withCredits = append.includes("credits");
       answer = () => ({
         ...(withCredits ? { ...rowOf(kind, id), overview: `Plot ${id}`, genres: [{ id: 18, name: "Drama" }], credits: { cast: [] },
-          external_ids: {}, ...(kind === "tv" && { seasons: seasonsOf() }) } : { id }),
+          external_ids: state.imdb ? { imdb_id: `tt${id}` } : {}, ...(kind === "tv" && { seasons: seasonsOf() }) } : { id }),
         ...seasonKeys,
       });
     } else if (walk?.[1] !== undefined) {

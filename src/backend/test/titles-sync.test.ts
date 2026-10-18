@@ -77,7 +77,7 @@ test("TMDB_SYNC_SCHEDULE arms the warm-up, audited as system, without touching t
   await t.dispose();
 });
 
-test("the Library fill makes no OMDb call and a stored detail carries no omdb block; the status still reports the counter", async () => {
+test("the Library fill asks OMDb once per title by IMDb id; reads add no call; the status reports the counter", async () => {
   const tmdb = await stubTmdb();
   const omdb = await stubOmdb();
   const t = await makeApp({ config: omdbOn(tmdb, omdb) });
@@ -88,9 +88,10 @@ test("the Library fill makes no OMDb call and a stored detail carries no omdb bl
 
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   assert.deepEqual([pick(detail.body, "data.shape"), pick(detail.body, "data.imdbId")], ["detail", "tt0133093"]);
-  assert.equal(pick(detail.body, "data.omdb"), undefined);
-  assert.equal(omdb.calls.length, 0, "no OMDb call in the sync or in a read");
+  assert.equal(pick(detail.body, "data.omdb.rated"), "R", "the sync's details phase attached OMDb's block");
+  assert.equal(pick((await send(t.app, "GET", "/api/titles/tv-1399", undefined, access)).body, "data.omdb"), undefined, "OMDb missed this one");
+  assert.deepEqual(omdb.calls.map((c) => c.split("|")[0]).sort(), ["tt0133093", "tt0944947"], "two calls in the sync, none in a read");
   const status = await send(t.app, "GET", "/api/titles/sync", undefined, access);
-  assert.deepEqual(pick(status.body, "data.omdb"), { enabled: true, calls: 0, limit: 1000 });
+  assert.deepEqual(pick(status.body, "data.omdb"), { enabled: true, calls: 2, limit: 1000 });
   await t.dispose();
 });

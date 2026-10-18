@@ -8,6 +8,8 @@ export interface Seen {
   detailed: number;
   /** Seasons given their episodes. */
   seasons: number;
+  /** Titles given an OMDb block. */
+  enriched: number;
 }
 
 /** What one run shares with its phases: its stop signal, its progress report and its counts. */

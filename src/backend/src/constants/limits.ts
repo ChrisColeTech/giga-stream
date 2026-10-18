@@ -138,3 +138,11 @@ export const TMDB_APPEND_MAX = 20;
 export const TMDB_BACKOFF_MS = 2_500;
 export const TMDB_RETRIES = 3;
 export const TMDB_TIMEOUT_MS = 10_000;
+
+// The OMDb client and the Library fill's OMDb step (docs/11 section 7.3).
+/** The client stops this many calls before the daily limit so the owner's own use of the key keeps room. */
+export const OMDB_HEADROOM = 10;
+export const OMDB_DEFAULT_DAILY_LIMIT = 1_000;
+export const OMDB_TIMEOUT_MS = 10_000;
+/** This many OMDb outages in a row end the OMDb step for the rest of one run (TMDB details go on). */
+export const OMDB_MAX_ERRORS = 3;

@@ -66,7 +66,10 @@ export function createDetailFetch(deps: { store: Store; tmdb: TmdbClient; now: (
     if (base.length === 0 && first.length === 0) return undefined;
     const answer = await call([...base, ...appended(first)]);
     const payload = wholeDetail ? detailOf(kind, tmdbId, answer) : { ...prior };
-    if (wholeDetail) keepEpisodes(payload, prior);
+    if (wholeDetail) {
+      keepEpisodes(payload, prior);
+      if (prior.omdb !== undefined) payload.omdb = prior.omdb; // OMDb's block is the OMDb step's, not TMDB's to drop
+    }
     let seasons = kind === "tv" ? mergeSeasons(payload, answer, now()) : 0;
     const asked = new Set(first);
     while (kind === "tv") {
