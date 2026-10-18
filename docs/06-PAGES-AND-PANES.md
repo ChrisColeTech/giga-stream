@@ -260,7 +260,7 @@ tooltip, until one plays. Volume, mute and fullscreen are on the player and are 
 
 ```
 ┌──────────────────┬────────────────────────────────┬──────────────────┐
-│ Collections      │ All · Movies · TV · Local      │ Search           │
+│ Collections      │ All · Movies · TV · Local  ⟳ ⌕ │ Filter           │
 │ All              │ Continue Watching              │ View · Sort      │
 │ History          │ Poster grid or list            │ Genre · Year     │
 │ Favorites        │                                │ Watched          │
@@ -300,9 +300,11 @@ The groups do not fold (§2.8's exception).
 **Type strip**
 
 LoRA Studio's top strip over a gallery grid, holding `All · Movies · TV · Local` as the family's equal-width
-pill choice (`Segmented`). No changing count text. The strip is one row and holds no Search, Sort, View,
-selection count or batch verb; those belong to the filters. It is drawn over the grid, the list and Rows alike.
-Existing cards stay while a scope change resolves.
+pill choice (`Segmented`). No changing count text. At its right end, two icon buttons: **Refresh**
+(`RefreshCw`, `Refresh Library`) and, right beside it, **Search titles** (`Search`, aria-label and tooltip `Search
+titles`), which opens the spotlight (§4.6). The strip is one row and holds no filter field, Sort, View, selection
+count or batch verb; those belong to the filters. It is drawn over the grid, the list and Rows alike. Existing cards
+stay while a scope change resolves.
 
 **Continue Watching**
 
@@ -401,13 +403,13 @@ LoRA Studio's gallery filter pane: one scrolling stack of settings, each a 14px 
 
 | Filter | Control |
 |---|---|
-| Search | a field with a search icon and a clear control, `data-search` for `Ctrl+F`; combines with the type strip and every filter |
+| Filter | a field with a search icon and a clear control (`Clear the filter`), labelled `Filter`, `data-search` for `Ctrl+F`; narrows the loaded list by title and combines with the type strip and every filter. Its text is saved like the other filters (the `libraryFilter` setting, at most 200 characters, default empty; owner, 2026-10-18, reversing the earlier "the search is never saved") and restored before the first Library read |
 | View | Grid / List / Rows, segmented. It opens on the **Default view** setting, and follows that setting when it changes |
 | Sort | a select: Newest, Oldest, A to Z, Year. It opens on the **Default sort** setting and follows it when it changes. Trending is offered only when the backend supplies a real current popularity signal |
 | Genre | a field (the same box and chevron as the selects beside it, not a button) that opens a popover of chips, multi-choice, with a search box when there are 12 or more; Escape or focus leaving closes it |
 | Year | a populated select, `Any year` first |
 | Watched | a select: All, Unwatched, Watching, Watched |
-| **Clear filters** | ghost, full width, always enabled. Returns Genre, Year and Watched to their defaults and the sort to the Default sort setting; keeps the search, the type strip and the rail's view |
+| **Clear filters** | ghost, full width, always enabled. Returns Genre, Year and Watched to their defaults and the sort to the Default sort setting; keeps the Filter text, the type strip and the rail's view |
 
 - Genre and Year are populated choices and never free text, with no counts. A selected value stays
   listed until it is removed, so no choice disappears.
@@ -439,6 +441,28 @@ is nothing to cancel. The body is `Form`'s page grammar with one group.
 
 It is not a popup and has no flow of its own. It is the `Collections ▸` submenu of §4.2, summoned from a card's menu, from Title information's **Collections** button, or from the Player stage's context menu, and it is the app's one context menu (§9). Its rows are the collections, each with a check for membership. A click toggles membership at once, inline, with no dialog.
 With no collection yet, the submenu's one row says so, disabled with its reason, and **Manage collections** in the Library rail is the way to create one.
+
+### 4.6 Search titles (the spotlight popup; owner, 2026-10-18)
+
+Opened by the type strip's **Search titles** button. A wide authored popup (602px) drawn exactly as the family's
+`PopupPanel` (its frame, the `Search titles` header with its edged `X`, the body capped at the wide class's height) and
+placed by the family's `placePopup`: centred across the work area a fifth of the way down, with no scrim of its own.
+It sits one layer under the work windows' scrim, so Title information can stand over it, and its dismissal (the
+family `usePopupFrame` rules) pauses while that window is open. It searches the catalog's **titles, movies and series**, by
+title, through the Library's own read (`GET /api/library?view=all&type=all&q=`, the backend's title search); local
+files are not results.
+
+| Part | Behaviour |
+|---|---|
+| Field | a search field with the search glyph, focused on open, labelled `Search titles`. Typing searches through the Library's debounced search session (no timer of its own); `Enter` searches at once, or, with a row focused, plays it |
+| Rows | one per result, as the list view's row: a compact poster thumbnail (or the title's colour), the title, then `year · Movie` or `year · Series` in mono; at the end two icon buttons, **Play** (`Play`, named `Play <title>`) and **Info** (`Info`, named `Info <title>`). The focused row wears the control fill |
+| Searching | six row skeletons in the row's shape; with no query or no result the body is the same skeleton rows (no sentence) |
+| Keys | Up and Down move the focused row (Home and End to the ends); `Enter` plays the focused row; `Escape` closes |
+| Dismissal | its `X`, `Escape`, a press outside it or focus leaving it |
+| Info | opens Title information over the spotlight without closing it (`01` section 9, Overlays exception). Closing Title information returns to the spotlight, its query, results and focused row intact |
+| Play | closes the spotlight and does exactly what a card's Play does: `requestPlay` shows the Player and loads the title (a series on its resumable episode, §5.6) |
+
+The spotlight never survives a restart, and leaving Library (a surface switch, Title information's own Play) closes it.
 
 ---
 
@@ -579,7 +603,7 @@ A band across the full work area. It is Giga LoRA Studio's bottom rail, `compone
 | a series card's Play or Open | the Player shows the series in place. Left partway, the browser shows that season with that episode selected and the episode is asked for; never watched, it shows the first season and **nothing loads** until an exact episode is chosen |
 | a local card's Play | the Player shows the file in place and it plays through its Range route |
 | a related card | as above, and the current item is replaced |
-| **Reveal in Library** (the stage's context menu) | `requestLibrary({ select })`: Library is shown on All with the type strip, search and filters cleared (the sort kept), the item selected, focused and scrolled into view; Player stays loaded |
+| **Reveal in Library** (the stage's context menu) | `requestLibrary({ select })`: Library is shown on All with the type strip, the Filter text and filters cleared (the sort kept), the item selected, focused and scrolled into view; Player stays loaded |
 
 A failed load leaves the item in place with a failed stage and **Retry**; it does not bounce back to Library.
 
