@@ -198,7 +198,7 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 - The system's timer exception covers the admin backend's one internal timer (`sync-scheduler.ts`, `26` section
   3.11): it is armed for the earliest due enabled sync job (a catalog job pulls **title metadata** into the title
   store, a playlist job refreshes the sync-owned channels from an M3U playlist, `03` sections 7.6b and 7.2c); the
-  `TMDB_SYNC_SCHEDULE` and `PLAYLIST_SYNC_SCHEDULE` settings only seed the first job records. Every run is audited
+  `TMDB_SYNC_SCHEDULE` setting only seeds the first catalog job record (playlist jobs are created by an import, `43`). Every run is audited
   with the actor `system`. Images are never part
   of either: image bytes are fetched and served by the fileserver's image cache (`03` section
   3.11) lazily on first request — the backend never stores or serves a media byte (section 7). **One dated
@@ -271,9 +271,12 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   7.11-7.13). Off loopback it runs only behind TLS (`03` section 7.10).
 - The backend has no socket (its read-only `/ws` was removed on 2026-10-17; nothing connected to it). Each
   change raises its `revision`, which channel and provider answers and `GET /healthz` carry.
+- All backend outbound HTTP to a remote address goes through ONE function (`safe-fetch.ts`: https only, public addresses
+  only, bounded redirects and byte caps; `03` 7.3); no service calls `fetch` on a remote address directly. A schema
+  enforces its relations with foreign keys, not with service code alone.
 - No route accepts, uploads or serves video, local files or media bytes. **Two dated exceptions (owner, 2026-10-18, plan
   `43`):** the backend accepts one uploaded M3U playlist file (`POST /api/playlists/import`, at most 8 MiB, read and
-  discarded, never kept), and it serves its own cached channel logos (`GET /logos/<file>`, section 4.4).
+  discarded, never kept), and it serves its own cached channel logos (`GET /logos/c/<file>`, section 4.4).
 
 ## 8. Contract grammar
 

@@ -80,8 +80,8 @@ Electron app, so the development window always loads it.
 `JWT_SECRET` (signs access tokens, section 7.12), `ADMIN_BOOTSTRAP_USERNAME` (`ADMIN_BOOTSTRAP_EMAIL` is read when only that old name is set) and
 `ADMIN_BOOTSTRAP_PASSWORD` (the first admin account, section 7.11), `TLS_CERT_FILE` and `TLS_KEY_FILE`, `TRUST_PROXY`, `ALLOW_INSECURE_HTTP` and
 `CORS_ORIGINS` (serving over the network, section 7.10), `TMDB_READ_TOKEN` (`11`), `TMDB_SYNC_SCHEDULE`
-(the catalog-sync interval, section 7.6b; default off), `PLAYLIST_URLS` and `PLAYLIST_SYNC_SCHEDULE`
-(the playlist sync, section 7.2c; both default off/absent), `OMDB_API_KEY` (detail enrichment, `11`
+(the catalog-sync interval, section 7.6b; default off; `PLAYLIST_URLS` and `PLAYLIST_SYNC_SCHEDULE` are retired:
+playlists are imported, section 7.2c), `OMDB_API_KEY` (detail enrichment, `11`
 section 7; absent means details stay TMDB-shaped), `MOVIE_STREAM_TEMPLATE` and
 `EPISODE_STREAM_TEMPLATE` (the stream address rule, section 7.5), `SEED_TEST_CHANNELS` (seeds the four live test
 channels, section 7.7), `ALLOW_LOOPBACK_STREAMS`, `TEST_PAGE` (serves `/test/player.html`), `FIXTURE_DIR` (the test
@@ -624,11 +624,12 @@ interface BackendChannel {
   logoUrl?: string;        // the logo's source; the fileserver's image cache fetches it
   streamUrl: string;       // the HLS address
   tvgId?: string;          // the playlist's tvg-id; the playlist sync's update key (7.2c)
-  source?: string;         // the playlist host (or file name) that created the row; imported rows only (7.2c)
-  playlistId?: number;     // the parent playlist (7.2c); absent on a hand-made row
-  status?: "live" | "dead"; // the sync's last per-channel stream verdict; absent = not checked (7.2c)
+  source?: string;         // derived from the parent playlist (its host, or its file name), never stored (7.2c)
+  playlistId?: number;     // the parent playlist, a foreign key with cascade (7.2c); absent on a hand-made row
+  // Admin read only (not on the public channel answer): the sync's per-channel verdict and cached logo (7.2c).
+  status?: "live" | "dead"; // the last stream verdict of this channel's own URL; absent = not checked
   checkedAt?: number;      // when that verdict was taken
-  cachedLogoUrl?: string;  // the backend's cached copy of the logo (7.2c); logoUrl stays the source address
+  cachedLogoUrl?: string;  // the relative /logos/c/<file> of the backend's cached copy; logoUrl stays the source address
   revision: number;        // the revision at which this channel last changed
 }
 ```
@@ -728,76 +729,102 @@ operator: it creates a playlist record and all its channels, in one request, fro
 does no per-channel network work; sync owns every image download and stream check. They share only the parser and the
 address rule, never a lock or a call.
 
-A channel created by an import carries `playlistId` (the parent) and `source` (the playlist's host, or its file name);
-an operator's hand-made rows (`playlistId` and `source` absent) are never touched by either. Imported channels land
-**disabled** (`enabled: false`); the operator enables them (the admin's bulk `Enable`, `7.2`).
+A channel created by an import carries `playlistId`, a real foreign key to its parent playlist (`ON DELETE CASCADE`;
+foreign keys are enforced); an operator's hand-made rows (`playlistId` absent) are never touched by either. Imported
+channels land **disabled** (`enabled: false`); the operator enables them (the admin's bulk `Enable`, `7.2`).
 
-- **Playlist record** (`playlists`): `id`, `name`, `address` (a secret: the web address, or the label `stored:<file name>`
-  for an uploaded file; never returned, audited by host only), `enabled`, `contentHash` (the last imported web body's
-  SHA-256; absent forces a re-read), `lastSyncedAt`, `lastOutcome`. Its kind is derived: `stored:` is a `file`, else a
-  `url`. The uploaded file itself is **not kept**.
-- **Import.** `POST /api/playlists/import` takes `multipart/form-data` with exactly one `file` part (at most 8 MiB); the
-  playlist's name and its label come from the sanitized filename (basename, lowercase, runs of anything but `a-z0-9._-`
-  become `-`, must end `.m3u`; the same name updates the same playlist in place, a different name makes a new one).
-  `POST /api/playlists` with `{ address, name?, enabled? }` is the **web-address import**: it fetches the address once
-  (15 s, 8 MiB hard cap, never a silent truncation). Both parse the text (not M3U is `422 playlist.invalid`, nothing
-  written), pass every entry through the address rule (7.3; an `http` entry is skipped and counted, never imported
-  broken), dedupe by `name` and `streamUrl`, cap at `PLAYLIST_SYNC_MAX` *(default 5000)*, match only against **this
-  playlist's own rows** (`tvgId`, then exact `name`: a match updates `streamUrl`, `logoUrl`, `category`, an unmatched
-  entry creates a disabled row; nothing is ever deleted), and write in one transaction with one revision bump. An
-  unreachable address creates no record (`503 playlist.unreachable`). The answer is the playlist (`7.2c` view below)
-  plus `created` (the playlist was new) and `imported { created, updated, skipped, refused, refusalExamples }`; `201`
-  for a new playlist, `200` for a replaced one. Import creates the playlist's sync job in the same transaction when it
-  has none (`Sync <name>`, `24h`, enabled), due at once.
-- **Sync (a `playlist` job, `config { playlistId }`).** `POST /api/jobs/:id/run` starts it and answers `202` at once;
-  the result is read on a refresh. Single flight per job (`409 sync.busy`). Steps: (1) refuse a disabled job or playlist
-  (`422 job.disabled`); (2) **re-read only if the source can have changed**: a file playlist is never re-read (the
-  upload was the read); a web playlist is fetched, its body hashed, and parsed and applied only when the hash differs
-  from `contentHash` (create and update only); a fetch failure is recorded as `source: unreachable` and the run goes on;
-  (3) fill missing `logoUrl`s from the iptv-org index (`logos.json`, `channels.json`; `tvgId` first, normalized `name`
-  second; an existing `logoUrl` wins; the index is loaded once per run, a bad row is skipped, a failed load is retried
-  after one hour); (4) **cache the images**: each distinct `logoUrl` not tried in the last 7 days is downloaded
-  (10 s, 1 MiB, `image/*` with PNG, JPEG, GIF or WebP magic bytes, 8 at a time; SVG is never cached) into
-  `DATA_DIR/logo-cache/<first 32 hex of sha256(bytes)>.<ext>`; an identical image already on disk is not rewritten, so
-  identical images are stored once; a failure keeps the previous file; files no channel references are deleted at the
-  end; (5) **check every stream**: each of the playlist's channels, enabled or not, oldest check first, is asked for **its
-  own exact stream URL** (5 s, first 64 KiB, 16 at a time, 10 minutes in all): `live` when the answer is 2xx and the
-  body starts `#EXTM3U`, else `dead` (a DNS or refused failure on that URL is `dead` for that channel only). A host-level
-  check (ping, TCP connect, DNS) is never a channel's verdict and there is no host shortcut. Verdicts are written
-  column by column in batches (`status`, `checkedAt`), never as whole records over a long run; (6) record
-  `lastSyncedAt`, `lastOutcome` (a sentence such as `Synced: playlist unchanged, 312 logos cached, 1,904 live, 640 dead.`)
-  and the job's counts. The run is audited as `playlist.synced` with the counts and the host.
+- **Playlist record** (`playlists`): `id`, `name` (unique, case-insensitive), `kind` (`file` or `url`), `url` (a secret:
+  the web address, `url` kind only, unique; never returned, audited by host only), `fileName` (`file` kind only,
+  unique), `host` (`url` kind only), `enabled`. There is no stored sentence and no sync timestamp on it: the last run
+  lives on the playlist's one sync job (`26` 3.11). The uploaded file itself is **not kept**. Precedence of the three
+  `enabled` switches: a channel is published when `channel.enabled` and (it has no playlist or `playlist.enabled`); a
+  disabled playlist stops its sync, manual or scheduled; a disabled job stops only the scheduled run.
+- **Import.** `POST /api/playlists/import` takes `multipart/form-data` with exactly one `file` part (at most 8 MiB; a
+  second file part or a truncated one is `400 request.invalid`); the playlist's name and `fileName` come from the
+  sanitized filename (basename, NFKD with diacritics stripped, lowercase, runs of anything but `a-z0-9._-` become `-`,
+  must end `.m3u`; the same `fileName` updates the same playlist in place). `POST /api/playlists` with
+  `{ url, name?, enabled? }` is the **web-address import**: it fetches the address once through the guarded fetch (7.3;
+  15 s, 8 MiB hard cap, never a silent truncation). Both **read and parse first and write nothing until they succeed**:
+  not an M3U (`#EXTM3U` as the first non-empty line, or an `#EXTINF` in the first 20 lines) is `422 playlist.invalid`; an
+  unreachable address is `503 playlist.unreachable`; neither creates a record. Every entry's `streamUrl` and `logoUrl`
+  passes the address rule (7.3; a failing entry is skipped and counted, never imported broken), names are NFC-normalised,
+  duplicates (`name` and `streamUrl`) are dropped, at most `PLAYLIST_SYNC_MAX` *(default 5000)* entries are taken, and the
+  entries are matched only against **this playlist's own rows** in three passes (exact name and stream; name alone when
+  unique; stream alone; `tvgId` only breaks ties). Then ONE synchronous transaction does the duplicate check, the playlist
+  insert, the channel writes (updates change `streamUrl`, `logoUrl`, `category`; new entries are created disabled; nothing
+  is ever deleted), the playlist's sync job and one revision bump **only if a row changed** (a re-import with nothing new
+  writes and bumps nothing). The `UNIQUE` columns decide a concurrent double import: the loser is `409 playlist.taken`
+  (the same for a duplicate name, `url` or `fileName`). The answer is the playlist view (below) plus `created` and
+  `imported { created, updated, skipped, refused, refusalExamples }` (the examples carry an entry's name and host, never a
+  stream address); `201` for a new playlist, `200` for a replaced one. The playlist's sync job (`Sync <name>`, `24h`,
+  enabled, due at once) is created in the same transaction.
+- **Sync (a `playlist` job; the job's `playlistId` column, one job per playlist).** `POST /api/jobs/:id/run` starts it
+  and answers `202` at once; the result is read on a refresh. One run at a time **per playlist** (`409 sync.busy`), a
+  shared limit bounds the total; a playlist job's schedule is at least 15 minutes (`422 job.invalid`). Steps: (1) refuse a
+  disabled playlist (`422 job.disabled`); (2) a **file** playlist is never re-read (the upload was the read); a **web**
+  playlist is fetched on every run and imported (create and update only; it writes only if something changed); a fetch
+  failure is recorded as `source: unreachable` and the run goes on; (3) fill missing `logoUrl`s from the iptv-org index
+  (`tvgId` first, then the name with accents folded; an existing `logoUrl` wins; the index is loaded once per run, a bad row
+  is skipped, a failed load is retried after one hour); (4) **cache the images**: each distinct `logoUrl` not tried in
+  the last 7 days, or whose cached file is missing, is downloaded (10 s, 1 MiB, `image/*` with PNG, JPEG, GIF or WebP magic
+  bytes, at most 4096 px a side, 8 at a time; SVG is never cached) into `DATA_DIR/logo-cache/<first 32 hex of
+  sha256(bytes)>.<ext>`; an identical image already on disk is not rewritten, so identical images are stored once; a
+  failure keeps the previous file; at the end of the run, files no channel references and older than an hour are deleted;
+  (5) **check every stream**: each of the playlist's channels, enabled or not, ordered by check time (never checked first,
+  then oldest, then id), is asked for **its own exact stream URL** (5 s, first 64 KiB, 16 at a time, 10 minutes in all):
+  `live` when the answer is 2xx and the body, after a byte-order mark and whitespace, starts `#EXTM3U`, else `dead` (a
+  DNS or refused failure on that URL is `dead` for that channel only; a stream that is not HLS is `dead`). A host-level
+  check (ping, TCP connect, DNS) is never a channel's verdict and there is no host shortcut. A verdict is written only
+  `WHERE id = ? AND streamUrl = ?` (a channel edited or removed mid-run is skipped), column by column in batches of 200,
+  each batch taking its own revision when it changed a row; (6) record on the job `lastRunAt`, `lastResult`
+  (`ok`, `failed` or `stopped`) and the typed counts (`created`, `updated`, `skipped`, `refused`, `source`, `logosCached`,
+  `logosFailed`, `live`, `dead`, `unchecked`, or `{ code }` when it failed); no sentence is stored and an exception's
+  message is never stored. The run is audited as `playlist.synced` with the counts and the host.
 - **Stop and resume.** `POST /api/jobs/:id/stop` (signed in, audited `job.stopped`, `202`) cancels a running playlist job
   and keeps everything already written (`409 job.not_running` when idle; `422 job.invalid` for a catalog job). A stopped run
-  records `lastOutcome` `Stopped: 1,204 of 2,598 streams checked.` and `stopped: true` in its counts, and sets
-  `lastRunAt`, so the schedule does not fire it early. **Resume** is `POST /api/jobs/:id/run` again: the oldest-checked-first
-  order and the 7-day image window make it continue where it stopped. Pausing the schedule is the job's `Enabled` toggle;
-  it does not stop a run in progress.
-- **Channels' fields** `status` (`live`, `dead`; absent means not checked), `checkedAt`, and `cachedLogoUrl`
-  (`<origin>/logos/<file>`, built from the request origin) join the channel answers (`7.2`); `logoUrl` stays the source
-  address everywhere.
-- **Revision.** An import bumps the revision once. A sync bumps it once on the first batch that changes something.
+  records `lastResult: stopped` and `stopped: true` in its counts, and sets `lastRunAt`, so the schedule does not fire it
+  early. **Resume** is `POST /api/jobs/:id/run` again: the check order and the 7-day image window make it continue where
+  it stopped. Pausing the schedule is the job's `Enabled` toggle; it does not stop a run in progress.
+- **Channels' fields** `status` (`live`, `dead`; absent means not checked), `checkedAt`, and `cachedLogoUrl` (the relative
+  `/logos/c/<file>`) join the **admin** channel answer only (`7.2`); the public channel read is unchanged; `logoUrl` stays
+  the source address everywhere. A write that changes a channel's `streamUrl` or `logoUrl` clears the dependent verdict
+  or cached file in the same statement. The channels' `source` is derived from the playlist (its host, or its file name),
+  not stored.
+- **Revision.** An import bumps the revision once only if it wrote a row. A sync batch bumps it (its own value) only when
+  it changed a row.
 
 | Route | Who | Behaviour |
 |---|---|---|
 | `POST /api/playlists/import` | signed in | the file import above |
 | `POST /api/playlists` | signed in | the web-address import above |
-| `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id` | signed in | the record; `PATCH` with `address` replaces it and clears `contentHash`; `DELETE` removes the playlist **and its channels and jobs in one transaction** (no child is ever left pointing at a deleted parent; a running sync for it is aborted first; one revision bump, one `playlist.deleted` audit entry with the counts and host; answers `{ id, deletedChannels, deletedJobs }`; hand-made channels are untouched) |
+| `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id` | signed in | the record; `PATCH` renames, enables, or replaces a `url` playlist's address; `DELETE` removes the playlist **and its channels and sync job in one transaction** (see below; one revision bump, one `playlist.deleted` audit entry with the counts and host) |
 | `POST /api/jobs/:id/run`, `POST /api/jobs/:id/stop` | signed in | run (start, resume) and stop a job |
-| `PATCH /api/channels` | signed in | bulk `{ enabled, ids[] }` (1-500) on stream channels; one transaction, one revision, one audit entry `channel.enabled_bulk`; answers `{ changed, skipped }` (live-kind ids are skipped) |
-| `GET /logos/<file>` | public | a cached image by its hash name (`immutable`, `nosniff`) |
+| `PATCH /api/channels` | signed in | bulk `{ enabled, ids[] }` (1-5,000, one request, no client chunking) on stream channels; one transaction, one revision, one audit entry `channel.enabled_bulk`; answers `{ changed, skipped }` (live-kind ids are skipped) |
+| `GET /logos/c/<file>` | public | a cached image by its hash name (`^[0-9a-f]{32}\.(png\|jpg\|gif\|webp)$`; `immutable`, `nosniff`) |
 
 `GET /api/playlist-sync` and `POST /api/playlist-sync` no longer exist: the jobs are the sync. The playlist view is
-`{ id, name, kind, host, masked, enabled, channels, enabledChannels, live, dead, lastSyncedAt, lastOutcome }`. Every
-import and every sync is one audit entry (`playlist.imported`, `playlist.synced`) with counts and each playlist's
-**host** only (never its query, which can carry credentials, and never a logo address). A body that is not an M3U
-playlist is `422 playlist.invalid`.
+`{ id, name, kind, host?, masked?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?, lastResult?,
+lastCounts? }` (the last three joined from its job). Every import and every sync is one audit entry (`playlist.imported`,
+`playlist.synced`) with counts and each playlist's **host** only (never its query, which can carry credentials, and never
+a logo address or an exception message). A body that is not an M3U playlist is `422 playlist.invalid`; a duplicate is
+`409 playlist.taken`. `PATCH` may replace `url` only for a `url` playlist (`422 playlist.invalid`, field `url`). **`DELETE`
+aborts that playlist's running sync (waiting at most 10 s), then deletes the playlist and, through the foreign keys, its
+channels and its sync job, in one transaction** (hand-made channels and other playlists' channels are untouched; the
+answer is `{ id, deletedChannels, deletedJobs }`).
 
 ### 7.3 Stream and image addresses
 
 Every `streamUrl`, `logoUrl`, address produced by the stream rule (7.5) and image source must be `https`. With
 `ALLOW_LOOPBACK_STREAMS=true` (default `false`; never set in production), `http` on exactly `127.0.0.1` or
 `localhost`, any port, is also accepted. Nothing else is. TMDB's image host is `https` and passes.
+
+Every remote address the **backend itself fetches** (a playlist, the logo index, a logo, a stream check) must also resolve
+to a **public** address: a private, loopback, link-local, carrier-grade (CGNAT) or unique-local address is refused, redirects
+included, because the content of a playlist is untrusted and the backend may be exposed to a network (7.10). The backend
+resolves the name itself and connects to the checked address (so a rebinding DNS answer cannot redirect it), follows at most
+3 redirects (each re-checked, `https` only), refuses a URL with credentials, caps the decoded bytes while streaming, and
+sends no cookies and a fixed User-Agent. All remote requests go through that one function; `ALLOW_LOOPBACK_STREAMS` is the
+only development exception.
 
 ### 7.4 Titles
 
@@ -987,8 +1014,10 @@ Forward-only, numbered migrations, as the fileserver's (section 6). Tables: `cha
 counter, `admin_accounts`, `refresh_tokens` (hashes only), `audit_log`, `providers`, `channel_videos`, `playlists`,
 `sync_jobs`, `sync_seed`, and the title store (`7.6b`). It holds no
 Giga Stream user data, no local paths and no media beyond the playlist logos: `DATA_DIR/logo-cache/` holds one file per
-distinct cached channel image, named by the hash of its bytes (`7.2c`), served at `GET /logos/<file>`; an uploaded
-playlist file is read and discarded, never kept.
+distinct cached channel image, named by the hash of its bytes (`7.2c`), served at `GET /logos/c/<file>`; an uploaded
+playlist file is read and discarded, never kept. Foreign keys are enforced: deleting a playlist cascades to its channels
+and its sync job, and a migration that rebuilds a table is preceded by a `VACUUM INTO` backup and followed by
+`PRAGMA foreign_key_check`.
 
 ### 7.10 Running over the network
 
@@ -1105,7 +1134,7 @@ An entry is `{ id, at, actorId?, actorUsername?, action, subject?, detail?, addr
 route.not_found        request.invalid        internal.failure
 settings.invalid       library.invalid
 channel.not_found      channel.invalid        title.not_found
-playlist.invalid       playlist.busy
+playlist.invalid       playlist.taken
 collection.not_found   collection.invalid     watch.not_found
 fs.desktop_required    fs.cancelled           fs.invalid_selection
 job.not_found          job.not_running        job.not_settled        job.running
@@ -1121,15 +1150,16 @@ The admin backend also owns these (not in the fileserver): `channel.taken`, `fau
 `playlist.unavailable`, `playlist.unreachable`, `playlist.not_found`, `range.unsatisfiable`, `job.invalid`,
 `job.disabled`, `title.invalid`, `title.manual`, `provider.not_found`, `provider.invalid`, `sync.busy`, `sync.invalid`.
 `job.not_found` is the backend's missing sync job and the fileserver's missing scan job: two meanings, one code. The
-backend also answers `job.not_running` (409, `POST /api/jobs/:id/stop` on an idle job) and `playlist.busy` (409, another
-playlist sync is running); `channel.imported` is retired in favour of `playlist.imported`.
+backend also answers `job.not_running` (409, `POST /api/jobs/:id/stop` on an idle job) and `playlist.taken` (409, a
+duplicate name, web address or file name); `playlist.busy` is retired (one run at a time per playlist is `sync.busy`);
+`channel.imported` is retired in favour of `playlist.imported`.
 
 | Status | Used for |
 |---|---|
 | 400 | `request.invalid` |
 | 401 | `auth.unauthorized`, `auth.invalid_credentials`, `auth.refresh_invalid`, `auth.reset_invalid` |
 | 404 | the `*.not_found` codes |
-| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.username_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.busy` |
+| 409 | `fs.desktop_required`, `fs.cancelled`, `job.not_running`, `job.not_settled`, `job.running`, `account.username_taken`, `account.last_admin`, `channel.taken`, `title.manual`, `sync.busy`, `playlist.taken` |
 | 429 | `auth.rate_limited`, `auth.locked` |
 | 416 | `playback.range_invalid`, `range.unsatisfiable` |
 | 422 | `settings.invalid`, `library.invalid`, `channel.invalid`, `account.invalid`, `collection.invalid`, `fs.invalid_selection`, `playlist.invalid`, `job.invalid`, `job.disabled`, `title.invalid`, `provider.invalid`, `sync.invalid` |

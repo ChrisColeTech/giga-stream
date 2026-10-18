@@ -251,15 +251,18 @@ The syncs were environment variables read once at start (`TMDB_SYNC_SCHEDULE`, `
 one off. An admin app manages **records**. The owner: *"we need a jobs tab for the sync jobs, the title and playlist
 should be crud for titles and playlists."* So there are two new record types: a **playlist** and a **job**.
 
-- **Playlists** (`playlists` table): the parent of the channels an import creates (`channels.playlist_id`). `id`, `name`,
-  `address` (a secret: never returned, audited by host only; a web address passing the rule of `03` 7.3, or the label
-  `stored:<file name>` of an uploaded file, which is read and not kept), `enabled`, `content_hash`, `created_at`. Routes
+- **Playlists** (`playlists` table): the parent of the channels an import creates (`channels.playlist_id`). `id`, `name`
+  (unique, case-insensitive), `kind` (`file` or `url`), `url` (a secret, `url` kind only, unique: never returned, audited
+  by host only; passing the rule of `03` 7.3), `file_name` (`file` kind only, unique; the uploaded file is read and not
+  kept), `host`, `enabled`, `created_at`. The last run is on the playlist's one sync job, not on the playlist. Routes
   (signed in, audited): `POST /api/playlists/import` (a file, multipart), `POST /api/playlists` (a web address: the
-  import), `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id`; the contract is `03` 7.2c and plan `43`.
-  An answer is `{ id, name, kind, host, masked, enabled, channels, enabledChannels, live, dead, lastSyncedAt,
-  lastOutcome }`; `PATCH` with `address` replaces it. **Deleting a playlist deletes its channels and jobs with it**, in
-  one transaction (a child never outlives its parent; hand-made channels are untouched; the armed Delete says how many
-  channels go). A disabled playlist is skipped by every job.
+  import), `GET /api/playlists`, `GET`, `PATCH`, `DELETE /api/playlists/:id`; the contract is `03` 7.2c and plan `43`. An
+  answer is `{ id, name, kind, host?, masked?, fileName?, enabled, channels, enabledChannels, live, dead, lastRunAt?,
+  lastResult?, lastCounts? }`; `PATCH` may replace `url` for a `url` playlist only. **Deleting a playlist deletes its
+  channels and its sync job with it**, through foreign keys (`ON DELETE CASCADE`), in one transaction (a child never
+  outlives its parent; hand-made channels are untouched; the armed Delete says how many channels go). **Precedence of the
+  `Enabled` switches:** a channel is published when `channel.enabled` and (it has no playlist or `playlist.enabled`); a
+  disabled playlist stops its sync, manual or scheduled; a disabled job stops only the scheduled run.
 - **Jobs** (`sync_jobs` table): `id`, `name`, `type` (`playlist` or `catalog`), `enabled`, `schedule` (`"6h"`, `"30m"`,
   `"24h"` or `"off"`), `config` JSON, `last_run_at`, `last_outcome`, `last_counts` JSON, `created_at`. A playlist job's
   config is `playlistId` only (no dry run, no prune: plan `43`), created with the playlist, and it caches the channels'
@@ -269,8 +272,8 @@ should be crud for titles and playlists."* So there are two new record types: a 
   /api/jobs/:id`; `POST /api/jobs/:id/run` (single-flight per job, `409 sync.busy`; a disabled job or a job whose
   playlist is disabled is refused with `422 job.disabled` and its reason). A playlist job syncs only its playlist, under
   the rules of 3.10; a catalog job syncs its scope.
-- **Seeding** (first start only, from the environment): each `PLAYLIST_URLS` entry becomes a playlist and a playlist job
-  for it (schedule `PLAYLIST_SYNC_SCHEDULE`); the catalog job - the library fill, scope `discover` - is created with
+- **Seeding** (first start only, from the environment): playlists are **not** seeded (`PLAYLIST_URLS` and
+  `PLAYLIST_SYNC_SCHEDULE` are retired; a playlist and its job come from an import, `43`); the catalog job - the library fill, scope `discover` - is created with
   schedule `TMDB_SYNC_SCHEDULE` when that is set, else `off` (runnable on demand). The four per-slice catalog jobs
   (trending and popular, movies and series) are retired (owner, 2026-10-17): no longer seeded, existing records deleted. `POST/GET /api/titles/sync` keeps working as a thin wrapper over the service the catalog job uses; `POST/GET
   /api/playlist-sync` is removed (the jobs are the sync, `43`).
