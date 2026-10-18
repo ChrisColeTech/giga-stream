@@ -183,6 +183,6 @@ Temporary backend (`39` 7) with `TMDB_READ_TOKEN` unset (the Titles list then sh
 | 2 | `28` Wave 4 plans fixtures first | superseded; no `fixtures/providers.ts` or `titles.ts` exists |
 | 3 | `29` 18 B2 "gap: Enabled cannot be written" | landed: `enabled` on create and update, `null` clears |
 | 4 | `29` 9.3: the list returns `AdminTitleRow` with `editedFields` | the row schema in the foundation (`title-schema.ts`) has no `editedFields`; B5 puts it on the admin view, so the schema gains it |
-| 5 | `28` 7.2: Titles search "carries `data-search`" | the shell key hook's `Ctrl+F` already looks for `data-search` (`hooks/useShellKeys.ts`); the field must set it |
+| 5 | `28` 7.2: Titles search "carries `data-search`" | the shell key hook's `Ctrl+F` already looks for `data-search` (`lib/shell-actions.ts`); the field must set it |
 | 6 | `29` 9.3 "with both Kind chips on, search makes two calls" | `GET /api/titles` already merges two kinds on the backend (`kind=all`); only search needs the admin to merge |
 | 7 | `26` 4.9b: a manual row's id `custom-0001` | the backend id is `custom-<uuid>`; the tooltip shows the id as the backend gives it |
