@@ -1,0 +1,22 @@
+import type { GridHeading } from "@giga/ui/lists/RecordGrid";
+import type { GridLayout } from "@giga/ui/lists/record-grid-layout";
+
+/** The Channels list's column set (`36` section 5.2, the mockup's `#gridChannels`). Tracks are rem so the header and the
+ *  rows line up; below the minimum width the list scrolls sideways inside its own group, never the page. The end track
+ *  fits the armed question for a long name (`Delete Fixture Entertainment?`). */
+export const CHANNEL_GRID: GridLayout = {
+  tracks: ["3.5rem", "minmax(9rem,1.4fr)", "7rem", "4rem", "6rem", "4.5rem", "minmax(8rem,1.2fr)", "7rem"],
+  end: "15rem",
+  minWidth: "78rem",
+};
+
+export const CHANNEL_HEADINGS: readonly GridHeading[] = [
+  { key: "number", label: "number", align: "right" },
+  { key: "name", label: "name" },
+  { key: "category", label: "category" },
+  { key: "kind", label: "kind" },
+  { key: "state", label: "state" },
+  { key: "mode", label: "mode" },
+  { key: "now-playing", label: "now playing" },
+  { key: "fault", label: "fault" },
+];

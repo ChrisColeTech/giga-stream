@@ -1,16 +1,17 @@
+import { ChannelsIndex } from "@/components/channels/ChannelsIndex";
 import { TabPage, type PageProps } from "@/components/chrome/TabPage";
-import { IndexSkeleton } from "@/components/records/IndexSkeleton";
-import { IndexToolbar } from "@/components/records/IndexToolbar";
-import { INDEX_FRAMES } from "@/constants/index-frames";
+import { useChannelsLoad } from "@/hooks/useChannelsLoad";
+import { useAppStore } from "@/store/app-store";
 
-const FRAME = INDEX_FRAMES.channels;
-
-/** Channels. Wave 2 draws its index skeleton; the New form, the grid and both workspaces arrive in Wave 3. */
+/** Channels (`36`): the index (the toolbar with the bulk verbs and `Preview →`, `New channel`, the list) or, when a row is
+ *  open, that channel's workspace, live or stream. The page is the only reader of `workspaces.channels`; it loads the
+ *  channels when first shown after sign-in and keeps the statusbar's `N preparing`. */
 export function ChannelsPage({ active }: PageProps) {
+  const openId = useAppStore((state) => state.workspaces.channels);
+  useChannelsLoad(active);
   return (
     <TabPage active={active} label="Channels">
-      <IndexToolbar frame={FRAME} />
-      <IndexSkeleton frame={FRAME} />
+      {openId === null ? <ChannelsIndex /> : <ChannelsIndex />}
     </TabPage>
   );
 }
