@@ -24,17 +24,19 @@ export const TITLEBAR_HEIGHT = 40;
  *  own status bar (`ChildStatusbar`) is the same height. */
 export const STATUSBAR_HEIGHT = 24;
 
-/** The work surfaces (Settings, Collections): what their content wants. The width is the rail (210), a form at its full
- *  width and the workspace's side padding, with air; the height shows the first groups and scrolls the rest. Never less
- *  than the least, which nothing clips. */
-export const WORK_WIDTH = 960;
-export const WORK_BODY = 700;
+/** The work surfaces (Settings, Collections): what their content wants (`50` section 2.7). The width is the rail (210),
+ *  a form at its full width and the workspace's side padding, with air; the height shows the first groups and scrolls
+ *  the rest. Never less than the least, which nothing clips; never more than 80% of the main window. */
+export const WORK_WIDTH = 1200;
+export const WORK_BODY = 840;
 export const WORK_LEAST = { width: 640, body: 360 } as const;
 
-/** A work surface: titled, centred, modal, dismissed by Escape unless a field is being typed in. */
+/** A work surface: titled, centred, modal, dismissed by Escape unless a field is being typed in. The memory key
+ *  carries the size's version (`50` section 2.7): a bound remembered by an earlier kit (`settings`) cannot restore the
+ *  small pre-`50` size; the first open after this wave lands centred at the new size and is remembered as usual. */
 export function workSpec(key: string, title: string, overrides: Partial<ChildSpec> = {}): ChildSpec {
   return {
-    key,
+    key: `${key}@2`,
     title,
     width: WORK_WIDTH,
     body: WORK_BODY,

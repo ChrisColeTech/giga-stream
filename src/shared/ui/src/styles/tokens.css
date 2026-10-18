@@ -6,7 +6,7 @@
  *
  * This is the family library's token file (docs/27 step 1): every app imports it, so a theme
  * change is one edit. An app adds its own delta in its own index.css (the interface's Theatre
- * spotlight and remap, for example), never by redefining these.
+ * remap, for example), never by redefining these.
  *
  * The values below are the dark theme. Light and the four alternate accent
  * families override the same variables from a data-attribute on <html>, so a
@@ -19,6 +19,7 @@
   /* Giga Stream delta (docs/23): the video stage is dark in every theme, as a video app's picture area is; the light
      theme does not override it. */
   --color-stage: #0a0a0b;
+  --color-spot: rgba(255, 255, 255, 0.045); /* the centre spotlight (`50` §2.8), theme-independent */
   --color-border: #2a2a2f;
   --color-hair: #202024;
 

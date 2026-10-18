@@ -49,17 +49,22 @@ describe("the chrome slice: defaults", () => {
 });
 
 describe("the chrome slice: notices and the events log", () => {
-  it("shows an info notice without an Events row", () => {
+  it("puts an info sentence in the drawer's rows and never on the notice line", () => {
     const { state } = makeStore();
     state.say("Zoom reset to 100%.");
-    assert.deepEqual(state.notice, { sentence: "Zoom reset to 100%.", tone: "info", serial: 1 });
-    assert.equal(state.events.length, 0);
+    assert.equal(state.notice, null);
+    assert.equal(state.events.length, 1);
+    assert.equal(state.events[0]?.tone, "info");
+    assert.equal(state.events[0]?.area, "Connection");
+    assert.equal(state.events[0]?.sentence, "Zoom reset to 100%.");
+    assert.equal(state.events[0]?.at, 1000);
   });
 
-  it("logs a warn or an error as a row in the default area", () => {
+  it("logs a warn or an error as a row in the default area AND on the notice line", () => {
     const { state } = makeStore();
     state.say("Could not reach the fileserver.", "warn");
     assert.equal(state.notice?.tone, "warn");
+    assert.equal(state.notice?.sentence, "Could not reach the fileserver.");
     assert.equal(state.events.length, 1);
     assert.equal(state.events[0]?.tone, "warn");
     assert.equal(state.events[0]?.area, "Connection");
@@ -67,17 +72,26 @@ describe("the chrome slice: notices and the events log", () => {
     assert.equal(state.events[0]?.at, 1000);
   });
 
-  it("logs a notice into the area it names", () => {
+  it("logs a warn or an error into the area it names", () => {
     const { state } = makeStore();
     state.say("No folder was selected.", "error", "Scan");
     assert.equal(state.events[0]?.area, "Scan");
     assert.equal(state.events[0]?.tone, "error");
   });
 
-  it("bumps the notice serial, so an identical sentence is announced again", () => {
+  it("an info sentence leaves an earlier notice alone", () => {
     const { state } = makeStore();
-    state.say("Saved.");
-    state.say("Saved.");
+    state.say("Refused.", "warn");
+    state.say("Created x.");
+    assert.deepEqual(state.notice, { sentence: "Refused.", tone: "warn", serial: 1 });
+    assert.equal(state.events.length, 2);
+    assert.equal(state.events[1]?.tone, "info");
+  });
+
+  it("bumps the notice serial on a warn, so an identical refusal is announced again", () => {
+    const { state } = makeStore();
+    state.say("Refused.", "warn");
+    state.say("Refused.", "warn");
     assert.equal(state.notice?.serial, 2);
   });
 
