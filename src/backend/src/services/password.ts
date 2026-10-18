@@ -32,5 +32,5 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return key.length === expected.length && timingSafeEqual(key, expected);
 }
 
-/** A hash checked when the email is unknown, so an unknown email takes as long as a wrong password. */
+/** A hash checked when the username is unknown, so an unknown username takes as long as a wrong password. */
 export const decoyHash = hashPassword(randomBytes(24).toString("base64url"));

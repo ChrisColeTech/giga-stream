@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { EMAIL_MAX, PASSWORD_MAX } from "../constants/limits.js";
+import { PASSWORD_MAX, USERNAME_MAX } from "../constants/limits.js";
 import { SECURITY_ANSWER_MAX, SECURITY_QUESTION_COUNT } from "../constants/security-questions.js";
 import { PasswordChangeSchema } from "./account.js";
 
@@ -19,6 +19,6 @@ export const SecurityQuestionSetSchema = z
   })
   .strict();
 
-export const ResetStartSchema = z.object({ email: z.string().max(EMAIL_MAX) }).strict();
+export const ResetStartSchema = z.object({ username: z.string().max(USERNAME_MAX) }).strict();
 
-export const ResetSchema = z.object({ email: z.string().max(EMAIL_MAX), answer, newPassword }).strict();
+export const ResetSchema = z.object({ username: z.string().max(USERNAME_MAX), answer, newPassword }).strict();

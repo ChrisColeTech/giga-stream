@@ -36,7 +36,11 @@ export const ERRORS = {
   playlistUnreachable: { code: "playlist.unreachable", status: 503, message: "A playlist cannot be reached right now." },
   accountNotFound: { code: "account.not_found", status: 404, message: "That account does not exist." },
   accountInvalid: { code: "account.invalid", status: 422, message: "That account is not valid." },
-  accountEmailTaken: { code: "account.email_taken", status: 409, message: "Another account already uses that email." },
+  accountUsernameTaken: {
+    code: "account.username_taken",
+    status: 409,
+    message: "Another account already uses that username.",
+  },
   accountStateInvalid: { code: "account_state.invalid", status: 422, message: "That saved account state is not valid." },
   accountLastAdmin: {
     code: "account.last_admin",
@@ -44,14 +48,18 @@ export const ERRORS = {
     message: "This is the last enabled account; another one is needed first.",
   },
   authUnauthorized: { code: "auth.unauthorized", status: 401, message: "Sign in to do that." },
-  authInvalidCredentials: { code: "auth.invalid_credentials", status: 401, message: "The email or password is wrong." },
+  authInvalidCredentials: {
+    code: "auth.invalid_credentials",
+    status: 401,
+    message: "The username or password is wrong.",
+  },
   authRefreshInvalid: { code: "auth.refresh_invalid", status: 401, message: "That session has ended; sign in again." },
   authRateLimited: { code: "auth.rate_limited", status: 429, message: "Too many sign-in attempts; wait a minute." },
   authLocked: { code: "auth.locked", status: 429, message: "This account is locked for a while after failed sign-ins." },
   authResetInvalid: {
     code: "auth.reset_invalid",
     status: 401,
-    message: "That answer is not right, or the reset is not available for this email.",
+    message: "That answer is not right, or the reset is not available for this username.",
   },
   storeNewerSchema: {
     code: "store.newer_schema",

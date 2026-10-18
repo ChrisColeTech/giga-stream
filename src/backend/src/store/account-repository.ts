@@ -5,7 +5,7 @@ import type { AdminAccount } from "../types/account.js";
 
 const AccountRow = z.object({
   id: z.string(),
-  email: z.string(),
+  username: z.string(),
   name: z.string(),
   password_hash: z.string(),
   disabled: z.number().int(),
@@ -36,7 +36,7 @@ function toStored(row: unknown): StoredAccount {
   return {
     account: {
       id: r.id,
-      email: r.email,
+      username: r.username,
       name: r.name,
       disabled: r.disabled === 1,
       createdAt: r.created_at,
@@ -55,25 +55,25 @@ function toStored(row: unknown): StoredAccount {
 
 export interface AccountWrite {
   id: string;
-  email: string;
+  username: string;
   name: string;
   passwordHash: string;
   disabled: boolean;
 }
 
-const COLUMNS = `id, email, name, password_hash, disabled, session_version, failed_sign_ins, locked_until,
+const COLUMNS = `id, username, name, password_hash, disabled, session_version, failed_sign_ins, locked_until,
   created_at, updated_at, last_sign_in_at, security_question, security_answer_hash`;
 
-/** The admin accounts table (docs/03 section 7.11). Emails are unique without case. */
+/** The admin accounts table (docs/03 section 7.11). Usernames are unique without case. */
 export function createAccountRepository(db: DatabaseSync) {
   const byId = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts WHERE id = ?`);
-  const byEmail = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts WHERE email_key = ?`);
-  const all = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts ORDER BY email_key`);
+  const byUsername = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts WHERE username_key = ?`);
+  const all = db.prepare(`SELECT ${COLUMNS} FROM admin_accounts ORDER BY username_key`);
   const count = db.prepare("SELECT COUNT(*) AS n FROM admin_accounts");
   const enabled = db.prepare("SELECT COUNT(*) AS n FROM admin_accounts WHERE disabled = 0");
-  const insert = db.prepare(`INSERT INTO admin_accounts (id, email, email_key, name, password_hash, disabled,
+  const insert = db.prepare(`INSERT INTO admin_accounts (id, username, username_key, name, password_hash, disabled,
     created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  const update = db.prepare(`UPDATE admin_accounts SET email = ?, email_key = ?, name = ?, password_hash = ?,
+  const update = db.prepare(`UPDATE admin_accounts SET username = ?, username_key = ?, name = ?, password_hash = ?,
     disabled = ?, updated_at = ? WHERE id = ?`);
   const bumpVersion = db.prepare("UPDATE admin_accounts SET session_version = session_version + 1 WHERE id = ?");
   const signInFailed = db.prepare("UPDATE admin_accounts SET failed_sign_ins = ?, locked_until = ? WHERE id = ?");
@@ -92,18 +92,18 @@ export function createAccountRepository(db: DatabaseSync) {
       const row = byId.get(id);
       return row === undefined ? undefined : toStored(row);
     },
-    findByEmail(email: string): StoredAccount | undefined {
-      const row = byEmail.get(email.toLowerCase());
+    findByUsername(username: string): StoredAccount | undefined {
+      const row = byUsername.get(username.toLowerCase());
       return row === undefined ? undefined : toStored(row);
     },
     list: (): StoredAccount[] => all.all().map(toStored),
     count: (): number => n(count),
     enabledCount: (): number => n(enabled),
     insert(a: AccountWrite, at: number): void {
-      insert.run(a.id, a.email, a.email.toLowerCase(), a.name, a.passwordHash, a.disabled ? 1 : 0, at, at);
+      insert.run(a.id, a.username, a.username.toLowerCase(), a.name, a.passwordHash, a.disabled ? 1 : 0, at, at);
     },
     update(a: AccountWrite, at: number): void {
-      update.run(a.email, a.email.toLowerCase(), a.name, a.passwordHash, a.disabled ? 1 : 0, at, a.id);
+      update.run(a.username, a.username.toLowerCase(),a.name, a.passwordHash, a.disabled ? 1 : 0, at, a.id);
     },
     /** Every access token issued before this stops working (the `ver` claim no longer matches). */
     revokeSessions: (id: string): void => void bumpVersion.run(id),

@@ -18,7 +18,7 @@ const PROTECTED = [
   ["GET", "/api/admin-channels", undefined],
 ] as const;
 
-const second = { email: "second@example.test", name: "Ed", password: "second-password-1" };
+const second = { username:"second@example.test", name: "Ed", password: "second-password-1" };
 
 test("without a token or with a bad one, every write route is auth.unauthorized and changes nothing", async () => {
   const t = await makeApp();
@@ -48,7 +48,7 @@ test("a second admin may manage live channels; an account that is disabled is re
   const t = await makeApp();
   const token = (await signIn(t.app)).access;
   const id = String(pick((await send(t.app, "POST", "/api/admin-accounts", second, token)).body, "data.id"));
-  const { access } = await signIn(t.app, second.email, second.password);
+  const { access } = await signIn(t.app, second.username, second.password);
   assert.equal((await send(t.app, "POST", "/api/channels", liveBody(), access)).status, 201);
   assert.equal((await send(t.app, "PUT", "/api/channels/home/fault", { fault: "stall" }, access)).status, 200);
   assert.equal((await send(t.app, "GET", "/api/admin-channels", undefined, access)).status, 200);

@@ -47,8 +47,8 @@ test("migrations 015 and 016 drop role and api_key and keep every row, id and th
     createStore(oldDatabase(dataDir)).close();
     const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
     try {
-      // Migrations 017 (account UI state) and 018 (security questions) run after 015 and 016: the schema is at 18.
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 18 });
+      // Migrations 017 (account UI state), 018 (security questions) and 019 (username) run after 015 and 016.
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 19 });
       verifyRows(db);
     } finally {
       db.close();
@@ -63,16 +63,16 @@ function verifyRows(db: DatabaseSync): void {
     assert.equal(columnsOf(db, "admin_accounts").includes("role"), false);
     assert.equal(columnsOf(db, "providers").includes("api_key"), false);
 
-    const accounts = db.prepare(`SELECT id, email, email_key, name, password_hash, disabled, session_version, failed_sign_ins,
+    const accounts = db.prepare(`SELECT id, username, username_key, name, password_hash, disabled, session_version, failed_sign_ins,
       locked_until, created_at, updated_at, last_sign_in_at FROM admin_accounts ORDER BY id`).all().map((row) => ({ ...row }));
     // Migration 018 gives every existing account no security question.
     const questions = db.prepare("SELECT security_question, security_answer_hash FROM admin_accounts").all();
     const none = { security_question: null, security_answer_hash: null };
     assert.deepEqual(questions.map((row) => ({ ...row })), [none, none]);
     assert.deepEqual(accounts, [
-      { id: "acct_a", email: "Boss@Example.test", email_key: "boss@example.test", name: "Boss", password_hash: "scrypt$hash-a",
+      { id: "acct_a", username: "Boss@Example.test", username_key: "boss@example.test", name: "Boss", password_hash: "scrypt$hash-a",
         disabled: 0, session_version: 4, failed_sign_ins: 2, locked_until: null, created_at: 10, updated_at: 11, last_sign_in_at: 12 },
-      { id: "acct_b", email: "ed@example.test", email_key: "ed@example.test", name: "Ed", password_hash: "scrypt$hash-b",
+      { id: "acct_b", username: "ed@example.test", username_key: "ed@example.test", name: "Ed", password_hash: "scrypt$hash-b",
         disabled: 1, session_version: 1, failed_sign_ins: 0, locked_until: 99, created_at: 20, updated_at: 21, last_sign_in_at: null },
     ]);
     const tokens = db.prepare("SELECT id, account_id, token_hash FROM refresh_tokens").all().map((row) => ({ ...row }));

@@ -9,8 +9,8 @@ import { RESET_DECOY_PREFIX, SECURITY_QUESTIONS } from "../constants/security-qu
 export const normaliseAnswer = (answer: string): string =>
   answer.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
 
-/** The backend's own form of an email for lookups and the attempt counter: trimmed and lower-cased. */
-export const emailKeyOf = (email: string): string => email.trim().toLowerCase();
+/** The backend's own form of a username for lookups and the attempt counter: trimmed and lower-cased. */
+export const usernameKeyOf = (username: string): string => username.trim().toLowerCase();
 
 /** The text of a picklist question by its stored number (1 to 8). */
 export function questionText(question: number): string {
@@ -20,12 +20,12 @@ export function questionText(question: number): string {
 }
 
 /**
- * The decoy question an email with no account, or an account with no question, is shown (docs/40 section 2.4):
- * HMAC-SHA256 of `reset-decoy:<emailKey>` under the JWT secret, taken as an unsigned integer modulo eight. The
- * same email always gets the same question, and without the secret nobody can tell which one it will be.
+ * The decoy question a username with no account, or an account with no question, is shown (docs/40 section 2.4):
+ * HMAC-SHA256 of `reset-decoy:<usernameKey>` under the JWT secret, taken as an unsigned integer modulo eight. The
+ * same username always gets the same question, and without the secret nobody can tell which one it will be.
  */
-export function decoyQuestion(secret: string, emailKey: string): string {
-  const digest = createHmac("sha256", secret).update(RESET_DECOY_PREFIX + emailKey).digest("hex");
+export function decoyQuestion(secret: string, usernameKey: string): string {
+  const digest = createHmac("sha256", secret).update(RESET_DECOY_PREFIX + usernameKey).digest("hex");
   const index = Number(BigInt(`0x${digest}`) % BigInt(SECURITY_QUESTIONS.length));
   return questionText(index + 1);
 }

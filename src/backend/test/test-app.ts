@@ -9,7 +9,7 @@ import type { Config } from "../src/config.js";
 import type { LiveEngine, LiveSeams } from "../src/live/engine/live-engine.js";
 import { fakeBuild, type FakeTally } from "./live-fake-source.js";
 
-export const ADMIN_EMAIL = "admin@example.test";
+export const ADMIN_USERNAME ="admin@example.test";
 export const ADMIN_PASSWORD = "admin-password-123";
 export const JWT_SECRET = "test-secret-that-is-at-least-32-characters";
 
@@ -73,7 +73,8 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       ADMIN_DIST: path.join(dataDir, "admin-dist"),
       TEST_PAGE: false,
       JWT_SECRET,
-      ADMIN_BOOTSTRAP_EMAIL: ADMIN_EMAIL,
+      ADMIN_BOOTSTRAP_USERNAME: ADMIN_USERNAME,
+      ADMIN_BOOTSTRAP_EMAIL: "",
       ADMIN_BOOTSTRAP_PASSWORD: ADMIN_PASSWORD,
       TLS_CERT_FILE: "",
       TLS_KEY_FILE: "",
@@ -175,8 +176,8 @@ export function pick(value: unknown, dotted: string): unknown {
 }
 
 /** Signs in and answers the session's two tokens. */
-export async function signIn(app: FastifyInstance, email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
-  const answer = await send(app, "POST", "/api/auth/login", { email, password });
+export async function signIn(app: FastifyInstance, username = ADMIN_USERNAME, password = ADMIN_PASSWORD) {
+  const answer = await send(app, "POST", "/api/auth/login", { username, password });
   if (answer.status !== 200) throw new Error(`sign-in failed: ${JSON.stringify(answer.body)}`);
   return { access: String(pick(answer.body, "data.accessToken")), refresh: String(pick(answer.body, "data.refreshToken")) };
 }
