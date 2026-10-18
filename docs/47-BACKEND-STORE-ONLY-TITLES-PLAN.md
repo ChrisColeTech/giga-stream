@@ -36,15 +36,21 @@ admin backend and, for Browse TMDB, the admin app.
   of a manual-edited title are never overwritten, as today). **No OMDb call** in the sync (its 1,000-a-day budget stays for
   on-demand enrichment by an admin action, if kept; the plan does not depend on OMDb). Progress phase `details` with `done/total`
   (total = the titles still needing detail when the phase starts); weights (fixed, so the bar never goes backwards): `movies`/`tv` walk
-  0-10%, `details` 10-50%, `episodes` 50-100% (the admin copies the weights from the backend, `44` 3.1). Counts: `{ titles,
-  detailed, seasons, stale }`.
-- **`episodes`:** for every stored, enabled, not-deleted `tv` title that has a detail payload, every season (the detail's `seasons`
-  list; season 0 specials skipped) whose episodes are not stored (or whose stored episodes are older than `TITLE_FRESH_MS`) gets ONE
-  call (`/tv/{id}/season/{n}`, the existing episode mapping of `title-reads.seasons()`) written into that title's payload
-  (`seasons[n].episodes`) in its own short transaction; ordered by the title's popularity DESC, then season. Same rules as details:
-  resumable by query, Stop between calls, per-season failures recorded with a three-strike skip, bounded backoff, no OMDb,
-  progress `episodes` done/total (total = the seasons still needing episodes when the phase starts). First full run: roughly 20,000
-  calls at about 5/s is one to two hours; later runs fetch only new or stale seasons.
+  0-10%, `details` 10-100% (the admin copies the weights from the backend, `44` 3.1). Counts: `{ titles, detailed, seasons,
+  stale }`.
+- **Series episodes ride the same call (owner, 2026-10-18: "is there a way to get it in a single call?"):** a series' detail
+  request is `/tv/{id}?append_to_response=credits,external_ids,season/1,season/2,...` (TMDB allows up to 20 appended items per
+  request; season 0 specials skipped), so ONE call returns the detail AND the episodes of up to the first 18 non-special seasons
+  (credits and external_ids take two of the 20 slots). A series with more seasons gets follow-up calls of up to 20 `season/N` appends
+  each (`/tv/{id}?append_to_response=season/19,season/20,...`). Each season's episodes are written into the title's payload
+  (`seasons[n].episodes`, the existing episode mapping of `title-reads.seasons()`) in the same short transaction as the detail.
+  There is no separate `episodes` phase: `details` covers movies (one call) and series (one to a few calls); a stored series whose
+  detail is fresh but some seasons have no stored episodes (a season added upstream) is picked up by the same query and gets only the
+  missing `season/N` appends. Progress counts calls' worth of titles (`done/total` titles), not seasons.
+- **Pace (named constant, not a literal):** `TMDB_REQUESTS_PER_SECOND` = 20 in constants/limits.ts (TMDB's documented ceiling is about
+  40 a second and there is no published daily quota; the previous pacing was about 5 a second). The existing 429 backoff stays and
+  lowers the pace for the rest of the run after a 429. About 11,900 calls for the owner's library (1,000 discover pages, 5,534
+  movie details, 5,389 series details with seasons): about 10 minutes at 20 a second; later runs fetch only new or stale titles.
 - **Resumable:** Stop then Run again continues with the titles still list-only (the query, not a cursor). A run that fails keeps
   what was written. Per-title failures (a TMDB 404 for a removed title) mark that title `detail_failed_at` and continue; a title
   failing 3 runs in a row is skipped until its payload changes. A `429`/5xx uses the client's bounded backoff.
