@@ -127,6 +127,13 @@ written. A removal replaces the mark with a tombstone so the Player never resume
 (`ask` / `resume` / `restart`), the opening position and `waitingForResume`; the live progress changes after that never
 move the stage.
 
+**Episode navigation (`59`).** Episode-row presses and the compact Previous/Next footer share one operation: advance
+the existing latest-navigation generation; await the current recorder's `flush(false)`; if still latest, dispatch the
+exact returned season/episode and let the playback-key effect begin its distinct watch identity. A later episode press,
+Close or title open supersedes the pending switch. Cross-season adjacency reads/caches actual season responses, skips
+empty/Season 0 and never manufactures an episode from summary counts. Resume capability follows the active source:
+native/app streams yes; embeds only with `startParam`.
+
 ### 3.4 Server changes
 
 1. `routes/watch.ts`: integers only (`positionMs >= 0`, `durationMs > 0`, `season`/`episode` > 0, `seq >= 1`), ids and

@@ -551,14 +551,17 @@ fitted by the Picture fit preference (Fit by default). Chrome's native control l
 alone. A stream that fails shows Live's stage note (§3.1): an icon, `This stream will not play`, the reason in
 one sentence and **Retry**, clear of the control bar. The stage's verbs are its context menu (§5.1).
 
-- **Resume.** **Resume** (the one accent) and **Start over** remain pinned at the foot of the details pane in
-  every state. Resume is enabled when the paused item has saved progress and a playable source; Start over
-  is enabled when the paused item has a playable source. Otherwise each stays visibly disabled with its
-  accessible reason tooltip (no item, loading, no saved position, no playable source, or pause first).
-  Show `resume at m:ss` only when a real saved position exists. The Resume preference controls automatic
-  opening behavior only: Ask waits for a choice, Always resume seeks, Always start over starts at zero.
-  None of these preferences hides the footer (owner clarification, 2026-10-17).
-- **Progress** is written about every 30 seconds while playing (never more often) and immediately on pause,
+- **Footer (`59`).** A compact footer stays pinned: Source (only with 2+ sources); Previous/Next (series with an exact
+  episode); `resume at m:ss` (only real saved progress); compact Resume and Start over. Idle/loading retain the thin
+  shell and accessible disabled reasons, never the old full-width two-button block. Previous/Next use real sorted
+  episode responses, read/cache an adjacent season at a boundary, skip empty/Season 0, and never invent episode numbers;
+  a switch awaits the prior progress flush and the latest navigation alone commits it. No rewind/forward/loop/
+  play-pause/fullscreen duplicates and no auto-next.
+- **Resume.** Resume is enabled when the paused item has saved progress AND the active source can seek to it: native/
+  app streams always; an embed only with `startParam` (else `This source does not support resuming at a saved
+  position.`). Start over remains available for every playable source. Ask/Always resume/Always start over control
+  opening only and never hide the footer.
+- **Progress** is written every 10 seconds of MEDIA movement (also on a rewind/seek of that size) and immediately on pause,
   ended, seek settle and close. Each playback numbers its writes from 1 and a lower number can
   never replace a higher one.
 - **Fullscreen** is the stage; `F` toggles it.
