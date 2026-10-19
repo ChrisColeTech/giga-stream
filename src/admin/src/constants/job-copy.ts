@@ -27,7 +27,6 @@ export const JOB_WORKSPACE_LABELS: readonly string[] = [
 export const JOB_SECTIONS = [
   { id: "jw-details", label: "Details" },
   { id: "jw-schedule", label: "Schedule" },
-  { id: "jw-run", label: "Run" },
   { id: "jw-last", label: "Last run" },
 ] as const;
 export const JOB_SECTION_KEYS: readonly string[] = JOB_SECTIONS.map((section) => section.id);

@@ -147,6 +147,14 @@ describe("a title's workspace", () => {
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });
 
+  it("draws the Plot and the Cast as text areas, 4 rows and 3, with their own aria-labels", () => {
+    const html = open(row("movie-1"), { plot: "P", cast: ["Ann", "Bo"] });
+    assert.match(html, /<textarea[^>]*rows="4"[^>]*aria-label="Plot"/);
+    assert.match(html, /<textarea[^>]*rows="3"[^>]*aria-label="Cast"/);
+    assert.ok(html.includes('value="Ann, Bo"'), "the cast draft stays text");
+    assert.ok(!/<input[^>]*aria-label="Cast"/.test(html), "the Cast row is no single-line field");
+  });
+
   it("disables Revert to TMDB with its reasons: manual, nothing edited; enables it on an edited title", () => {
     const manual = open(row("custom-1", { state: "manual" }), {});
     assert.ok(manual.includes('aria-label="Revert to TMDB. A title made by hand has no TMDB copy to go back to."'));

@@ -1,5 +1,6 @@
 /* The form's units against the wire's (`37` section 4.3), pure: Runtime is minutes in the form and `runtimeMs` on the
- * wire; Genres and Cast are comma lists in the form and `string[]` on the wire. */
+ * wire; Genres and Cast are text lists in the form (Cast one name per line or comma-separated, `53` section 2.2) and
+ * `string[]` on the wire. */
 
 const MINUTE_MS = 60_000;
 
@@ -14,9 +15,10 @@ export function runtimeMsOf(minutes: string): number | undefined {
   return /^\d+$/.test(text) ? Number(text) * MINUTE_MS : Number.NaN;
 }
 
-/** A comma list as its items: trimmed, empties dropped, a repeat kept once. */
+/** A comma-or-newline list as its items: trimmed, empties dropped, a repeat kept once. The genres' single-line
+ *  field cannot hold a newline, so its behaviour is unchanged. */
 export function commaItems(text: string): string[] {
-  const items = text.split(",").map((item) => item.trim()).filter((item) => item !== "");
+  const items = text.split(/[,\n]/).map((item) => item.trim()).filter((item) => item !== "");
   return [...new Set(items)];
 }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { Radio } from "lucide-react";
+import { CircleStop, Radio } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TabPage } from "@/components/chrome/TabPage";
@@ -176,6 +176,22 @@ describe("a workspace's pieces", () => {
     const save = renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING, reason: NOTHING_CHANGED } }));
     assert.ok(save.includes(`aria-label="Save details. ${NOTHING_CHANGED}"`) && save.includes("text-accent-ink"));
     assert.ok(renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING } })).includes(">Save details</button>"));
+  });
+
+  it("draws the page's own verbs before Discard changes: their fill, their icon, their reason as the tooltip", () => {
+    const verbs = [
+      { label: "Run job", tip: "Start the job now.", variant: "primary" as const, onPress: NOTHING },
+      { label: "Stop", tip: "Stop the running job.", reason: "Not running.", icon: CircleStop, onPress: NOTHING },
+    ];
+    const forward = { label: "Jobs" as const, onPress: NOTHING };
+    const bar = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: true, onDiscard: NOTHING, verbs, forward }));
+    assert.ok(/<button[^>]*title="Start the job now\."[^>]*>Run job<\/button>/.test(bar));
+    assert.ok(bar.includes("text-accent-ink") && bar.includes("lucide-circle-stop"));
+    assert.ok(bar.indexOf(">Run job<") < bar.indexOf('aria-label="Stop. Not running."'));
+    assert.ok(bar.indexOf('aria-label="Stop. Not running."') < bar.indexOf("Discard changes"));
+    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") && bar.indexOf("min-w-0 flex-1") < bar.indexOf("Jobs →"));
+    const plain = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: false, onDiscard: NOTHING }));
+    assert.ok(!plain.includes("Run job") && !plain.includes("Stop. "), "the slot is optional");
   });
 
   it("draws the rail: the way back named for the tab, then the sections, the lit one selected", () => {
