@@ -182,8 +182,8 @@ describe("the Security question group", () => {
     const html = open();
     assert.ok(at(html, 'aria-label="Security question"') < at(html, 'aria-label="Answer"'));
     assert.ok(html.includes("<select") && html.includes('autoComplete="off"'));
-    const answer = html.slice(at(html, 'aria-label="Answer"'));
-    assert.ok(/type="text"/.test(answer.slice(0, 400)), "the answer is typed in clear");
+    /* The input's own `type` renders before its `aria-label`, so the tag is pinned whole, not sliced from the label. */
+    assert.ok(/<input type="text"[^>]*aria-label="Answer"/.test(html), "the answer is typed in clear");
     assert.ok(!/\splaceholder=/.test(html) && !html.includes("aria-disabled"));
   });
 
