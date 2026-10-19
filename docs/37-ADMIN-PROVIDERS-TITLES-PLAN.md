@@ -124,7 +124,7 @@ its groups wear shimmer lines in their shape until it answers.
   one), Rating, Genres (comma list, sent as `string[]`), Runtime (minutes in the form, `runtimeMs` on the wire; `lib/title-units.ts`), Stream address, State
   (read-only word). `Revert to TMDB` is disabled with `A title made by hand has no TMDB copy to go back to.` for a manual title, with `Nothing was edited.` when `editedFields` is empty, and
   otherwise posts `.../revert` (an `ArmedButton`-free ghost verb: it only drops local edits).
-- **Plot** (`users`): Plot (`Textarea`), Cast (comma list).
+- **Plot** (`users`): Plot (`Textarea`, 4 rows), Cast (a `Textarea`, 3 rows - one name per line or comma-separated, `53`; both fields draw multi-line: the kit's `Textarea` no longer inherits the one-line field height).
 - **Images** (`image`): Poster address, Backdrop address.
 - **Seasons** (`layers`, series only): for a **manual** series an editable ordered `SeasonList` (season number, episodes with number and title, remove, `Add season`); for a **synced**
   series the seasons are read-only with their `episodeCount`. A movie's workspace has no Seasons rail item and no Seasons group.

@@ -3,7 +3,12 @@
 > **Amended 2026-10-18 (owner):** the reset has no attempt limit and no lock (the five-wrong-answers 15-minute lock, the
 > `reset_attempts` table and `429 auth.rate_limited` are removed).
 
-**Status: built (backend B3, branch `backend/reset`; username rename and admin Wave R, branch `admin/username-reset`).** Owner, 2026-10-17: "add a password reset button to the login form", then "lets do security question instead of email for password reset", then "we don't have emails set up, why would it use email for login." There is no email, no SMTP, no reset code, no console sink, no Electron dialog and no tray action, and **the sign-in name is a plain username**: any text, trimmed, 1 to 254 characters, no format check, unique without case (migration `019`). The reset is answered by a **security question** that each account sets for itself while signed in. The program is `39` (B3 took migration `018`, the rename `019`). Governed by `00`, `01`, `03` 7.11 and 7.12, `07`, `26` (D5, D22), `34`.
+> **Amended 2026-10-18 (`54`, owner):** the question is set **per account by a signed-in admin** in the Accounts workspace,
+> not by each account for itself in Settings: `PUT /api/auth/me/security-question` and the Settings > Account page are gone,
+> replaced by `PUT /api/admin-accounts/:accountId/security-question` and the workspace's `Security question` group. Sections
+> 2.3, 2.6, 3.3, 4.1, 4.2 and 4.4 are amended accordingly.
+
+**Status: built (backend B3, branch `backend/reset`; username rename and admin Wave R, branch `admin/username-reset`).** Owner, 2026-10-17: "add a password reset button to the login form", then "lets do security question instead of email for password reset", then "we don't have emails set up, why would it use email for login." There is no email, no SMTP, no reset code, no console sink, no Electron dialog and no tray action, and **the sign-in name is a plain username**: any text, trimmed, 1 to 254 characters, no format check, unique without case (migration `019`). The reset is answered by a **security question** that a signed-in admin sets for the account in the Accounts workspace (`54`; before it, each account set its own in Settings). The program is `39` (B3 took migration `018`, the rename `019`). Governed by `00`, `01`, `03` 7.11 and 7.12, `07`, `26` (D5, D22), `34`.
 
 ## 1. What exists (verified in source)
 
@@ -18,7 +23,7 @@
 | The reset: `services/security-question-service.ts`, `store/reset-attempts-repository.ts`, `api/auth-security.ts`, `constants/security-questions.ts` | `src/backend` |
 | The admin gate: `SignInPage`, `SignInForm`, `GateNotice`, `lib/gate-state.ts`, `AuthPort`, `createAuthPort` | `src/admin/src/...` (`34`) |
 | The reset views: `lib/reset-state.ts`, `ResetUsernameForm`, `ResetAnswerForm`, `ForgotLink`, `hooks/useResetStart.ts`, `hooks/useResetPassword.ts` | `src/admin/src/...` |
-| Settings window pages: Appearance, Session, Account (the security question), About | `src/admin/src/constants/settings-sections.ts`, `components/settings/*` |
+| Settings window pages: Appearance, Session, About (`54` removed the Account page) | `src/admin/src/constants/settings-sections.ts`, `components/settings/*` |
 
 ## 2. The design
 
@@ -41,11 +46,11 @@
 - Stored only as a **scrypt hash** (`hashPassword`, salted), never in plain text.
 - **Normalised before hashing and before every comparison:** `answer.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US")`. So `  Rex  ` and `rex` are the same answer, and `Golden   Retriever` and `golden retriever` are the same. An answer that is empty after normalisation is refused (`422 account.invalid`, field `answer`). The answer is at most 200 characters before normalisation.
 
-### 2.3 Setting or changing the question (signed in, own account only)
+### 2.3 Setting or changing the question (a signed-in admin, per account; amended by `54`)
 
-- Route `PUT /api/auth/me/security-question`, body `{ currentPassword, question, answer }` (strict). The **current password is required** (a wrong one is `401 auth.invalid_credentials` with `details.field: "currentPassword"`, the same as the password change).
-- An account can set or change only its **own** question. Another admin cannot set it: the owner's rule is that an account's question is its own, so a locked-out person is never handed a question by someone else. A question is never removed by a route (an account with no question stays without one until it sets one).
-- Changing the question does **not** end sessions (it is not a credential change). Audit `auth.security_question_set` (actor: the account; detail `{ username }`; never the answer).
+- Route `PUT /api/admin-accounts/:accountId/security-question`, body `{ question, answer }` (strict). No current password: the actor is a signed-in admin, who already holds password power over every account (`54` decision 1).
+- Any signed-in admin sets or changes **any** account's question, including their own (every account appears in the Accounts list). A question is never removed by a route (an account with no question stays without one until an admin sets one).
+- A gone account answers `404 account.not_found`, the admin-accounts routes' standard refusal. Changing the question does **not** end sessions (it is not a credential change). Audit `account.security_question_set` (actor: the signed-in admin; subject: the account; detail `{ username }`; never the answer).
 - Answer `200 { set: true }`.
 
 ### 2.4 Resetting: `reset-start` and `reset`
@@ -72,7 +77,7 @@ Order of checks (the first two are the same for every username, so they reveal n
 
 **Every failure is one body:** `401 auth.reset_invalid`, message `That answer is not right, or the reset is not available for this username.` (The message is deliberately the same for a wrong answer, a lock, a decoy, an unknown username and a disabled account. A lock is not disclosed, because a disclosed lock would mark the username as a real account.)
 
-**The account with no question.** The owner asked that `reset-start` tell such an account it has no question. It cannot, without revealing that a username is a real account with no question (an observer would learn that the username exists). The design answers with the decoy as in 2.4, and the gate shows a **generic** reason on every answer view (4.1), under the question: "If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one first, under Settings > Account." This is the only reason shown, for every username, so it discloses nothing. See 7, decision 1.
+**The account with no question.** The owner asked that `reset-start` tell such an account it has no question. It cannot, without revealing that a username is a real account with no question (an observer would learn that the username exists). The design answers with the decoy as in 2.4, and the gate shows a **generic** reason on every answer view (4.1), under the question: "If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one first, in the Accounts workspace." This is the only reason shown, for every username, so it discloses nothing. See 7, decision 1.
 
 ### 2.5 The attempt counter (`reset_attempts`)
 
@@ -83,12 +88,12 @@ Order of checks (the first two are the same for every username, so they reveal n
 
 | Action | Written when | Detail |
 |---|---|---|
-| `auth.security_question_set` | a signed-in account sets or changes its question | `{ username }` |
+| `account.security_question_set` | a signed-in admin sets or changes an account's question (`54`; was `auth.security_question_set`, an account setting its own) | `{ username }` |
 | `auth.reset_failed` | a wrong or refused answer (any username) | `{ username }` |
 | `auth.reset_locked` | the fifth wrong answer | `{ username }` |
 | `auth.reset_completed` | a successful reset | `{ username }`, actor the account |
 
-Events drawer sentences: `<username> set a security question`, `Password reset failed for <username>`, `Password reset locked for <username> after five wrong answers`, `<username> reset a password`. Names only: never an answer, a password, a hash or a question's answer.
+Events drawer sentences: `<actor> set a security question for <username>` (`54`; the actor and the account are both admins, so both are named), `Password reset failed for <username>`, `Password reset locked for <username> after five wrong answers`, `<username> reset a password`. Names only: never an answer, a password, a hash or a question's answer.
 
 ## 3. Backend (`src/backend` only)
 
@@ -110,11 +115,11 @@ Events drawer sentences: `<username> set a security question`, `Password reset f
 
 | Route | Who | Body | Answer |
 |---|---|---|---|
-| `PUT /api/auth/me/security-question` | signed in | `{ currentPassword, question, answer }` | `200 { set: true }`; `401 auth.invalid_credentials` (field `currentPassword`); `422 account.invalid` (field `answer` or `question`) |
+| `PUT /api/admin-accounts/:accountId/security-question` | signed in | `{ question, answer }` | `200 { set: true }`; `404 account.not_found`; `422 account.invalid` (field `answer` or `question`) |
 | `POST /api/auth/reset-start` | anyone | `{ username }` | `200 { question }`; `429 auth.rate_limited` |
 | `POST /api/auth/reset` | anyone | `{ username, answer, newPassword }` | `200 { reset: true }`; `401 auth.reset_invalid`; `422 account.invalid` (field `newPassword`); `429 auth.rate_limited` |
 
-Routes parse, make one service call and return the envelope (`01` 4.3). All three are under `/api/auth`, so they are `no-store`. `03` 7.12 lists them and section 8 has `auth.reset_invalid`.
+Routes parse, make one service call and return the envelope (`01` 4.3). The reset pair is under `/api/auth`, so its answers are `no-store`; the question route is an admin-accounts route (`54`). `03` 7.12 lists them and section 8 has `auth.reset_invalid`.
 
 ### 3.4 Backend tests
 
@@ -134,15 +139,15 @@ Views in the same full-window wall (`SignInPage`, which holds the reset state in
 
 Copy (`constants/reset-copy.ts`):
 - Heading `Reset your password`; verbs `Continue`, `Reset password`, `Back to sign in`; the link `Forgot password?`.
-- The generic reason, always shown on `reset-answer`: `If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one first, under Settings > Account.` (card title `No security question?`).
+- The generic reason, always shown on `reset-answer`: `If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one first, in the Accounts workspace.` (card title `No security question?`).
 - Refusals: `That answer is not right, or the reset is not available for this username.` under Answer (`auth.reset_invalid`); `Password must be at most 256 characters.` under New password (the client check first), `That password is not valid.` for the backend's `422`; `Too many sign-in attempts; wait a minute.` on a card (`rate_limited`); `The admin backend cannot be reached.` on a card (`unreachable`).
 - Success: back to `signin` with the typed username kept and the card `Password reset` / `Password reset. Sign in.`
 - Focus: Username on `reset-username`; Answer on `reset-answer`; after a refusal of the answer focus goes back to Answer (the answer and the new password are cleared; the question stays); after a refusal of the new password focus goes to New password and the answer is kept. The password field uses `autoComplete="new-password"`; the answer uses `autoComplete="off"`. Enter submits. Escape does nothing (a gate has no cancel).
 - No placeholder text, no `aria-disabled`, the only filled button is the primary of each view. A disabled verb is natively `disabled` with its reason as a focusable tooltip.
 
-### 4.2 Settings > Account (the account's own question)
+### 4.2 The Accounts workspace's Security question group (amended by `54`; the Settings > Account page is gone)
 
-A page in the Settings window, `Account` (between Session and About). One group, `Security question`, whose badge reads `Set` or `Not set` (from the session's `securityQuestionSet`). Rows in this order: **Security question** (`Select` of the eight), **Answer** (typed in clear, `autoComplete="off"`, info glyph "Used only to reset your password from the sign-in page."), **Current password** (`type=password`). `Save question` is the one primary, disabled with `Choose a question.`, `Enter your answer.` or `Enter your current password.` as the first missing field; `Saving.` while it runs. A wrong current password (`401`) is shown under that row as `That current password is wrong.`; a `422` sits under Answer or Question. Success says `Security question saved.`, empties the form and flips the badge to `Set`. Saving signs nothing out. The Accounts workspace's Details shows `Security question` as `Set` or `Not set`, read only (`securityQuestionSet`).
+Settings has three pages (Appearance, Session, About). The question is set per account in the Accounts workspace: a `Security question` group for the selected account (the last group, after Password), whose badge reads `Set` or `Not set` (from the account's `securityQuestionSet`; the Details group's fact row is gone). Rows: **Security question** (`Select` of the eight), **Answer** (typed in clear, `autoComplete="off"`). `Save question` is its own primary (not part of `Save details`), disabled with `Choose a question.`, `Enter your answer.`, `Saving.` or the unreachable sentence; a `422` sits under its row; a gone account closes the workspace as a details save does. Success empties the form (nothing is kept on screen) and flips the account's flag. Saving signs nothing out.
 
 ### 4.3 AuthPort additions (`types/auth.ts`, `services/auth-port.ts`, `services/session-api.ts`; additive)
 
@@ -155,16 +160,16 @@ interface AuthPort {
   resetPassword(username: string, answer: string, newPassword: string): Promise<ResetResult>; // POST /api/auth/reset, public layer
 }
 ```
-Both never reject. `lib/auth-errors.ts` has `resetRefusalFor(error)`: `auth.reset_invalid` -> `invalid`; `account.invalid` -> `weak`; `auth.rate_limited` -> `rate_limited`; a transport failure or a 5xx -> `unreachable`. The request layer treats a 401 `auth.invalid_credentials` (a wrong current password) as a plain refusal: no refresh, and the session is not ended. The Settings > Account page uses `PUT /api/auth/me/security-question` through the signed layer in `services/security-question.ts`.
+Both never reject. `lib/auth-errors.ts` has `resetRefusalFor(error)`: `auth.reset_invalid` -> `invalid`; `account.invalid` -> `weak`; `auth.rate_limited` -> `rate_limited`; a transport failure or a 5xx -> `unreachable`. The request layer treats a 401 `auth.invalid_credentials` (a wrong current password) as a plain refusal: no refresh, and the session is not ended. The Accounts workspace's `Save question` uses `PUT /api/admin-accounts/:accountId/security-question` through `services/accounts.ts`'s `saveQuestion` (`54`).
 `hooks/useResetStart.ts` and `hooks/useResetPassword.ts` await the port; the store holds no promise; a second submit is ignored while waiting.
 
 ### 4.4 Files
 
-`lib/reset-state.ts`, `lib/reset-verb.ts`, `constants/reset-copy.ts`, `components/session/{ResetUsernameForm,ResetAnswerForm,ForgotLink}.tsx`, `hooks/{useResetStart,useResetPassword}.ts`, `services/schemas/reset-schema.ts`; `components/settings/SecurityQuestionSection.tsx`, `constants/{security-questions,security-question-copy}.ts`, `lib/security-question-form.ts`, `services/security-question.ts`, `hooks/useSaveSecurityQuestion.ts`. Updated: `SignInForm`, `SignInPage`, `GateNotice` (a title and icon), `constants/settings-sections.ts`, `SettingsWindow`, `types/auth.ts`, `services/{auth-port,session-api}.ts`, `lib/{auth-errors,event-sentence}.ts`, `constants/api-sentences.ts`, `store/session-slice.ts` (the actor carries `securityQuestionSet`).
+`lib/reset-state.ts`, `lib/reset-verb.ts`, `constants/reset-copy.ts`, `components/session/{ResetUsernameForm,ResetAnswerForm,ForgotLink}.tsx`, `hooks/{useResetStart,useResetPassword}.ts`, `services/schemas/reset-schema.ts`; `components/settings/SecurityQuestionSection.tsx`, `constants/{security-questions,security-question-copy}.ts`, `lib/security-question-form.ts`, `services/security-question.ts`, `hooks/useSaveSecurityQuestion.ts`. Updated: `SignInForm`, `SignInPage`, `GateNotice` (a title and icon), `constants/settings-sections.ts`, `SettingsWindow`, `types/auth.ts`, `services/{auth-port,session-api}.ts`, `lib/{auth-errors,event-sentence}.ts`, `constants/api-sentences.ts`, `store/session-slice.ts` (the actor carries `securityQuestionSet`). (`54` deleted `SecurityQuestionSection`, `useSaveSecurityQuestion`, `services/security-question.ts`, `lib/security-question-form.ts` and `security-question-copy.ts`; the question group lives in `components/accounts/AccountQuestionGroup.tsx` with `lib/account-question.ts` and `services/account-question-flow.ts`.)
 
 ### 4.5 Admin tests
 
-`reset-state.test.ts` (every transition, the verbs' reasons), `reset-copy.test.ts`, `reset-auth-port.test.ts` (bodies, the token-free layer, each refusal mapping, a wrong current password neither refreshes nor ends the session), `reset-markup.test.ts`, `security-question-section.test.ts` (the eight questions equal the backend's, the reasons in order, `Set` / `Not set`, the 401 / 422 field mapping), `event-sentence.test.ts`, `gate-markup.test.ts` (the link), `settings-sections.test.ts`; `gate-cover.test.ts` and `no-network-storage.test.ts` stay green.
+`reset-state.test.ts` (every transition, the verbs' reasons), `reset-copy.test.ts`, `reset-auth-port.test.ts` (bodies, the token-free layer, each refusal mapping, a wrong current password neither refreshes nor ends the session), `reset-markup.test.ts`, the security-question suite (the eight questions equal the backend's, the reasons in order, `Set` / `Not set`; re-homed by `54` into the accounts suites - `account-question-flow.test.ts` and the accounts markup tests), `event-sentence.test.ts`, `gate-markup.test.ts` (the link), `settings-sections.test.ts`; `gate-cover.test.ts` and `no-network-storage.test.ts` stay green.
 
 ## 5. Failure modes and their decisions
 

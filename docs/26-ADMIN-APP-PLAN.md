@@ -432,7 +432,7 @@ the Titles or Playlists pages.
 | Playlist | Name*, Address* | `Enabled` | none | Host, Channels, Last synced, Outcome |
 | Playlist job | Name*, Type*, Playlist* (a select of the playlist records) | `Enabled` | Schedule, Dry run, Prune | Last run, Outcome, Counts |
 | Catalog job | Name*, Type*, Scope* (Trending, Popular or Library), Kind* (not asked for Library) | `Enabled` | Pages, Schedule | Last run, Outcome, Titles |
-| Account | Username*, Password* (New only; no Name: removed, owner, 2026-10-17) | `Enabled` | none | Last sign-in, Security question (`Set` or `Not set`) |
+| Account | Username*, Password* (New only; no Name: removed, owner, 2026-10-17) | `Enabled` | none | Last sign-in (the Security question's `Set` / `Not set` is the workspace's `Security question` group badge, `54`) |
 
 ### 4.5 Channels index (proposed)
 

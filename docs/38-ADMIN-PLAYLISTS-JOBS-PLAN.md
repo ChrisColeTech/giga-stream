@@ -7,6 +7,10 @@
 > and resumed. Read `43` section 4.1 for the Playlists, Jobs and Channels surfaces; where this document and `43` differ, `43`
 > governs. The jobs tab's catalog (title sync) parts of this document stand.
 
+> **Amended 2026-10-18 (`53`, owner).** The Jobs workspace's Run section is gone: `Run job` (the primary, `Resume` after a
+> stopped run) and the ghost `Stop` sit in the page toolbar before `Discard changes`, with the run gate's reasons as their
+> tooltips; the rail lists `Details`, `Schedule`, `Last run`. Section 4.3 is amended accordingly.
+
 **Status: plan, written before the code (branch `admin/playlists-jobs`, cut from `family-port` after Wave 3a, `35`, has landed; it runs in
 parallel with `36` and `37`, and is accepted after `36` for the one cross-tab read of section 3.4).** Owner, 2026-10-17: no fixture waves; every tab
 is built directly against the real backend routes through the service modules, and a wave exits only when every control is really wired and verified.
@@ -116,7 +120,7 @@ or scope + kind), `schedule`, `last run`, `outcome`, `state` (`idle`, `running` 
 notice and the rest continue. It is disabled, in this priority order, with: `Tick a job first` (none ticked); `Jobs that are disabled cannot run.` (a ticked job is disabled);
 `A ticked job is already running.`; `A ticked job's playlist is disabled.` (from `playlistName` and the playlists list); `The admin backend cannot be reached.` (`lib/job-run-gate.ts`, pure).
 
-### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Run`, `Last run`; toolbar `Discard changes`, `Save`, `Channels →` for a playlist job or `Titles →` for a catalog job)
+### 4.3 Workspace (rail `‹ Jobs`, `Details`, `Schedule`, `Last run` (`53` removed `Run`); toolbar `Run job` (primary, `Resume` after a stopped run), `Stop`, `Discard changes`, then rightmost `Channels →` for a playlist job or `Titles →` for a catalog job)
 
 - **Details** (`file-text`): Name (first), Type (read-only), Playlist (`Select`) or Scope and Kind (a catalog), **Enabled**, Pages (catalog).
 - **Schedule** (`clock`): Interval (a `Select`: Off, Every 15 minutes, Every 30 minutes, Every hour, Every 6 hours, Every 12 hours, Every day, `Custom...`; `lib/job-schedule.ts`). A stored value outside the list
@@ -124,9 +128,7 @@ notice and the rest continue. It is disabled, in this priority order, with: `Tic
   and the notice; the backend normalises it and answers `422 job.invalid` field `schedule` otherwise). A read-only Status row says Scheduled, Not scheduled or Disabled. The Jobs list's
   schedule column uses the same words. The backend does not expose a next run, so none is shown. The New job form's Playlist row is always the select, natively disabled with its reason as a tooltip
   (`Loading.`, `The playlists could not be read.`, `Add a playlist first.`) when there are no options.
-- **Run** (`play`): a playlist job has **Dry run** and **Prune** (`Toggle`s; the Prune tip says it deletes synced channels whose entry vanished, and that edited ones are kept) and `Run job`;
-  a catalog job has `Run job`. `Run job` on the workspace sends the toggles' current values as the once-only override (`{ dryRun, prune }`) and is disabled with the same reasons as the toolbar's plus
-  `Save the job first` while the draft is dirty.
+- **Run (amended by `53`: this section is gone; the verbs live in the toolbar)**: `Run job` - `Resume` after a stopped run - is the toolbar's primary and `Stop` the ghost beside it, both with the run gate's reasons as their tooltips (`Save the job first` while the draft is dirty, `Running.`, the gate's own); the rail lists no `Run` and the page carries no Run group.
 - **Last run** (`history`, read-only; a heading `Refresh`): State (word), When, Outcome (`lastOutcome`, a sentence after B4), Counts (a playlist job: `created`, `updated`, `kept`, `skipped`, `refused`,
   `removed`; a catalog job: titles stored and stale), **Refused** (`refusalExamples`, at most 10 strings) and **Created** (`createdIds`, each a link that calls `requestTab("channels", id)`),
   read defensively from the loose `lastCounts` record (an absent key draws a shimmer line, never a sentence). Forward verbs: `Channels →` (a playlist job) or `Titles →` (a catalog job) call `requestTab`.
