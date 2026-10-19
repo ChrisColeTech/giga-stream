@@ -151,7 +151,7 @@ describe("a title's workspace", () => {
     const html = open(row("movie-1"), { plot: "P", cast: ["Ann", "Bo"] });
     assert.match(html, /<textarea[^>]*rows="4"[^>]*aria-label="Plot"/);
     assert.match(html, /<textarea[^>]*rows="3"[^>]*aria-label="Cast"/);
-    assert.ok(html.includes('value="Ann, Bo"'), "the cast draft stays text");
+    assert.ok(html.includes(">Ann, Bo</textarea>"), "the cast draft stays text");
     assert.ok(!/<input[^>]*aria-label="Cast"/.test(html), "the Cast row is no single-line field");
   });
 
