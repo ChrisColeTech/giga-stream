@@ -23,6 +23,7 @@ import {
   type FlowResult,
 } from "./account-flow-support";
 import { createPasswordFlow } from "./account-password-flow";
+import { createQuestionFlow } from "./account-question-flow";
 
 export type { AccountField, FlowResult } from "./account-flow-support";
 
@@ -32,6 +33,7 @@ export interface AccountFlows {
   create: (draft: NewAccountDraft) => Promise<FlowResult>;
   save: (id: AccountId, draft: AccountDraft) => Promise<FlowResult<AdminAccount | null>>;
   setPassword: (id: AccountId, password: string) => Promise<FlowResult>;
+  saveQuestion: (id: AccountId, question: number, answer: string) => Promise<FlowResult>;
   remove: (id: AccountId) => Promise<FlowResult>;
   /** Reads the list. Does nothing while a read is already running. */
   load: () => Promise<FlowResult>;
@@ -161,5 +163,5 @@ export function createAccountFlows(deps: AccountFlowDeps): AccountFlows {
     return result;
   };
 
-  return { create, save, remove, load, refresh, ...createPasswordFlow(deps) };
+  return { create, save, remove, load, refresh, ...createPasswordFlow(deps), ...createQuestionFlow(deps, load) };
 }

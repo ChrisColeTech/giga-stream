@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-/* `POST /api/auth/reset-start` answers `{ question }`; `POST /api/auth/reset` answers `{ reset: true }`;
- * `PUT /api/auth/me/security-question` answers `{ set: true }` (`40` sections 2.3 and 2.4). */
+/* `POST /api/auth/reset-start` answers `{ question }`; `POST /api/auth/reset` answers `{ reset: true }` (`40`
+ * section 2.4). The per-account save route's answer lives in `account-schema.ts` (docs/54 section 2). */
 export const ResetStartSchema = z.object({ question: z.string().min(1) });
 export const ResetDoneSchema = z.object({ reset: z.literal(true) });
-export const QuestionSavedSchema = z.object({ set: z.literal(true) });

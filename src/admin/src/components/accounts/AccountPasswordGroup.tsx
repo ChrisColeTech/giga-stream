@@ -40,7 +40,7 @@ export function AccountPasswordGroup({ saving, unreachable, onSet }: AccountPass
   );
 
   return (
-    <Group id="ac-password" icon={KeyRound} title="Password" last>
+    <Group id="ac-password" icon={KeyRound} title="Password">
       <Row label="New password" tip={NEW_PASSWORD_TIP} error={error}>
         <Input
           type="password"

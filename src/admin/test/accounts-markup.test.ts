@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
+import { SECURITY_QUESTIONS, SECURITY_QUESTION_OPTIONS } from "@/constants/security-questions";
 import { AccountsPage } from "@/pages/AccountsPage";
 import { useAppStore } from "@/store/app-store";
 import type { AdminAccount } from "@/types/admin-account";
@@ -120,14 +122,14 @@ describe("the accounts table strip", () => {
 });
 
 describe("an account's workspace", () => {
-  it("opens from the held list with the rail, Details, Password, the pinned Discard and Save details ending Details", () => {
+  it("opens from the held list with the rail, Details, Password, Security question, the pinned Discard and Save details ending Details", () => {
     state().accountsLoaded([account("a"), account("b")]);
     state().openWorkspace("accounts", "a");
     const html = page();
     assert.ok(html.includes('aria-label="Account sections"') && html.includes("Accounts"));
     assert.ok(at(html, ">Details<") < at(html, ">Password<"));
+    assert.ok(at(html, ">Password<") < at(html, ">Security question<"), "the rail lists the question group last");
     assert.ok(!html.includes('aria-label="Name"') && html.includes('aria-label="Username"'));
-    assert.ok(html.includes("Security question") && html.includes("Not set"), "the read-only fact");
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(!html.includes(">Save<") && !html.includes("Titles →"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
@@ -150,5 +152,48 @@ describe("an account's workspace", () => {
     state().accountsLoaded([account("a")]);
     state().openWorkspace("accounts", "a");
     assert.ok(page().includes(">never<"));
+  });
+});
+
+describe("the Security question group", () => {
+  const open = (): string => {
+    state().accountsLoaded([account("a"), account("b")]);
+    state().openWorkspace("accounts", "a");
+    return page();
+  };
+
+  it("is the workspace's last group, after Password, with its own primary `Save question`", () => {
+    const html = open();
+    assert.ok(at(html, 'id="ac-password"') < at(html, 'id="ac-question"'));
+    assert.ok(at(html, 'aria-label="Answer"') < at(html, "Save question"), "the rows come before the verb");
+    assert.ok(html.includes('aria-label="Save question. Choose a question."'));
+  });
+
+  it("offers the backend's eight questions, in its order, numbered 1 to 8", () => {
+    const backend = readFileSync(new URL("../../backend/src/constants/security-questions.ts", import.meta.url), "utf8");
+    const listed = Array.from(backend.matchAll(/^ {2}"(.+)",$/gm), (match) => match[1]);
+    assert.deepEqual([...SECURITY_QUESTIONS], listed);
+    assert.deepEqual(SECURITY_QUESTION_OPTIONS.map((option) => option.value), [1, 2, 3, 4, 5, 6, 7, 8]);
+    const html = open();
+    for (const question of SECURITY_QUESTIONS) assert.ok(html.includes(question.replace("'", "&#x27;")), question);
+  });
+
+  it("has the Answer row after the question, typed in clear, kept off autocomplete, with no placeholder", () => {
+    const html = open();
+    assert.ok(at(html, 'aria-label="Security question"') < at(html, 'aria-label="Answer"'));
+    assert.ok(html.includes("<select") && html.includes('autoComplete="off"'));
+    const answer = html.slice(at(html, 'aria-label="Answer"'));
+    assert.ok(/type="text"/.test(answer.slice(0, 400)), "the answer is typed in clear");
+    assert.ok(!/\splaceholder=/.test(html) && !html.includes("aria-disabled"));
+  });
+
+  it("carries the account's flag as its badge both ways, and Details has no fact row", () => {
+    const html = open();
+    const details = html.slice(at(html, 'id="ac-details"'), at(html, 'id="ac-password"'));
+    assert.ok(!details.includes("Security question"), "the fact row moved to the group's badge");
+    assert.ok(html.includes("Not set"));
+    state().accountsLoaded([account("a", false, { securityQuestionSet: true }), account("b")]);
+    const set = page();
+    assert.ok(set.includes(">Set<") && !set.includes("Not set"), "the badge flips with the flag");
   });
 });

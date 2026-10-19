@@ -79,8 +79,8 @@ function describe(entry: AuditEntry, names: SubjectNames, area: EventArea): [Eve
       return ["warn", `Sign-in failed for ${text(entry.detail, "username") ?? UNKNOWN_USERNAME}`];
     case "auth.password_changed":
       return ["info", `${actor} changed a password`];
-    case "auth.security_question_set":
-      return ["info", `${actor} set a security question`];
+    case "account.security_question_set":
+      return ["info", `${actor} set a security question for ${name}`];
     case "auth.reset_failed":
       return ["warn", `Password reset failed for ${text(entry.detail, "username") ?? UNKNOWN_USERNAME}`];
     case "auth.reset_completed":

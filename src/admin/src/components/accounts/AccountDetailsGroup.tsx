@@ -7,7 +7,7 @@ import { Row } from "@giga/ui/form/Row";
 import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SaveDetails } from "@/components/records/SaveDetails";
 import type { SaveVerb } from "@/lib/workspace-verbs";
-import { ENABLED_TIP, LAST_SIGN_IN_TIP, SECURITY_QUESTION_TIP, USERNAME_TIP } from "@/constants/account-copy";
+import { ENABLED_TIP, LAST_SIGN_IN_TIP, USERNAME_TIP } from "@/constants/account-copy";
 import type { AccountDraft } from "@/lib/account-draft";
 import { formatWhen } from "@/lib/format-when";
 import type { FormErrors } from "@/lib/record-form";
@@ -24,9 +24,9 @@ export interface AccountDetailsGroupProps {
   readonly save: SaveVerb;
 }
 
-/** `Details`: Username, the Enabled switch (the inverse of the stored `disabled`), the last sign-in and whether a
- *  security question is set (`Set` or `Not set`), both read only. The username is the identity and comes first; an
- *  account has no name. The switch is disabled with its reason while this is the last enabled account. */
+/** `Details`: Username, the Enabled switch (the inverse of the stored `disabled`) and the last sign-in, read only. The
+ *  username is the identity and comes first; an account has no name. The switch is disabled with its reason while this
+ *  is the last enabled account. The security-question flag moved to its own group's badge (docs/54). */
 export function AccountDetailsGroup({ account, draft, errors, onChange, lockReason, save }: AccountDetailsGroupProps) {
   const toggle = (
     <Toggle
@@ -61,11 +61,6 @@ export function AccountDetailsGroup({ account, draft, errors, onChange, lockReas
       </Row>
       <Row label="Last sign-in" tip={LAST_SIGN_IN_TIP}>
         <span className="flex h-9 items-center font-mono text-sm text-muted">{formatWhen(account.lastSignInAt)}</span>
-      </Row>
-      <Row label="Security question" tip={SECURITY_QUESTION_TIP}>
-        <span className="flex h-9 items-center font-mono text-sm text-muted">
-          {account.securityQuestionSet === true ? "Set" : "Not set"}
-        </span>
       </Row>
       <SaveDetails save={save} />
     </Group>

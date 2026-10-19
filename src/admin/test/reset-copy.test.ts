@@ -26,7 +26,7 @@ describe("the reset's words, word for word", () => {
   it("says that a question-less account needs a signed-in admin to set one first", () => {
     assert.match(copy.NO_QUESTION_REASON, /no security question was ever set/);
     assert.match(copy.NO_QUESTION_REASON, /signed-in admin must set one first/);
-    assert.match(copy.NO_QUESTION_REASON, /Settings > Account/);
+    assert.match(copy.NO_QUESTION_REASON, /in the Accounts workspace/);
   });
 
   it("names the success notice and fixes the labels' column", () => {

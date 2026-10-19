@@ -96,6 +96,20 @@ describe("the Settings window", () => {
     assert.ok(html.includes("--label-col"), "one label column for every page");
   });
 
+  it("renders three pages with no Account page and no security-question labels", () => {
+    const html = render(SettingsWindow);
+    assert.ok(!html.includes(">Account</"));
+    for (const section of [AppearanceSection, SessionSection, AboutSection]) {
+      const page = render(section);
+      for (const label of ["Security question", "Current password", "Save question"]) {
+        assert.ok(!page.includes(label), `${label} on ${section.name}`);
+      }
+    }
+    for (const label of ["Security question", "Answer", "Current password"]) {
+      assert.ok(!SETTINGS_LABELS.includes(label), label);
+    }
+  });
+
   it("sizes its label column from every page's labels", () => {
     const longest = Math.max(...SETTINGS_LABELS.map((label) => label.length));
     assert.ok(render(SettingsWindow).includes(`--label-col:${Math.ceil(longest * 8) + 36}px`));
