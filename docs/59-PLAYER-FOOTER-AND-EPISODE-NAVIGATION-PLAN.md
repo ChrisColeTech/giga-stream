@@ -21,9 +21,10 @@ progress settlement and resume capability. No server route changes. Landing (`07
 ## 2. Decisions
 
 1. **Keep the footer, make it compact and aligned.** Source (only with 2+ sources), saved position (only real progress),
-   then ONE non-wrapping action row: Previous/Next grouped LEFT for a series; Resume/Start over grouped RIGHT. A
-   movie/local/idle has no left group and aligns Resume/Start over right. The two groups never stack into separate rows
-   or wrap; the footer never looks staggered. Idle keeps the thin shell and compact disabled reasons. No stage toolbar.
+   then ONE contiguous equal-column action grid - never two intrinsic-width flex groups. Series: Previous | Next |
+   Resume | Start over, four equal columns across the footer with one consistent gap. Movie/local/idle: Resume | Start
+   over, two equal columns in one centred compact grid. No `justify-between`, large middle gap, unequal label widths,
+   wrapping or stacked action rows. Idle keeps the thin shell and compact disabled reasons. No stage toolbar.
 2. **Resume capability:** stream/native sources resume; embeds resume only with `startParam`. An unsupported embed's
    Resume is disabled with `This source does not support resuming at a saved position.` Start over stays available.
    `messageShape` affects progress reporting, not seek capability.
