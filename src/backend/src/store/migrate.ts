@@ -127,6 +127,9 @@ export async function migrate(db: Database): Promise<void> {
       throw new AppError(ERRORS.storeMigrate, {
         version: migration.version,
         reason: cause instanceof Error ? cause.message : "migration failed",
+        // What the store saw before it started: the schema version it read and how it is connected.
+        readVersion: version,
+        protocol: db.protocol,
       });
     }
   }

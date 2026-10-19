@@ -9,6 +9,8 @@ try {
   console.error(error instanceof Error ? error.message : String(error));
   // The details say which migration failed and why (an AppError carries them); the message alone hides the cause.
   if (error instanceof AppError && error.details !== undefined) console.error(JSON.stringify(error.details));
+  // Which database it was: the host only, never the token.
+  if (config.TURSO_DATABASE_URL !== "") console.error(`database host: ${new URL(config.TURSO_DATABASE_URL).host}`);
   process.exit(1);
 }
 
