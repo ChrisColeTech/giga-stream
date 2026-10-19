@@ -14,7 +14,7 @@ export function libraryRenderState(
   if (titlesAvailable) return { items, titleRegionsLoading: false };
   return {
     items: items.filter((item) => item.kind === "local"),
-    titleRegionsLoading: scope !== "local",
+    titleRegionsLoading: scope.some((kind) => kind !== "local"),
   };
 }
 

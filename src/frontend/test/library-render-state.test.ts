@@ -21,22 +21,22 @@ beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 
 describe("backend-down Library rendering", () => {
   it("keeps local rows and skeletonizes unavailable title regions", () => {
-    assert.deepEqual(libraryRenderState([movie, local], false, "all"), {
+    assert.deepEqual(libraryRenderState([movie, local], false, ["movie", "tv", "local"]), {
       items: [local], titleRegionsLoading: true,
     });
   });
 
   it("does not skeletonize an explicitly local-only query", () => {
-    assert.deepEqual(libraryRenderState([local], false, "local"), {
+    assert.deepEqual(libraryRenderState([local], false, ["local"]), {
       items: [local], titleRegionsLoading: false,
     });
-    assert.deepEqual(libraryRenderState([movie, local], true, "all").items, [movie, local]);
+    assert.deepEqual(libraryRenderState([movie, local], true, ["movie", "tv", "local"]).items, [movie, local]);
   });
 });
 
 describe("Rows paging grammar", () => {
   it("keeps established skeletons for pending and settled empty Rows", () => {
-    assert.equal(libraryRenderState([], false, "all").titleRegionsLoading, true);
+    assert.equal(libraryRenderState([], false, ["movie", "local"]).titleRegionsLoading, true);
   });
 
   it("requests a visible cursor only once until the active request clears", () => {

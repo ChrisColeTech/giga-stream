@@ -1,9 +1,10 @@
 import { CONTINUE_LIMIT } from "@/lib/library-limits";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
-import type { LibraryItem, LibraryKind } from "@/types/library";
+import type { LibraryItem } from "@/types/library";
+import { ALL_MEDIA, hasMedia, type MediaScope } from "@/lib/library-media";
 
-export type Scope = "all" | LibraryKind;
+export type Scope = MediaScope;
 export type SourceId = "all" | "history" | "favorites" | `collection:${string}`;
 export type SortKey = "newest" | "oldest" | "az" | "year" | "trending";
 export type WatchedFilter = "all" | "unwatched" | "watching" | "watched";
@@ -23,7 +24,7 @@ export interface LibraryQuery {
 }
 
 export const DEFAULT_QUERY: LibraryQuery = {
-  scope: "all",
+  scope: ALL_MEDIA,
   source: "all",
   search: "",
   genres: [],
@@ -34,7 +35,7 @@ export const DEFAULT_QUERY: LibraryQuery = {
 
 /** The faceted filters at rest. Clear filters also restores Media and the title filter, while keeping source and sort. */
 export const FILTER_DEFAULTS = { genres: [], year: "", watched: "all" } as const;
-export const CLEAR_FILTERS = { ...FILTER_DEFAULTS, scope: "all", search: "" } as const;
+export const CLEAR_FILTERS = { ...FILTER_DEFAULTS, scope: ALL_MEDIA, search: "" } as const;
 
 const COLLECTION_PREFIX = "collection:";
 
@@ -67,7 +68,7 @@ export function watchStateOf(item: ResolvedItem): "unwatched" | "watching" | "wa
 }
 
 export function matchesQuery(item: ResolvedItem, query: LibraryQuery): boolean {
-  if (query.scope !== "all" && item.kind !== query.scope) return false;
+  if (!hasMedia(query.scope, item.kind)) return false;
   const text = query.search.trim().toLocaleLowerCase();
   if (text !== "" && !item.title.toLocaleLowerCase().includes(text)) return false;
   if (query.genres.length > 0 && !query.genres.some((genre) => item.genres.includes(genre))) return false;
@@ -101,7 +102,7 @@ export function visibleItems(items: readonly ResolvedItem[], query: LibraryQuery
  *  limit. One order for the strip and the Rows shelf. */
 export function continueItems(items: readonly ResolvedItem[], scope: Scope, source: SourceId = "all"): ResolvedItem[] {
   const watching = items.filter(
-    (item) => (scope === "all" || item.kind === scope) && matchesSource(item, source) && item.progress?.state === "watching",
+    (item) => hasMedia(scope, item.kind) && matchesSource(item, source) && item.progress?.state === "watching",
   );
   return sortItems(watching, "newest").slice(0, CONTINUE_LIMIT);
 }

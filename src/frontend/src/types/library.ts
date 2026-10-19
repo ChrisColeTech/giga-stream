@@ -2,6 +2,14 @@
 export type ItemRef = { readonly kind: "title"; readonly id: string } | { readonly kind: "local"; readonly id: string };
 
 export type LibraryKind = "movie" | "tv" | "local";
+export type LibraryMediaTypes =
+  | readonly ["movie"]
+  | readonly ["tv"]
+  | readonly ["local"]
+  | readonly ["movie", "tv"]
+  | readonly ["movie", "local"]
+  | readonly ["tv", "local"]
+  | readonly ["movie", "tv", "local"];
 export type MembershipSource = "manual" | "folder";
 export interface Membership {
   readonly collectionId: string;

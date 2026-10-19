@@ -1,4 +1,15 @@
 import { z } from "zod";
+import type { LibraryMediaTypes } from "@/types/library";
+
+const LibraryScopeSchema: z.ZodType<LibraryMediaTypes> = z.union([
+  z.tuple([z.literal("movie")]),
+  z.tuple([z.literal("tv")]),
+  z.tuple([z.literal("local")]),
+  z.tuple([z.literal("movie"), z.literal("tv")]),
+  z.tuple([z.literal("movie"), z.literal("local")]),
+  z.tuple([z.literal("tv"), z.literal("local")]),
+  z.tuple([z.literal("movie"), z.literal("tv"), z.literal("local")]),
+]);
 
 export const SettingsSchema = z.object({
   autoplay: z.boolean(),
@@ -21,7 +32,7 @@ export const SettingsSchema = z.object({
   rescanOnStartup: z.boolean(),
   adminUrl: z.string().min(1).max(2048),
   defaultSource: z.string().min(1).max(200).nullable(),
-  libraryScope: z.enum(["all", "movie", "tv", "local"]),
+  libraryScope: LibraryScopeSchema,
   librarySource: z.string().regex(/^(all|history|favorites|collection:.{1,100})$/),
   libraryGenres: z.array(z.string().min(1).max(80)).max(40),
   libraryYear: z.string().regex(/^(1[89]\d\d|2[01]\d\d)?$/),

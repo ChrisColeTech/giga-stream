@@ -96,8 +96,8 @@ const PARAGRAPH = /<(p|small)[\s>]/;
 describe("the markup", () => {
   it("draws Search titles right after Refresh in the Library toolbar, as icons with no text", () => {
     const strip = html(createElement(LibraryToolbar, {
-      query: { scope: "all", source: "all", search: "", genres: [], year: "", watched: "all", sort: "newest" },
-      view: "grid", trending: false, filters: createElement("div"), loading: false,
+      query: { scope: ["movie", "tv", "local"], source: "all", search: "", genres: [], year: "", watched: "all", sort: "newest" },
+      view: "grid", loading: false,
       onQuery: noop, onView: noop, onRefresh: noop, onSearch: noop,
     }));
     const refresh = strip.indexOf('aria-label="Refresh Library"');
@@ -106,8 +106,9 @@ describe("the markup", () => {
     assert.ok(strip.includes('title="Search titles"'));
     assert.ok(!/<button[^>]*aria-label="Search titles"[^>]*>[^<]*\w[^<]*</.test(strip), "no word inside the button");
     assert.ok(!PARAGRAPH.test(strip), "no text under a control");
-    assert.ok(strip.includes("Filters · 0</button>"));
-    assert.ok(strip.includes('aria-label="Sort: Newest"') && strip.includes("Sort: Newest"));
+    assert.ok(strip.includes('aria-label="Media: All"') && strip.includes("Media: All"));
+    assert.equal(strip.includes("Filters ·"), false);
+    assert.equal(strip.includes("Sort:"), false);
     assert.ok(strip.includes('aria-label="View: Grid"') && strip.includes("View: Grid"));
   });
 

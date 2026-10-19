@@ -76,4 +76,16 @@ describe("Segmented compliance inventory", () => {
     assert.equal(count(appearance, /<Segmented/g), 2, "Appearance is the two-pair page budget");
     assert.equal(count(playback, /<Segmented/g), 1, "Playback has one pair in one group");
   });
+
+  it("uses only the shared ChoicePopover family for frontend choice popovers", () => {
+    const files = sourceFiles("src");
+    const source = files.map((file) => readFileSync(file, "utf8")).join("\n");
+    for (const rejected of ["ChoiceMenu", "ChoicePicker", "GenrePopover", "AppliedFilters", "library-filter-state"]) {
+      assert.equal(source.includes(rejected), false, rejected);
+    }
+    assert.match(readFileSync("src/components/library/LibraryToolbar.tsx", "utf8"),
+      /@giga\/ui\/menus\/ChoicePopover/);
+    assert.match(readFileSync("src/components/library/LibraryFilters.tsx", "utf8"),
+      /@giga\/ui\/menus\/ChoicePopover/);
+  });
 });

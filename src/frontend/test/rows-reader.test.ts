@@ -40,7 +40,7 @@ function harness() {
 
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 const SPECS: readonly ShelfSpec[] = planShelves({
-  query: { ...DEFAULT_QUERY, scope: "movie" }, genreFacets: ["Drama", "Mystery"], collections: [], showContinue: false,
+  query: { ...DEFAULT_QUERY, scope: ["movie"] }, genreFacets: ["Drama", "Mystery"], collections: [], showContinue: false,
 });
 
 describe("the Rows reader", () => {

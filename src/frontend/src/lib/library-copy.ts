@@ -51,13 +51,6 @@ export interface LibraryOption<T extends string> {
   readonly label: string;
 }
 
-export const SCOPE_OPTIONS: readonly LibraryOption<"all" | "movie" | "tv" | "local">[] = [
-  { value: "all", label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "tv", label: "TV" },
-  { value: "local", label: "Local" },
-];
-
 /** Trending is not offered in phase 1 (`06` section 4.3: only with a real popularity signal from the backend). */
 export const SORT_OPTIONS: readonly LibraryOption<"newest" | "oldest" | "az" | "year">[] = [
   { value: "newest", label: "Newest" },

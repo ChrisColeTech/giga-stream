@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_QUERY, collectionOf, matchesQuery, type LibraryQuery, type ViewCounts } from "@/lib/library-query";
+import { ALL_MEDIA } from "@/lib/library-media";
 import {
   LibrarySearchSession,
   appendLibraryPage,
@@ -42,9 +43,8 @@ export function useLibraryData(
   const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
-  const [accepted, setAccepted] = useState<{ readonly queryKey: string | null; readonly serial: number | null }>({
-    queryKey: null, serial: null,
-  });
+  const [accepted, setAccepted] = useState<{ readonly queryKey: string | null; readonly serial: number | null }>(
+    { queryKey: null, serial: null });
   const [sideReady, setSideReady] = useState(false);
   const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
@@ -86,7 +86,7 @@ export function useLibraryData(
     const controller = new AbortController();
     sideRequest.current = controller;
     const collectionsVersion = useAppStore.getState().beginCollectionsRead();
-    const neutral = { ...DEFAULT_QUERY, scope: "all" as const, sort: "newest" as const };
+    const neutral = { ...DEFAULT_QUERY, scope: ALL_MEDIA, sort: "newest" as const };
     const reads = [
       showContinue ? readContinue(controller.signal) : Promise.resolve([]),
       listCollections(controller.signal),

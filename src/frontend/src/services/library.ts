@@ -80,7 +80,7 @@ export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: 
   const collectionId = collectionOf(query.source);
   params.set("view", collectionId === null ? query.source : "collection");
   if (collectionId !== null) params.set("collectionId", collectionId);
-  params.set("type", query.scope);
+  for (const type of query.scope) params.append("type", type);
   const search = query.search.trim();
   if (search !== "") params.set("q", search);
   params.set("sort", query.sort);

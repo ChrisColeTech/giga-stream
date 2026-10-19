@@ -1,8 +1,8 @@
 import { SORT_OPTIONS } from "@/lib/library-copy";
-import type { LibraryQuery, Scope, SourceId, WatchedFilter } from "@/lib/library-query";
+import { sameMedia } from "@/lib/library-media";
+import type { LibraryQuery, SourceId, WatchedFilter } from "@/lib/library-query";
 import type { LibraryPrefs } from "@/types/settings";
 
-const SCOPES: readonly Scope[] = ["all", "movie", "tv", "local"];
 const WATCHED: readonly WatchedFilter[] = ["all", "unwatched", "watching", "watched"];
 const VIEWS = ["all", "history", "favorites"] as const;
 const YEAR = /^\d{4}$/;
@@ -24,7 +24,7 @@ function restoredSource(saved: string, collectionIds: readonly string[]): Source
 export function restoredQuery(prefs: LibraryPrefs, collectionIds: readonly string[]): Partial<LibraryQuery> {
   const sort = SORT_OPTIONS.find((option) => option.value === prefs.librarySort)?.value ?? "newest";
   return {
-    scope: SCOPES.find((scope) => scope === prefs.libraryScope) ?? "all",
+    scope: prefs.libraryScope,
     source: restoredSource(prefs.librarySource, collectionIds),
     search: prefs.libraryFilter.length <= LIBRARY_FILTER_MAX ? prefs.libraryFilter : "",
     genres: prefs.libraryGenres.filter((genre) => genre.trim() !== ""),
@@ -42,7 +42,8 @@ const sameList = (a: readonly string[], b: readonly string[]): boolean =>
  *  the whole patch). */
 export function savedChange(change: Partial<LibraryQuery>, prefs: LibraryPrefs): Partial<LibraryPrefs> {
   return {
-    ...(change.scope !== undefined && change.scope !== prefs.libraryScope ? { libraryScope: change.scope } : {}),
+    ...(change.scope !== undefined && !sameMedia(change.scope, prefs.libraryScope)
+      ? { libraryScope: change.scope } : {}),
     ...(change.source !== undefined && change.source !== prefs.librarySource ? { librarySource: change.source } : {}),
     ...(change.search !== undefined && change.search !== prefs.libraryFilter
       && change.search.length <= LIBRARY_FILTER_MAX ? { libraryFilter: change.search } : {}),
