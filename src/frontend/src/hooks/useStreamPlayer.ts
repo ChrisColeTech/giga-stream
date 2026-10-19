@@ -27,9 +27,18 @@ export function liveOwnsStream(playingStreamUrl: string | null): boolean {
   return playingStreamUrl !== null;
 }
 
+/** Whether the stop acts on THIS controller: the stream it attached must be the live slice's current stream, not
+ *  another media (a player-surface movie) that merely rides the hook while a live channel plays elsewhere. The
+ *  hook remembers the manifest it attached; the effect compares it with the slice's before `stopLive` and the
+ *  detach (`50` section 2.4's instrumented stop). */
+export function liveStopApplies(attachedStreamUrl: string | null, playingStreamUrl: string | null): boolean {
+  return attachedStreamUrl !== null && attachedStreamUrl === playingStreamUrl;
+}
+
 /** Connects the one Live video element to its controller; neither the store nor the component owns media objects. */
 export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void {
   const controller = useRef<StreamPlayerController | null>(null);
+  const attachedStreamUrl = useRef<string | null>(null);
   const serial = useAppStore((state) => state.livePlaySerial);
   const stopRequest = useAppStore((state) => state.stopRequest);
   const videoQuality = useAppStore((state) => state.playback.videoQuality);
@@ -53,6 +62,7 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
       unregister();
       controller.current?.destroy();
       controller.current = null;
+      attachedStreamUrl.current = null;
     };
   }, [video]);
 
@@ -63,21 +73,23 @@ export function useStreamPlayer(video: RefObject<HTMLVideoElement | null>): void
     return () => useAppStore.getState().setActivity("live", false);
   }, [channelsLoading, streamStarting]);
 
-  /* Stop (`50` section 2.4): the serial's change is the stop — but only for a stream the LIVE slice owns (the
-     playing channel is set; read before `stopLive` clears it). The store's live state returns to rest and the
-     engine detaches back to the idle stage. A stream that is not the slice's (a player-surface stream this hook
-     does not own) gets no detach: that stop is NativePlayer's pause. */
+  /* Stop (`50` section 2.4): the serial's change is the stop — but only when THIS controller attached the live
+     slice's stream (the manifest it holds must equal the slice's `playingStreamUrl`). A controller holding other
+     media — a player-surface movie that rode this hook — never detaches on stop, even while a live channel plays
+     elsewhere; that stop is NativePlayer's pause. */
   useEffect(() => {
     if (stopRequest === 0) return;
     const state = useAppStore.getState();
-    if (!liveOwnsStream(state.playingStreamUrl)) return;
+    if (!liveStopApplies(attachedStreamUrl.current, state.playingStreamUrl)) return;
     state.stopLive();
+    attachedStreamUrl.current = null;
     detachForStop(controller.current);
   }, [stopRequest]);
 
   useEffect(() => {
     const state = useAppStore.getState();
     if (serial > 0 && state.playingStreamUrl !== null) {
+      attachedStreamUrl.current = state.playingStreamUrl;
       syncLiveStream({
         url: state.playingStreamUrl,
         autoplay: state.playback.autoplay,
