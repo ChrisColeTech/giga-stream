@@ -16,7 +16,7 @@
 #   • the fileserver's tests spawn the REAL backend, whose test lane runs on
 #     src/backend/node_modules/tsx — so that program is installed too.
 #
-# Required repo secrets (set from docs/secrets.env, never committed):
+# Required repository secrets, configured in GitHub Actions:
 #   RENDER_API_KEY      — Account Settings → API Keys on Render
 #   RENDER_SERVICE_ID   — the srv-… id of the giga-stream web service
 

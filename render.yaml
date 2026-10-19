@@ -13,8 +13,8 @@
 # TURSO_DATABASE_URL + TURSO_AUTH_TOKEN. Locally and in tests the same code
 # opens a local file, so the store has one driver everywhere.
 #
-# Secrets are `sync: false`: their NAMES live here, their VALUES are set on
-# the service (from docs/secrets.env, which is gitignored) — never in git.
+# Secrets are `sync: false`: their names live here and Render injects their
+# values into each program's environment. Values are never read from the repository.
 #
 # Deliberately NOT set here:
 #   • PORT            — Render injects it (the fileserver's public port)

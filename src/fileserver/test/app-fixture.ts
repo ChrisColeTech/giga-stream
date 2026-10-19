@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -97,6 +97,12 @@ export interface RealBackend {
 export async function startBackend(): Promise<RealBackend> {
   const port = await freePort();
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-fixture-"));
+  const fixtureDir = path.join(dataDir, "fixtures");
+  const liveDir = path.join(fixtureDir, "live");
+  mkdirSync(liveDir, { recursive: true });
+  for (const kind of ["news", "sports", "music", "kids"]) {
+    for (let part = 1; part <= 3; part += 1) writeFileSync(path.join(liveDir, `${kind}-${part}.mp4`), "");
+  }
   const child = spawn(
     process.execPath,
     [path.join(BACKEND_ROOT, "node_modules", "tsx", "dist", "cli.mjs"), "src/server.ts"],
@@ -112,6 +118,7 @@ export async function startBackend(): Promise<RealBackend> {
         ADMIN_BOOTSTRAP_USERNAME: OWNER_USERNAME,
         ADMIN_BOOTSTRAP_PASSWORD: OWNER_PASSWORD,
         SEED_TEST_CHANNELS: "true",
+        FIXTURE_DIR: fixtureDir,
         TMDB_READ_TOKEN: "",
         TMDB_SYNC_SCHEDULE: "",
       },
