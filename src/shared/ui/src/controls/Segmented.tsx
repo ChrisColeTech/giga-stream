@@ -1,22 +1,23 @@
+import { Tooltip } from '../form/Tooltip'
 import { cn } from '../lib/cn'
-import { PILL_CHIP, PILL_EQUAL_ROW, PILL_ROW } from './pill-classes'
+import { PILL_CHIP, PILL_EQUAL_ROW, PILL_SEGMENTED_ROW } from './pill-classes'
 
 export interface SegmentedOption<T extends string> {
   value: T
   label: string
   /** Rendered before the label — an icon, usually. */
   icon?: React.ReactNode
-  /** A choice this state of the world cannot serve. It stays in the row,
-   *  dimmed and unpressable, WITH ITS REASON in `disabledReason` — hard rule
-   *  16: disabled, never hidden. A chip that vanishes takes its own
-   *  explanation with it and moves everything beside it. */
+  /** A peer mode this state of the world cannot serve. It stays in the pair, dimmed and unpressable. */
   disabled?: boolean
-  /** Why it cannot be picked. Required in practice whenever `disabled` is set:
-   *  an inert control with no reason is exactly what rule 16 forbids. */
+  /** Why it cannot be picked. With `disabled`, this puts the native button in a focusable tooltip wrapper. */
   disabledReason?: string
 }
 
 interface SegmentedProps<T extends string> {
+  /**
+   * Exactly two fixed, short peer modes. Neither is a catch-all, dynamic value, boolean state, navigation or verb.
+   * The array remains open for temporary source compatibility; repository inventory tests enforce the pair rule.
+   */
   options: ReadonlyArray<SegmentedOption<T>>
   value: T
   onChange: (value: T) => void
@@ -31,19 +32,19 @@ interface SegmentedProps<T extends string> {
 /* PILL CHIPS, ONE LIT (owner's pick, 2026-09-05 night — docs/handoff/
  * SEGMENTED-ALTERNATIVES.md candidate A): the recessed track with raised
  * segments is the NAV's look (PageTabs) and must not appear anywhere else in
- * the app. A one-of choice on a page is a row of flat pills with no track:
+ * the app. A binary peer-mode choice on a page is a row of flat pills with no track:
  * off = hairline edge, muted text; on = the accent tint and edge the buttons
  * use for `data-on`, so a lit chip reads like a pressed toggle button
- * anywhere else. Counts ride inside the chip's label. `equal` sizes every
- * chip to the widest so a row never re-flows as counts change. */
-const ROW = PILL_ROW
+ * anywhere else. `equal` sizes both pills to the widest label. */
+const ROW = PILL_SEGMENTED_ROW
 const EQUAL_ROW = PILL_EQUAL_ROW
 const CHIP = PILL_CHIP
 
 /** Chips share a rail's full width equally — never ragged. */
-export const SEG_FULL = 'flex [&>button]:flex-1 [&>button]:justify-center'
+export const SEG_FULL =
+  'flex [&>button]:flex-1 [&>button]:justify-center [&>span]:flex-1 [&>span>button]:w-full'
 
-/** A one-of control: one home for a small closed set of choices. */
+/** A binary one-of control for direct, one-click comparison between two fixed peer modes. */
 export function Segmented<T extends string>({
   options,
   value,
@@ -57,21 +58,34 @@ export function Segmented<T extends string>({
   const size = dense ? 'h-6 px-2.5 text-xs' : 'h-7 px-3 text-xs'
   return (
     <div role="group" className={cn(row, className)} {...rest}>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          aria-pressed={option.value === value}
-          data-active={option.value === value ? '' : undefined}
-          disabled={option.disabled}
-          title={option.disabled ? option.disabledReason : undefined}
-          className={cn(CHIP, size)}
-          onClick={() => onChange(option.value)}
-        >
-          {option.icon}
-          {option.label}
-        </button>
-      ))}
+      {options.map((option) => {
+        const button = (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={option.value === value}
+            data-active={option.value === value ? '' : undefined}
+            disabled={option.disabled}
+            className={cn(CHIP, size)}
+            onClick={() => onChange(option.value)}
+          >
+            {option.icon}
+            {option.label}
+          </button>
+        )
+        if (option.disabled !== true || option.disabledReason === undefined) return button
+        return (
+          <Tooltip
+            key={option.value}
+            text={option.disabledReason}
+            focusable
+            label={`${option.label}. ${option.disabledReason}`}
+            className="min-w-0 [&>button]:w-full"
+          >
+            {button}
+          </Tooltip>
+        )
+      })}
     </div>
   )
 }

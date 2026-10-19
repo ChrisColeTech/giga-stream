@@ -2,9 +2,9 @@ import { useState, type KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../lib/cn'
 
-/* The token editor for extension lists (docs/02 §6.2): a recessed track
- * holding raised chips; Enter or comma commits the typed token, Backspace on
- * an empty field removes the last chip, paste splits on whitespace/commas.
+/* The token editor for freeform user-entered values such as origins and extensions. Its chips are values already
+ * entered, never a supplied vocabulary, and are exempt from offered-choice limits. Enter or comma commits a token,
+ * Backspace on an empty field removes the last chip, paste splits on whitespace/commas.
  * Tokens normalize — lowercased, leading dots stripped, deduped — and a
  * malformed token is REFUSED with an inline message (aria-described), never
  * silently dropped. Escape clears the typed text and, in edit mode, hands
@@ -18,6 +18,7 @@ const INPUT = 'min-w-16 flex-1 border-0 bg-transparent p-0.5 font-mono text-[11p
 const TOKEN_RE = /^[a-z0-9]{1,10}$/
 
 export interface ChipsInputProps {
+  /** Entered freeform tokens. Do not use this component to offer supplied choices. */
   value: string[]
   onChange: (tokens: string[]) => void
   placeholder?: string

@@ -4,7 +4,7 @@ export function lockedByMin(on: boolean, selectedCount: number, min: number): bo
   return on && selectedCount <= min;
 }
 
-/** The reason a locked chip gives (its title): the rule in a sentence. */
+/** The reason a locked chip gives through its focusable tooltip wrapper. */
 export function minReason(min: number): string {
   return `At least ${min} must stay on.`;
 }
