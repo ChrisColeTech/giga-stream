@@ -23,12 +23,14 @@ contract. Landing (`07` 6.1): shared foundation; fileserver contract/migration; 
 
 ## 2. Decisions
 
-1. **One shared ChoicePopover family** (`01` Choice popovers): single/multi discriminated props, field/toolbar visible
-   triggers, popup matches trigger width, automatic search at 12, common check/check-box rows and keyboard/focus/Escape.
+1. **One shared ChoicePopover family** (`01` Choice popovers): single/multi discriminated props; field/toolbar triggers
+   use the same dropdown field chrome and display ONLY the selected summary (label remains accessible); popup width
+   exactly matches the trigger; automatic search at 12; common check/check-box rows and keyboard/focus/Escape.
    It replaces `ChoiceMenu`, `ChoicePicker` and Genre's own menu. `PopupPanel` is not a choice list; native Select remains
    ordinary static single-choice form/settings input.
-2. **Library toolbar:** `Media: <summary>` MULTI-select quick popover; `View: <Grid/List/Rows>` single popover with
-   icons; spacer; Refresh; Search. DELETE `Filters · N`, toolbar Sort, Filters PopupPanel and applied-filter tokens.
+2. **Library toolbar:** `<Media summary>` MULTI-select quick popover; `<Grid/List/Rows>` single popover with icons;
+   spacer; Refresh; Search. The visible trigger never prefixes `Media:` or `View:`. DELETE `Filters · N`, toolbar Sort,
+   Filters PopupPanel and applied-filter tokens.
 3. **Full filter pane stays full.** Order: Title, Media (the same ChoicePopover/state as toolbar), Genre (multi,
    searchable checklist), Year (single, searchable/scrollable), Watched (single), Sort (single), Clear filters. The
    right-pane toggle remains the way to show/hide it; no duplicate full filter dialog.

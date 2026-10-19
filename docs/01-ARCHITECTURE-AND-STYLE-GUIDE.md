@@ -452,10 +452,12 @@ focusable-tooltip rule, never title-only copy.
 One shared popover family handles choices that need check rows, icons, multi-select or searchable populated options -
 never one implementation per feature:
 
-- **Trigger variants:** `field` (the full `FIELD_BASE` skin, full row width) and `toolbar` (compact but visibly edged/
-  filled, never a transparent ghost that reads as plain text). Both show the current value/summary and a chevron.
-- **Width:** the popup's width matches its trigger; it may grow wider only to fit a documented minimum, never shrink
-  below or use a consumer-owned random width. Collision padding/flip behavior is shared.
+- **Trigger variants:** `field` (full row width) and `toolbar` (compact/intrinsic) use the SAME `FIELD_BASE` dropdown
+  chrome - border, surface, radius, focus and chevron - never a raised/gradient button and never transparent text. The
+  visible trigger shows ONLY the selected value/summary; the control's label stays in `aria-label` and the external
+  form label, never as `Label: value` inside the trigger.
+- **Width:** the popup width is exactly its trigger width. A toolbar trigger owns the family's one shared minimum width
+  (large enough for its option labels); a field trigger is full width. Consumers never set popup/trigger widths.
 - **Single mode:** checkmark/radio rows, one selected, selecting closes.
 - **Multi mode:** checkbox rows, selection stays open; an optional All row represents the complete canonical set rather
   than coexisting as a stored value beside specifics.

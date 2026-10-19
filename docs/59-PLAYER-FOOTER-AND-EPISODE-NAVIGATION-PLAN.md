@@ -20,9 +20,10 @@ progress settlement and resume capability. No server route changes. Landing (`07
 
 ## 2. Decisions
 
-1. **Keep the footer, make it compact.** Source (only with 2+ sources), episode navigation (series only), saved position
-   (only real progress), then compact Resume/Start-over actions. Idle retains a thin stable footer with the two compact
-   disabled actions/reasons, never the current full-width block. No toolbar on the stage.
+1. **Keep the footer, make it compact and aligned.** Source (only with 2+ sources), saved position (only real progress),
+   then ONE non-wrapping action row: Previous/Next grouped LEFT for a series; Resume/Start over grouped RIGHT. A
+   movie/local/idle has no left group and aligns Resume/Start over right. The two groups never stack into separate rows
+   or wrap; the footer never looks staggered. Idle keeps the thin shell and compact disabled reasons. No stage toolbar.
 2. **Resume capability:** stream/native sources resume; embeds resume only with `startParam`. An unsupported embed's
    Resume is disabled with `This source does not support resuming at a saved position.` Start over stays available.
    `messageShape` affects progress reporting, not seek capability.
