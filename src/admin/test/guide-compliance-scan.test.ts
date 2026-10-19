@@ -73,23 +73,23 @@ describe("every page has its page toolbar (LoRA Trainer Toolbar.tsx, DatasetsInd
 
 describe("choice-control inventory", () => {
   const segmented = [
-    ["channels/NewChannelRows.tsx", "channels/NewChannelRows.tsx", "KINDS", "channels.new", "channels.index"],
-    ["channels/LiveDetailsGroup.tsx", "channels/LiveDetailsGroup.tsx", "PLAYS", "live.details", "channels.live"],
-    ["channels/PlaybackGroup.tsx", "channels/PlaybackGroup.tsx", "MODES", "live.playback", "channels.live"],
-    ["providers/NewProviderForm.tsx", "../constants/provider-copy.ts", "FAMILY_OPTIONS", "providers.new", "providers.index"],
-    ["providers/ProviderDetailsGroup.tsx", "../constants/provider-copy.ts", "FAMILY_OPTIONS", "provider.details", "provider.edit"],
-    ["titles/NewTitleForm.tsx", "../constants/title-copy.ts", "KIND_OPTIONS", "titles.new", "titles.index"],
-    ["titles/TitleListGroup.tsx", "../constants/title-stored-copy.ts", "VIEW_OPTIONS", "titles.list", "titles.index"],
-    ["playlists/NewPlaylistForm.tsx", "playlists/NewPlaylistForm.tsx", "SOURCES", "playlists.new", "playlists.index"],
-    ["settings/AppearanceSection.tsx", "settings/AppearanceSection.tsx", "THEMES", "appearance.theme", "appearance"],
-    ["settings/AppearanceSection.tsx", "settings/AppearanceSection.tsx", "MOTIONS", "appearance.motion", "appearance"],
+    ["components/channels/NewChannelRows.tsx", "components/channels/NewChannelRows.tsx", "KINDS", "channels.new", "channels.index"],
+    ["components/channels/LiveDetailsGroup.tsx", "components/channels/LiveDetailsGroup.tsx", "PLAYS", "live.details", "channels.live"],
+    ["components/channels/PlaybackGroup.tsx", "components/channels/PlaybackGroup.tsx", "MODES", "live.playback", "channels.live"],
+    ["components/providers/NewProviderForm.tsx", "constants/provider-copy.ts", "FAMILY_OPTIONS", "providers.new", "providers.index"],
+    ["components/providers/ProviderDetailsGroup.tsx", "constants/provider-copy.ts", "FAMILY_OPTIONS", "provider.details", "provider.edit"],
+    ["components/titles/NewTitleForm.tsx", "constants/title-copy.ts", "KIND_OPTIONS", "titles.new", "titles.index"],
+    ["components/titles/TitleListGroup.tsx", "constants/title-stored-copy.ts", "VIEW_OPTIONS", "titles.list", "titles.index"],
+    ["components/playlists/NewPlaylistForm.tsx", "components/playlists/NewPlaylistForm.tsx", "SOURCES", "playlists.new", "playlists.index"],
+    ["components/settings/AppearanceSection.tsx", "components/settings/AppearanceSection.tsx", "THEMES", "appearance.theme", "appearance"],
+    ["components/settings/AppearanceSection.tsx", "components/settings/AppearanceSection.tsx", "MOTIONS", "appearance.motion", "appearance"],
   ] as const;
 
   it("inventories every admin Segmented and pins every option source to exactly two", () => {
     const found = COMPONENTS.reduce((total, source) => total + (source.text.match(/<Segmented\b/g) ?? []).length, 0);
     assert.equal(found, segmented.length);
     for (const [component, optionsFile, name] of segmented) {
-      const text = read(join(SRC, "components", component)).text;
+      const text = read(join(SRC, component)).text;
       assert.ok(new RegExp(`options=\\{${name}\\}`).test(text), `${component}: ${name}`);
       const options = read(join(SRC, optionsFile)).text.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\][^;]*;`))?.[1] ?? "";
       assert.equal((options.match(/\{\s*value:/g) ?? []).length, 2, `${name} must be exactly two`);
