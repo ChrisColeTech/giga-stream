@@ -22,13 +22,15 @@ describe("the settings schema for the saved Library state", () => {
     assert.deepEqual(
       [DEFAULT_SETTINGS.libraryScope, DEFAULT_SETTINGS.librarySource, DEFAULT_SETTINGS.libraryGenres,
         DEFAULT_SETTINGS.libraryYear, DEFAULT_SETTINGS.libraryWatched, DEFAULT_SETTINGS.libraryFilter],
-      ["all", "all", [], "", "all", ""],
+      [["movie", "tv", "local"], "all", [], "", "all", ""],
     );
     assert.equal(state().library.libraryFilter, "", "the store starts with no Filter text");
   });
   it("refuses an unknown scope, source, year, watched value, genre list or an over-long filter", () => {
     for (const bad of [
-      { libraryScope: "music" }, { librarySource: "nowhere" }, { libraryYear: "99" }, { libraryYear: "20x4" },
+      { libraryScope: "movie" }, { libraryScope: [] }, { libraryScope: ["tv", "movie"] },
+      { libraryScope: ["movie", "movie"] }, { libraryScope: ["music"] },
+      { librarySource: "nowhere" }, { libraryYear: "99" }, { libraryYear: "20x4" },
       { libraryWatched: "seen" }, { libraryGenres: [""] }, { libraryGenres: "Drama" },
       { libraryFilter: "x".repeat(LIBRARY_FILTER_MAX + 1) }, { libraryFilter: null }, { libraryFilter: undefined },
     ]) {
@@ -42,13 +44,13 @@ describe("restoring the saved query", () => {
   it("applies every saved field", () => {
     const query = restoredQuery(
       prefs({
-        libraryScope: "tv", librarySource: "collection:c1", libraryGenres: ["Drama"], libraryYear: "1999",
+        libraryScope: ["tv"], librarySource: "collection:c1", libraryGenres: ["Drama"], libraryYear: "1999",
         libraryWatched: "watching", librarySort: "az", libraryFilter: "alien",
       }),
       ["c1"],
     );
     assert.deepEqual(query, {
-      scope: "tv", source: "collection:c1", search: "alien", genres: ["Drama"], year: "1999", watched: "watching",
+      scope: ["tv"], source: "collection:c1", search: "alien", genres: ["Drama"], year: "1999", watched: "watching",
       sort: "az",
     });
   });
@@ -60,14 +62,15 @@ describe("restoring the saved query", () => {
     const query = restoredQuery(
       {
         ...prefs(),
-        libraryScope: "music" as never, librarySource: "collection:gone", libraryGenres: ["", "  ", "Drama"],
+        librarySource: "collection:gone", libraryGenres: ["", "  ", "Drama"],
         libraryYear: "abc", libraryWatched: "seen" as never, librarySort: "random" as never,
         libraryFilter: "x".repeat(LIBRARY_FILTER_MAX + 1),
       },
       ["c1"],
     );
     assert.deepEqual(query, {
-      scope: "all", source: "all", search: "", genres: ["Drama"], year: "", watched: "all", sort: "newest",
+      scope: ["movie", "tv", "local"], source: "all", search: "", genres: ["Drama"], year: "", watched: "all",
+      sort: "newest",
     });
   });
 });
@@ -75,13 +78,15 @@ describe("restoring the saved query", () => {
 describe("what a query change saves", () => {
   it("saves the Type, source, filters and sort, and only what differs", () => {
     assert.deepEqual(
-      savedChange({ scope: "movie", source: "history", genres: ["A"], year: "2001", watched: "watched", sort: "year" }, prefs()),
+      savedChange({ scope: ["movie"], source: "history", genres: ["A"], year: "2001", watched: "watched", sort: "year" }, prefs()),
       {
-        libraryScope: "movie", librarySource: "history", libraryGenres: ["A"], libraryYear: "2001",
+        libraryScope: ["movie"], librarySource: "history", libraryGenres: ["A"], libraryYear: "2001",
         libraryWatched: "watched", librarySort: "year",
       },
     );
-    assert.deepEqual(savedChange({ scope: "all", genres: [], year: "" }, prefs()), {});
+    assert.deepEqual(savedChange({ scope: ["movie", "tv", "local"], genres: [], year: "" }, prefs()), {});
+    assert.deepEqual(savedChange({ scope: [...DEFAULT_SETTINGS.libraryScope] }, prefs()), {},
+      "equal media arrays do not write by reference inequality");
   });
   it("saves the Filter text, but not the trending sort or an over-long filter", () => {
     assert.deepEqual(savedChange({ search: "alien", sort: "trending" }, prefs()), { libraryFilter: "alien" });
@@ -93,7 +98,7 @@ describe("what a query change saves", () => {
 
 describe("hydration and the first read", () => {
   const saved = {
-    ...DEFAULT_SETTINGS, libraryView: "list" as const, librarySort: "oldest" as const, libraryScope: "movie" as const,
+    ...DEFAULT_SETTINGS, libraryView: "list" as const, librarySort: "oldest" as const, libraryScope: ["movie"] as const,
     libraryGenres: ["Horror"], libraryYear: "1982", libraryWatched: "unwatched" as const, libraryFilter: "thing",
   };
 
@@ -101,7 +106,7 @@ describe("hydration and the first read", () => {
     state().applySnapshot({ settings: saved, unreadable: [] });
     assert.equal(state().library.libraryView, "list");
     const first = { ...DEFAULT_QUERY, ...restoredQuery(state().library, state().collections.map((row) => row.id)) };
-    assert.equal(first.scope, "movie");
+    assert.deepEqual(first.scope, ["movie"]);
     assert.notEqual(libraryQueryKey(first), libraryQueryKey(DEFAULT_QUERY));
     assert.deepEqual([first.genres, first.year, first.watched, first.sort], [["Horror"], "1982", "unwatched", "oldest"]);
     assert.equal(first.search, "thing", "the saved Filter text is in the first read");
@@ -136,10 +141,10 @@ describe("saving through the settings write-back", () => {
         return { ...DEFAULT_SETTINGS, ...patch };
       },
     });
-    state().setLibraryPrefs(savedChange({ scope: "tv", genres: ["Drama", "War"], sort: "az" }, state().library));
+    state().setLibraryPrefs(savedChange({ scope: ["tv"], genres: ["Drama", "War"], sort: "az" }, state().library));
     await Promise.resolve();
     await Promise.resolve();
-    assert.deepEqual(writes, [{ libraryScope: "tv", libraryGenres: ["Drama", "War"], librarySort: "az" }]);
+    assert.deepEqual(writes, [{ libraryScope: ["tv"], libraryGenres: ["Drama", "War"], librarySort: "az" }]);
     assert.deepEqual(state().library.libraryGenres, ["Drama", "War"]);
     stop();
   });

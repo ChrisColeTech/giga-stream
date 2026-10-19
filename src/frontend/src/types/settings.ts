@@ -1,4 +1,5 @@
 import type { Accent, MotionPreference, ThemeMode } from "./shell";
+import type { LibraryMediaTypes } from "./library";
 
 /** How the picture sits in the stage: Fit shows the whole picture, Fill crops it to the stage, Original keeps its own
  *  pixel size (`06` section 3.3). */
@@ -45,7 +46,7 @@ export interface Settings {
   readonly defaultSource: string | null;
   /** The Library as the person last left it: the Media picker, the rail view and the filters, the Filter text included
    *  (owner, 2026-10-18). */
-  readonly libraryScope: "all" | "movie" | "tv" | "local";
+  readonly libraryScope: LibraryMediaTypes;
   /** `all`, `history`, `favorites` or `collection:<id>`. */
   readonly librarySource: string;
   readonly libraryGenres: string[];

@@ -3,6 +3,7 @@ import { playRef } from "@/components/library/library-service";
 import { openTitleInfo } from "@/components/library/open-title-info";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { DEFAULT_QUERY, type LibraryQuery } from "@/lib/library-query";
+import { ALL_MEDIA } from "@/lib/library-media";
 import {
   SPOTLIGHT_CLOSED,
   focusedItem,
@@ -16,7 +17,7 @@ import { useAppStore } from "@/store/app-store";
 import type { LibraryItem } from "@/types/library";
 
 /** The catalog's titles, movies and series, by title: the Library's own read with `q` (the backend's title search). */
-const titleQuery = (text: string): LibraryQuery => ({ ...DEFAULT_QUERY, source: "all", scope: "all", search: text });
+const titleQuery = (text: string): LibraryQuery => ({ ...DEFAULT_QUERY, source: "all", scope: ALL_MEDIA, search: text });
 
 export interface TitleSpotlight {
   readonly state: SpotlightState;

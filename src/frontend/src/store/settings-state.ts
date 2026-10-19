@@ -1,6 +1,7 @@
 import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-schema";
 import type { LibraryPrefs, PlaybackPrefs } from "@/types/settings";
 import type { Accent, MotionPreference, ThemeMode } from "@/types/shell";
+import { sameMedia } from "@/lib/library-media";
 
 export interface SettingsFields {
   readonly theme: ThemeMode;
@@ -85,7 +86,7 @@ export function settingsPatchOf(current: SettingsFields, baseline: SettingsAnswe
     ...(value.rescanOnStartup === baseline.rescanOnStartup ? {} : { rescanOnStartup: value.rescanOnStartup }),
     ...(value.adminUrl === baseline.adminUrl ? {} : { adminUrl: value.adminUrl }),
     ...(value.defaultSource === baseline.defaultSource ? {} : { defaultSource: value.defaultSource }),
-    ...(value.libraryScope === baseline.libraryScope ? {} : { libraryScope: value.libraryScope }),
+    ...(sameMedia(value.libraryScope, baseline.libraryScope) ? {} : { libraryScope: value.libraryScope }),
     ...(value.librarySource === baseline.librarySource ? {} : { librarySource: value.librarySource }),
     ...(sameList(value.libraryGenres, baseline.libraryGenres) ? {} : { libraryGenres: value.libraryGenres }),
     ...(value.libraryYear === baseline.libraryYear ? {} : { libraryYear: value.libraryYear }),

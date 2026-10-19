@@ -81,10 +81,12 @@ export function LibraryPage({ active }: { active: boolean }) {
   const years = [...new Set([
     ...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)]),
   ])].sort((a, b) => b - a);
-  const filters = <LibraryFilters query={query} genres={genres} years={years} onQuery={patch} />;
+  const filters = (
+    <LibraryFilters query={query} genres={genres} years={years} trending={data.page?.trending ?? false} onQuery={patch} />
+  );
   const toolbar = (
     <LibraryToolbar
-      query={query} view={view} trending={data.page?.trending ?? false} filters={filters} loading={data.loading}
+      query={query} view={view} loading={data.loading}
       onQuery={patch} onView={changeView} onRefresh={data.refresh} onSearch={spotlight.open}
     />
   );

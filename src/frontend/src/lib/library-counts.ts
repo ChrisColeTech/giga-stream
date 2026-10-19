@@ -1,11 +1,12 @@
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
+import { isAllMedia } from "@/lib/library-media";
 import { knownLibraryCount } from "@/services/library";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryPage } from "@/types/library";
 
 /** Records a page's whole-list count for its rail entry, when the page was read without any narrowing. */
 export function acceptCount(query: LibraryQuery, page: LibraryPage): void {
-  if (query.scope !== "all" || query.search.trim() !== "" || query.genres.length > 0
+  if (!isAllMedia(query.scope) || query.search.trim() !== "" || query.genres.length > 0
     || query.year !== "" || query.watched !== "all") return;
   const count = knownLibraryCount(page);
   if (count === undefined) return;

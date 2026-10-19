@@ -1,4 +1,5 @@
 import type { Settings } from "@/types/settings";
+import { ALL_MEDIA } from "@/lib/library-media";
 
 /** The fileserver defaults (`03` section 3.2), used until its saved settings arrive. */
 export const DEFAULT_SETTINGS: Readonly<Settings> = {
@@ -22,7 +23,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = {
   rescanOnStartup: true,
   adminUrl: "",
   defaultSource: null,
-  libraryScope: "all",
+  libraryScope: ALL_MEDIA,
   librarySource: "all",
   libraryGenres: [],
   libraryYear: "",

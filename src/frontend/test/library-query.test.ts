@@ -47,8 +47,8 @@ const titles = (items: readonly ResolvedItem[]): string[] => items.map((item) =>
 
 describe("the views and the scope", () => {
   it("narrows by the Media picker", () => {
-    assert.deepEqual(titles(visibleItems(ALL, query({ scope: "tv" }))), ["Bravo"]);
-    assert.deepEqual(titles(visibleItems(ALL, query({ scope: "local" }))), ["Charlie"]);
+    assert.deepEqual(titles(visibleItems(ALL, query({ scope: ["tv"] }))), ["Bravo"]);
+    assert.deepEqual(titles(visibleItems(ALL, query({ scope: ["movie", "local"] }))), ["Charlie", "Alpha"]);
   });
 
   it("offers History as the items with progress, and Favorites as the favorites", () => {
@@ -80,7 +80,7 @@ describe("the filters", () => {
 
   it("clears Media, title and every facet while keeping source and sort", () => {
     const set = query({
-      source: "favorites", scope: "movie", search: "x", genres: ["Drama"], year: "2020",
+      source: "favorites", scope: ["movie"], search: "x", genres: ["Drama"], year: "2020",
       watched: "watched", sort: "az",
     });
     const cleared: LibraryQuery = { ...set, ...CLEAR_FILTERS };
@@ -102,8 +102,8 @@ describe("the sorts", () => {
 
 describe("continue watching, counts and collections", () => {
   it("lists only titles being watched, within the scope", () => {
-    assert.deepEqual(titles(continueItems(ALL, "all")), ["Bravo"]);
-    assert.deepEqual(titles(continueItems(ALL, "movie")), []);
+    assert.deepEqual(titles(continueItems(ALL, ["movie", "tv", "local"])), ["Bravo"]);
+    assert.deepEqual(titles(continueItems(ALL, ["movie"])), []);
   });
 
   it("counts every view and every collection", () => {

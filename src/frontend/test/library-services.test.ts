@@ -39,12 +39,12 @@ describe("library routes", () => {
       assert.equal(init?.method, "GET");
       assert.equal(
         input,
-        "/api/library?view=all&type=movie&q=space+opera&sort=trending&genre=Action&genre=Drama&year=1999&watched=watching",
+        "/api/library?view=all&type=movie&type=local&q=space+opera&sort=trending&genre=Action&genre=Drama&year=1999&watched=watching",
       );
       return success(page);
     };
     const answer = await readLibrary({
-      ...DEFAULT_QUERY, scope: "movie", search: " space opera ", sort: "trending",
+      ...DEFAULT_QUERY, scope: ["movie", "local"], search: " space opera ", sort: "trending",
       genres: ["Action", "Drama"], year: "1999", watched: "watching",
     });
     assert.equal(answer.total, undefined);
@@ -64,6 +64,7 @@ describe("library routes", () => {
     assert.match(calls[0] ?? "", /^\/api\/library\?view=history&/);
     assert.match(calls[1] ?? "", /^\/api\/library\?view=favorites&/);
     assert.match(calls[2] ?? "", /^\/api\/library\?view=collection&collectionId=kids%2Fone&/);
+    assert.match(calls[0] ?? "", /type=movie&type=tv&type=local/);
   });
 
   it("requires collectionSource on collection-view rows", async () => {
@@ -143,6 +144,13 @@ describe("library pagination", () => {
     assert.equal(canLoadLibraryPage(oldKey, nextKey, false, false, "old-cursor"), false);
     assert.equal(canLoadLibraryPage(oldKey, oldKey, true, false, "old-cursor"), false);
     assert.equal(canLoadLibraryPage(oldKey, oldKey, false, false, "old-cursor"), true);
+  });
+
+  it("keys media arrays by canonical order and content", () => {
+    assert.equal(libraryQueryKey({ ...DEFAULT_QUERY, scope: ["movie", "tv"] }),
+      libraryQueryKey({ ...DEFAULT_QUERY, scope: ["movie", "tv"] }));
+    assert.notEqual(libraryQueryKey({ ...DEFAULT_QUERY, scope: ["movie"] }),
+      libraryQueryKey({ ...DEFAULT_QUERY, scope: ["movie", "local"] }));
   });
 
   it("deduplicates repeated rows within the appended page", () => {

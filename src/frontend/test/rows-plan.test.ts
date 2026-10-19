@@ -53,9 +53,9 @@ describe("the shelf list", () => {
   });
 
   it("plans only the kind the Media filter allows, and no genres for Local", () => {
-    const tv = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: "tv" } });
+    const tv = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: ["tv"] } });
     assert.deepEqual(tv.filter((id) => id.startsWith("type:")), ["type:tv"]);
-    const local = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: "local" } });
+    const local = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: ["local"] } });
     assert.deepEqual(local.filter((id) => id.startsWith("type:") || id.startsWith("genre:")), ["type:local"]);
   });
 
@@ -75,7 +75,7 @@ describe("per-shelf queries", () => {
   const query = (group: ShelfGroup, base: LibraryQuery = user): LibraryQuery | null => shelfQuery(base, group);
 
   it("keeps the user's search, filters and sort and adds the shelf's own narrowing", () => {
-    assert.deepEqual(query({ kind: "type", scope: "movie" }), { ...user, scope: "movie" });
+    assert.deepEqual(query({ kind: "type", scope: "movie" }), { ...user, scope: ["movie"] });
     assert.deepEqual(query({ kind: "genre", genre: "Drama" }), { ...user, genres: ["Drama"] });
     assert.deepEqual(query({ kind: "favorites" }), { ...user, source: "favorites" });
     assert.deepEqual(query({ kind: "collection", id: "c-a" }), { ...user, source: "collection:c-a" });
@@ -83,7 +83,7 @@ describe("per-shelf queries", () => {
   });
 
   it("answers null where the shelf and the query cannot both hold", () => {
-    assert.equal(query({ kind: "type", scope: "tv" }, { ...user, scope: "movie" }), null);
+    assert.equal(query({ kind: "type", scope: "tv" }, { ...user, scope: ["movie"] }), null);
     assert.equal(query({ kind: "genre", genre: "Drama" }, { ...user, genres: ["Comedy"] }), null);
     assert.equal(query({ kind: "favorites" }, { ...user, source: "history" }), null);
     assert.equal(query({ kind: "continue" }, { ...user, watched: "watched" }), null);
@@ -98,7 +98,7 @@ describe("per-shelf queries", () => {
 describe("See all", () => {
   it("opens the grid on the shelf's group with the rest clear and the sort kept", () => {
     assert.deepEqual(groupQuery({ kind: "genre", genre: "Drama" }).genres, ["Drama"]);
-    assert.equal(groupQuery({ kind: "type", scope: "tv" }).scope, "tv");
+    assert.deepEqual(groupQuery({ kind: "type", scope: "tv" }).scope, ["tv"]);
     assert.equal(groupQuery({ kind: "favorites" }).source, "favorites");
     assert.equal(groupQuery({ kind: "collection", id: "c-1" }).source, "collection:c-1");
     assert.equal("sort" in groupQuery({ kind: "continue" }), false);

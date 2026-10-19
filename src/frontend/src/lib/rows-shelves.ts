@@ -1,5 +1,6 @@
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { collectionSource, sortedCollections, type LibraryQuery } from "@/lib/library-query";
+import { ALL_MEDIA, hasMedia } from "@/lib/library-media";
 import type { CollectionRow } from "@/types/collection";
 import type { LibraryKind } from "@/types/library";
 
@@ -55,7 +56,7 @@ export function shelfQuery(base: LibraryQuery, group: ShelfGroup): LibraryQuery 
     case "collection":
       return base.source === "all" ? { ...base, source: collectionSource(group.id) } : null;
     case "type":
-      return base.scope === "all" || base.scope === group.scope ? { ...base, scope: group.scope } : null;
+      return hasMedia(base.scope, group.scope) ? { ...base, scope: [group.scope] } : null;
     case "genre":
       return base.genres.length === 0 || base.genres.includes(group.genre) ? { ...base, genres: [group.genre] } : null;
   }
@@ -64,7 +65,7 @@ export function shelfQuery(base: LibraryQuery, group: ShelfGroup): LibraryQuery 
 /** The genres that get a shelf: the Genre filter's values when it has any, else the facets, first six. Local files carry
  *  no genres, so a Local-only query has none. */
 export function shelfGenres(query: LibraryQuery, facets: readonly string[]): string[] {
-  if (query.scope === "local") return [];
+  if (query.scope.length === 1 && query.scope[0] === "local") return [];
   const source = query.genres.length > 0 ? query.genres : facets;
   return [...new Set(source)].slice(0, GENRE_SHELVES_MAX);
 }
@@ -90,7 +91,9 @@ export function planShelves(input: ShelfPlanInput): ShelfSpec[] {
 }
 
 /* See all clears the query to a fresh one that shows exactly the shelf's group. The sort is the user's and stays. */
-const FRESH: Partial<LibraryQuery> = { scope: "all", source: "all", search: "", genres: [], year: "", watched: "all" };
+const FRESH: Partial<LibraryQuery> = {
+  scope: ALL_MEDIA, source: "all", search: "", genres: [], year: "", watched: "all",
+};
 
 /** The query patch a shelf's See all applies through the Library's own setter. */
 export function groupQuery(group: ShelfGroup): Partial<LibraryQuery> {
@@ -102,7 +105,7 @@ export function groupQuery(group: ShelfGroup): Partial<LibraryQuery> {
     case "collection":
       return { ...FRESH, source: collectionSource(group.id) };
     case "type":
-      return { ...FRESH, scope: group.scope };
+      return { ...FRESH, scope: [group.scope] };
     case "genre":
       return { ...FRESH, genres: [group.genre] };
   }

@@ -14,9 +14,6 @@ export const LIBRARY_PAGE_SIZE = 20;
 /** The rail draws this many row skeletons while its collections are not there. */
 export const RAIL_SKELETON_ROWS = 5;
 
-/** The genre popover offers a search box from this many genres. */
-export const SEARCH_MIN_GENRES = 12;
-
 /** The Library asks for the next page when the end of the list is this many pixels from the scroller's edge. */
 export const PAGER_LOOK_AHEAD = 240;
 
