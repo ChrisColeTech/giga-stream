@@ -13,14 +13,14 @@ export interface ChannelEditor {
   readonly form: RecordForm<ChannelDraft>;
   readonly actions: ChannelActions;
   readonly unreachable: boolean;
-  /** The form's one commit, `Save details`, ending the last editable group. */
+  /** The toolbar's ONE Save (`55` decision 1): the press and its reason. */
   readonly save: SaveVerb;
   /** The toolbar's forward arrow, `Preview`. */
   readonly forward: ToolbarAction;
 }
 
-/** One channel's workspace form (`36` sections 6 and 7), live or stream: the draft against the saved channel, ONE `Save
- *  details` that sends only the changed fields, and the toolbar's `Preview` arrow for the saved channel (`Save the channel
+/** One channel's workspace form (`36` sections 6 and 7), live or stream: the draft against the saved channel, ONE `Save`
+ *  (the toolbar's) that sends only the changed fields, and the toolbar's `Preview` arrow for the saved channel (`Save the channel
  *  first` while the draft differs). Save is disabled with `Nothing has changed.`, the first empty required row, `Saving.` or the unreachable
  *  sentence; a value or backend refusal goes under its row. The answer becomes the new baseline. */
 export function useChannelEditor(channel: AdminChannel): ChannelEditor {

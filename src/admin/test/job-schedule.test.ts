@@ -10,8 +10,6 @@ import { CUSTOM, SCHEDULE_OPTIONS, scheduleChoice, scheduleLabel, scheduleStatus
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { renderLive } from "./support/store";
 
-const SAVE = { onPress: () => undefined };
-
 const job = (schedule: string, enabled = true): AdminJob => ({
   id: 1,
   name: "Trending",
@@ -54,7 +52,7 @@ describe("the schedule options", () => {
     assert.equal(scheduleLabel("1s"), "Every second");
     assert.equal(scheduleLabel("bogus"), "bogus");
     assert.equal(scheduleRefusal("45s"), null);
-    const props = { value: "90m", job: job("90m"), error: undefined, onChange: () => undefined, save: SAVE };
+    const props = { value: "90m", job: job("90m"), error: undefined, onChange: () => undefined };
     const html = renderLive(createElement(JobScheduleGroup, props));
     assert.ok(html.includes('<option value="custom" selected="">Custom...</option>'));
     assert.ok(html.includes('aria-label="Custom interval"') && html.includes('value="90m"'));
@@ -72,7 +70,7 @@ describe("the schedule options", () => {
 
 describe("the Schedule group", () => {
   const render = (value: string, saved: AdminJob): string =>
-    renderLive(createElement(JobScheduleGroup, { value, job: saved, error: undefined, onChange: () => undefined, save: SAVE }));
+    renderLive(createElement(JobScheduleGroup, { value, job: saved, error: undefined, onChange: () => undefined }));
 
   it("is a picker, with the text field only for Custom", () => {
     const html = render("6h", job("6h"));

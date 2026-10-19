@@ -14,7 +14,7 @@ import { StreamDetailsGroup } from "./StreamDetailsGroup";
 import { StreamStatusGroup } from "./StreamStatusGroup";
 
 /** A stream channel's workspace (`36` section 7): the rail (`‹ Channels`, Details, Stream, Status), the page toolbar
- *  (`Discard changes` left, `Preview →` rightmost) and one page whose Stream group ends with `Save details`. A hand-made row and a synced row are both editable (the sync keeps an
+ *  (`Discard changes` left; `Save`, then `Preview →` rightmost) and one page. A hand-made row and a synced row are both editable (the sync keeps an
  *  admin's edits); `Revert to playlist` drops a synced row's edits. */
 export function StreamWorkspace({ channel, active }: { readonly channel: StreamAdminChannel; readonly active: boolean }) {
   const { form, actions, unreachable, save, forward } = useChannelEditor(channel);
@@ -35,7 +35,7 @@ export function StreamWorkspace({ channel, active }: { readonly channel: StreamA
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} forward={forward} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} forward={forward} />}
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(CHANNEL_LABELS) } as CSSProperties}>
@@ -53,7 +53,6 @@ export function StreamWorkspace({ channel, active }: { readonly channel: StreamA
               errors={form.errors}
               edited={channel.editedFields ?? []}
               onChange={form.set}
-              save={save}
             />
           </div>
           <div ref={spy.bind("st-status")}>

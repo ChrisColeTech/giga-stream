@@ -26,7 +26,6 @@ const statusGroup = (channel: StreamAdminChannel, revertReason?: string) =>
       onRevert: () => undefined,
     }),
   );
-const SAVE = { onPress: () => undefined, reason: "Nothing has changed." };
 const SYNCED = stream("s", {
   source: "lists.example", playlistId: 3, playlistName: "Example list", editedFields: ["name", "streamUrl"],
 });
@@ -37,19 +36,20 @@ beforeEach(() => {
 });
 
 describe("a stream channel's workspace", () => {
-  it("opens with the rail Details, Stream, Status, the page toolbar (Discard, Preview →) and Save details ending Stream", () => {
+  it("opens with the rail Details, Stream, Status, the page toolbar (Discard; Save, Preview →) and no trailing save", () => {
     holdChannels([stream("s")], 1);
     state().openWorkspace("channels", "s");
     const html = page();
     assert.ok(html.indexOf(">Details<") < html.indexOf(">Stream<") && html.indexOf(">Stream<") < html.indexOf(">Status<"));
     assert.ok(!html.includes(">Playback<"));
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
+    assert.ok(html.includes('aria-label="Save. Nothing has changed."'));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
+    assert.ok(!html.includes("Save details"), "the trailing save is gone (`55` decision 1)");
     const start = html.indexOf('role="toolbar"');
     const bar = html.slice(start, html.indexOf("overflow-y-auto", start));
     assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "Preview → is the page toolbar's");
-    assert.ok(!statusGroup(stream("s")).includes("Preview") && !html.includes(">Save<"));
-    assert.ok(html.indexOf("Save details") > html.indexOf(">Stream<"), "the commit ends the Stream group");
+    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") && bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<"), "Save sits right of the spacer");
+    assert.ok(!statusGroup(stream("s")).includes("Preview"));
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));
   });
 
@@ -70,7 +70,6 @@ describe("a stream channel's workspace", () => {
         errors: {},
         edited: SYNCED.editedFields ?? [],
         onChange: () => undefined,
-        save: SAVE,
       }),
     );
     assert.equal((address.match(/>Edited</g) ?? []).length, 1, "the stream address, in Stream");
@@ -90,7 +89,6 @@ describe("a stream channel's workspace", () => {
         errors: { streamUrl: "Stream address must be an http or https address." },
         edited: [],
         onChange: () => undefined,
-        save: SAVE,
       }),
     );
     assert.ok(html.includes('role="alert">Stream address must be an http or https address.</p>'));

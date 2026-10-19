@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 
 describe("a live channel's workspace", () => {
-  it("opens from the held list: the rail, the page toolbar (Discard, Preview →), the groups and Save details", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard; Save, Preview →), the groups and no trailing save", () => {
     holdChannels([live("a")], 1);
     state().openWorkspace("channels", "a");
     const html = page();
@@ -60,10 +60,15 @@ describe("a live channel's workspace", () => {
       assert.ok(at(html, before) < at(html, after), `${before} before ${after}`);
     }
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
-    assert.ok(at(html, "Save details") > at(html, 'id="lv-playback"') && at(html, "Save details") < at(html, 'id="lv-status"'));
+    assert.ok(html.includes('aria-label="Save. Nothing has changed."'));
+    assert.ok(!html.includes("Save details"), "the trailing save is gone (`55` decision 1)");
     const bar = html.slice(at(html, 'role="toolbar"'), html.indexOf("overflow-y-auto", at(html, 'role="toolbar"')));
-    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("Preview →"), "Discard left, the forward verb rightmost");
+    assert.ok(
+      bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") &&
+        bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<") &&
+        bar.indexOf(">Save<") < bar.indexOf("Preview →"),
+      "Discard left; Save, then the forward verb rightmost",
+    );
     assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "a saved channel previews");
     assert.ok(!status(live("a")).includes("Preview"), "the Status group no longer carries Preview");
   });
@@ -95,9 +100,9 @@ describe("a live channel's workspace", () => {
 
   it("keeps two qualities: the last two lit chips are locked with the reason", () => {
     const html = renderLive(
-      createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined, save: { onPress: () => undefined } }),
+      createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined }),
     );
-    assert.ok(html.includes(">Save details<"), "the form's commit ends this last editable group");
+    assert.ok(!html.includes("Save details"), "the group ends without a commit; the toolbar holds the Save");
     assert.ok(html.includes('aria-label="Mode"') && html.includes(">Encode</button>") && html.includes('aria-label="Captions"'));
     assert.equal((html.match(/title="A channel keeps at least two qualities\."/g) ?? []).length, 2);
     assert.ok(/aria-pressed="false"[^>]*>1080p/.test(html), "an unlit quality can be added");
