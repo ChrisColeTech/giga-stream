@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpotlightRow } from "@/components/library/SpotlightRow";
-import { TypeStrip } from "@/components/library/TypeStrip";
+import { LibraryToolbar } from "@/components/library/LibraryToolbar";
 import { FilterField } from "@/components/library/FilterField";
 import {
   SPOTLIGHT_CLOSED,
@@ -94,15 +94,19 @@ const noop = (): void => undefined;
 const PARAGRAPH = /<(p|small)[\s>]/;
 
 describe("the markup", () => {
-  it("draws Search titles right after Refresh in the type strip, as icons with no text", () => {
-    const strip = html(createElement(TypeStrip, { scope: "all", onScope: noop, onRefresh: noop, onSearch: noop }));
+  it("draws Search titles right after Refresh in the Library toolbar, as icons with no text", () => {
+    const strip = html(createElement(LibraryToolbar, {
+      query: { scope: "all", source: "all", search: "", genres: [], year: "", watched: "all", sort: "newest" },
+      view: "grid", trending: false, filters: createElement("div"), loading: false,
+      onQuery: noop, onView: noop, onRefresh: noop, onSearch: noop,
+    }));
     const refresh = strip.indexOf('aria-label="Refresh Library"');
     const search = strip.indexOf('aria-label="Search titles"');
     assert.ok(refresh > 0 && search > refresh, "Search titles follows Refresh");
     assert.ok(strip.includes('title="Search titles"'));
     assert.ok(!/<button[^>]*aria-label="Search titles"[^>]*>[^<]*\w[^<]*</.test(strip), "no word inside the button");
     assert.ok(!PARAGRAPH.test(strip), "no text under a control");
-    assert.ok(!html(createElement(TypeStrip, { scope: "all", onScope: noop })).includes("Search titles"));
+    assert.ok(strip.includes("Filters · 0") && strip.includes("Sort: Newest") && strip.includes("View: Grid"));
   });
 
   it("draws a result row with Play and Info named for the title, and no text under them", () => {

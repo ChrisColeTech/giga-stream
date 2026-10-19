@@ -191,12 +191,12 @@ describe("settings write-back", () => {
     assert.deepEqual(writes, [{ theme: "light" }]);
     state().setMotion("on");
     assert.equal(writes.length, 1);
-    committed = { ...DEFAULT_SETTINGS, theme: "system" };
+    committed = { ...DEFAULT_SETTINGS, theme: "dark" };
     first.resolve(committed);
     await Promise.resolve();
     await Promise.resolve();
     assert.deepEqual(writes[1], { reducedMotion: "on" });
-    assert.equal(state().theme, "system");
+    assert.equal(state().theme, "dark");
     assert.equal(state().motion, "on");
     stop();
   });

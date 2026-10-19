@@ -4,7 +4,7 @@ import type { Settings } from "@/types/settings";
 export const DEFAULT_SETTINGS: Readonly<Settings> = {
   theme: "dark",
   themeAccent: "amber",
-  reducedMotion: "system",
+  reducedMotion: "off",
   uiZoom: 1,
   autoplay: false,
   videoQuality: "auto",

@@ -6,7 +6,7 @@ import { Actions } from "@giga/ui/form/Actions";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { Segmented } from "@giga/ui/controls/Segmented";
+import { Select } from "@giga/ui/controls/Select";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import type { CollectionRow, CollectionType } from "@/types/collection";
@@ -34,7 +34,14 @@ export function CollectionDetailsGroup({ collection }: { readonly collection: Co
         />
       </Row>
       <Row label="Type" tip="What the collection holds: movies, TV series, or your own local files.">
-        <Segmented aria-label="Collection type" options={TYPE_CHOICES} value={type} onChange={setType} />
+        <Select
+          aria-label="Collection type"
+          className={FIELD_CONTROL}
+          value={type}
+          onChange={(event) => setType(TYPE_CHOICES.find((choice) => choice.value === event.target.value)?.value ?? "movie")}
+        >
+          {TYPE_CHOICES.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+        </Select>
       </Row>
       <Actions>
         <Button

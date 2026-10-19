@@ -52,7 +52,7 @@ describe("the shelf list", () => {
     assert.equal(inCollection.some((id) => id.startsWith("collection:")), false);
   });
 
-  it("plans only the kind the type strip allows, and no genres for Local", () => {
+  it("plans only the kind the Media filter allows, and no genres for Local", () => {
     const tv = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: "tv" } });
     assert.deepEqual(tv.filter((id) => id.startsWith("type:")), ["type:tv"]);
     const local = ids({ ...BASE, query: { ...DEFAULT_QUERY, scope: "local" } });

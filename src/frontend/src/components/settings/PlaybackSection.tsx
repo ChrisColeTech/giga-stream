@@ -41,12 +41,17 @@ export function PlaybackSection() {
           <Toggle checked={playback.autoplay} aria-label="Autoplay" onChange={(on) => setPlayback({ autoplay: on })} />
         </Row>
         <Row label="Resume" tip="What happens when you open a title you left partway.">
-          <Segmented
+          <Select
             aria-label="Resume"
-            options={RESUME}
+            className={FIELD_CONTROL}
             value={playback.resumeMode}
-            onChange={(resumeMode) => setPlayback({ resumeMode })}
-          />
+            onChange={(event) => {
+              const resumeMode = RESUME.find((option) => option.value === event.target.value)?.value ?? "ask";
+              setPlayback({ resumeMode });
+            }}
+          >
+            {RESUME.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </Select>
         </Row>
         <Row label="Mark as watched" tip="How far in a title counts as watched, which takes it off Continue watching.">
           <Select

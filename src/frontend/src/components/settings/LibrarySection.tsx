@@ -5,7 +5,6 @@ import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
-import { Segmented } from "@giga/ui/controls/Segmented";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
@@ -52,12 +51,17 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
     <Workspace labels={SETTINGS_LABELS}>
       <Group title="Library" icon={Library}>
         <Row label="Default view" tip="Show the library as a grid of posters, a list, or rows of shelves.">
-          <Segmented
+          <Select
             aria-label="Default view"
-            options={VIEWS}
+            className={FIELD_CONTROL}
             value={prefs.libraryView}
-            onChange={(libraryView) => setPrefs({ libraryView })}
-          />
+            onChange={(event) => {
+              const libraryView = VIEWS.find((option) => option.value === event.target.value)?.value ?? "grid";
+              setPrefs({ libraryView });
+            }}
+          >
+            {VIEWS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </Select>
         </Row>
         <Row label="Default sort" tip="The order the library opens in.">
           <Select

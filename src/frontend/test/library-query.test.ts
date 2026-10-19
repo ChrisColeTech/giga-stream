@@ -3,9 +3,9 @@ import { describe, it } from "node:test";
 import { NO_HISTORY, resolveItems, type ResolvedItem } from "@/lib/library-marks";
 import {
   DEFAULT_QUERY,
+  CLEAR_FILTERS,
   collectionSource,
   continueItems,
-  FILTER_DEFAULTS,
   matchesSource,
   sortedCollections,
   viewCounts,
@@ -46,7 +46,7 @@ const query = (change: Partial<LibraryQuery>): LibraryQuery => ({ ...DEFAULT_QUE
 const titles = (items: readonly ResolvedItem[]): string[] => items.map((item) => item.title);
 
 describe("the views and the scope", () => {
-  it("narrows by the type strip", () => {
+  it("narrows by the Media picker", () => {
     assert.deepEqual(titles(visibleItems(ALL, query({ scope: "tv" }))), ["Bravo"]);
     assert.deepEqual(titles(visibleItems(ALL, query({ scope: "local" }))), ["Charlie"]);
   });
@@ -78,12 +78,13 @@ describe("the filters", () => {
     assert.deepEqual(titles(visibleItems(ALL, query({ watched: "watching" }))), ["Bravo"]);
   });
 
-  it("clears the filters and keeps the search, the type and the source", () => {
-    const set = query({ scope: "movie", search: "x", genres: ["Drama"], year: "2020", watched: "watched" });
-    const cleared: LibraryQuery = { ...set, ...FILTER_DEFAULTS };
-    assert.deepEqual({ ...cleared, scope: DEFAULT_QUERY.scope, search: "" }, DEFAULT_QUERY);
-    assert.equal(cleared.scope, "movie");
-    assert.equal(cleared.search, "x");
+  it("clears Media, title and every facet while keeping source and sort", () => {
+    const set = query({
+      source: "favorites", scope: "movie", search: "x", genres: ["Drama"], year: "2020",
+      watched: "watched", sort: "az",
+    });
+    const cleared: LibraryQuery = { ...set, ...CLEAR_FILTERS };
+    assert.deepEqual(cleared, { ...DEFAULT_QUERY, source: "favorites", sort: "az" });
   });
 });
 

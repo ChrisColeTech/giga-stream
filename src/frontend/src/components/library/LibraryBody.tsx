@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { type ListView, type Scope, type SourceId } from "@/lib/library-query";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
@@ -8,7 +9,6 @@ import { HistoryStrip } from "./HistoryStrip";
 import { PosterGrid } from "./PosterGrid";
 import { PosterList } from "./PosterList";
 import type { Reveal } from "./WindowedRows";
-import { TypeStrip } from "./TypeStrip";
 import { LibraryPager } from "./LibraryPager";
 import { PosterGridSkeleton } from "./PosterGridSkeleton";
 import { SkeletonRows } from "@giga/ui/lists/SkeletonRows";
@@ -29,13 +29,10 @@ export interface LibraryBodyProps {
   readonly continuing: readonly ResolvedItem[];
   readonly collections: readonly CollectionRow[];
   readonly selected: string | null;
-  readonly onScope: (scope: Scope) => void;
+  readonly toolbar: ReactNode;
   readonly onSelect: (id: string) => void;
   readonly onRemoveWatch: (item: ResolvedItem) => void;
   readonly onClearHistory: () => void;
-  readonly onRefresh: () => void;
-  /** Opens the Search titles spotlight. */
-  readonly onSearch: () => void;
   readonly loading: boolean;
   readonly paging: boolean;
   readonly hasMore: boolean;
@@ -46,7 +43,7 @@ export interface LibraryBodyProps {
   readonly onRevealed?: () => void;
 }
 
-/** The centre of Library: the type strip, the History strip when History is open, then Continue Watching and the
+/** The centre of Library: the toolbar, the History strip when History is open, then Continue Watching and the
  *  results as a grid or a list. */
 export function LibraryBody({
   scope,
@@ -58,12 +55,10 @@ export function LibraryBody({
   continuing,
   collections,
   selected,
-  onScope,
+  toolbar,
   onSelect,
   onRemoveWatch,
   onClearHistory,
-  onRefresh,
-  onSearch,
   loading,
   paging,
   hasMore,
@@ -78,7 +73,7 @@ export function LibraryBody({
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <TypeStrip scope={scope} onScope={onScope} onRefresh={onRefresh} refreshing={loading} onSearch={onSearch} />
+      {toolbar}
       {inHistory && <HistoryStrip empty={historyEmpty} onClear={onClearHistory} />}
       <div ref={scroller} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <ContinueStrip
