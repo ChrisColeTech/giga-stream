@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { hasSourceChoice, playableSources, sameSources, selectedPlayerSource } from "@/lib/player-sources";
+import {
+  canResumeSource, hasSourceChoice, localSource, playableSources, sameSources, selectedPlayerSource,
+} from "@/lib/player-sources";
 import { playerStageRender } from "@/lib/player-render-state";
 import type { TitleSource } from "@/services/schemas/source-schema";
 import { useAppStore } from "@/store/app-store";
@@ -16,6 +18,18 @@ const provider = (providerId: number, order: number): TitleSource => ({
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 
 describe("Player source selection", () => {
+  it("resumes streams and only embeds with a start parameter", () => {
+    const stream = playableSources([], "https://stream.example/a.mp4")[0];
+    const embed = playableSources([provider(1, 1)], undefined)[0];
+    const resumable = playableSources([{ ...provider(2, 2), startParam: "start", messageShape: undefined }], undefined)[0];
+    const messagesOnly = playableSources([{ ...provider(3, 3), messageShape: "player-event" }], undefined)[0];
+    assert.equal(canResumeSource(localSource("/api/media/local/one")), true);
+    assert.equal(canResumeSource(stream), true);
+    assert.equal(canResumeSource(embed), false);
+    assert.equal(canResumeSource(resumable), true);
+    assert.equal(canResumeSource(messagesOnly), false);
+  });
+
   it("sorts provider sources by order and id, with App player last", () => {
     const sources = playableSources([provider(9, 2), provider(8, 1), provider(7, 1)], "https://stream.example/a.m3u8");
     assert.deepEqual(sources.map((source) => source.id), ["provider:7", "provider:8", "provider:9", "app"]);

@@ -13,7 +13,11 @@ export interface LoadedPlayerData {
   readonly detail?: TitleDetail;
   readonly localInfo?: LocalMediaInfo;
   readonly playingEpisode?: Episode;
+  readonly playingEpisodes: readonly Episode[];
+  readonly playingEpisodesSeason?: number;
+  readonly playingFailed: boolean;
   readonly episodes: readonly Episode[];
+  readonly episodesSeason?: number;
   readonly related: readonly LibraryItem[];
   readonly basePending: boolean;
   readonly seasonPending: boolean;
@@ -22,7 +26,8 @@ export interface LoadedPlayerData {
 }
 
 const EMPTY: LoadedPlayerData = {
-  episodes: [], related: [], basePending: false, seasonPending: false, playingPending: false, relatedPending: false,
+  episodes: [], playingEpisodes: [], playingFailed: false, related: [], basePending: false,
+  seasonPending: false, playingPending: false, relatedPending: false,
 };
 interface LoadedState extends LoadedPlayerData { readonly key: string; readonly playingKey?: string; }
 const EMPTY_STATE: LoadedState = { ...EMPTY, key: "idle" };
@@ -101,10 +106,12 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
   useEffect(() => {
     if (tab?.ref.kind !== "title" || tab.kind !== "tv" || session.season === undefined) return undefined;
     const controller = new AbortController();
-    setLoaded((current) => ({ ...current, episodes: [], seasonPending: true }));
+    setLoaded((current) => ({ ...current, episodes: [], episodesSeason: undefined, seasonPending: true }));
     void readSeason(tab.ref.id, session.season, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
-      setLoaded((current) => ({ ...current, episodes: answer.episodes, seasonPending: false }));
+      setLoaded((current) => ({
+        ...current, episodes: answer.episodes, episodesSeason: session.season, seasonPending: false,
+      }));
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) {
         setLoaded((current) => ({ ...current, seasonPending: false }));
@@ -120,16 +127,26 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
     setLoaded((current) => ({
       ...current,
       playingEpisode: episodeDuringRefresh(current.playingKey, playingKey, current.playingEpisode),
+      playingEpisodes: current.playingKey === playingKey ? current.playingEpisodes : [],
+      playingEpisodesSeason: current.playingKey === playingKey ? current.playingEpisodesSeason : undefined,
+      playingFailed: false,
       playingKey,
       playingPending: true,
     }));
     void readSeason(tab.ref.id, playing.season, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
       const playingEpisode = answer.episodes.find((episode) => episode.episode === playing.episode);
-      setLoaded((current) => ({ ...current, playingEpisode, playingKey, playingPending: false }));
+      setLoaded((current) => ({
+        ...current, playingEpisode, playingEpisodes: answer.episodes, playingEpisodesSeason: playing.season,
+        playingFailed: false, playingKey,
+        playingPending: false,
+      }));
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) {
-        setLoaded((current) => ({ ...current, playingPending: false }));
+        setLoaded((current) => ({
+          ...current, playingEpisodes: [], playingEpisodesSeason: undefined,
+          playingFailed: true, playingPending: false,
+        }));
         useAppStore.getState().say(sentence(error, "Episode could not be read."), "warn");
       }
     });
@@ -142,7 +159,12 @@ export function usePlayerData(session: PlayerSession, revision = 0): LoadedPlaye
      sit at `loading` while the mounted media plays — the render layer derives its own states and ignores the kind. */
   const view: LoadedPlayerData = loaded.key !== key
     ? (tab === null ? EMPTY : { ...EMPTY, basePending: true, relatedPending: tab.ref.kind !== "local" })
-    : loaded.playingKey === playingKey ? loaded : { ...loaded, playingEpisode: undefined };
+    : loaded.playingKey === playingKey
+      ? loaded
+      : {
+          ...loaded, playingEpisode: undefined, playingEpisodes: [], playingEpisodesSeason: undefined,
+          playingFailed: false,
+        };
   const pending = view.basePending || view.seasonPending || view.playingPending || view.relatedPending;
   useEffect(() => {
     useAppStore.getState().setActivity("video", pending);

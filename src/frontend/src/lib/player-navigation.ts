@@ -31,3 +31,20 @@ export async function settleLatestNavigation(
   }
   return navigation.isLatest(generation);
 }
+
+export interface EpisodeSwitchTarget {
+  readonly season: number;
+  readonly episode: number;
+}
+
+export async function settleEpisodeSwitch(
+  navigation: PlayerNavigation,
+  generation: number,
+  target: EpisodeSwitchTarget,
+  settle: Promise<void>,
+  onCommit: (target: EpisodeSwitchTarget) => void,
+  onCurrentFailure: (error: unknown) => void,
+): Promise<boolean> {
+  const latest = await settleLatestNavigation(navigation, generation, settle, onCurrentFailure);
+  return latest && navigation.commitLatest(generation, () => onCommit(target));
+}

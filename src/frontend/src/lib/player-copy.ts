@@ -18,6 +18,12 @@ export const NO_TITLE_SOURCE_REASON = "No stream source is set up for titles.";
 export const LOCAL_MEDIA_FAILURE = "The file could not be read. It may have moved since the last scan.";
 export const STREAM_FAILURE = "The stream could not be loaded.";
 export const PLAYER_LOADING_REASON = "The player is loading this item.";
+export const EPISODE_LOADING_REASON = "Episode navigation is loading.";
+export const EPISODE_READ_FAILURE_REASON = "Episode navigation could not be loaded.";
+export const EPISODE_SWITCH_REASON = "Episode navigation is in progress.";
+export const FIRST_EPISODE_REASON = "This is the first episode.";
+export const LAST_EPISODE_REASON = "This is the last episode.";
+export const UNSUPPORTED_RESUME_REASON = "This source does not support resuming at a saved position.";
 /** A title answered from the fileserver's cache (`fromCache`, `46` section E): no sources, so Play is disabled. */
 export const BACKEND_UNREACHABLE_REASON = "The admin backend is not reachable.";
 

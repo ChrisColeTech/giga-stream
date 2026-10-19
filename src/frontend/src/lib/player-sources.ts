@@ -20,6 +20,10 @@ export function hasSourceChoice(sources: readonly PlayerSource[]): boolean {
   return sources.length >= 2;
 }
 
+export function canResumeSource(source: PlayerSource | undefined): boolean {
+  return source?.kind === "stream" || source?.embed.startParam !== undefined;
+}
+
 /** Uses the committed choice when valid, otherwise the first source while the store synchronizes. */
 export function selectedPlayerSource(
   sources: readonly PlayerSource[],
