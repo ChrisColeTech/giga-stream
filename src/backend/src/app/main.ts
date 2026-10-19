@@ -7,9 +7,12 @@ import { app, BrowserWindow, dialog, screen, session } from "electron";
 
 import { resolveAppUrl } from "./app-url.js";
 import { startOrAttach, type BackendHandle } from "./backend-host.js";
+import { enableAdBlocking } from "./ad-blocker.js";
+import { adHostResolverRules } from "./ad-hosts.js";
 import { installGuards } from "./guards.js";
 import { installMinimizeToTray, revealSteps } from "./minimize-to-tray.js";
 import { installNativeDialogIpc } from "./native-dialog.js";
+import { installPlayerPolicyIpc } from "./player-policy-ipc.js";
 import { createTray, type TrayHandle } from "./tray.js";
 import { isTrustedSender } from "./trust.js";
 import { installWindowOverlayIpc } from "./window-overlay.js";
@@ -25,6 +28,9 @@ import { installWindowOverlayIpc } from "./window-overlay.js";
 // Dev-only DevTools endpoint on a fixed loopback port, so automation can drive the window like a browser tab. The
 // fileserver's window uses 9222; this one 9223, so both can run. The packaged app never opens one.
 if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9223");
+
+// Ad-named hosts never resolve, from any frame or worker (docs/55 decision 9). Must be set before the app is ready.
+app.commandLine.appendSwitch("host-resolver-rules", adHostResolverRules());
 
 const BAR = { color: "#18181b", symbolColor: "#a3a3ac", height: 40 } as const;
 
@@ -81,7 +87,15 @@ function createWindow(url: string, origin: string): BrowserWindow {
   const allowed: ReadonlySet<string> = new Set([origin, new URL(url).origin]);
   const trusted = (event: Parameters<typeof isTrustedSender>[0]): boolean =>
     isTrustedSender(event, () => window.webContents.mainFrame.frameTreeNodeId, allowed);
-  installGuards(window, session.defaultSession, allowed, (entry) => console.warn("[guard]", JSON.stringify(entry)));
+  const playerPolicy = installGuards(window, session.defaultSession, allowed, (entry) =>
+    console.warn("[guard]", JSON.stringify(entry)),
+  );
+  installPlayerPolicyIpc(
+    window.webContents.ipc,
+    () => window.webContents.mainFrame.frameTreeNodeId,
+    playerPolicy.canAcceptPolicy,
+    playerPolicy.authority,
+  );
   installNativeDialogIpc(window.webContents.ipc, trusted, () => window, (_target, options) =>
     dialog.showOpenDialog(window, options),
   );
@@ -126,7 +140,13 @@ if (!app.requestSingleInstanceLock()) {
     .then(async () => {
       backend = await startOrAttach();
       const url = await resolveAppUrl(backend.origin);
+      const filters = await enableAdBlocking(session.defaultSession, (blocked) =>
+        console.warn(
+          "[guard]",
+          JSON.stringify({ kind: "ad blocked", url: `${blocked.host} (${blocked.type})`, blocked: true }),
+        ));
       console.info(`[giga-stream-admin] ${backend.attached ? "attached to" : "started"} ${backend.origin}; window on ${url}`);
+      console.info(`[giga-stream-admin] ad blocking on (${filters} filters)`);
       target = { url, origin: backend.origin };
       mainWindow = createWindow(url, backend.origin);
       tray = createTray({ showWindow, quit: () => app.quit(), address: backend.origin });
