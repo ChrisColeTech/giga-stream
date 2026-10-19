@@ -106,7 +106,9 @@ describe("the markup", () => {
     assert.ok(strip.includes('title="Search titles"'));
     assert.ok(!/<button[^>]*aria-label="Search titles"[^>]*>[^<]*\w[^<]*</.test(strip), "no word inside the button");
     assert.ok(!PARAGRAPH.test(strip), "no text under a control");
-    assert.ok(strip.includes("Filters · 0") && strip.includes("Sort: Newest") && strip.includes("View: Grid"));
+    assert.ok(strip.includes("Filters · 0</button>"));
+    assert.ok(strip.includes('aria-label="Sort: Newest"') && strip.includes("Sort: Newest"));
+    assert.ok(strip.includes('aria-label="View: Grid"') && strip.includes("View: Grid"));
   });
 
   it("draws a result row with Play and Info named for the title, and no text under them", () => {

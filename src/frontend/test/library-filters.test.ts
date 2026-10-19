@@ -31,9 +31,11 @@ describe("faceted filter state", () => {
       query: current, view: "list", trending: false, filters: createElement("div"), loading: false,
       onQuery: noop, onView: noop, onRefresh: noop, onSearch: noop,
     }));
-    assert.match(markup, />Filters · 2</);
-    assert.match(markup, />Sort: Newest/);
-    assert.match(markup, />View: List/);
+    assert.match(markup, /Filters · 2<\/button>/);
+    assert.match(markup, /aria-label="Sort: Newest"/);
+    assert.ok(markup.includes("Sort: Newest"));
+    assert.match(markup, /aria-label="View: List"/);
+    assert.ok(markup.includes("View: List"));
     assert.match(markup, /aria-label="Refresh Library".*aria-label="Search titles"/s);
   });
 });
