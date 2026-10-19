@@ -11,7 +11,7 @@ export function LibraryPager({
   scope,
   onVisible,
 }: {
-  /** The Type strip's scope: it decides how many kinds, so how many cards, one page adds. */
+  /** The Media filter's scope: it decides how many kinds, so how many cards, one page adds. */
   readonly scope: Scope;
   readonly hasMore: boolean;
   readonly loading: boolean;

@@ -101,7 +101,7 @@ describe("store slices and hydration", () => {
     state().setTheme("dark");
     state().applySnapshot({
       shell: { activeSurface: "library", paneVisibility: {}, paneSizes: {} },
-      settings: { ...DEFAULT_SETTINGS, theme: "system" },
+      settings: { ...DEFAULT_SETTINGS, theme: "light" },
       unreadable: [],
     });
     assert.equal(state().surface, "live");

@@ -43,7 +43,7 @@ export interface Settings {
   /** The Player source last chosen (`provider:<id>` or `app`), played first wherever an item offers it; null is the
    *  item's first source. */
   readonly defaultSource: string | null;
-  /** The Library as the person last left it: the Type strip, the rail view and the filters, the Filter text included
+  /** The Library as the person last left it: the Media picker, the rail view and the filters, the Filter text included
    *  (owner, 2026-10-18). */
   readonly libraryScope: "all" | "movie" | "tv" | "local";
   /** `all`, `history`, `favorites` or `collection:<id>`. */

@@ -6,7 +6,7 @@ import { Actions } from "@giga/ui/form/Actions";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { Segmented } from "@giga/ui/controls/Segmented";
+import { Select } from "@giga/ui/controls/Select";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";
@@ -18,7 +18,7 @@ import type { CollectionType } from "@/types/collection";
 export const NEW_COLLECTION_LABELS = ["Name", "Type", "Folder"] as const;
 
 /** The create form, as Sensenova's New dataset form (pages/datasets/NewDatasetForm.tsx): a name, its type (Movies, TV
- *  or Local, a one-of pill choice), and an optional folder to start from, chosen through the native picker on the row's
+ *  or Local), and an optional folder to start from, chosen through the native picker on the row's
  *  trailing edge; Create ends the group. Create is disabled only while the name is blank; a created collection clears
  *  the field, a refused one keeps it. Delta: no placeholder text (banned in Giga Stream). */
 export function NewCollectionForm() {
@@ -67,7 +67,14 @@ export function NewCollectionForm() {
         />
       </Row>
       <Row label="Type" tip="What the collection holds: movies, TV series, or your own local files.">
-        <Segmented aria-label="Collection type" options={TYPE_CHOICES} value={type} onChange={setType} />
+        <Select
+          aria-label="Collection type"
+          className={FIELD_CONTROL}
+          value={type}
+          onChange={(event) => setType(TYPE_CHOICES.find((choice) => choice.value === event.target.value)?.value ?? "movie")}
+        >
+          {TYPE_CHOICES.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+        </Select>
       </Row>
       <Row
         label="Folder"

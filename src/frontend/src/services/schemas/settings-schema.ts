@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const SettingsSchema = z.object({
   autoplay: z.boolean(),
-  theme: z.enum(["dark", "light", "system"]),
+  theme: z.enum(["dark", "light"]),
   themeAccent: z.enum(["amber", "blue", "green", "violet", "rose"]),
-  reducedMotion: z.enum(["system", "off", "on"]),
+  reducedMotion: z.enum(["off", "on"]),
   uiZoom: z.number().min(0.5).max(3),
   videoQuality: z.enum(["auto", "higher", "saver"]),
   audioLanguage: z.string().min(2).max(35).nullable(),

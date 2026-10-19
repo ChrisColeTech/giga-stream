@@ -10,8 +10,8 @@ import type { Box } from "@/types/child-window";
 import type { EventArea } from "@/types/events";
 import type { ItemRef } from "@/types/library";
 import type { OverlayId, PopupAnchor } from "@/types/overlays";
-import type { PaneKey, PaneSide, Surface } from "@/types/shell";
-import { createChromeSlice } from "@giga/ui/store/chrome-slice";
+import type { MotionPreference, PaneKey, PaneSide, Surface, ThemeMode } from "@/types/shell";
+import { createChromeSlice, type ChromeSet } from "@giga/ui/store/chrome-slice";
 import type { ChromeKinds, ChromeSlice } from "@giga/ui/store/chrome-types";
 import { clampZoom } from "@giga/ui/lib/settings-zoom";
 
@@ -35,7 +35,11 @@ export interface ActivityFlags {
 
 /** The interface's shell state: the shared chrome fields, plus its panes, Theatre, hydration and settings write-back.
  */
-export interface ShellSlice extends ChromeSlice<ShellKinds> {
+export interface ShellSlice extends Omit<ChromeSlice<ShellKinds>, "theme" | "motion" | "setTheme" | "setMotion"> {
+  theme: ThemeMode;
+  motion: MotionPreference;
+  setTheme: (theme: ThemeMode) => void;
+  setMotion: (motion: MotionPreference) => void;
   adminUrl: string;
   surface: Surface;
   open: Partial<Record<PaneKey, boolean>>;
@@ -96,7 +100,25 @@ type Set = (partial: Partial<AppState>) => void;
 type Get = () => AppState;
 
 export function shellSlice(set: Set, get: Get): ShellSlice {
-  const chrome = createChromeSlice<ShellKinds>(set, get, {
+  const setChrome: ChromeSet<ShellKinds> = (partial) => {
+    const { theme, motion, setTheme, setMotion, ...rest } = partial;
+    void setTheme;
+    void setMotion;
+    set({
+      ...rest,
+      ...(theme === "dark" || theme === "light" ? { theme } : {}),
+      ...(motion === "off" || motion === "on" ? { motion } : {}),
+    });
+  };
+  const getChrome = (): ChromeSlice<ShellKinds> => {
+    const state = get();
+    return {
+      ...state,
+      setTheme: (theme) => { if (theme === "dark" || theme === "light") state.setTheme(theme); },
+      setMotion: (motion) => { if (motion === "off" || motion === "on") state.setMotion(motion); },
+    };
+  };
+  const chrome = createChromeSlice<ShellKinds>(setChrome, getChrome, {
     defaults: {
       theme: DEFAULT_SETTINGS.theme,
       accent: DEFAULT_SETTINGS.themeAccent,
@@ -107,6 +129,8 @@ export function shellSlice(set: Set, get: Get): ShellSlice {
   });
   return {
     ...chrome,
+    theme: DEFAULT_SETTINGS.theme,
+    motion: DEFAULT_SETTINGS.reducedMotion,
     /* A change made in the window is a setting: each one bumps the revision the settings write-back saves by. */
     setTheme: (theme) => changeSetting(set, get, { theme }),
     setAccent: (accent) => changeSetting(set, get, { accent }),

@@ -34,7 +34,7 @@ export interface ShelfSpec {
 }
 
 export interface ShelfPlanInput {
-  /** The Library's current query: the rail's view, the type strip, the search, the filters and the sort. */
+  /** The Library's current query: the rail's view, Media, title search, facets and sort. */
   readonly query: LibraryQuery;
   /** The genre facets of the current query's first page, in the server's order. */
   readonly genreFacets: readonly string[];

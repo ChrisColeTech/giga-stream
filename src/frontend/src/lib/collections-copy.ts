@@ -1,6 +1,6 @@
 import type { CollectionRow, CollectionType } from "@/types/collection";
 
-/** A collection's type, as the one-of pill choice and the index column read it. */
+/** A collection's type, as the select and the index column read it. */
 export const TYPE_CHOICES: ReadonlyArray<{ value: CollectionType; label: string }> = [
   { value: "movie", label: "Movies" },
   { value: "tv", label: "TV" },

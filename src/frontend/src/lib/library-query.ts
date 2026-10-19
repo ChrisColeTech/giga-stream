@@ -10,7 +10,7 @@ export type WatchedFilter = "all" | "unwatched" | "watching" | "watched";
 /** The presentation of the results: a grid of cards, a list of rows, or the Rows view of shelves (`06` section 4.3). */
 export type ListView = "grid" | "list" | "rows";
 
-/** Everything the Library narrows by. Scope and source come from the rail and the type strip; the rest from the filters. */
+/** Everything the Library narrows by. Source comes from the rail; Media and the other facets come from Filters. */
 export interface LibraryQuery {
   readonly scope: Scope;
   readonly source: SourceId;
@@ -32,9 +32,9 @@ export const DEFAULT_QUERY: LibraryQuery = {
   sort: "newest",
 };
 
-/** The filters at rest. Clear filters restores these and the sort to the Default sort setting, and keeps the search, the
- *  type and the source (`06` section 4.3). */
+/** The faceted filters at rest. Clear filters also restores Media and the title filter, while keeping source and sort. */
 export const FILTER_DEFAULTS = { genres: [], year: "", watched: "all" } as const;
+export const CLEAR_FILTERS = { ...FILTER_DEFAULTS, scope: "all", search: "" } as const;
 
 const COLLECTION_PREFIX = "collection:";
 
@@ -97,7 +97,7 @@ export function visibleItems(items: readonly ResolvedItem[], query: LibraryQuery
   return sortItems(narrowed, query.sort);
 }
 
-/** Continue Watching: items being watched in the rail's view and the type strip's scope, newest first, at most the
+/** Continue Watching: items being watched in the rail's view and the Media filter's scope, newest first, at most the
  *  limit. One order for the strip and the Rows shelf. */
 export function continueItems(items: readonly ResolvedItem[], scope: Scope, source: SourceId = "all"): ResolvedItem[] {
   const watching = items.filter(

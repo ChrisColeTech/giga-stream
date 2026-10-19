@@ -4,6 +4,7 @@ import { HistoryStrip } from "@/components/library/HistoryStrip";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryFilters } from "@/components/library/LibraryFilters";
 import { LibraryRail } from "@/components/library/LibraryRail";
+import { LibraryToolbar } from "@/components/library/LibraryToolbar";
 import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { TitleSpotlight } from "@/components/library/TitleSpotlight";
@@ -23,7 +24,7 @@ import {
   type HistoryMarks,
   type ResolvedItem,
 } from "@/lib/library-marks";
-import type { Scope, SourceId } from "@/lib/library-query";
+import type { SourceId } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
 import { libraryRenderState, shownItems } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
@@ -51,7 +52,6 @@ export function LibraryPage({ active }: { active: boolean }) {
   useLibraryRequest({ patch, setView, setSelected, setReveal });
   const spotlight = useTitleSpotlight(active);
   const onSource = (source: SourceId): void => patch({ source });
-  const onScope = (scope: Scope): void => patch({ scope });
   const onSeeAll = useCallback((group: ShelfGroup): void => {
     patch(groupQuery(group));
     setView("grid");
@@ -77,22 +77,33 @@ export function LibraryPage({ active }: { active: boolean }) {
     );
   }, [items]);
   const rows = view === "rows";
+  const genres = [...new Set([...(data.page?.facets.genres ?? []), ...query.genres])];
+  const years = [...new Set([
+    ...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)]),
+  ])].sort((a, b) => b - a);
+  const filters = <LibraryFilters query={query} genres={genres} years={years} onQuery={patch} />;
+  const toolbar = (
+    <LibraryToolbar
+      query={query} view={view} trending={data.page?.trending ?? false} filters={filters} loading={data.loading}
+      onQuery={patch} onView={changeView} onRefresh={data.refresh} onSearch={spotlight.open}
+    />
+  );
   const rowsShelves = useRowsShelves({
     enabled: rows && active, query, data, collections, history, showContinue: prefs.showContinue && query.source !== "history",
   });
   const center = rows ? (
     <LibraryRows
-      scope={query.scope} shelves={rowsShelves.shelves} positions={rowsShelves.positions} collections={collections}
-      selected={selected} onScope={onScope} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
-      onLoadMore={rowsShelves.loadMore} onRefresh={data.refresh} onSearch={spotlight.open} loading={data.loading}
+      toolbar={toolbar} shelves={rowsShelves.shelves} positions={rowsShelves.positions} collections={collections}
+      selected={selected} onSelect={setSelected} onRemoveWatch={onRemoveWatch} onSeeAll={onSeeAll}
+      onLoadMore={rowsShelves.loadMore} loading={data.loading}
       strip={query.source === "history" && <HistoryStrip empty={shown.length === 0} onClear={onClearHistory} />}
     />
   ) : (
     <LibraryBody
       scope={query.scope} source={query.source} showContinue={prefs.showContinue} view={view} items={items}
-      shown={shown} continuing={continuing} collections={collections} selected={selected} onScope={onScope}
+      shown={shown} continuing={continuing} collections={collections} selected={selected} toolbar={toolbar}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
-      onRefresh={data.refresh} onSearch={spotlight.open} loading={data.loading}
+      loading={data.loading}
       paging={data.paging} hasMore={data.hasMore} onLoadMore={data.loadMore}
       titleRegionsLoading={render.titleRegionsLoading} reveal={reveal} onRevealed={onRevealed}
     />
@@ -104,10 +115,7 @@ export function LibraryPage({ active }: { active: boolean }) {
         surface="library" active={active}
         left={<LibraryRail source={query.source} counts={counts} collections={collections} onSource={onSource} />}
         center={center}
-        right={<LibraryFilters query={query} view={view}
-          genres={[...new Set([...(data.page?.facets.genres ?? []), ...query.genres])]} years={[
-            ...new Set([...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)])]),
-          ].sort((a, b) => b - a)} trending={data.page?.trending ?? false} onQuery={patch} onView={changeView} />}
+        right={filters}
       />
       {spotlight.state.open && (
         <TitleSpotlight
