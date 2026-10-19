@@ -447,6 +447,28 @@ Binary application state stays `Toggle`, never two pills and never a select. Tab
 native for their platform menu, keyboard and large-list behavior. A disabled pill's reason follows the family's
 focusable-tooltip rule, never title-only copy.
 
+#### Choice popovers (owner 2026-10-19; `58`)
+
+One shared popover family handles choices that need check rows, icons, multi-select or searchable populated options -
+never one implementation per feature:
+
+- **Trigger variants:** `field` (the full `FIELD_BASE` skin, full row width) and `toolbar` (compact but visibly edged/
+  filled, never a transparent ghost that reads as plain text). Both show the current value/summary and a chevron.
+- **Width:** the popup's width matches its trigger; it may grow wider only to fit a documented minimum, never shrink
+  below or use a consumer-owned random width. Collision padding/flip behavior is shared.
+- **Single mode:** checkmark/radio rows, one selected, selecting closes.
+- **Multi mode:** checkbox rows, selection stays open; an optional All row represents the complete canonical set rather
+  than coexisting as a stored value beside specifics.
+- **Search:** automatic when `options.length >= 12` (one family constant), absent below it. Search policy never varies
+  per consumer.
+- **Keyboard:** native/Radix roving rows; search focus on open when present; arrows/Home/End move rows; Enter/Space
+  selects/toggles; Escape closes once, clears search and returns focus; Tab closes and continues. No custom focus trap.
+
+`ChoicePopover` is not a second native Select style. Native `Select` remains the ordinary compact form/settings control
+for static single-choice values. ChoicePopover is used when the control needs the capabilities above (multi-select,
+check rows, search, icons, a toolbar quick picker). `PopupPanel` remains an authored dialog/editor and is never used as
+a choice list. Consumer-built choice menus/popovers are prohibited.
+
 ### Buttons and surfaces
 
 The family rule, from Giga Cut (`D:\Projects\giga-cut\docs\01-ARCHITECTURE-AND-STYLE-GUIDE.md` §Buttons and

@@ -1,5 +1,10 @@
 # 57 - Choice controls and the cross-app chip audit (plan v1)
 
+> **Amended 2026-10-19 (owner; superseded in part by `58`).** The full `Filters · N` popup, toolbar Sort and applied
+> filter-token strip built by this plan are rejected. `58` restores a quick toolbar Media multi-picker and View picker,
+> keeps the full filter pane (Sort included), and replaces ChoiceMenu/ChoicePicker/GenrePopover with one shared
+> single/multi choice-popover family.
+
 **Status: v1 (2026-10-19).** Owner: "there is no consistency or standard here for when you are using a chip vs drop
 down. can you tell me when we should use chips vs dropdowns? how many chips are 'too many chips' that should use a
 dropdown instead. how many is too many on a form if there are a bunch of chip form controls across form groups? we
