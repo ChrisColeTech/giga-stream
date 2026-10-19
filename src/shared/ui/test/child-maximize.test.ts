@@ -1,5 +1,6 @@
 import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -23,6 +24,11 @@ after(() => {
 });
 
 const count = (html: string, needle: string) => html.split(needle).length - 1;
+const actionFor = (html: string, label: string): string =>
+  html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>.*?</button>`))?.[0] ?? "";
+const source = readFileSync("src/windows/ChildWindow.tsx", "utf8");
+const raisedClasses =
+  /border-ctl-edge|hover:border-dim|linear-gradient|shadow-\[var\(--shadow-ctl\),var\(--shadow-stroke-hi\)\]/;
 
 function render(over: { maximizable?: boolean; memory?: ChildMemory; status?: { left?: string; right?: string } } = {}): string {
   const spec = { ...workSpec("settings", "Settings"), ...(over.maximizable === undefined ? {} : { maximizable: over.maximizable }) };
@@ -61,11 +67,26 @@ test("maximizing hands the NORMAL box to memory first and sets the flag; restori
 
 test("every window gains the Maximize button by default, beside the close X, and nothing else", () => {
   const html = render();
+  const maximize = actionFor(html, "Maximize Settings");
+  const close = actionFor(html, "Close Settings");
   assert.equal(count(html, 'aria-label="Maximize Settings"'), 1);
   assert.ok(html.indexOf('aria-label="Maximize Settings"') < html.indexOf('aria-label="Close Settings"'), "left of the close X");
+  for (const action of [maximize, close]) {
+    assert.match(action, /size-ctl-md[^"]*border border-transparent bg-transparent/);
+    assert.match(action, /hover:bg-hov hover:text-text/);
+    assert.doesNotMatch(action, raisedClasses);
+    assert.match(action, /class="[^"]*size-3\.75[^"]*"/);
+    assert.doesNotMatch(action, /data-on=/);
+  }
   assert.equal(count(html, "data-grip="), 8);
   assert.equal(count(html, "data-child-status"), 0, "no status strip without `status`");
   assert.ok(html.includes("width:1218px") && html.includes("height:768px"), "the normal box is untouched");
+});
+
+test("every ChildWindow titlebar action stays on the default ghost IconButton variant", () => {
+  const actions = source.match(/<IconButton\b[^>]*>/gs) ?? [];
+  assert.equal(actions.length, 2, "Maximize/Restore and Close are the only titlebar actions");
+  for (const action of actions) assert.doesNotMatch(action, /\bbordered\b/);
 });
 
 test("a spec may opt out: no button and no double-click toggle target", () => {
@@ -76,10 +97,15 @@ test("a spec may opt out: no button and no double-click toggle target", () => {
 
 test("a window that was maximized opens maximized: the container's area, no grips, a Restore button", () => {
   const html = render({ memory: kept(true) });
+  const restore = actionFor(html, "Restore Settings");
+  const close = actionFor(html, "Close Settings");
   assert.ok(html.includes("left:0;") && html.includes("top:40px") && html.includes("width:1600px") && html.includes("height:936px"));
   assert.equal(count(html, "data-grip="), 0);
   assert.equal(count(html, 'aria-label="Restore Settings"'), 1);
   assert.equal(count(html, "Maximize Settings"), 0);
+  assert.match(restore, /data-on=""/);
+  assert.match(restore, /data-on:border-accent-edge data-on:bg-accent-tint data-on:text-accent-text/);
+  assert.doesNotMatch(close, /data-on=/);
   assert.ok(render({ memory: kept(false) }).includes("width:1218px"), "a window never maximized opens normal");
 });
 

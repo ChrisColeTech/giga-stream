@@ -83,12 +83,12 @@ export function ChildWindow({ spec, onClose, children, heading, label = spec.tit
             {heading ?? spec.title}
           </h2>
           {maximizable && (
-            <IconButton bordered title={maxLabel} aria-label={maxLabel} onClick={toggleMaximized}>
-              <MaxIcon className="size-3.5" aria-hidden />
+            <IconButton on={maximized} title={maxLabel} aria-label={maxLabel} onClick={toggleMaximized}>
+              <MaxIcon className="size-3.75" aria-hidden />
             </IconButton>
           )}
-          <IconButton bordered title={`Close ${label}`} aria-label={`Close ${label}`} onClick={onClose}>
-            <X className="size-3.5" aria-hidden />
+          <IconButton title={`Close ${label}`} aria-label={`Close ${label}`} onClick={onClose}>
+            <X className="size-3.75" aria-hidden />
           </IconButton>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
