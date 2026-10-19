@@ -27,7 +27,7 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
       autoplay: false,
       theme: "dark",
       themeAccent: "amber",
-      reducedMotion: "system",
+      reducedMotion: "off",
       uiZoom: 1,
       videoQuality: "auto",
       audioLanguage: null,

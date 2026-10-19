@@ -6,9 +6,9 @@ import { z } from "zod";
  */
 export interface Settings {
   autoplay: boolean;
-  theme: "dark" | "light" | "system";
+  theme: "dark" | "light";
   themeAccent: "amber" | "blue" | "green" | "violet" | "rose";
-  reducedMotion: "system" | "off" | "on";
+  reducedMotion: "off" | "on";
   uiZoom: number;
   videoQuality: "auto" | "higher" | "saver";
   audioLanguage: string | null;
@@ -44,9 +44,9 @@ export type SettingKey = keyof Settings;
 /** One validator per key; a row is checked on its own, never as part of a whole object. */
 export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   autoplay: z.boolean(),
-  theme: z.enum(["dark", "light", "system"]),
+  theme: z.enum(["dark", "light"]),
   themeAccent: z.enum(["amber", "blue", "green", "violet", "rose"]),
-  reducedMotion: z.enum(["system", "off", "on"]),
+  reducedMotion: z.enum(["off", "on"]),
   uiZoom: z.number().min(0.5).max(3),
   videoQuality: z.enum(["auto", "higher", "saver"]),
   audioLanguage: z.string().min(2).max(35).nullable(),
@@ -76,7 +76,7 @@ export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
   autoplay: false,
   theme: "dark",
   themeAccent: "amber",
-  reducedMotion: "system",
+  reducedMotion: "off",
   uiZoom: 1,
   videoQuality: "auto",
   audioLanguage: null,
@@ -105,9 +105,9 @@ export const SETTING_KEYS = Object.keys(SETTING_SCHEMAS) as SettingKey[];
 
 export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   autoplay: "Autoplay must be on or off.",
-  theme: "Theme must be dark, light or system.",
+  theme: "Theme must be dark or light.",
   themeAccent: "Accent must be amber, blue, green, violet or rose.",
-  reducedMotion: "Reduced motion must be system, off or on.",
+  reducedMotion: "Reduced motion must be off or on.",
   uiZoom: "Zoom must be 0.5 to 3.",
   videoQuality: "Video quality must be auto, higher or saver.",
   audioLanguage: "Audio language must be a language tag or empty.",
