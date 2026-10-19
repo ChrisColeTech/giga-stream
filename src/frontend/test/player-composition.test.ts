@@ -95,7 +95,7 @@ describe("documented Player composition", () => {
     } finally { useAppStore.setState({ playback: previous.playback }); }
   });
 
-  it("keeps loading and movie footers thin, stable and accessible", () => {
+  it("keeps loading, idle and movie actions in one non-wrapping row aligned right", () => {
     const movie = {
       ...view,
       tab: { id: "movie-1", ref: { kind: "title" as const, id: "movie-1" }, kind: "movie" as const, title: "Film" },
@@ -106,6 +106,9 @@ describe("documented Player composition", () => {
         ...inspectorActions,
       }));
       assert.doesNotMatch(html, /grid-cols-2|aria-label="Previous episode|aria-label="Next episode/);
+      assert.match(html, /aria-label="Player actions"[^>]*flex-nowrap/);
+      assert.match(html, /aria-label="Playback position actions"[^>]*ml-auto[^>]*flex-nowrap/);
+      assert.doesNotMatch(html, /aria-label="Episode navigation"/);
       assert.match(html, /h-ctl-sm/);
       assert.match(html, /Resume\./);
       assert.match(html, /Start over\./);
@@ -162,7 +165,7 @@ describe("documented Player composition", () => {
     assert.match(last, /Next episode\. This is the last episode\./);
   });
 
-  it("orders Source, episode navigation, saved point and compact actions", () => {
+  it("orders Source, saved point and one left/right series action row without staggering", () => {
     const sources = [
       { id: "a", kind: "stream" as const, name: "A", url: "https://a.example/video.mp4" },
       { id: "b", kind: "stream" as const, name: "B", url: "https://b.example/video.mp4" },
@@ -183,8 +186,13 @@ describe("documented Player composition", () => {
       view: series, commands, paused: true, loading: false, sources, activeId: "a", activeSource: sources[0],
       onSelect: noop, adjacency, ...inspectorActions,
     }));
-    const ordered = ['aria-label="Source"', 'aria-label="Previous episode"', "resume at", ">Resume</button>"];
+    const ordered = ['aria-label="Source"', "resume at", 'aria-label="Player actions"',
+      'aria-label="Episode navigation"', 'aria-label="Playback position actions"'];
     assert.deepEqual([...ordered].sort((left, right) => html.indexOf(left) - html.indexOf(right)), ordered);
+    assert.match(html, new RegExp('aria-label="Player actions"[^>]*flex-nowrap[^>]*>[\\s\\S]*' +
+      'aria-label="Episode navigation"[\\s\\S]*aria-label="Playback position actions"'));
+    assert.match(html, /aria-label="Episode navigation"[^>]*flex-none flex-nowrap/);
+    assert.match(html, /aria-label="Playback position actions"[^>]*ml-auto[^>]*flex-none flex-nowrap/);
     assert.match(html, /h-ctl-sm/);
   });
 
