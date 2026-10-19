@@ -10,15 +10,32 @@ import type { SliceGet, SliceSet } from "./slices/slice-host";
 
 export type ProvidersStatus = "idle" | "loading" | "ready" | "failed";
 
+/** The provider preview window's request value (`55` decision 7), the channels preview's own shape: the provider the
+ *  opener held, a serial raised at every open (so the window re-reads and its choice resets) and the open this window
+ *  is, the remount key that keeps its body through its exit fade. */
+export interface ProviderPreview {
+  readonly providerId: number;
+  readonly serial: number;
+  readonly opened: number;
+}
+
 export interface ProvidersState {
   readonly status: ProvidersStatus;
   readonly items: readonly AdminProvider[];
   readonly unreachable: boolean;
   readonly ticked: readonly number[];
   readonly session: number;
+  readonly preview: ProviderPreview | null;
 }
 
-export const NO_PROVIDERS: ProvidersState = { status: "idle", items: [], unreachable: false, ticked: [], session: 0 };
+export const NO_PROVIDERS: ProvidersState = {
+  status: "idle",
+  items: [],
+  unreachable: false,
+  ticked: [],
+  session: 0,
+  preview: null,
+};
 
 export interface ProvidersSlice {
   providers: ProvidersState;
@@ -36,6 +53,10 @@ export interface ProvidersSlice {
   /** Leaves exactly these ids ticked (a bulk run unticks the rows it finished). */
   providersSetTicked: (ids: readonly number[]) => void;
   providersMarkUnreachable: (unreachable: boolean) => void;
+  /** `Preview` (the row's eye, the workspace's `Preview →`): the window's request value, its serial raised. The caller
+   *  opens the overlay. */
+  providersOpenPreview: (providerId: number) => void;
+  providersClosePreview: () => void;
 }
 
 export function createProvidersSlice(set: SliceSet<ProvidersSlice>, get: SliceGet<ProvidersSlice>): ProvidersSlice {
@@ -59,5 +80,10 @@ export function createProvidersSlice(set: SliceSet<ProvidersSlice>, get: SliceGe
     providersTickAll: (on) => patch({ ticked: on ? get().providers.items.map((item) => item.id) : [] }),
     providersSetTicked: (ids) => patch({ ticked: pruneProviderTicks(ids, get().providers.items) }),
     providersMarkUnreachable: (unreachable) => patch({ unreachable }),
+    providersOpenPreview: (providerId) => {
+      const serial = (get().providers.preview?.serial ?? 0) + 1;
+      patch({ preview: { providerId, serial, opened: serial } });
+    },
+    providersClosePreview: () => patch({ preview: null }),
   };
 }

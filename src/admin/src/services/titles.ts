@@ -3,14 +3,16 @@ import { storedParams, type StoredQuery } from "@/lib/title-stored-query";
 import { request } from "./api";
 import { StoredPageLenientSchema, type StoredPage } from "./schemas/title-stored-schema";
 import {
+  DeletedTitleListSchema,
+  SeasonEpisodesSchema,
   TitleDeletedSchema,
   TitleDetailSchema,
   TitleListLenientSchema,
   TitleRowSchema,
-  DeletedTitleListSchema,
   type AdminDeletedTitle,
   type AdminTitleDetail,
   type AdminTitleRow,
+  type SeasonEpisodes,
   type TitleList,
 } from "./schemas/title-schema";
 import type { RecordInput } from "./service-types";
@@ -40,6 +42,9 @@ export interface TitlesService {
   /** `GET /api/titles/stored` (`docs/41` section 3.2): rows `offset` to `offset + limit` of the stored titles that match
    *  the query, never TMDB. Read row by row. A `signal` aborts the request (a newer query replaced it). */
   readonly listStored: (query: StoredQuery, offset: number, limit?: number, signal?: AbortSignal) => Promise<StoredPage>;
+  /** The existing seasons read (`GET /api/titles/:id/seasons/:season`, `55` decision 8): the season's episodes, each with
+   *  the sources the backend's fill built for it. `includeDisabled`, as the detail read, so a disabled title previews. */
+  readonly episodes: (id: string, season: number) => Promise<SeasonEpisodes>;
 }
 
 const path = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
@@ -74,6 +79,10 @@ async function stored(query: StoredQuery, offset: number, limit?: number, signal
 
 export const titles: TitlesService = {
   listStored: stored,
+  episodes: (id, season) =>
+    request(`${path(id)}/seasons/${encodeURIComponent(String(season))}?includeDisabled=true`, SeasonEpisodesSchema, {
+      area: "Title",
+    }),
   list: (query = BROWSE_START, signal) => page(`/api/admin/tmdb/titles?${queryString(query)}`, signal),
   search: (query, signal) => page(`/api/admin/tmdb/search?${queryString(query)}`, signal),
   addFromTmdb: (id) =>

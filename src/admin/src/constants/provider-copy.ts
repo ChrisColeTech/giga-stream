@@ -78,3 +78,9 @@ export const EVERY_ENABLED = "Every ticked provider is already enabled.";
 export const EVERY_DISABLED = "Every ticked provider is already disabled.";
 export const ALREADY_ENABLED = "Already enabled.";
 export const ALREADY_DISABLED = "Already disabled.";
+
+/** The provider preview (`55` decisions 2, 4 and 7). */
+export const PREVIEW_PROVIDER_TOOLTIP = "Preview provider";
+export const SAVE_PROVIDER_FIRST = "Save the provider first";
+/** The `Title` select's reason while no held stored movie can fill a template. */
+export const NO_PREVIEW_TITLE = "No stored movie has a TMDB id.";
