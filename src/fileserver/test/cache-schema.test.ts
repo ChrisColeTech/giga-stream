@@ -35,7 +35,7 @@ test("the cache tables have exactly the documented columns: no provider, sources
   db.close();
 });
 
-test("a version 5 database upgrades to 8 and keeps everything it held", () => {
+test("a version 5 database upgrades to 9 and keeps everything it held", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "giga-migrate-"));
   const file = path.join(dir, "v5.db");
   const old = new DatabaseSync(file);
@@ -48,8 +48,8 @@ test("a version 5 database upgrades to 8 and keeps everything it held", () => {
   old.exec("INSERT INTO favorites (item_kind, item_id, added_at) VALUES ('title', 'movie-1', 2)");
   old.exec("INSERT INTO channel_state (id, last_channel_id) VALUES (1, 'fx-news')");
   assert.equal(readSchemaVersion(old), 5);
-  assert.equal(migrate(old), 8);
-  assert.equal(readSchemaVersion(old), 8);
+  assert.equal(migrate(old), 9);
+  assert.equal(readSchemaVersion(old), 9);
   const one = (sql: string): unknown => ({ ...old.prepare(sql).get() });
   assert.deepEqual(one("SELECT value FROM settings WHERE key = 'adminUrl'"), { value: '"http://127.0.0.1:9"' });
   assert.deepEqual(one("SELECT item_id FROM favorites"), { item_id: "movie-1" });
