@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { LiveDetailsGroup } from "@/components/channels/LiveDetailsGroup";
 import { LiveStatusGroup } from "@/components/channels/LiveStatusGroup";
 import { PlaybackGroup } from "@/components/channels/PlaybackGroup";
+import { QualityChecklist } from "@/components/channels/QualityChecklist";
 import { PlaylistRows } from "@/components/channels/PlaylistRows";
 import { liveDraft } from "@/lib/channel-draft";
 import { ChannelsPage } from "@/pages/ChannelsPage";
@@ -105,11 +106,17 @@ describe("a live channel's workspace", () => {
   });
 
   it("keeps two qualities: the last two checked rows are locked with the reason", () => {
-    const html = renderLive(
+    const playback = renderLive(
       createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined }),
     );
-    assert.ok(!html.includes("Save details"), "the group ends without a commit; the toolbar holds the Save");
-    assert.ok(html.includes('aria-label="Mode"') && html.includes(">Encode</button>") && html.includes('aria-label="Captions"'));
+    const html = renderLive(
+      createElement(QualityChecklist, { value: liveDraft(live("a")).variants, onChange: () => undefined }),
+    );
+    assert.ok(!playback.includes("Save details"), "the group ends without a commit; the toolbar holds the Save");
+    assert.ok(
+      playback.includes('aria-label="Mode"') && playback.includes(">Encode</button>") &&
+        playback.includes('aria-label="Captions"'),
+    );
     const reason = "A channel keeps at least two qualities.";
     const lockedReasons = (html.match(/<span[^>]*>/g) ?? []).filter((tag) => tag.includes(`. ${reason}"`));
     assert.equal(lockedReasons.length, 2, "both locked qualities expose their reason on focusable tooltip wrappers");
@@ -122,8 +129,14 @@ describe("a live channel's workspace", () => {
       "each reason wrapper is described and keyboard focusable",
     );
     assert.ok(!html.includes(`title="${reason}"`), "the reason is not title-only");
-    assert.ok(/type="checkbox"[^>]*aria-label="1080p quality"/.test(html), "an unchecked quality can be added");
+    for (const label of ["360p", "720p", "1080p"]) {
+      assert.ok(html.includes(`aria-label="${label} quality"`), label);
+      assert.ok(html.includes(`>${label}</span>`), `${label} row label`);
+    }
     assert.equal((html.match(/type="checkbox"/g) ?? []).length, 3, "one real checkbox per supplied quality");
+    assert.equal((html.match(/checked=""/g) ?? []).length, 2, "two quality rows are checked");
+    assert.equal((html.match(/disabled=""/g) ?? []).length, 2, "the minimum-two checked rows are locked");
+    assert.equal((html.match(/lucide-check/g) ?? []).length, 2, "checked rows carry a visible checkmark");
     assert.ok(!html.includes("aria-pressed"), "qualities are not offered-choice pills");
   });
 
