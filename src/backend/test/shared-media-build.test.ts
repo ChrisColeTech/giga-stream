@@ -15,7 +15,9 @@ test("the built locate-tool resolves the repository root", () => {
   assert.equal(fold(REPO_ROOT), fold(path.resolve(here, "..", "..", "..")));
 });
 
-test("the built locate-tool finds ffprobe in the tools folder or the main checkout's, without throwing", () => {
-  const found = fold(locateTool("ffprobe"));
-  assert.ok(found.includes(path.join("tools", "ffmpeg", "bin")), found);
+test("the built locate-tool finds ffprobe in the tools folder without requiring a local binary", () => {
+  const executable = process.platform === "win32" ? "ffprobe.exe" : "ffprobe";
+  const expected = path.join(REPO_ROOT, "tools", "ffmpeg", "bin", executable);
+  const found = locateTool("ffprobe", { env: {}, exists: (candidate) => fold(candidate) === fold(expected) });
+  assert.equal(fold(found), fold(expected));
 });

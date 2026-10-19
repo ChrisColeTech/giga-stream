@@ -2,9 +2,9 @@
 #
 # The service runs both programs (scripts/start.sh): the fileserver public on
 # $PORT and the admin backend as its loopback sibling. Render's autoDeploy is
-# off on purpose — a deploy restarts both processes — so this workflow is the
-# only road to production: everything must be green before the deploy trigger
-# fires, and a failed trigger is visible here rather than silent.
+# off on purpose — a deploy restarts both processes — so a push to main through
+# this workflow is the only road to production. Everything must be green before
+# the deploy trigger fires, and a failed trigger is visible here rather than silent.
 #
 # No root workspaces (docs/01): every program owns its package.json and
 # lockfile, and CI installs exactly the programs each job needs — including
@@ -24,7 +24,7 @@ name: deploy
 
 on:
   push:
-    branches: [family-port, turso-migration]
+    branches: [main, turso-migration]
   workflow_dispatch:
 
 concurrency:
@@ -158,6 +158,7 @@ jobs:
 
   deploy:
     needs: [verify-admin, verify-frontend, verify-backend, verify-fileserver, verify-shared-ui, verify-shared-http]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

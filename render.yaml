@@ -27,11 +27,10 @@ services:
     runtime: node
     region: ohio
     plan: starter
-    # The migration branch while the Turso move lands; merge back to
-    # family-port and flip this with it.
-    branch: turso-migration
+    # GitHub Actions deploys main only after every program passes verification.
+    branch: main
     numInstances: 1
-    autoDeploy: false # a deploy restarts the pair; an explicit owner action
+    autoDeploy: false # GitHub Actions deploys the pair after every check passes.
     healthCheckPath: /healthz
     buildCommand: bash ./scripts/build.sh
     startCommand: bash ./scripts/start.sh

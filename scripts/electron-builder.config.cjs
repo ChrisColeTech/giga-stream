@@ -17,7 +17,7 @@
  */
 const path = require("node:path");
 
-const electronVersion = require(path.join(__dirname, "src/fileserver/node_modules/electron/package.json")).version;
+const electronVersion = require(path.join(__dirname, "../src/fileserver/node_modules/electron/package.json")).version;
 
 module.exports = {
   appId: "com.giga.stream",

@@ -66,7 +66,7 @@ root during development and testing (owner, 2026-10-17; `07` section 4):
   segment), reported SKIPPED when no stack is up. It reads the backend at `GIGA_SMOKE_BACKEND` (default
   `http://127.0.0.1:3001`, the port the owner's local `src/backend/.env` sets; the code default is 8091).
 - `npm run dist:win` — builds the interface and the fileserver and packages the Windows app with
-  electron-builder (`electron-builder.config.cjs`): `release/Giga Stream Setup <version>.exe`, and
+  electron-builder (`scripts/electron-builder.config.cjs`): `release/Giga Stream Setup <version>.exe`, and
   `release/win-unpacked/Giga Stream.exe` to run without installing. Only the fileserver (with the built
   interface it serves, the shared media library and FFmpeg) is in it; the backend is not.
   The coordinator produces it after every wave (`07` section 6.5).

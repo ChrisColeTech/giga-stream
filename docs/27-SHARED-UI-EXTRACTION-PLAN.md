@@ -109,7 +109,7 @@ kebab-case; files at most 200 lines (`Form` 307, `Section` 338 and `ActionList` 
 - **Packages:** `src/shared/ui/package.json` pins the same versions as the interface; TypeScript redirects duplicates of
   one name and version, Vite's `dedupe` handles the runtime.
 - **The interface's Electron build is unchanged:** `dist:win` builds `src/frontend` with Vite, which bundles the library
-  into `frontend/dist`; `electron-builder.config.cjs` ships only that and `shared/media/dist`. The admin is not in the
+  into `frontend/dist`; `scripts/electron-builder.config.cjs` ships only that and `shared/media/dist`. The admin is not in the
   desktop installer (`AGENTS.md`); the backend serves its built `dist` at `/admin/`.
 - **The store:** every component and hook takes values and callbacks. Each app spreads `createChromeSlice(set, get)` into
   its own single `create()` call, so "one zustand store per program" (`01` section 4.1) holds. The interface keeps its
