@@ -14,12 +14,11 @@ export function EpisodeFooterNavigation(props: EpisodeFooterNavigationProps) {
   const previousReason = props.switching ? EPISODE_SWITCH_REASON : props.adjacency.previous.reason;
   const nextReason = props.switching ? EPISODE_SWITCH_REASON : props.adjacency.next.reason;
   return (
-    <div role="group" aria-label="Episode navigation"
-      className="flex flex-none flex-nowrap items-center gap-1.5">
-      <Button size="sm" aria-label="Previous episode" reason={previousReason}
+    <>
+      <Button size="sm" full className="min-w-0" aria-label="Previous episode" reason={previousReason}
         onClick={props.onPrevious}>Previous</Button>
-      <Button size="sm" aria-label="Next episode" reason={nextReason}
+      <Button size="sm" full className="min-w-0" aria-label="Next episode" reason={nextReason}
         onClick={props.onNext}>Next</Button>
-    </div>
+    </>
   );
 }
