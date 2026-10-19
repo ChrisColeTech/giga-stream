@@ -152,8 +152,14 @@ describe("a live channel's workspace", () => {
   it("shows a failed channel's problem, the playlist with the video on air lit, and the address with copy", () => {
     const html = status(live("a", { state: "failed", problem: "The folder holds no video." }));
     assert.ok(at(html, 'data-st="failed"') < at(html, "The folder holds no video."));
+    /* `text-accent-text` cannot be searched for alone: it also appears inside every IconButton's `data-on:` variant
+     * classes (the Status group's Refresh status button sits before the playlist), so the accent is pinned inside
+     * the playing row itself. */
+    const onAir = at(html, 'data-st="playing"');
+    const row = html.slice(onAir, html.indexOf("</li>", onAir) + 5);
     assert.ok(
-      at(html, 'data-st="playing"') < at(html, "text-accent-text") && at(html, "text-accent-text") < at(html, ">b.mp4<"),
+      row.includes('data-col="name"') && row.indexOf("text-accent-text") >= 0 &&
+        row.indexOf("text-accent-text") < row.indexOf(">b.mp4<"),
       "the on-air row's state is the marker and its name draws in the accent",
     );
     assert.ok(!html.includes("aria-current"), "the kit's row has no such slot (`52` decision 2)");
