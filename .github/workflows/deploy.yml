@@ -6,6 +6,16 @@
 # only road to production: everything must be green before the deploy trigger
 # fires, and a failed trigger is visible here rather than silent.
 #
+# No root workspaces (docs/01): every program owns its package.json and
+# lockfile, and CI installs exactly the programs each job needs — including
+# the dependencies of anything a job typechecks or spawns:
+#   • the admin and frontend programs INCLUDE the shared library sources in
+#     their tsc projects (tsconfig paths @giga/ui and @giga/http), and those
+#     sources resolve react/zod/lucide from src/shared/<pkg>/node_modules —
+#     so those packages must be installed for the typecheck to see real types;
+#   • the fileserver's tests spawn the REAL backend, whose test lane runs on
+#     src/backend/node_modules/tsx — so that program is installed too.
+#
 # Required repo secrets (set from docs/secrets.env, never committed):
 #   RENDER_API_KEY      — Account Settings → API Keys on Render
 #   RENDER_SERVICE_ID   — the srv-… id of the giga-stream web service
@@ -22,40 +32,132 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  NODE_VERSION: 24.11.1
+  ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
-  verify:
+  verify-admin:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        program: [admin, frontend, backend, fileserver]
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24.11.1
           cache: npm
-          cache-dependency-path: src/${{ matrix.program }}/package-lock.json
+          cache-dependency-path: |
+            src/admin/package-lock.json
+            src/shared/ui/package-lock.json
+            src/shared/http/package-lock.json
+      - name: Install (admin + the shared sources it typechecks)
+        run: |
+          npm ci --no-audit --no-fund --prefix src/shared/ui
+          npm ci --no-audit --no-fund --prefix src/shared/http
+          npm ci --no-audit --no-fund --prefix src/admin
+      - run: npm run typecheck
+        working-directory: src/admin
+      - run: npm test
+        working-directory: src/admin
 
-      - name: Install (lockfile only)
-        working-directory: src/${{ matrix.program }}
-        run: npm ci --no-audit --no-fund
+  verify-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: |
+            src/frontend/package-lock.json
+            src/shared/ui/package-lock.json
+            src/shared/http/package-lock.json
+      - name: Install (frontend + the shared sources it typechecks)
+        run: |
+          npm ci --no-audit --no-fund --prefix src/shared/ui
+          npm ci --no-audit --no-fund --prefix src/shared/http
+          npm ci --no-audit --no-fund --prefix src/frontend
+      - run: npm run typecheck
+        working-directory: src/frontend
+      - run: npm test
+        working-directory: src/frontend
 
-      - name: Typecheck
-        working-directory: src/${{ matrix.program }}
-        run: npm run typecheck
+  verify-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: src/backend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: src/backend
+      - run: npm run typecheck
+        working-directory: src/backend
+      - run: npm test
+        working-directory: src/backend
 
-      - name: Test
-        working-directory: src/${{ matrix.program }}
-        run: npm test
+  verify-fileserver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: |
+            src/fileserver/package-lock.json
+            src/backend/package-lock.json
+      - name: Install (fileserver + the real backend its tests spawn)
+        run: |
+          npm ci --no-audit --no-fund --prefix src/backend
+          npm ci --no-audit --no-fund --prefix src/fileserver
+      - run: npm run typecheck
+        working-directory: src/fileserver
+      - run: npm test
+        working-directory: src/fileserver
+
+  verify-shared-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: src/shared/ui/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: src/shared/ui
+      - run: npm run typecheck
+        working-directory: src/shared/ui
+      - run: npm test
+        working-directory: src/shared/ui
+
+  verify-shared-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: src/shared/http/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: src/shared/http
+      - run: npm run typecheck
+        working-directory: src/shared/http
+      - run: npm test
+        working-directory: src/shared/http
 
   deploy:
-    needs: verify
+    needs: [verify-admin, verify-frontend, verify-backend, verify-fileserver, verify-shared-ui, verify-shared-http]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -71,7 +173,7 @@ jobs:
             -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{"clearCache": "false"}')
+            -d '{"clearCache": "clear"}')
           echo "POST /v1/services/$RENDER_SERVICE_ID/deploys -> HTTP $code"
           cat "$RUNNER_TEMP/deploy.json"
           [ "$code" = "201" ] || { echo "::error::Render refused the deploy trigger (HTTP $code)"; exit 1; }
