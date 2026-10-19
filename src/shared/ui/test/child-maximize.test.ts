@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { VscChromeClose, VscChromeMaximize, VscChromeRestore } from "react-icons/vsc";
 
 import { maximizedBox, roomOf } from "../src/lib/child-bounds";
 import { ChildMemoryContext, toggleMaximized } from "../src/lib/child-memory";
@@ -26,6 +27,8 @@ after(() => {
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 const actionFor = (html: string, label: string): string =>
   html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>.*?</button>`))?.[0] ?? "";
+const captionIcon = (Icon: typeof VscChromeMaximize): string =>
+  renderToStaticMarkup(createElement(Icon, { className: "size-3.75", "aria-hidden": true }));
 const source = readFileSync("src/windows/ChildWindow.tsx", "utf8");
 const raisedClasses =
   /border-ctl-edge|hover:border-dim|linear-gradient|shadow-\[var\(--shadow-ctl\),var\(--shadow-stroke-hi\)\]/;
@@ -78,8 +81,8 @@ test("every window gains the Maximize button by default, beside the close X, and
     assert.match(action, /class="[^"]*size-3\.75[^"]*"/);
     assert.doesNotMatch(action, /data-on=/);
   }
-  assert.match(maximize, /lucide-square/);
-  assert.match(close, /lucide-x/);
+  assert.ok(maximize.includes(captionIcon(VscChromeMaximize)), "renders the VS Code maximize caption SVG at 15px");
+  assert.ok(close.includes(captionIcon(VscChromeClose)), "renders the VS Code close caption SVG at 15px");
   assert.equal(count(html, "data-grip="), 8);
   assert.equal(count(html, "data-child-status"), 0, "no status strip without `status`");
   assert.ok(html.includes("width:1218px") && html.includes("height:768px"), "the normal box is untouched");
@@ -91,10 +94,16 @@ test("every ChildWindow titlebar action stays on the default ghost IconButton va
   for (const action of actions) assert.doesNotMatch(action, /\bbordered\b/);
 });
 
-test("window chrome uses literal caption icons, never diagonal content controls", () => {
-  assert.match(source, /^import \{ Copy, Square, X \} from "lucide-react";$/m);
-  assert.match(source, /const MaxIcon = maximized \? Copy : Square;/);
-  assert.doesNotMatch(source, /\b(?:Maximize2|Minimize2)\b/);
+test("window chrome imports only the dedicated VS Code caption icons", () => {
+  assert.match(
+    source,
+    /^import \{ VscChromeClose, VscChromeMaximize, VscChromeRestore \} from "react-icons\/vsc";$/m,
+  );
+  assert.match(source, /const MaxIcon = maximized \? VscChromeRestore : VscChromeMaximize;/);
+  assert.doesNotMatch(
+    source,
+    /^import \{[^}]*\b(?:Square|Copy|X|Maximize2|Minimize2)\b[^}]*\} from "lucide-react";$/m,
+  );
 });
 
 test("a spec may opt out: no button and no double-click toggle target", () => {
@@ -113,7 +122,7 @@ test("a window that was maximized opens maximized: the container's area, no grip
   assert.equal(count(html, "Maximize Settings"), 0);
   assert.match(restore, /data-on=""/);
   assert.match(restore, /data-on:border-accent-edge data-on:bg-accent-tint data-on:text-accent-text/);
-  assert.match(restore, /lucide-copy/);
+  assert.ok(restore.includes(captionIcon(VscChromeRestore)), "renders the VS Code restore caption SVG at 15px");
   assert.doesNotMatch(close, /data-on=/);
   assert.ok(render({ memory: kept(false) }).includes("width:1218px"), "a window never maximized opens normal");
 });
