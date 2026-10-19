@@ -1,11 +1,23 @@
 import type { CSSProperties } from "react";
+import { CircleStop } from "lucide-react";
 import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { labelColumn } from "@giga/ui/lib/label-column";
 import { WorkspaceFrame } from "@/components/chrome/WorkspaceFrame";
 import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { SAVING_REASON, UNREACHABLE_REASON } from "@/constants/account-copy";
-import { JOB_GONE, JOB_SECTIONS, JOB_SECTION_KEYS, JOB_WORKSPACE_LABELS } from "@/constants/job-copy";
+import {
+  JOB_GONE,
+  JOB_SECTIONS,
+  JOB_SECTION_KEYS,
+  JOB_WORKSPACE_LABELS,
+  RESUME_JOB,
+  RESUME_TIP,
+  RUN_JOB,
+  RUN_TIP,
+  STOP_JOB,
+  STOP_TIP,
+} from "@/constants/job-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useJobActions } from "@/hooks/useJobActions";
 import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
@@ -14,12 +26,11 @@ import { draftOf, sameJobDraft } from "@/lib/job-draft";
 import { workspaceRunReason, workspaceStopReason } from "@/lib/job-run-gate";
 import { lastRunStopped } from "@/lib/job-rows";
 import { idOf } from "@/lib/playlist-rows";
-import { changeReason, type ToolbarAction } from "@/lib/workspace-verbs";
+import { changeReason, type ToolbarAction, type ToolbarVerb } from "@/lib/workspace-verbs";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { useAppStore } from "@/store/app-store";
 import { JobDetailsGroup } from "./JobDetailsGroup";
 import { JobLastRunGroup } from "./JobLastRunGroup";
-import { JobRunGroup } from "./JobRunGroup";
 import { JobScheduleGroup } from "./JobScheduleGroup";
 
 const LABEL_COLUMN = { "--label-col": labelColumn(JOB_WORKSPACE_LABELS) } as CSSProperties;
@@ -45,7 +56,23 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
       if (result.value !== null) form.reset(draftOf(result.value));
     } else if (result.dropped !== true && result.field !== undefined) form.setError(result.field, result.sentence);
   };
-  const runReason = workspaceRunReason(job, { dirty: form.dirty, busy: isBusy(runKey), unreachable, playlists });
+  const resume = lastRunStopped(job) && !job.running;
+  const verbs: readonly ToolbarVerb[] = [
+    {
+      label: resume ? RESUME_JOB : RUN_JOB,
+      tip: resume ? RESUME_TIP : RUN_TIP,
+      reason: workspaceRunReason(job, { dirty: form.dirty, busy: isBusy(runKey), unreachable, playlists }),
+      variant: "primary",
+      onPress: () => void track(runKey, () => flows.run(job.id)),
+    },
+    {
+      label: STOP_JOB,
+      tip: STOP_TIP,
+      reason: workspaceStopReason(job, isBusy(stopKey)),
+      icon: CircleStop,
+      onPress: () => void track(stopKey, () => flows.stop(job.id)),
+    },
+  ];
   const forward: ToolbarAction =
     job.type === "playlist"
       ? { label: "Channels", onPress: () => requestTab("channels") }
@@ -63,7 +90,7 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} forward={forward} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} verbs={verbs} forward={forward} />}
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={LABEL_COLUMN}>
@@ -82,15 +109,6 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
               }}
             />
           </div>
-          <div ref={spy.bind("jw-run")}>
-            <JobRunGroup
-              reason={runReason}
-              stopReason={workspaceStopReason(job, isBusy(stopKey))}
-              resume={lastRunStopped(job) && !job.running}
-              onRun={() => track(runKey, () => flows.run(job.id))}
-              onStop={() => track(stopKey, () => flows.stop(job.id))}
-            />
-          </div>
           <div ref={spy.bind("jw-last")}>
             <JobLastRunGroup job={job} loading={loading} onRefresh={() => void track("refresh", flows.refresh)} />
           </div>
@@ -100,9 +118,11 @@ function Editor({ job, active }: { readonly job: AdminJob; readonly active: bool
   );
 }
 
-/** One job's workspace (`38` section 4.3), opened from the list already held: the rail (`‹ Jobs`, Details, Schedule,
- *  Run, Last run), the page toolbar (`Discard changes` left; rightmost `Channels →` for a playlist job or `Titles →` for
- *  a catalog job) and one scrolling page whose Schedule group ends with `Save details`. A job gone from a read list (its playlist deleted elsewhere) closes with a notice. */
+/** One job's workspace (`38` section 4.3, `53` section 2.3), opened from the list already held: the rail (`‹ Jobs`,
+ *  Details, Schedule, Last run), the page toolbar (the primary `Run job` — `Resume` after a stopped run — and the ghost
+ *  `Stop` before `Discard changes`; rightmost `Channels →` for a playlist job or `Titles →` for a catalog job) and one
+ *  scrolling page whose Schedule group ends with `Save details`. A job gone from a read list (its playlist deleted
+ *  elsewhere) closes with a notice. */
 export function JobWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const job = useAppStore((state) => state.jobs.items.find((item) => item.id === idOf(id)));
   const status = useAppStore((state) => state.jobs.status);

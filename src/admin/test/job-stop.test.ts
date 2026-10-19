@@ -195,7 +195,7 @@ describe("a stopped run in the words", () => {
   });
 });
 
-describe("the workspace Run group", () => {
+describe("the workspace Run verbs in the toolbar", () => {
   it("gates Run job and Stop as opposites: Running. / Not running.", () => {
     assert.equal(workspaceRunReason(job(2, { running: true }), IDLE), "Running.");
     assert.equal(workspaceRunReason(job(1), IDLE), undefined);
@@ -204,16 +204,20 @@ describe("the workspace Run group", () => {
     assert.equal(workspaceStopReason(job(2, { running: true }), true), "Stopping.");
   });
 
-  it("draws a ghost Stop beside Run job, disabled `Not running.` while idle and `Running.` on Run job while it runs", () => {
+  it("draws the primary Run job, then Stop, then Discard changes; Stop disabled `Not running.` while idle", () => {
     state().jobsPlaylistsLoaded([playlist(1)]);
     state().jobsLoaded([job(1)]);
     state().openWorkspace("jobs", "1");
     const idle = page();
-    assert.ok(idle.includes(">Run job</button>") && idle.includes('aria-label="Stop. Not running."'));
-    assert.ok(idle.indexOf(">Run job<") < idle.indexOf('aria-label="Stop. Not running."'));
+    const bar = (): string => idle.slice(idle.indexOf('role="toolbar"'), idle.indexOf('id="jw-details"'));
+    assert.ok(/<button[^>]*title="Start the job now[^>]*>Run job<\/button>/.test(bar()));
+    assert.ok(bar().includes('aria-label="Stop. Not running."') && bar().includes("lucide-circle-stop"));
+    assert.ok(bar().indexOf(">Run job<") < bar().indexOf('aria-label="Stop. Not running."'));
+    assert.ok(bar().indexOf('aria-label="Stop. Not running."') < bar().indexOf("Discard changes"));
     state().jobsLoaded([job(1, { running: true })]);
     const running = page();
-    assert.ok(running.includes('aria-label="Run job. Running."') && running.includes(">Stop</button>"));
+    const busy = running.slice(running.indexOf('role="toolbar"'), running.indexOf('id="jw-details"'));
+    assert.ok(busy.includes('aria-label="Run job. Running."') && busy.includes(">Stop</button>"));
   });
 
   it("reads Resume after a stop, and Run job again once it has run", () => {
@@ -221,9 +225,11 @@ describe("the workspace Run group", () => {
     state().jobsLoaded([job(1, { lastRunAt: 5, lastResult: "stopped", lastCounts: counts({ stopped: true }) })]);
     state().openWorkspace("jobs", "1");
     const html = page();
-    assert.ok(html.includes(">Resume</button>") && !html.includes(">Run job</button>"));
+    const bar = html.slice(html.indexOf('role="toolbar"'), html.indexOf('id="jw-details"'));
+    assert.ok(bar.includes(">Resume</button>") && !bar.includes(">Run job</button>"));
     assert.ok(html.includes("Stopped: nothing changed."));
     state().jobsLoaded([job(1, { lastRunAt: 9, lastResult: "ok", lastCounts: counts() })]);
-    assert.ok(page().includes(">Run job</button>"));
+    const again = page();
+    assert.ok(again.slice(again.indexOf('role="toolbar"'), again.indexOf('id="jw-details"')).includes(">Run job</button>"));
   });
 });

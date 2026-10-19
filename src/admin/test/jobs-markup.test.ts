@@ -110,16 +110,19 @@ describe("the jobs list", () => {
 });
 
 describe("a job's workspace", () => {
-  it("a playlist job: rail, Details in order, Run without Dry run or Prune, Last run from the typed counts", () => {
+  it("a playlist job: rail without Run, Details in order, the toolbar's Run verbs, Last run from the typed counts", () => {
     const typed = counts({ created: 2, updated: 1, refused: 1, refusalExamples: ["Bad Entry"], source: "unchanged" });
     state().jobsPlaylistsLoaded([playlist(1)]);
     state().jobsLoaded([job(1, { lastRunAt: 5, lastResult: "ok", lastCounts: typed })]);
     state().openWorkspace("jobs", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Job sections"'));
-    for (const [a, b] of [[">Details<", ">Schedule<"], [">Schedule<", ">Run<"], [">Run<", ">Last run<"]]) {
+    for (const [a, b] of [[">Details<", ">Schedule<"], [">Schedule<", ">Last run<"]]) {
       assert.ok(at(html, a ?? "") < at(html, b ?? ""));
     }
+    const rail = html.slice(at(html, 'aria-label="Job sections"'), at(html, 'role="toolbar"'));
+    assert.ok(rail.includes(">Details<") && rail.includes(">Schedule<") && rail.includes(">Last run<"));
+    assert.ok(!rail.includes(">Run<"), "the rail lists no Run section");
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
     assert.ok(/aria-label="Name"[^>]*readOnly=""|readOnly=""[^>]*aria-label="Name"/.test(html), "a playlist job's name is derived");
     assert.ok(/<input[^>]*readOnly=""[^>]*aria-label="Playlist"[^>]*value="List 1"/.test(html), "the playlist is read-only");
@@ -128,7 +131,19 @@ describe("a job's workspace", () => {
     assert.ok(html.includes("2 created · 1 updated · 0 skipped · 1 refused") && html.includes(">Web list unchanged<"));
     assert.ok(html.includes(">Bad Entry<") && !html.includes(">Created<"));
     assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "a playlist job's forward verb");
-    assert.ok(html.includes('aria-label="Run job"') || html.includes(">Run job</button>"), "an enabled playlist job runs");
+    const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="jw-details"'));
+    assert.ok(
+      /<button[^>]*title="Start the job now[^>]*>Run job<\/button>/.test(bar),
+      "an enabled playlist job runs from the toolbar",
+    );
+    assert.ok(bar.includes("text-accent-ink") && bar.includes("h-ctl-sm"), "Run job is the toolbar's small primary");
+    assert.ok(bar.includes('aria-label="Stop. Not running."'), "Stop waits beside it while the job is idle");
+    assert.ok(
+      at(bar, ">Run job<") < at(bar, 'aria-label="Stop. Not running."') &&
+        at(bar, 'aria-label="Stop. Not running."') < at(bar, "Discard changes") &&
+        at(bar, "Discard changes") < at(bar, "Channels →"),
+      "Run job, Stop, Discard changes, then the forward verb",
+    );
     assert.ok(html.includes('aria-label="Save details. Nothing has changed."'), "the commit ends Schedule");
     assert.ok(html.includes('aria-label="Refresh last run"'), "Refresh is an icon on the State row");
   });
@@ -141,14 +156,14 @@ describe("a job's workspace", () => {
     assert.ok(!html.includes('aria-label="Playlist"'));
     assert.ok(html.includes(">1240<") && html.includes(">3<") && html.includes("Synced: 1,240 titles, 3 stale."));
     assert.ok(/<button[^>]*title="Go to Titles"[^>]*>Titles →<\/button>/.test(html), "a catalog job's forward verb");
-    assert.ok(html.split("text-accent-ink").length <= 3, "the primaries are Save details and the page toolbar's Titles →");
+    assert.ok(html.split("text-accent-ink").length <= 4, "the primaries are Run job, Save details and the toolbar's Titles →");
   });
 
-  it("keeps the workspace's Run job enabled for a disabled job, and shows a bad interval under its row", () => {
+  it("keeps the toolbar's Run job enabled for a disabled job, and shows a bad interval under its row", () => {
     state().jobsLoaded([job(1, { enabled: false })]);
     state().openWorkspace("jobs", "1");
     const workspace = page();
-    assert.ok(workspace.includes('aria-label="Run job"') || workspace.includes(">Run job</button>"), "the job's switch gates only its schedule");
+    assert.ok(workspace.includes('title="Start the job now'), "the job's switch gates only its schedule");
     assert.ok(!workspace.includes("Jobs that are disabled cannot run."));
     const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
     const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined, save: { onPress: () => undefined } };

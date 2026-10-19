@@ -19,6 +19,17 @@ describe("comma lists", () => {
     assert.equal(commaText(["Ann", "Bo"]), "Ann, Bo");
     assert.equal(commaText(undefined), "");
   });
+
+  it("split a newline list like a comma list: trimmed, empties dropped, a repeat kept once", () => {
+    assert.deepEqual(commaItems("Ann\nBo\n Ann "), ["Ann", "Bo"]);
+    assert.deepEqual(commaItems("\n\n Ann \n\n"), ["Ann"]);
+  });
+
+  it("split a mixed comma-and-newline list (`53` section 2.2)", () => {
+    assert.deepEqual(commaItems("A\nB, C"), ["A", "B", "C"]);
+    assert.deepEqual(commaItems("A,\nB\n,C"), ["A", "B", "C"]);
+    assert.deepEqual(commaItems("A,\nB\nA"), ["A", "B"]);
+  });
 });
 
 describe("numbers", () => {
