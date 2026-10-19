@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ALL_LIBRARY_MEDIA, type LibraryMediaTypes } from "./library.js";
+
 /**
  * `Settings` (docs/03 section 3.2), its per-key grammar and defaults. A stored key this build does
  * not know is ignored; a stored value that no longer validates reads as its default.
@@ -29,7 +31,7 @@ export interface Settings {
   defaultSource: string | null;
   /** The Library's Type strip, rail view and filters as the person last left them, the Filter text included (owner,
    *  2026-10-18). */
-  libraryScope: "all" | "movie" | "tv" | "local";
+  libraryScope: LibraryMediaTypes;
   librarySource: string;
   libraryGenres: string[];
   /** A four-digit year, or "" for any year. */
@@ -40,6 +42,16 @@ export interface Settings {
 }
 
 export type SettingKey = keyof Settings;
+
+const LibraryScopeSchema = z.union([
+  z.tuple([z.literal("movie")]),
+  z.tuple([z.literal("tv")]),
+  z.tuple([z.literal("local")]),
+  z.tuple([z.literal("movie"), z.literal("tv")]),
+  z.tuple([z.literal("movie"), z.literal("local")]),
+  z.tuple([z.literal("tv"), z.literal("local")]),
+  z.tuple([z.literal("movie"), z.literal("tv"), z.literal("local")]),
+]);
 
 /** One validator per key; a row is checked on its own, never as part of a whole object. */
 export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
@@ -63,7 +75,7 @@ export const SETTING_SCHEMAS: { [K in SettingKey]: z.ZodType<Settings[K]> } = {
   rescanOnStartup: z.boolean(),
   adminUrl: z.string().min(1).max(2048),
   defaultSource: z.string().min(1).max(200).nullable(),
-  libraryScope: z.enum(["all", "movie", "tv", "local"]),
+  libraryScope: LibraryScopeSchema,
   librarySource: z.string().regex(/^(all|history|favorites|collection:.{1,100})$/),
   libraryGenres: z.array(z.string().min(1).max(80)).max(40),
   libraryYear: z.string().regex(/^(1[89]\d\d|2[01]\d\d)?$/),
@@ -93,7 +105,7 @@ export const SETTING_DEFAULTS: Readonly<Settings> = Object.freeze({
   rescanOnStartup: true,
   adminUrl: "http://127.0.0.1:8091",
   defaultSource: null,
-  libraryScope: "all",
+  libraryScope: ALL_LIBRARY_MEDIA,
   librarySource: "all",
   libraryGenres: [],
   libraryYear: "",
@@ -124,7 +136,7 @@ export const SETTING_INVALID_MESSAGES: { [K in SettingKey]: string } = {
   rescanOnStartup: "Rescan on startup must be on or off.",
   adminUrl: "The admin address must be a full http(s) URL.",
   defaultSource: "The default source must be a source name or empty.",
-  libraryScope: "Library type must be all, movie, tv or local.",
+  libraryScope: "Library media must be a canonical non-empty list of movie, tv and local.",
   librarySource: "Library source must be all, history, favorites or a collection.",
   libraryGenres: "Library genres must be a list of genre names.",
   libraryYear: "Library year must be a four-digit year or empty.",

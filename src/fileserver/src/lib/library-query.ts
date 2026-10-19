@@ -2,14 +2,14 @@ import { z } from "zod";
 
 import { LIBRARY_PAGE_SIZE, FACET_YEARS } from "../constants/library.js";
 import type { TitleKind } from "../services/admin-titles.js";
-import type { LibraryItem } from "../types/library.js";
+import type { LibraryItem, LibraryMediaTypes } from "../types/library.js";
 import { AppError } from "./app-error.js";
 
 /** The library query as the service runs it (docs/03 section 3.5's parameter table). */
 export interface LibraryQuery {
   view: "all" | "history" | "favorites" | "collection";
   collectionId?: string;
-  type: "all" | "movie" | "tv" | "local";
+  types: LibraryMediaTypes;
   q?: string;
   sort: "newest" | "oldest" | "az" | "year" | "trending";
   genres: string[];
@@ -29,9 +29,11 @@ const CursorSchema = z.object({
   titleOffset: z.number().int().min(0).default(0),
 });
 
-/** The title kinds a `type` asks for: both for `all`, none for `local`. */
-export function titleKindsOf(type: LibraryQuery["type"]): TitleKind[] {
-  return type === "movie" || type === "tv" ? [type] : type === "all" ? ["movie", "tv"] : [];
+/** The title kinds selected by the media list; `local` has no cached-title kind. */
+export function titleKindsOf(types: LibraryMediaTypes): TitleKind[] {
+  const kinds: TitleKind[] = [];
+  for (const type of types) if (type !== "local") kinds.push(type);
+  return kinds;
 }
 
 const invalidCursor = (): AppError => new AppError("library.invalid", 422, "That library page marker is not usable.");
@@ -61,11 +63,11 @@ export interface RowOrder {
   watchedAt?: number;
 }
 
-/** `q` and `type` decide which rows the list holds at all (docs/03 section 3.5). */
+/** `q` and media membership decide which rows the list holds at all (docs/03 section 3.5). */
 export function inList(item: LibraryItem, query: LibraryQuery): boolean {
   const q = query.q?.toLowerCase();
   if (q !== undefined && !item.title.toLowerCase().includes(q)) return false;
-  if (query.type !== "all" && item.kind !== query.type) return false;
+  if (!query.types.some((type) => type === item.kind)) return false;
   return true;
 }
 

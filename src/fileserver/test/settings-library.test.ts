@@ -7,7 +7,7 @@ import { makeApp, pick, send } from "./app-fixture.js";
 test("the library's view, sort, scope, source, genres, year and watched filter save and read back", async () => {
   const t = await makeApp();
   const saved = {
-    libraryScope: "tv",
+    libraryScope: ["movie", "tv"],
     librarySource: "collection:abc",
     libraryGenres: ["Drama", "Sci-Fi"],
     libraryYear: "1999",
@@ -25,7 +25,9 @@ test("the library's view, sort, scope, source, genres, year and watched filter s
 test("an invalid library filter is refused whole, and a stored invalid one reads as its default", async () => {
   const t = await makeApp();
   const bad: Array<Record<string, unknown>> = [
-    { libraryScope: "music" }, { librarySource: "collection:" }, { librarySource: "x" }, { libraryGenres: [""] },
+    { libraryScope: "tv" }, { libraryScope: [] }, { libraryScope: ["tv", "movie"] },
+    { libraryScope: ["movie", "movie"] }, { libraryScope: ["music"] },
+    { librarySource: "collection:" }, { librarySource: "x" }, { libraryGenres: [""] },
     { libraryGenres: "Drama" }, { libraryYear: "99" }, { libraryYear: "abcd" }, { libraryWatched: "seen" },
     { libraryFilter: "x".repeat(201) }, { libraryFilter: 7 }, { libraryFilter: null },
   ];
@@ -35,7 +37,8 @@ test("an invalid library filter is refused whole, and a stored invalid one reads
   const year = pick((await send(t.app, "GET", "/api/settings")).body, "data.libraryYear");
   assert.equal(year, "", "a refused patch commits nothing");
   const stored = new Map<string, unknown>([
-    ["libraryYear", "12"], ["libraryGenres", [3]], ["libraryScope", "tv"], ["libraryFilter", "x".repeat(300)],
+    ["libraryYear", "12"], ["libraryGenres", [3]], ["libraryScope", ["movie", "local"]],
+    ["libraryFilter", "x".repeat(300)],
   ]);
   const service = createSettingsService({
     repository: { readAll: () => stored, writeMany: () => undefined }, allowInsecureAdmin: false, now: () => 0,
@@ -43,6 +46,6 @@ test("an invalid library filter is refused whole, and a stored invalid one reads
   assert.equal(service.get().libraryFilter, "", "a stored over-long filter reads as empty");
   assert.equal(service.get().libraryYear, "");
   assert.deepEqual(service.get().libraryGenres, []);
-  assert.equal(service.get().libraryScope, "tv");
+  assert.deepEqual(service.get().libraryScope, ["movie", "local"]);
   await t.dispose();
 });
