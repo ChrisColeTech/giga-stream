@@ -1,7 +1,7 @@
-import { Copy, Square, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useContext, useRef } from "react";
 import type { ReactNode } from "react";
+import { VscChromeClose, VscChromeMaximize, VscChromeRestore } from "react-icons/vsc";
 import { IconButton } from "../controls/IconButton";
 import { useChildWindowBox } from "../hooks/useChildWindowBox";
 import { useChildWindowKeys } from "../hooks/useChildWindowKeys";
@@ -40,7 +40,7 @@ export function ChildWindow({ spec, onClose, children, heading, label = spec.tit
   const frame = useRef<HTMLDivElement | null>(null);
   const { box, move, grip, maximized, toggleMaximized } = useChildWindowBox(spec, useContext(ChildMemoryContext));
   const maximizable = spec.maximizable !== false;
-  const MaxIcon = maximized ? Copy : Square;
+  const MaxIcon = maximized ? VscChromeRestore : VscChromeMaximize;
   const maxLabel = `${maximized ? "Restore" : "Maximize"} ${label}`;
   const reduced = useReduceMotion();
   useChildWindowKeys(frame, { escape: spec.escape, modal: spec.modal, onClose });
@@ -88,7 +88,7 @@ export function ChildWindow({ spec, onClose, children, heading, label = spec.tit
             </IconButton>
           )}
           <IconButton title={`Close ${label}`} aria-label={`Close ${label}`} onClick={onClose}>
-            <X className="size-3.75" aria-hidden />
+            <VscChromeClose className="size-3.75" aria-hidden />
           </IconButton>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
