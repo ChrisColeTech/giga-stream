@@ -13,15 +13,13 @@ import {
 } from '../lib/choice-popover-state'
 import { cn } from '../lib/cn'
 import type { ChoicePopoverOption, ChoicePopoverProps } from '../types/choice-popover'
-import { MENU_PANEL, MENU_ROW } from './ContextMenuRow'
+import { MENU_PANEL_SKIN, MENU_ROW } from './ContextMenuRow'
 
-const TOOLBAR_TRIGGER =
-  'h-ctl-md rounded-ctl border border-ctl-edge px-2.5 text-[13px] font-[550] text-text ' +
-  'bg-[linear-gradient(180deg,var(--color-ctl-hi),var(--color-ctl))] shadow-[var(--shadow-ctl),var(--shadow-stroke-hi)]'
+const TOOLBAR_TRIGGER_WIDTH = 'w-auto! min-w-32'
 const TRIGGER_CORE =
   'flex cursor-pointer items-center justify-between gap-2 whitespace-nowrap text-left outline-none ' +
   'data-[state=open]:border-accent data-[state=open]:shadow-[0_0_0_2px_var(--color-accent-tint)]'
-const PANEL_WIDTH = 'w-[max(var(--radix-dropdown-menu-trigger-width),190px)]'
+const PANEL_WIDTH = 'w-[var(--radix-dropdown-menu-trigger-width)]'
 
 function currentSummary<T extends string>(props: ChoicePopoverProps<T>): string {
   if (props.summary !== undefined) return props.summary
@@ -87,12 +85,13 @@ export function ChoicePopover<T extends string>(props: ChoicePopoverProps<T>) {
       disabled={props.disabledReason !== undefined}
       aria-label={`${props.label}: ${summary}`}
       className={cn(
+        FIELD_BASE,
         TRIGGER_CORE,
-        props.trigger === 'field' ? FIELD_BASE : TOOLBAR_TRIGGER,
-        props.trigger === 'field' && 'h-ctl-md w-full',
+        'h-ctl-md',
+        props.trigger === 'toolbar' && TOOLBAR_TRIGGER_WIDTH,
       )}
     >
-      <span className="min-w-0 truncate">{props.label}: {summary}</span>
+      <span className="min-w-0 truncate">{summary}</span>
       <ChevronDown className="size-3.5 flex-none text-faint" aria-hidden />
     </Menu.Trigger>
   )
@@ -113,7 +112,7 @@ export function ChoicePopover<T extends string>(props: ChoicePopoverProps<T>) {
           align="start"
           sideOffset={4}
           collisionPadding={8}
-          className={cn(MENU_PANEL, PANEL_WIDTH, 'max-h-72 overflow-hidden')}
+          className={cn(MENU_PANEL_SKIN, PANEL_WIDTH, 'max-h-72 overflow-hidden')}
           onKeyDown={(event) => {
             if (event.key !== 'Tab') return
             event.preventDefault()

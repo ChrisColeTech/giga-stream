@@ -13,8 +13,10 @@ import type { MenuRow } from './types'
 /** The panel's own box, shared by the menu and its submenus. The drop shadow
  *  is the ONE real shadow in the app (doc 10 §11.3) and it is a token, so the
  *  colour lives in `index.css` where hard rule 8 requires it. */
-export const MENU_PANEL =
-  'z-70 min-w-[190px] rounded-card border border-border bg-panel p-1 ' + 'shadow-[var(--shadow-menu)] animate-menu-in focus:outline-none'
+export const MENU_PANEL_SKIN =
+  'z-70 rounded-card border border-border bg-panel p-1 shadow-[var(--shadow-menu)] animate-menu-in focus:outline-none'
+
+export const MENU_PANEL = `min-w-[190px] ${MENU_PANEL_SKIN}`
 
 export const MENU_ROW =
   'flex w-full cursor-pointer items-center gap-2 rounded-ctl border-0 bg-transparent px-2 py-1.5 ' +
