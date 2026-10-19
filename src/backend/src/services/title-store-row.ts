@@ -15,12 +15,12 @@ const REFRESHED = ["rating", "posterUrl", "backdropUrl"] as const;
 export function createStoreRow(deps: { store: Store; deleted: Pick<TitleDeleted, "isDeleted">; now: () => number }) {
   const { store, deleted, now } = deps;
 
-  return function storeRow(kind: Kind, record: Record<string, unknown>): boolean {
+  return async function storeRow(kind: Kind, record: Record<string, unknown>): Promise<boolean> {
     const id = num(record.id);
-    if (id === undefined || deleted.isDeleted(kind, id)) return false;
+    if (id === undefined || (await deleted.isDeleted(kind, id))) return false;
     const shaped = rowOf(kind, record, now());
     if (shaped === undefined) return false;
-    const existing = store.titles.find(kind, id);
+    const existing = await store.titles.find(kind, id);
     const kept = existing === undefined
       ? undefined
       : storedRowOf(kind, id, existing.payload, existing.popularityReadAt ?? existing.fetchedAt);
@@ -41,7 +41,7 @@ export function createStoreRow(deps: { store: Store; deleted: Pick<TitleDeleted,
       if (faceNow !== undefined) payload.listSnapshot = faceNow;
     }
     const popularity = num(record.popularity);
-    store.titles.put({
+    await store.titles.put({
       kind,
       tmdbId: id,
       payload,

@@ -1,8 +1,8 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { LIVE_MODES, VARIANT_NAMES } from "../constants/live-media.js";
 import type { ChannelRecord, LiveRecord, StreamRecord } from "../types/channel.js";
+import type { Database } from "./database.js";
 
 const ChannelRow = z.object({
   id: z.string(),
@@ -39,9 +39,9 @@ const editedOf = (json: string | null): string[] => {
 };
 
 /** Turns a joined `CHANNEL_SELECT` row into a record; a live row also reads its listed videos. */
-export function createRowReader(db: DatabaseSync): (row: unknown) => ChannelRecord {
-  const videosOf = db.prepare("SELECT path FROM channel_videos WHERE channel_id = ? ORDER BY position");
-  return (row) => {
+export function createRowReader(db: Database): (row: unknown) => Promise<ChannelRecord> {
+  const videosSql = "SELECT path FROM channel_videos WHERE channel_id = ? ORDER BY position";
+  return async (row) => {
     const r = ChannelRow.parse(row);
     const core = {
       id: r.id, name: r.name, category: r.category, number: r.number, logoUrl: r.logo_url, revision: r.revision,
@@ -59,6 +59,7 @@ export function createRowReader(db: DatabaseSync): (row: unknown) => ChannelReco
     if (r.live_mode === null || r.live_captions === null || r.live_variants === null) {
       throw new Error(`channel ${r.id} is a live row without its settings`);
     }
+    const videos = (await db.execute({ sql: videosSql, args: [r.id] })).rows.map((video) => PathRow.parse(video).path);
     const live: LiveRecord = {
       ...core,
       kind: "live",
@@ -67,7 +68,7 @@ export function createRowReader(db: DatabaseSync): (row: unknown) => ChannelReco
         captions: r.live_captions === 1,
         variants: Variants.parse(JSON.parse(r.live_variants)),
         folder: r.live_folder,
-        videos: videosOf.all(r.id).map((video) => PathRow.parse(video).path),
+        videos,
       },
     };
     return live;

@@ -23,14 +23,14 @@ describe("the envelope", () => {
   it("parses a success and validates its data with the route's schema", async () => {
     const backend = scripted(() => success({ items: [ACCOUNT] }));
     const api = createSessionApi(rig(backend.fetch, TOKENS).deps);
-    const list = await api.request("/api/admin-accounts", AccountListSchema);
+    const list = await api.request("/api/admin/accounts", AccountListSchema);
     assert.equal(list.items[0]?.username, "ada@example.test");
   });
 
   it("turns a failure envelope into a typed ApiError with its code, status and the backend's sentence", async () => {
     const backend = scripted(() => failure(409, "account.username_taken", "That username is in use."));
     const api = createSessionApi(rig(backend.fetch, TOKENS).deps);
-    const error = await refusal(api.request("/api/admin-accounts", Item, { method: "POST", body: {} }));
+    const error = await refusal(api.request("/api/admin/accounts", Item, { method: "POST", body: {} }));
     assert.deepEqual([error.code, error.status, error.message], ["account.username_taken", 409, "That username is in use."]);
   });
 

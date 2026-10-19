@@ -1,9 +1,10 @@
 /** Bodies and files for the live channel tests: real paths the checks can see, with nothing in them to encode. */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after } from "node:test";
 
+import { removeDir } from "./db-kit.js";
 import { pick } from "./test-app.js";
 
 const dir = mkdtempSync(path.join(os.tmpdir(), "giga-live-videos-"));
@@ -11,7 +12,7 @@ mkdirSync(path.join(dir, "folder"));
 for (const file of ["a.mp4", "b.mp4", "broken-1.mp4", path.join("folder", "x.mp4"), path.join("folder", "y.mp4")]) {
   writeFileSync(path.join(dir, file), "not a video: the fake build never reads it");
 }
-after(() => rmSync(dir, { recursive: true, force: true }));
+after(() => removeDir(dir));
 
 export const VIDEOS = {
   dir,

@@ -31,12 +31,12 @@ beforeEach(() => {
 });
 
 describe("the providers service", () => {
-  it("lists /api/providers with the bearer, dropping and counting a row it cannot read", async () => {
+  it("lists /api/admin/providers with the bearer, dropping and counting a row it cannot read", async () => {
     await withBackend(
       () => success({ items: [provider(1), { id: "broken" }, provider(2)] }),
       async (calls) => {
         const list = await providers.list();
-        assert.equal(calls[0]?.url, "/api/providers");
+        assert.equal(calls[0]?.url, "/api/admin/providers");
         assert.equal(calls[0]?.headers["authorization"], "Bearer a");
         assert.deepEqual([list.items.map((item) => item.id), list.unreadable], [[1, 2], 1]);
       },
@@ -62,7 +62,7 @@ describe("the providers service", () => {
       async (calls) => {
         const draft = { ...draftOfProvider(saved), enabled: false, origin: "  " };
         const answer = await providers.update(3, providerChanges(saved, draft));
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PUT", "/api/providers/3"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PUT", "/api/admin/providers/3"]);
         assert.deepEqual(calls[0]?.body, { enabled: false, origin: null });
         assert.equal(answer.is_active, false);
       },
@@ -74,7 +74,7 @@ describe("the providers service", () => {
       () => success({ id: 4 }),
       async (calls) => {
         assert.deepEqual(await providers.remove(4), { id: 4 });
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/providers/4"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/admin/providers/4"]);
       },
     );
   });

@@ -1,4 +1,4 @@
-// `GET /api/titles/stored` (docs/41 sections 3.2 and 3.4): 150 titles seeded in the store (movie and tv, synced and
+// `GET /api/admin/titles/stored` (docs/41 sections 3.2 and 3.4): 150 titles seeded in the store (movie and tv, synced and
 // made by hand, edited, disabled), read page by page from the store alone, with TMDB's stub watching for any call.
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -14,14 +14,14 @@ let shared: { t: TestApp; token: string; calls: string[] } | undefined;
 async function setup() {
   if (shared) return shared;
   const tmdb = await stubTmdb();
-  const t = await makeApp({ dataDir: seededDataDir((store) => writeTitles(store, titles)), config: tmdbOn(tmdb) });
+  const t = await makeApp({ dataDir: await seededDataDir(async (store) => writeTitles(store, titles)), config: tmdbOn(tmdb) });
   shared = { t, token: (await signIn(t.app)).access, calls: tmdb.calls };
   return shared;
 }
 
 const read = async (query: string) => {
   const { t, token } = await setup();
-  return send(t.app, "GET", `/api/titles/stored${query}`, undefined, token);
+  return send(t.app, "GET", `/api/admin/titles/stored${query}`, undefined, token);
 };
 
 async function walk(query: string): Promise<string[]> {
@@ -144,11 +144,11 @@ test("invalid values are 400 request.invalid naming the field", async () => {
 
 test("the stored list is signed in, no-store and never a public read", async () => {
   const { t } = await setup();
-  const anonymous = await send(t.app, "GET", "/api/titles/stored");
+  const anonymous = await send(t.app, "GET", "/api/admin/titles/stored");
   assert.deepEqual([anonymous.status, pick(anonymous.body, "error.code")], [401, "auth.unauthorized"]);
   assert.equal(anonymous.headers["cache-control"], "no-store");
   assert.equal((await read("?limit=5")).headers["cache-control"], "no-store");
-  for (const url of ["/api/titles/stored", "/api/titles/stored?limit=5&q=x", "/api/titles/stored/"]) {
+  for (const url of ["/api/admin/titles/stored", "/api/admin/titles/stored?limit=5&q=x", "/api/admin/titles/stored/"]) {
     assert.equal(isPrivateRoute(url), true, url);
   }
   assert.equal(isPrivateRoute("/api/titles?kind=movie"), false);
@@ -157,13 +157,13 @@ test("the stored list is signed in, no-store and never a public read", async () 
 test("a soft-deleted title leaves the list; nothing ever asked TMDB", async () => {
   const { t, token, calls } = await setup();
   const before = pageOf((await read("?limit=1")).body).data.inventory as Record<string, number>;
-  assert.equal((await send(t.app, "DELETE", "/api/titles/movie-1002", undefined, token)).status, 200);
+  assert.equal((await send(t.app, "DELETE", "/api/admin/titles/movie-1002", undefined, token)).status, 200);
   const after = pageOf((await read("?limit=200")).body);
   assert.equal(after.total, 149);
   assert.equal(after.items.some((item) => item.id === "movie-1002"), false);
   assert.equal((after.data.inventory as Record<string, number>).movie, (before.movie ?? 0) - 1);
   assert.equal(String(after.data.version).startsWith("149:"), true);
-  const deleted = pick((await send(t.app, "GET", "/api/titles/deleted", undefined, token)).body, "data.items");
+  const deleted = pick((await send(t.app, "GET", "/api/admin/titles/deleted", undefined, token)).body, "data.items");
   assert.equal(JSON.stringify(deleted).includes("1002"), true);
   assert.deepEqual(calls, []);
 });

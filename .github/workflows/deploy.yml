@@ -1,0 +1,77 @@
+# The giga-stream deploy: verify every program, then fire ONE Render deploy.
+#
+# The service runs both programs (scripts/start.sh): the fileserver public on
+# $PORT and the admin backend as its loopback sibling. Render's autoDeploy is
+# off on purpose — a deploy restarts both processes — so this workflow is the
+# only road to production: everything must be green before the deploy trigger
+# fires, and a failed trigger is visible here rather than silent.
+#
+# Required repo secrets (set from docs/secrets.env, never committed):
+#   RENDER_API_KEY      — Account Settings → API Keys on Render
+#   RENDER_SERVICE_ID   — the srv-… id of the giga-stream web service
+
+name: deploy
+
+on:
+  push:
+    branches: [family-port, turso-migration]
+  workflow_dispatch:
+
+concurrency:
+  # Deploys mutate production: serialise, never cancel mid-deploy.
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        program: [admin, frontend, backend, fileserver]
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+          cache-dependency-path: src/${{ matrix.program }}/package-lock.json
+
+      - name: Install (lockfile only)
+        working-directory: src/${{ matrix.program }}
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: src/${{ matrix.program }}
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: src/${{ matrix.program }}
+        run: npm test
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger the Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          : "${RENDER_API_KEY:?RENDER_API_KEY repo secret is not set}"
+          : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID repo secret is not set}"
+          code=$(curl -sS -o "$RUNNER_TEMP/deploy.json" -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "false"}')
+          echo "POST /v1/services/$RENDER_SERVICE_ID/deploys -> HTTP $code"
+          cat "$RUNNER_TEMP/deploy.json"
+          [ "$code" = "201" ] || { echo "::error::Render refused the deploy trigger (HTTP $code)"; exit 1; }

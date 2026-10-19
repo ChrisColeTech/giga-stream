@@ -49,41 +49,44 @@ export function createPlaylistImporter(deps: {
   const newId = (): string => `ch_${randomUUID()}`;
 
   /** Creates (or, for a known file, updates) the playlist and its channels; the caller wraps it in the transaction. */
-  function write(origin: Origin, screened: ScreenedPlaylist, actor: Actor): ImportAnswer {
-    const held = origin.kind === "file" ? store.playlists.idOfFileName(origin.fileName) : store.playlists.idOfUrl(origin.url);
+  async function write(origin: Origin, screened: ScreenedPlaylist, actor: Actor): Promise<ImportAnswer> {
+    const held = origin.kind === "file"
+      ? await store.playlists.idOfFileName(origin.fileName)
+      : await store.playlists.idOfUrl(origin.url);
     if (held !== undefined && origin.kind === "url") throw new AppError(ERRORS.playlistTaken, { field: "url" });
     let playlistId = held;
     if (playlistId === undefined) {
       const typed = origin.name;
-      if (typed !== undefined && store.playlists.idOfName(typed) !== undefined) {
+      if (typed !== undefined && (await store.playlists.idOfName(typed)) !== undefined) {
         throw new AppError(ERRORS.playlistTaken, { field: "name" });
       }
       const derived = origin.kind === "file" ? origin.fileName : nameOfUrl(new URL(origin.url));
-      const name = typed ?? uniqueName(derived, (candidate) => store.playlists.idOfName(candidate) !== undefined);
+      const name = typed ?? await uniqueName(derived, async (candidate) =>
+        (await store.playlists.idOfName(candidate)) !== undefined);
       playlistId =
         origin.kind === "file"
-          ? store.playlists.insert({ kind: "file", name, fileName: origin.fileName, enabled: true }, now())
-          : store.playlists.insert({ kind: "url", name, url: origin.url, host: origin.host, enabled: origin.enabled }, now());
-      store.jobs.insertPlaylist(playlistId, now());
+          ? await store.playlists.insert({ kind: "file", name, fileName: origin.fileName, enabled: true }, now())
+          : await store.playlists.insert({ kind: "url", name, url: origin.url, host: origin.host, enabled: origin.enabled }, now());
+      await store.jobs.insertPlaylist(playlistId, now());
     }
-    const rows = held === undefined ? [] : store.channels.listOfPlaylist(playlistId);
+    const rows = held === undefined ? [] : await store.channels.listOfPlaylist(playlistId);
     const plan = planEntries({ rows, entries: screened.entries, playlistId, newId });
-    applyPlan(store, plan, now());
+    await applyPlan(store, plan, now());
     const counts = { created: plan.creates.length, updated: plan.updates.length, skipped: screened.skipped, refused: screened.refused };
     const imported: ImportCounts = { ...counts, refusalExamples: screened.refusalExamples };
-    audit.record(actor, {
+    await audit.record(actor, {
       action: "playlist.imported",
       subject: String(playlistId),
       detail: { ...counts, kind: origin.kind, source: origin.kind === "file" ? origin.fileName : origin.host },
     });
-    const record = store.playlists.find(playlistId);
+    const record = await store.playlists.find(playlistId);
     if (!record) throw new AppError(ERRORS.playlistNotFound, { id: playlistId });
-    return { ...playlistView(store, record), created: held === undefined, imported };
+    return { ...(await playlistView(store, record)), created: held === undefined, imported };
   }
 
-  function commit(origin: Origin, screened: ScreenedPlaylist, actor: Actor): ImportAnswer {
+  async function commit(origin: Origin, screened: ScreenedPlaylist, actor: Actor): Promise<ImportAnswer> {
     try {
-      const answer = store.transaction(() => write(origin, screened, actor));
+      const answer = await store.transaction(() => write(origin, screened, actor));
       onChange();
       return answer;
     } catch (error) {
@@ -98,7 +101,7 @@ export function createPlaylistImporter(deps: {
     maxBytes,
 
     /** An uploaded file: the name is sanitised, the body parsed, and nothing is stored but the channels. */
-    importFile(upload: { fileName: string; body: Buffer; name?: string }, actor: Actor): ImportAnswer {
+    importFile(upload: { fileName: string; body: Buffer; name?: string }, actor: Actor): Promise<ImportAnswer> {
       const fileName = sanitizeFileName(upload.fileName);
       if (fileName === undefined) throw invalid("file", "The file must be an .m3u or .m3u8 playlist with a name.");
       return commit(
@@ -132,10 +135,12 @@ export function createPlaylistImporter(deps: {
         if (error instanceof AppError) return { source: "unreachable", counts: none };
         throw error;
       }
-      const plan = store.transaction(() => {
-        if (!store.playlists.find(playlist.id)) return undefined;
-        const made = planEntries({ rows: store.channels.listOfPlaylist(playlist.id), entries: screened.entries, playlistId: playlist.id, newId });
-        return applyPlan(store, made, now()) ? made : { creates: [], updates: [] };
+      const plan = await store.transaction(async () => {
+        if (!(await store.playlists.find(playlist.id))) return undefined;
+        const made = planEntries({
+          rows: await store.channels.listOfPlaylist(playlist.id), entries: screened.entries, playlistId: playlist.id, newId,
+        });
+        return (await applyPlan(store, made, now())) ? made : { creates: [], updates: [] };
       });
       const counts = {
         created: plan?.creates.length ?? 0, updated: plan?.updates.length ?? 0, skipped: screened.skipped,

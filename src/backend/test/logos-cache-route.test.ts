@@ -58,7 +58,7 @@ test("only an exact cache name is served: other names and traversal are refused,
 test("a live channel's own logo is still at /logos/<id>.png", async () => {
   const t = await withCache();
   const token = (await signIn(t.app)).access;
-  await send(t.app, "POST", "/api/channels", liveBody({ id: "home" }), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody({ id: "home" }), token);
   const logo = await t.app.inject({ method: "GET", url: "/logos/home.png" });
   assert.deepEqual([logo.statusCode, logo.headers["content-type"]], [200, "image/png"]);
 });

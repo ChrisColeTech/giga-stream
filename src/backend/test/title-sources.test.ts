@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
+
+import { openTestDatabase, runSql } from "./db-kit.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { fillLibrary, stubTmdb, tmdbOn } from "./title-stubs.js";
 import type { Config } from "../src/config.js";
@@ -41,18 +42,18 @@ async function appWithProviders(config: Partial<Config> = {}) {
   const t = await makeApp({ config: { ...tmdbOn(tmdb), ...config } });
   const access = (await signIn(t.app)).access;
   for (const entry of [FIRST, SECOND, SLEEPY, STREAM, BARE]) {
-    const created = await send(t.app, "POST", "/api/providers", entry, access);
+    const created = await send(t.app, "POST", "/api/admin/providers", entry, access);
     assert.equal(created.status, 201, `${entry.source} is created`);
   }
-  deactivate(t, "sleepy");
+  await deactivate(t, "sleepy");
   await fillLibrary(t);
   return t;
 }
 
 /** POST cannot create an inactive provider, so the test writes the row as the store holds it. */
-function deactivate(t: Awaited<ReturnType<typeof makeApp>>, source: string): void {
-  const db = new DatabaseSync(path.join(t.dataDir, "admin.db"));
-  db.exec(`UPDATE providers SET is_active = 0 WHERE source = '${source}'`);
+async function deactivate(t: Awaited<ReturnType<typeof makeApp>>, source: string): Promise<void> {
+  const db = await openTestDatabase(path.join(t.dataDir, "admin.db"));
+  await runSql(db, `UPDATE providers SET is_active = 0 WHERE source = '${source}'`);
   db.close();
 }
 
@@ -87,7 +88,7 @@ test("a season's episodes carry each episode's exact sources", async () => {
 
 test("an inactive provider stops yielding sources at once", async () => {
   const t = await appWithProviders();
-  deactivate(t, "first");
+  await deactivate(t, "first");
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
   assert.equal(pick(detail.body, "data.sources.length"), 1);
   assert.equal(pick(detail.body, "data.sources.0.name"), "Second");

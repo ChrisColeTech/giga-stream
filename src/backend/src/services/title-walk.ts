@@ -42,11 +42,11 @@ export function createTitleWalk(deps: {
   const { store, tmdb, storeRow, now } = deps;
 
   /** One page of `kind` into the store, in one transaction. */
-  function writePage(kind: Kind, answer: Record<string, unknown>, run: WalkRun): void {
+  async function writePage(kind: Kind, answer: Record<string, unknown>, run: WalkRun): Promise<void> {
     const rows = listOf(answer.results);
     run.seen.titles += rows.length;
-    store.transaction(() => {
-      for (const row of rows) storeRow(kind, asRecord(row));
+    await store.transaction(async () => {
+      for (const row of rows) await storeRow(kind, asRecord(row));
     });
   }
 
@@ -63,7 +63,7 @@ export function createTitleWalk(deps: {
       if (run.signal.aborted || run.shuttingDown()) return;
       const available = num(answer.total_pages);
       if (available !== undefined) last = Math.min(last, Math.max(available, page));
-      writePage(kind, answer, run);
+      await writePage(kind, answer, run);
       run.report({
         phase,
         done: (combined?.offset ?? 0) + page,
@@ -107,7 +107,7 @@ export function createTitleWalk(deps: {
           answer = asRecord(await fetchPage(slice, page));
           if (isStopping(run)) return;
         }
-        writePage(kind, answer, run);
+        await writePage(kind, answer, run);
         if (listOf(answer.results).length === 0) break;
       }
       run.report({ phase, done: ++done, total });

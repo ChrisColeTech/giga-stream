@@ -19,7 +19,7 @@ const params = (path: string): Record<string, string> => Object.fromEntries(new 
 
 describe("the Channels query builder (the contract of docs/41 section 3.1)", () => {
   it("asks for page N at offset N times the size, always with limit, sort and dir, and no empty filter", () => {
-    assert.equal(pagePath(DEFAULT_CHANNEL_QUERY, 0), "/api/admin-channels?limit=100&offset=0&sort=name&dir=asc");
+    assert.equal(pagePath(DEFAULT_CHANNEL_QUERY, 0), "/api/admin/channels?limit=100&offset=0&sort=name&dir=asc");
     assert.deepEqual(params(pagePath(DEFAULT_CHANNEL_QUERY, 3)), { limit: "100", offset: "300", sort: "name", dir: "asc" });
     assert.deepEqual(params(pagePath(DEFAULT_CHANNEL_QUERY, 2, 200)), { limit: "200", offset: "400", sort: "name", dir: "asc" });
     assert.equal(pagePath(DEFAULT_CHANNEL_QUERY, -4).includes("offset=0"), true);

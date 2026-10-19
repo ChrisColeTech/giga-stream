@@ -20,7 +20,7 @@ test("reset-start answers the same shape for a real account, an unknown username
   const offId = await makeAccount(t.app, access, "off@example.test");
   const off = await signIn(t.app, "off@example.test", ADMIN_PASSWORD);
   assert.equal((await setQuestion(t.app, off.access, "Spot", 5)).status, 200);
-  assert.equal((await send(t.app, "PATCH", `/api/admin-accounts/${offId}`, { disabled: true }, access)).status, 200);
+  assert.equal((await send(t.app, "PATCH", `/api/admin/accounts/${offId}`, { disabled: true }, access)).status, 200);
   assert.ok(plainId);
 
   const answers = await Promise.all(
@@ -67,12 +67,12 @@ test("the right answer, normalised, resets the password and ends every session",
   assert.deepEqual([done.status, done.body], [200, { ok: true, data: { reset: true } }]);
   assert.equal(done.headers["cache-control"], "no-store");
 
-  assert.equal(code(await send(t.app, "GET", "/api/auth/me", undefined, access)), "auth.unauthorized");
-  assert.equal(code(await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh })), "auth.refresh_invalid");
-  const old = await send(t.app, "POST", "/api/auth/login", { username: ADMIN_USERNAME, password: ADMIN_PASSWORD });
+  assert.equal(code(await send(t.app, "GET", "/api/admin/auth/me", undefined, access)), "auth.unauthorized");
+  assert.equal(code(await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: refresh })), "auth.refresh_invalid");
+  const old = await send(t.app, "POST", "/api/admin/auth/login", { username: ADMIN_USERNAME, password: ADMIN_PASSWORD });
   assert.equal(code(old), "auth.invalid_credentials", "the old password fails");
   const fresh = await signIn(t.app, ADMIN_USERNAME, NEW_PASSWORD);
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, fresh.access)).status, 200);
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, fresh.access)).status, 200);
 
   const again = await resetWith(t.app, ADMIN_USERNAME, "rex", "yet-another-password-789");
   assert.equal(again.status, 200, "the question survives a reset, so the same answer works again");
@@ -91,7 +91,7 @@ test("a wrong answer is 401 auth.reset_invalid and audits auth.reset_failed", as
   assert.equal(pick(wrong.body, "error.message"), "That answer is not right, or the reset is not available for this username.");
   const failed = (await auditEntries(t.app, access)).find((e) => e.action === "auth.reset_failed");
   assert.deepEqual(failed?.detail, { username: ADMIN_USERNAME });
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, access)).status, 200, "a failure ends no session");
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, access)).status, 200, "a failure ends no session");
 });
 
 test("a disabled account and an account with no question cannot be reset, even with the right answer", async () => {
@@ -100,7 +100,7 @@ test("a disabled account and an account with no question cannot be reset, even w
   const offId = await makeAccount(t.app, access, "off@example.test");
   const off = await signIn(t.app, "off@example.test", ADMIN_PASSWORD);
   assert.equal((await setQuestion(t.app, off.access, "Spot")).status, 200);
-  assert.equal((await send(t.app, "PATCH", `/api/admin-accounts/${offId}`, { disabled: true }, access)).status, 200);
+  assert.equal((await send(t.app, "PATCH", `/api/admin/accounts/${offId}`, { disabled: true }, access)).status, 200);
   assert.equal(code(await resetWith(t.app, "off@example.test", "Spot")), "auth.reset_invalid");
   await makeAccount(t.app, access, "plain@example.test");
   assert.equal(code(await resetWith(t.app, "plain@example.test", "")), "auth.reset_invalid");
@@ -116,10 +116,10 @@ test("a body that fails its schema is 422 before any lookup and audits nothing",
   const before = await failedCount();
   const long = await resetWith(t.app, ADMIN_USERNAME, "Rex", "p".repeat(257));
   assert.deepEqual([long.status, code(long), pick(long.body, "error.details.field")], [422, "account.invalid", "newPassword"]);
-  const extra = await send(t.app, "POST", "/api/auth/reset", { username: ADMIN_USERNAME, answer: "Rex", newPassword: NEW_PASSWORD, id: 1 });
+  const extra = await send(t.app, "POST", "/api/admin/auth-security/reset", { username: ADMIN_USERNAME, answer: "Rex", newPassword: NEW_PASSWORD, id: 1 });
   assert.deepEqual([extra.status, code(extra)], [422, "account.invalid"]);
-  const start = await send(t.app, "POST", "/api/auth/reset-start", { username: "x".repeat(255) });
+  const start = await send(t.app, "POST", "/api/admin/auth-security/reset-start", { username: "x".repeat(255) });
   assert.deepEqual([start.status, code(start)], [422, "account.invalid"]);
   assert.equal(await failedCount(), before, "no failure is audited");
-  assert.equal(code(await send(t.app, "GET", "/api/auth/me", undefined, access)), undefined, "the password is unchanged");
+  assert.equal(code(await send(t.app, "GET", "/api/admin/auth/me", undefined, access)), undefined, "the password is unchanged");
 });

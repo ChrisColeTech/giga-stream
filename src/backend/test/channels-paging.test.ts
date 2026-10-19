@@ -1,4 +1,4 @@
-// `GET /api/admin-channels` paging, search, filters and sort (docs/41 sections 3.1 and 3.4): 250 stream rows seeded in
+// `GET /api/admin/channels` paging, search, filters and sort (docs/41 sections 3.1 and 3.4): 250 stream rows seeded in
 // the store and 3 live rows made through the API (two playing, one failed).
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -30,10 +30,10 @@ const model: Model[] = [
 let shared: { t: TestApp; token: string } | undefined;
 async function setup(): Promise<{ t: TestApp; token: string }> {
   if (shared) return shared;
-  const dataDir = seededDataDir(seedStreams);
+  const dataDir = await seededDataDir(seedStreams);
   const t = await makeApp({ dataDir });
   const token = (await signIn(t.app)).access;
-  for (const body of LIVE) assert.equal((await send(t.app, "POST", "/api/channels", body, token)).status, 201);
+  for (const body of LIVE) assert.equal((await send(t.app, "POST", "/api/admin/channels", body, token)).status, 201);
   await t.live.settled();
   shared = { t, token };
   return shared;
@@ -41,7 +41,7 @@ async function setup(): Promise<{ t: TestApp; token: string }> {
 
 const read = async (query: string) => {
   const { t, token } = await setup();
-  return send(t.app, "GET", `/api/admin-channels${query}`, undefined, token);
+  return send(t.app, "GET", `/api/admin/channels${query}`, undefined, token);
 };
 
 /** Every row of a query, walked page by page (200 a page). */
@@ -179,10 +179,10 @@ test("only the returned rows are decorated with the engine's state", async () =>
 test("a write changes the revision a page carries; the route is signed-in and no-store", async () => {
   const { t, token } = await setup();
   const before = pageOf((await read("?limit=5")).body).data.revision;
-  assert.equal((await send(t.app, "PATCH", "/api/channels/ch_001", { name: "Renamed" }, token)).status, 200);
+  assert.equal((await send(t.app, "PATCH", "/api/admin/channels/ch_001", { name: "Renamed" }, token)).status, 200);
   const after = pageOf((await read("?limit=5")).body).data.revision;
   assert.notEqual(after, before);
-  const anonymous = await send(t.app, "GET", "/api/admin-channels?limit=5");
+  const anonymous = await send(t.app, "GET", "/api/admin/channels?limit=5");
   assert.deepEqual([anonymous.status, anonymous.headers["cache-control"]], [401, "no-store"]);
   assert.equal((await read("?limit=5")).headers["cache-control"], "no-store");
 });

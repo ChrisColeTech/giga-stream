@@ -37,7 +37,7 @@ export function createPlaylistJob(deps: {
   const { store, importer, fillLogos, logoCache, checkStreams, now } = deps;
 
   return async function runPlaylistJob(job: PlaylistJob, signal: AbortSignal, report: ProgressReport): Promise<RunOutcome> {
-    const playlist = store.playlists.find(job.playlistId);
+    const playlist = await store.playlists.find(job.playlistId);
     if (!playlist) throw new AppError(ERRORS.playlistNotFound, { id: job.playlistId });
     const run: SyncRun = { playlistId: playlist.id, signal, endsAt: now() + SYNC_RUN_MAX_MS, report };
     let source: PlaylistCounts["source"] = "file";
@@ -53,7 +53,7 @@ export function createPlaylistJob(deps: {
     if (!signal.aborted) await fillLogos(run);
     if (!signal.aborted) logos = await logoCache.run(run);
     if (!signal.aborted) await checkStreams(run);
-    const health = store.channels.countsByPlaylist().get(playlist.id);
+    const health = (await store.channels.countsByPlaylist()).get(playlist.id);
     const channels = health?.channels ?? 0;
     const online = health?.online ?? 0;
     const offline = health?.offline ?? 0;

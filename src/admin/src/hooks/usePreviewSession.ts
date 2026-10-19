@@ -13,7 +13,7 @@ export interface PreviewSessionView {
   readonly retry: () => void;
 }
 
-/** The Preview window's session (`36` section 8.2): ONE read of THE channel (`GET /api/admin-channels/:id`) when the
+/** The Preview window's session (`36` section 8.2): ONE read of THE channel (`GET /api/admin/channels/:id`) when the
  *  window opens and one more for each `Retry`; a step to a channel the list does not hold, or to a live one, reads that one
  *  channel too, in the background. The list is never read and its pages never dropped: the answer goes in by id. */
 export function usePreviewSession(channelId: string): PreviewSessionView {

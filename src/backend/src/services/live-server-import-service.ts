@@ -43,21 +43,21 @@ export function planImport(
  * at server start; the owner runs `scripts/import-live-server-db.ts`. `dryRun` reads both databases and writes
  * nothing (it does not even migrate the target).
  */
-export function runLiveServerImport(options: {
+export async function runLiveServerImport(options: {
   source: string;
   target: string;
   dryRun: boolean;
   now: () => number;
-}): ImportSummary {
+}): Promise<ImportSummary> {
   const { source, target, dryRun, now } = options;
-  const plan = planImport(readLegacyChannels(source), readExistingIdentities(target));
+  const plan = planImport(await readLegacyChannels(source), await readExistingIdentities(target));
   if (!dryRun && plan.insert.length > 0) {
-    const store = createStore(target);
+    const store = await createStore(target);
     try {
-      store.transaction(() => {
+      await store.transaction(async () => {
         for (const record of plan.insert) {
-          store.channels.insert({ ...record, revision: store.revisions.next() }, now());
-          store.audit.append(
+          await store.channels.insert({ ...record, revision: await store.revisions.next() }, now());
+          await store.audit.append(
             { action: "channel.imported", subject: record.id, detail: { name: record.name, from: "live-server.db" } },
             now(),
           );

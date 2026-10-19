@@ -43,25 +43,25 @@ export function createJobRunner(deps: {
 
   /** Why this job cannot be run by hand, or undefined when it can: a playlist job needs its playlist enabled; the
    *  job's own `enabled` switch gates only the schedule (docs/26 3.11). */
-  function refusal(job: JobRecord): string | undefined {
+  async function refusal(job: JobRecord): Promise<string | undefined> {
     if (job.type === "catalog") return undefined;
-    const playlist = store.playlists.find(job.playlistId);
+    const playlist = await store.playlists.find(job.playlistId);
     if (!playlist) return "The job's playlist no longer exists.";
     return playlist.enabled ? undefined : "The job's playlist is disabled; enable it to run this job.";
   }
 
   /** The schedule also needs the job itself enabled; a manual run does not. */
-  const scheduledRefusal = (job: JobRecord): string | undefined =>
+  const scheduledRefusal = async (job: JobRecord): Promise<string | undefined> =>
     !job.enabled ? "The job is disabled; enable it to run it." : refusal(job);
 
-  function keep(job: JobRecord, result: RunResult, counts: RunCounts, cursorAt?: number): void {
-    if (store.jobs.find(job.id)) store.jobs.recordRun(job.id, now(), result, counts, cursorAt);
+  async function keep(job: JobRecord, result: RunResult, counts: RunCounts, cursorAt?: number): Promise<void> {
+    if (await store.jobs.find(job.id)) await store.jobs.recordRun(job.id, now(), result, counts, cursorAt);
   }
 
   /** The end of a run as the stream tells it: the result the job now holds (none when the job is gone or the store closed). */
-  function finishedOf(jobId: number): JobFinished {
+  async function finishedOf(jobId: number): Promise<JobFinished> {
     try {
-      const ended = store.jobs.find(jobId);
+      const ended = await store.jobs.find(jobId);
       return { jobId, ...(ended?.lastResult !== undefined && { lastResult: ended.lastResult }),
         ...(ended?.lastRunAt !== undefined && { lastRunAt: ended.lastRunAt }) };
     } catch {
@@ -70,17 +70,17 @@ export function createJobRunner(deps: {
   }
 
   async function runPlaylist(job: PlaylistJob, actor: Actor, signal: AbortSignal, report: ProgressReport): Promise<void> {
-    const host = store.playlists.find(job.playlistId)?.host;
+    const host = (await store.playlists.find(job.playlistId))?.host;
     let outcome: RunOutcome;
     try {
       outcome = await playlistJob(job, signal, report);
     } catch (error) {
       outcome = { result: "failed", counts: { code: codeOf(error) } };
     }
-    keep(job, outcome.result, outcome.counts);
+    await keep(job, outcome.result, outcome.counts);
     try {
-      if (store.playlists.find(job.playlistId)) {
-        audit.record(actor, {
+      if (await store.playlists.find(job.playlistId)) {
+        await audit.record(actor, {
           action: "playlist.synced",
           subject: String(job.playlistId),
           detail: { result: outcome.result, ...outcome.counts, ...(host !== undefined && { host }) },
@@ -109,12 +109,12 @@ export function createJobRunner(deps: {
           : { scope: "discover" };
       const done = await titles.runNow(request, actor, triggered, { signal, report });
       const { titles: seen, detailed, seasons, enriched, airing } = done;
-      const counts = { titles: seen, detailed, seasons, enriched, airing, stale: titles.status().stale };
-      if (done.result === "ok") keep(job, "ok", counts, recent ? startedAt - CURSOR_OVERLAP_MS : undefined);
-      else if (done.result === "stopped") keep(job, "stopped", { ...counts, stopped: true });
-      else keep(job, "failed", { code: done.code ?? ERRORS.internalFailure.code });
+      const counts = { titles: seen, detailed, seasons, enriched, airing, stale: (await titles.status()).stale };
+      if (done.result === "ok") await keep(job, "ok", counts, recent ? startedAt - CURSOR_OVERLAP_MS : undefined);
+      else if (done.result === "stopped") await keep(job, "stopped", { ...counts, stopped: true });
+      else await keep(job, "failed", { code: done.code ?? ERRORS.internalFailure.code });
     } catch (error) {
-      keep(job, "failed", { code: codeOf(error) });
+      await keep(job, "failed", { code: codeOf(error) });
     }
   }
 
@@ -127,10 +127,10 @@ export function createJobRunner(deps: {
     const body = job.type === "playlist"
       ? runPlaylist(job, actor, signal, progress.start(job.id, "reading"))
       : runCatalog(job, actor, triggered, signal, progress.start(job.id, firstPhase(job.config)));
-    const settled = body.catch(() => undefined).finally(() => {
+    const settled = body.catch(() => undefined).finally(async () => {
       flights.delete(job.id);
       // After the flight is gone, so a client that refetches on `finished` reads the job as no longer running.
-      progress.finish(finishedOf(job.id));
+      progress.finish(await finishedOf(job.id));
       onSettled();
     });
     flights.set(job.id, { abort, settled });
@@ -162,15 +162,15 @@ export function createJobRunner(deps: {
     abort,
 
     /** An admin's run: refused when the job cannot run (`422 job.disabled`), `409 sync.busy` while it does. */
-    run(job: JobRecord, actor: Actor): void {
-      const reason = refusal(job);
+    run: async (job: JobRecord, actor: Actor): Promise<void> => {
+      const reason = await refusal(job);
       if (reason !== undefined) throw disabled(reason);
       start(job, actor, "admin");
     },
 
     /** The scheduler's run: started, never awaited; `busy` when the catalog engine is taken and the job should wait. */
-    runScheduled(job: JobRecord): "started" | "busy" | "skipped" {
-      if (scheduledRefusal(job) !== undefined || flights.has(job.id)) return "skipped";
+    runScheduled: async (job: JobRecord): Promise<"started" | "busy" | "skipped"> => {
+      if ((await scheduledRefusal(job)) !== undefined || flights.has(job.id)) return "skipped";
       if (job.type === "catalog" && titles.isSyncRunning()) return "busy";
       start(job, {}, "system");
       return "started";

@@ -20,12 +20,12 @@ beforeEach(() => {
 });
 
 describe("the channels service", () => {
-  it("lists /api/admin-channels, dropping and counting a row it cannot read, with the revision", async () => {
+  it("lists /api/admin/channels, dropping and counting a row it cannot read, with the revision", async () => {
     await withBackend(
       () => success(listOf([live("a"), { id: "broken", kind: "live" }, stream("b")], 12)),
       async (calls) => {
         const list = await channels.list();
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["GET", "/api/admin-channels"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["GET", "/api/admin/channels"]);
         assert.deepEqual([list.items.map((item) => item.id), list.unreadable, list.revision], [["a", "b"], 1, 12]);
         const auth = Object.entries(calls[0]?.headers ?? {}).find(([name]) => name.toLowerCase() === "authorization");
         assert.match(auth?.[1] ?? "", /^Bearer /);
@@ -39,7 +39,7 @@ describe("the channels service", () => {
       async (calls) => {
         const created = await channels.create(createBody(NEW));
         assert.equal(created.kind === "live" && created.state, "preparing");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/channels"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/admin/channels"]);
         assert.deepEqual(calls[0]?.body, { kind: "live", name: "Drive", category: "News", folder: "D:\\v" });
         await channels.create({ kind: "live", name: "V", category: "News", videos: ["D:\\a.mp4"] });
         assert.deepEqual(calls[1]?.body, { kind: "live", name: "V", category: "News", videos: ["D:\\a.mp4"] });
@@ -69,7 +69,7 @@ describe("the channels service", () => {
       () => success(saved),
       async (calls) => {
         await channels.update("x y", patchBody(saved, { ...liveDraft(saved), name: "New" }));
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PATCH", "/api/channels/x%20y"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PATCH", "/api/admin/channels/x%20y"]);
         assert.deepEqual(calls[0]?.body, { name: "New" });
         await channels.update("x y", patchBody(saved, { ...liveDraft(saved), plays: "videos", videos: ["D:\\a.mp4"] }));
         assert.deepEqual(calls[1]?.body, { videos: ["D:\\a.mp4"] });
@@ -96,21 +96,21 @@ describe("the channels service", () => {
         assert.deepEqual(
           calls.map((call) => `${call.method} ${call.url}`),
           [
-            "DELETE /api/channels/a",
-            "POST /api/channels/a/rebuild",
-            "POST /api/channels/a/revert",
+            "DELETE /api/admin/channels/a",
+            "POST /api/admin/channels/a/rebuild",
+            "POST /api/admin/channels/a/revert",
           ],
         );
       },
     );
   });
 
-  it("reads ONE channel from GET /api/admin-channels/:id, never the list route", async () => {
+  it("reads ONE channel from GET /api/admin/channels/:id, never the list route", async () => {
     await withBackend(
       () => success(live("a b", { state: "failed" })),
       async (calls) => {
         const row = await channels.readOne("a b");
-        assert.deepEqual([calls.length, calls[0]?.method, calls[0]?.url], [1, "GET", "/api/admin-channels/a%20b"]);
+        assert.deepEqual([calls.length, calls[0]?.method, calls[0]?.url], [1, "GET", "/api/admin/channels/a%20b"]);
         assert.deepEqual([row.kind, row.kind === "live" && row.state], ["live", "failed"]);
       },
     );
@@ -121,7 +121,7 @@ describe("the channels service", () => {
       () => success(stream("a", { status: "offline", checkedAt: 55 })),
       async (calls) => {
         const row = await channels.setStatus("a", "offline");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PUT", "/api/channels/a/status", { status: "offline" }]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PUT", "/api/admin/channels/a/status", { status: "offline" }]);
         assert.deepEqual([row.kind === "stream" && row.status, row.kind === "stream" && row.checkedAt], ["offline", 55]);
       },
     );
@@ -134,7 +134,7 @@ describe("the channels service", () => {
   it("carries the field of a 409 and a 422 refusal, and answers bad_response for an unreadable write", async () => {
     await withBackend(
       (call) => {
-        if (call.url === "/api/channels") return refusal(409, "channel.taken", "number");
+        if (call.url === "/api/admin/channels") return refusal(409, "channel.taken", "number");
         if (call.method === "PATCH") return refusal(422, "channel.invalid", "videos.1");
         return success({ nope: 1 });
       },

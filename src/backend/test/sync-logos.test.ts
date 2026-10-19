@@ -104,7 +104,7 @@ test("garbage collection deletes the files no channel references, and only at th
   writeFileSync(path.join(dir, stray), PNG);
   writeFileSync(path.join(dir, "notes.txt"), "not a cache name: left alone");
   const b = await byName(s, "b");
-  await s.api("PATCH", `/api/channels/${String(b.id)}`, { logoUrl: LOGO("a") });
+  await s.api("PATCH", `/api/admin/channels/${String(b.id)}`, { logoUrl: LOGO("a") });
   assert.equal(cacheOf(s).length, 4, "nothing is collected by an edit");
   await s.run();
   const left = cacheOf(s);
@@ -133,7 +133,7 @@ test("missing logo addresses are filled from the index by tvg id then name, one 
     m3uEntry("Unknown", STREAM("s.example", "unknown")),
   ]);
   const unknown = await byName(s, "Unknown");
-  await s.api("PATCH", `/api/channels/${String(unknown.id)}`, { logoUrl: "https://img.example/mine.png" });
+  await s.api("PATCH", `/api/admin/channels/${String(unknown.id)}`, { logoUrl: "https://img.example/mine.png" });
   const before = await s.revision();
   await s.run();
   const rows = Object.fromEntries((await s.channels()).map((c) => [String(c.name), c.logoUrl]));

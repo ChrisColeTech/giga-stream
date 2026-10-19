@@ -9,17 +9,17 @@ import { parseInput } from "./parse-input.js";
 
 /**
  * The signed-in admin's own settings and shell layout (docs/29 section 12.2). Only the token's account is read or
- * written; the answers are `no-store` through the `/api/auth` prefix.
+ * written, and the answer is `no-store` like every `/api/admin` answer.
  */
 export function registerAccountState(app: FastifyInstance, services: Services): void {
-  app.get("/api/auth/me/state", async (request, reply) => {
-    const principal = signedIn(services, request);
-    return ok(reply, services.uiState.read(principal));
+  app.get("/account-state", async (request, reply) => {
+    const principal = await signedIn(services, request);
+    return ok(reply, await services.uiState.read(principal));
   });
 
-  app.put("/api/auth/me/state", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.put("/account-state", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const body = parseInput(UiStatePutSchema, request.body, ERRORS.accountStateInvalid);
-    return ok(reply, services.uiState.write(principal, body));
+    return ok(reply, await services.uiState.write(principal, body));
   });
 }

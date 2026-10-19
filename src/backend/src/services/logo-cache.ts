@@ -41,14 +41,14 @@ export function createLogoCache(deps: {
   }
 
   /** Deletes the cache files no channel references. Run only at the end of a sync run, never in a delete handler. */
-  function collect(): void {
+  async function collect(): Promise<void> {
     let names: string[];
     try {
       names = readdirSync(dir);
     } catch {
       return;
     }
-    const kept = store.health.referencedLogoFiles();
+    const kept = await store.health.referencedLogoFiles();
     for (const name of names) {
       if (!LOGO_CACHE_NAME.test(name) || kept.has(name)) continue;
       try {
@@ -64,7 +64,7 @@ export function createLogoCache(deps: {
     async run(run: SyncRun): Promise<{ cached: number; failed: number }> {
       const cutoff = now() - LOGO_RECHECK_MS;
       const due = new Set<string>();
-      for (const t of store.health.logoTargets(run.playlistId)) {
+      for (const t of await store.health.logoTargets(run.playlistId)) {
         if (t.checkedAt === null || t.checkedAt < cutoff || (t.file !== null && !existsSync(path.join(dir, t.file)))) due.add(t.url);
       }
       let cached = 0;
@@ -82,10 +82,10 @@ export function createLogoCache(deps: {
           }
           if (name === undefined) {
             failed += 1;
-            store.health.stampLogo(run.playlistId, url, now());
+            await store.health.stampLogo(run.playlistId, url, now());
           } else {
             cached += 1;
-            store.health.cacheLogo(run.playlistId, url, name, now());
+            await store.health.cacheLogo(run.playlistId, url, name, now());
           }
         }).catch(() => undefined).finally(() => run.report({ phase: "logos", done: ++finished, total: due.size })),
       ));

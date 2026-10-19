@@ -14,51 +14,52 @@ import { hashPassword } from "./password.js";
 export function createAccountService(deps: {
   store: Store;
   audit: AuditService;
-  revokeAll: (accountId: string) => void;
+  revokeAll: (accountId: string) => Promise<void>;
   now: () => number;
 }) {
   const { store, audit, revokeAll, now } = deps;
 
-  function existing(id: string): StoredAccount {
-    const found = store.accounts.find(id);
+  async function existing(id: string): Promise<StoredAccount> {
+    const found = await store.accounts.find(id);
     if (!found) throw new AppError(ERRORS.accountNotFound);
     return found;
   }
 
-  function assertUsernameFree(username: string, exceptId?: string): void {
-    const holder = store.accounts.findByUsername(username);
+  async function assertUsernameFree(username: string, exceptId?: string): Promise<void> {
+    const holder = await store.accounts.findByUsername(username);
     if (holder && holder.account.id !== exceptId) {
       throw new AppError(ERRORS.accountUsernameTaken, { field: "username" });
     }
   }
 
   /** True when this account is enabled and no other enabled account exists. */
-  const isLastAdmin = (a: AdminAccount): boolean => !a.disabled && store.accounts.enabledCount() <= 1;
+  const isLastAdmin = async (a: AdminAccount): Promise<boolean> => !a.disabled && (await store.accounts.enabledCount()) <= 1;
 
   return {
-    list: (): { items: AdminAccount[] } => ({ items: store.accounts.list().map((s) => s.account) }),
+    list: async (): Promise<{ items: AdminAccount[] }> =>
+      ({ items: (await store.accounts.list()).map((s) => s.account) }),
 
-    get: (id: string): AdminAccount => existing(id).account,
+    get: async (id: string): Promise<AdminAccount> => (await existing(id)).account,
 
     async create(input: AccountCreate, actor: Actor): Promise<AdminAccount> {
-      assertUsernameFree(input.username);
+      await assertUsernameFree(input.username);
       const id = `acct_${randomUUID()}`;
       const passwordHash = await hashPassword(input.password);
-      store.accounts.insert({ id, username: input.username, passwordHash, disabled: false }, now());
-      audit.record(actor, { action: "account.created", subject: id, detail: { username: input.username } });
-      return existing(id).account;
+      await store.accounts.insert({ id, username: input.username, passwordHash, disabled: false }, now());
+      await audit.record(actor, { action: "account.created", subject: id, detail: { username: input.username } });
+      return (await existing(id)).account;
     },
 
     async update(id: string, patch: AccountPatch, actor: Actor): Promise<AdminAccount> {
-      const current = existing(id);
+      const current = await existing(id);
       const a = current.account;
-      if (patch.username !== undefined) assertUsernameFree(patch.username, id);
+      if (patch.username !== undefined) await assertUsernameFree(patch.username, id);
       const disabling = patch.disabled === true && !a.disabled;
-      if (disabling && isLastAdmin(a)) throw new AppError(ERRORS.accountLastAdmin);
+      if (disabling && (await isLastAdmin(a))) throw new AppError(ERRORS.accountLastAdmin);
       const passwordHash = patch.password === undefined ? current.passwordHash : await hashPassword(patch.password);
       const revokes = patch.password !== undefined || (patch.disabled !== undefined && patch.disabled !== a.disabled);
-      store.transaction(() => {
-        store.accounts.update(
+      await store.transaction(async () => {
+        await store.accounts.update(
           {
             id,
             username: patch.username ?? a.username,
@@ -67,11 +68,11 @@ export function createAccountService(deps: {
           },
           now(),
         );
-        if (revokes) revokeAll(id);
+        if (revokes) await revokeAll(id);
       });
       const changed = Object.keys(patch).filter((k) => k !== "password");
-      const saved = existing(id).account;
-      audit.record(actor, {
+      const saved = (await existing(id)).account;
+      await audit.record(actor, {
         action: "account.updated",
         subject: id,
         detail: { username: saved.username, fields: patch.password === undefined ? changed : [...changed, "password"] },
@@ -79,11 +80,11 @@ export function createAccountService(deps: {
       return saved;
     },
 
-    remove(id: string, actor: Actor): { id: string } {
-      const current = existing(id);
-      if (isLastAdmin(current.account)) throw new AppError(ERRORS.accountLastAdmin);
-      store.accounts.remove(id);
-      audit.record(actor, { action: "account.deleted", subject: id, detail: { username: current.account.username } });
+    async remove(id: string, actor: Actor): Promise<{ id: string }> {
+      const current = await existing(id);
+      if (await isLastAdmin(current.account)) throw new AppError(ERRORS.accountLastAdmin);
+      await store.accounts.remove(id);
+      await audit.record(actor, { action: "account.deleted", subject: id, detail: { username: current.account.username } });
       return { id };
     },
   };

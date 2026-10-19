@@ -164,7 +164,7 @@ describe("the audit service", () => {
       () => success({ items: [entry(2), { nope: true }, entry(1)], nextBefore: 1 }),
       async (calls) => {
         const result = await audit.list({ limit: 10, before: 5 });
-        assert.equal(calls[0]?.url, "/api/audit?limit=10&before=5");
+        assert.equal(calls[0]?.url, "/api/admin/audit?limit=10&before=5");
         assert.deepEqual([result.items.map((item) => item.id), result.unreadable, result.nextBefore], [[2, 1], 1, 1]);
       },
     );

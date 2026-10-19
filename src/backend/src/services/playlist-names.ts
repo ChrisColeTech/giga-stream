@@ -30,11 +30,11 @@ export function nameOfUrl(address: URL): string {
 }
 
 /** `name`, or `name (2)`, `name (3)` ... the first the caller does not already hold (a derived name never fails). */
-export function uniqueName(name: string, taken: (candidate: string) => boolean): string {
-  if (!taken(name)) return name;
+export async function uniqueName(name: string, taken: (candidate: string) => Promise<boolean>): Promise<string> {
+  if (!(await taken(name))) return name;
   for (let n = 2; ; n += 1) {
     const suffix = ` (${n})`;
     const candidate = `${name.slice(0, PLAYLIST_NAME_MAX - suffix.length)}${suffix}`;
-    if (!taken(candidate)) return candidate;
+    if (!(await taken(candidate))) return candidate;
   }
 }

@@ -1,11 +1,15 @@
 import path from "node:path";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
+import { existsSync } from "node:fs";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerAccountState } from "./api/account-state.js";
 import { registerAccounts } from "./api/accounts.js";
 import { registerAdminChannels } from "./api/admin-channels.js";
 import { registerAdminStatic } from "./api/admin-static.js";
+import { registerAdminTitles } from "./api/admin-titles.js";
+import { registerAdminTmdb } from "./api/admin-tmdb.js";
 import { registerAudit } from "./api/audit.js";
 import { registerAuth } from "./api/auth.js";
 import { registerAuthSecurity } from "./api/auth-security.js";
@@ -17,7 +21,6 @@ import { registerLiveStreams } from "./api/live-streams.js";
 import { registerJobs } from "./api/jobs.js";
 import { registerPlaylists } from "./api/playlists.js";
 import { registerProviders } from "./api/providers.js";
-import { registerAdminTmdb } from "./api/admin-tmdb.js";
 import { registerTitles } from "./api/titles.js";
 import { bootstrapUsername } from "./bootstrap-username.js";
 import { config, type Config } from "./config.js";
@@ -38,8 +41,10 @@ import { createStore } from "./store/store.js";
  * `DATA_DIR`, a secret and the flags; `now` is the one clock, `live` the engine's seams (a fake build, a fake sleep)
  * and `safeFetchImpl` the one guarded outbound fetch for every address that comes from playlist content (the test
  * seam for the playlists; `docs/43` section 3.8). Fixed provider hosts (TMDB, OMDb) use `fetch` directly and are
- * stubbed through their base addresses. Every route begins `/api`; the exceptions are `/healthz`, the live stream
- * addresses (`/live`, `/logos`, the test page) and the admin app at `/admin/` (`01` section 4.3).
+ * stubbed through their base addresses. Every route begins `/api` — the public reads of `/api/channels*` and
+ * `/api/titles/...` on the root, the console's whole API in the one `/api/admin` plugin — and the exceptions are
+ * `/healthz`, the live stream addresses (`/live`, `/logos`, the test page) and the admin app at `/admin/`
+ * (`01` section 4.3).
  */
 export async function buildApp(
   overrides: Partial<Config> = {},
@@ -53,7 +58,7 @@ export async function buildApp(
   if (refusal) throw new Error(refusal);
   const https = tlsOptions(settings);
 
-  const store = createStore(path.join(settings.DATA_DIR, DATABASE_FILE_NAME));
+  const store = await createStore(path.join(settings.DATA_DIR, DATABASE_FILE_NAME));
   let services: Services | undefined;
   try {
     const app = Fastify({
@@ -62,7 +67,7 @@ export async function buildApp(
       trustProxy: settings.TRUST_PROXY,
       ...(https && { https }),
     });
-    services = createServices(store, {
+    services = await createServices(store, {
       jwtSecret: settings.JWT_SECRET,
       tmdbToken: settings.TMDB_READ_TOKEN,
       tmdbBase: settings.TMDB_BASE,
@@ -87,18 +92,18 @@ export async function buildApp(
     const ready = services;
     const bootstrap = await bootstrapAdmin(
       ready.accounts,
-      ready.hasAccounts(),
+      await ready.hasAccounts(),
       bootstrapUsername(settings),
       settings.ADMIN_BOOTSTRAP_PASSWORD,
     );
     // Every saved live channel builds in the background, so the server answers at once. The seed (an empty
     // store only) starts its own channels as it creates them.
-    ready.channels.startLive();
+    await ready.channels.startLive();
     if (settings.SEED_TEST_CHANNELS) {
-      const seeded = seedTestChannels(ready.channels, settings.FIXTURE_DIR);
+      const seeded = await seedTestChannels(ready.channels, settings.FIXTURE_DIR);
       if (seeded.repaired > 0) app.log.info(`seed: repaired ${seeded.repaired} legacy stream channel(s) into live channels`);
     }
-    ready.purgeExpiredSessions();
+    await ready.purgeExpiredSessions();
 
     // The one timer (docs/01 section 4.4) is armed for the earliest due enabled job (docs/26 section 3.11).
     ready.scheduler.arm();
@@ -133,20 +138,42 @@ export async function buildApp(
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     });
     registerHealth(app, ready);
-    registerAuth(app, ready);
-    registerAuthSecurity(app, ready);
-    registerAccountState(app, ready);
-    registerAccounts(app, ready);
-    registerAudit(app, ready);
     registerChannels(app, ready);
-    registerAdminChannels(app, ready);
-    registerLiveFaults(app, ready);
-    registerProviders(app, ready);
     registerTitles(app, ready);
-    registerAdminTmdb(app, ready);
-    registerPlaylists(app, ready);
-    registerJobs(app, ready);
+    // The admin console's whole API is one encapsulated plugin (the same shape as the `/live` and `/logos`
+    // prefixes): every register function in it names its path relative to `/api/admin`, so the admin surface
+    // is one namespace no public route shares. The per-route `signedIn` checks stay in each file; sign-in
+    // itself has none.
+    await app.register(
+      async (admin) => {
+        registerAccountState(admin, ready);
+        registerAccounts(admin, ready);
+        registerAdminChannels(admin, ready);
+        registerAdminTitles(admin, ready);
+        registerAdminTmdb(admin, ready);
+        registerAudit(admin, ready);
+        registerAuth(admin, ready);
+        registerAuthSecurity(admin, ready);
+        registerJobs(admin, ready);
+        registerLiveFaults(admin, ready);
+        registerPlaylists(admin, ready);
+        registerProviders(admin, ready);
+      },
+      { prefix: "/api/admin" },
+    );
     registerAdminStatic(app, ready);
+    // The root-level admin UI (docs/26 section 4.1), after every API route so nothing shadows `/api`, `/healthz`,
+    // `/live`, `/logos`, `/admin` or the test page. `wildcard: false` answers only real files: `/` finds the
+    // `index.html`, anything else falls through to the JSON 404 envelope. With no UI built, nothing is served.
+    const publicIndex = path.join(settings.PUBLIC_DIR, "index.html");
+    if (existsSync(publicIndex)) {
+      await app.register(fastifyStatic, {
+        root: settings.PUBLIC_DIR,
+        wildcard: false,
+        index: ["index.html"],
+        cacheControl: false,
+      });
+    }
     return app;
   } catch (error) {
     await services?.live.stop();

@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+
 
 import { buildApp } from "../src/app.js";
 import { itemOf, itemsOf } from "./live-channel-kit.js";
+import { removeDir, openTestDatabase, runSql } from "./db-kit.js";
 import { JWT_SECRET, makeApp, pick, send, signIn } from "./test-app.js";
 
 /** The fixture files the seed looks for (docs/10 section 2.1), as empty placeholders: the fake build never reads them. */
@@ -35,7 +36,7 @@ test("the seed creates the four test channels as live rows served by this backen
     assert.equal(itemOf(list, "fx-news").logoUrl, "http://localhost:80/logos/fx-news.png");
     assert.equal(pick(list, "data.revision"), 4);
     await first.live.settled();
-    const admin = (await send(first.app, "GET", "/api/admin-channels", undefined, (await signIn(first.app)).access)).body;
+    const admin = (await send(first.app, "GET", "/api/admin/channels", undefined, (await signIn(first.app)).access)).body;
     assert.deepEqual(itemsOf(admin).map((c) => [c.id, c.state, c.captions, (c.variants as string[]).length, (c.videos as string[]).length]), [
       ["fx-news", "live", true, 2, 3],
       ["fx-sports", "live", false, 3, 3],
@@ -50,7 +51,7 @@ test("the seed creates the four test channels as live rows served by this backen
     assert.equal(pick((await send(second.app, "GET", "/api/channels")).body, "data.revision"), 4);
     await second.dispose();
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });
 
@@ -70,7 +71,7 @@ test("the seed without the fixture files refuses to start, naming the command th
       /npm run fixtures/,
     );
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });
 
@@ -87,18 +88,18 @@ test("channels and the revision survive a restart", async () => {
     assert.equal(pick(list, "data.revision"), 4);
     await second.dispose();
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });
 
 test("a database from a newer version is refused", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-newer-"));
   try {
-    const db = new DatabaseSync(path.join(dataDir, "admin.db"));
-    db.exec("PRAGMA user_version = 99");
+    const db = await openTestDatabase(path.join(dataDir, "admin.db"));
+    await runSql(db, "PRAGMA user_version = 99");
     db.close();
     await assert.rejects(buildApp({ NODE_ENV: "test", HOST: "127.0.0.1", DATA_DIR: dataDir, JWT_SECRET }), /newer version/);
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });

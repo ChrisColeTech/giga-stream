@@ -11,7 +11,7 @@ const LOOPBACK = "http://localhost:5171";
 async function withChannel(options: MakeAppOptions = {}) {
   const t = await makeApp(options);
   const token = (await signIn(t.app)).access;
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
   await t.live.settled();
   return { t, token };
 }
@@ -49,7 +49,7 @@ test("/api keeps its own policy: no loopback allowance, the listed origins only,
   assert.equal((await get(t, "/api/channels", LISTED)).headers["access-control-allow-origin"], LISTED);
   const preflight = await request(t.app, {
     method: "OPTIONS",
-    url: "/api/channels/home/fault",
+    url: "/api/admin/live-faults/home/fault",
     headers: { origin: LISTED, "access-control-request-method": "PUT", "access-control-request-headers": "authorization,content-type" },
   });
   assert.equal(preflight.status, 204);
@@ -86,10 +86,10 @@ test("the test player page is served only with TEST_PAGE=true", async () => {
 test("faults change what a player gets, and clearing restores it", async () => {
   const { t, token } = await withChannel();
   const playlist = "/live/home/360p/index.m3u8";
-  const fault = (body: unknown) => send(t.app, "PUT", "/api/channels/home/fault", body, token);
+  const fault = (body: unknown) => send(t.app, "PUT", "/api/admin/live-faults/home/fault", body, token);
   const status = async (url: string) => (await send(t.app, "GET", url)).status;
   assert.equal(pick((await fault({ fault: "playlist-500" })).body, "data.fault.fault"), "playlist-500");
-  const admin = await send(t.app, "GET", "/api/admin-channels", undefined, token);
+  const admin = await send(t.app, "GET", "/api/admin/channels", undefined, token);
   assert.equal(itemOf(admin.body, "home").fault, "playlist-500");
   const broken = await send(t.app, "GET", playlist);
   assert.deepEqual([broken.status, pick(broken.body, "error.code")], [500, "playlist.unavailable"]);
@@ -102,14 +102,14 @@ test("faults change what a player gets, and clearing restores it", async () => {
   await fault({ fault: "segment-404" });
   const gone = await send(t.app, "GET", "/live/home/360p/seg00000.ts");
   assert.deepEqual([gone.status, pick(gone.body, "error.code")], [404, "media.not_found"]);
-  assert.deepEqual((await send(t.app, "DELETE", "/api/channels/home/fault", undefined, token)).body, { ok: true, data: { id: "home", fault: null } });
+  assert.deepEqual((await send(t.app, "DELETE", "/api/admin/live-faults/home/fault", undefined, token)).body, { ok: true, data: { id: "home", fault: null } });
   assert.equal(await status(playlist), 200);
-  assert.equal(itemOf((await send(t.app, "GET", "/api/admin-channels", undefined, token)).body, "home").fault, null);
+  assert.equal(itemOf((await send(t.app, "GET", "/api/admin/channels", undefined, token)).body, "home").fault, null);
 });
 
 test("a fault with a duration clears itself on the clock; a bad fault, an unknown channel and a stream row are refused", async () => {
   const { t, token } = await withChannel();
-  await send(t.app, "PUT", "/api/channels/home/fault", { fault: "segment-404", durationMs: 5000 }, token);
+  await send(t.app, "PUT", "/api/admin/live-faults/home/fault", { fault: "segment-404", durationMs: 5000 }, token);
   assert.equal((await send(t.app, "GET", "/live/home/360p/seg00000.ts")).status, 404);
   t.clock.advance(5000);
   assert.equal((await send(t.app, "GET", "/live/home/360p/seg00000.ts")).status, 200);
@@ -117,11 +117,11 @@ test("a fault with a duration clears itself on the clock; a bad fault, an unknow
     const answer = await send(t.app, "PUT", url, body, token);
     return [answer.status, pick(answer.body, "error.code")];
   };
-  assert.deepEqual(await refusal("/api/channels/home/fault", { fault: "explode" }), [400, "fault.invalid"]);
-  assert.deepEqual(await refusal("/api/channels/home/fault", { fault: "stall", durationMs: -1 }), [400, "fault.invalid"]);
-  assert.deepEqual(await refusal("/api/channels/home/fault", { fault: "stall", colour: "red" }), [400, "fault.invalid"]);
-  assert.deepEqual(await refusal("/api/channels/nope/fault", { fault: "end" }), [404, "channel.not_found"]);
-  const stream = String(pick((await send(t.app, "POST", "/api/channels", { name: "N", category: "News", streamUrl: "https://a.example/n.m3u8" }, token)).body, "data.id"));
-  assert.deepEqual(await refusal(`/api/channels/${stream}/fault`, { fault: "end" }), [422, "channel.invalid"]);
-  assert.equal((await send(t.app, "DELETE", "/api/channels/nope/fault", undefined, token)).status, 404);
+  assert.deepEqual(await refusal("/api/admin/live-faults/home/fault", { fault: "explode" }), [400, "fault.invalid"]);
+  assert.deepEqual(await refusal("/api/admin/live-faults/home/fault", { fault: "stall", durationMs: -1 }), [400, "fault.invalid"]);
+  assert.deepEqual(await refusal("/api/admin/live-faults/home/fault", { fault: "stall", colour: "red" }), [400, "fault.invalid"]);
+  assert.deepEqual(await refusal("/api/admin/live-faults/nope/fault", { fault: "end" }), [404, "channel.not_found"]);
+  const stream = String(pick((await send(t.app, "POST", "/api/admin/channels", { name: "N", category: "News", streamUrl: "https://a.example/n.m3u8" }, token)).body, "data.id"));
+  assert.deepEqual(await refusal(`/api/admin/live-faults/${stream}/fault`, { fault: "end" }), [422, "channel.invalid"]);
+  assert.equal((await send(t.app, "DELETE", "/api/admin/live-faults/nope/fault", undefined, token)).status, 404);
 });

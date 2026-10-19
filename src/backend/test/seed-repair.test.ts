@@ -1,6 +1,7 @@
+import { removeDir } from "./db-kit.js";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -29,10 +30,10 @@ const legacyRow = (id: string, overrides: Partial<StreamRecord> = {}): Omit<Stre
 });
 
 /** Builds the database as the old version left it: the migrated schema with these stream rows in it. */
-function oldDatabase(dataDir: string, rows: Array<Omit<StreamRecord, "revision">>): void {
-  const store = createStore(path.join(dataDir, "admin.db"));
+async function oldDatabase(dataDir: string, rows: Array<Omit<StreamRecord, "revision">>): Promise<void> {
+  const store = await createStore(path.join(dataDir, "admin.db"));
   try {
-    for (const row of rows) store.transaction(() => store.channels.insert({ ...row, revision: store.revisions.next() }, 0));
+    for (const row of rows) await store.transaction(async () => store.channels.insert({ ...row, revision: await store.revisions.next() }, 0));
   } finally {
     store.close();
   }
@@ -43,13 +44,13 @@ async function withDir(work: (dataDir: string, fixtures: string) => Promise<void
   try {
     await work(dataDir, placeholderFixtures(dataDir));
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 }
 
 test("the seed turns the four legacy stream rows into live rows with the same ids, once", async () => {
   await withDir(async (dataDir, fixtures) => {
-    oldDatabase(dataDir, LEGACY.map((id) => legacyRow(id)));
+    await oldDatabase(dataDir, LEGACY.map((id) => legacyRow(id)));
     const first = await makeApp({ seed: true, dataDir, config: { FIXTURE_DIR: fixtures } });
     const list = (await send(first.app, "GET", "/api/channels")).body;
     assert.deepEqual(itemsOf(list).map((c) => [c.id, c.name, c.number, c.category, c.kind]), [
@@ -65,7 +66,7 @@ test("the seed turns the four legacy stream rows into live rows with the same id
 
     await first.live.settled();
     const token = (await signIn(first.app)).access;
-    const admin = (await send(first.app, "GET", "/api/admin-channels", undefined, token)).body;
+    const admin = (await send(first.app, "GET", "/api/admin/channels", undefined, token)).body;
     assert.deepEqual(itemsOf(admin).map((c) => [c.id, c.mode, c.state, c.captions, (c.variants as string[]).length]), [
       ["fx-news", "loop", "live", true, 2],
       ["fx-sports", "loop", "live", false, 3],
@@ -86,7 +87,7 @@ test("the seed turns the four legacy stream rows into live rows with the same id
 
 test("the repair touches only the exact legacy shape of the seed's own ids", async () => {
   await withDir(async (dataDir, fixtures) => {
-    oldDatabase(dataDir, [
+    await oldDatabase(dataDir, [
       legacyRow("fx-news", { editedFields: ["name"] }),
       legacyRow("fx-sports", { streamUrl: "http://127.0.0.1:8097/live/other/master.m3u8" }),
       legacyRow("fx-music", { streamUrl: "http://tv.example.test/live/fx-music/master.m3u8" }),
@@ -114,7 +115,7 @@ test("the repair touches only the exact legacy shape of the seed's own ids", asy
 
 test("a non-empty table gains no test channels, and a live row is left alone", async () => {
   await withDir(async (dataDir, fixtures) => {
-    oldDatabase(dataDir, [legacyRow("ch_own")]);
+    await oldDatabase(dataDir, [legacyRow("ch_own")]);
     const t = await makeApp({ seed: true, dataDir, config: { FIXTURE_DIR: fixtures } });
     const list = (await send(t.app, "GET", "/api/channels")).body;
     assert.deepEqual(itemsOf(list).map((c) => c.id), ["ch_own"]);
@@ -125,7 +126,7 @@ test("a non-empty table gains no test channels, and a live row is left alone", a
 
 test("a legacy row with the fixture files missing refuses to start, naming the command", async () => {
   await withDir(async (dataDir) => {
-    oldDatabase(dataDir, [legacyRow("fx-news")]);
+    await oldDatabase(dataDir, [legacyRow("fx-news")]);
     await assert.rejects(
       makeApp({ seed: true, dataDir, config: { FIXTURE_DIR: path.join(dataDir, "no-fixtures") } }),
       /npm run fixtures/,

@@ -1,7 +1,7 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { z } from "zod";
 
 import type { StoredSort, StoredTitleFilter, TitleInventory } from "../types/title-stored.js";
+import type { Database, SqlArgs } from "./database.js";
 import { LIKE_ESCAPE, containsPattern } from "./like-pattern.js";
 import type { StoredTitle } from "./title-repository.js";
 
@@ -18,9 +18,9 @@ const InventoryRow = z.object({
 const TITLE = "json_extract(payload, '$.title')";
 const EDITED = "(edited_fields IS NOT NULL AND edited_fields <> '[]')";
 
-function whereOf(filter: StoredTitleFilter): { sql: string; params: SQLInputValue[] } {
+function whereOf(filter: StoredTitleFilter): { sql: string; params: SqlArgs } {
   const clauses: string[] = [];
-  const params: SQLInputValue[] = [];
+  const params: SqlArgs = [];
   if (filter.q !== undefined) {
     clauses.push(`${TITLE} LIKE ? ${LIKE_ESCAPE}`);
     params.push(containsPattern(filter.q));
@@ -54,29 +54,32 @@ function orderOf(sort: StoredSort, dir: "asc" | "desc"): string {
   return `ORDER BY ${primary[sort]}, id`;
 }
 
+const INVENTORY_SQL = `
+  SELECT SUM(kind = 'movie') AS movie, SUM(kind = 'tv') AS tv, SUM(origin = 'manual') AS manual,
+    SUM(${EDITED}) AS edited, SUM(enabled = 0) AS disabled,
+    COUNT(*) || ':' || COALESCE(MAX(fetched_at), 0) AS version
+  FROM titles`;
+
 /**
  * The stored-titles list in SQL (docs/41 section 3.2): one page of every row of `titles`, synced and made by hand, with
  * the count the filters keep; and the whole store's inventory and change marker. A deleted synced title has no stored
  * copy (migration 020), so it is never here.
  */
-export function createTitlePage(db: DatabaseSync, columns: string, toStored: (row: unknown) => StoredTitle) {
-  const inventory = db.prepare(`
-    SELECT SUM(kind = 'movie') AS movie, SUM(kind = 'tv') AS tv, SUM(origin = 'manual') AS manual,
-      SUM(${EDITED}) AS edited, SUM(enabled = 0) AS disabled,
-      COUNT(*) || ':' || COALESCE(MAX(fetched_at), 0) AS version
-    FROM titles`);
+export function createTitlePage(db: Database, columns: string, toStored: (row: unknown) => Promise<StoredTitle>) {
   return {
-    page(filter: StoredTitleFilter, sort: StoredSort, dir: "asc" | "desc", limit: number, offset: number) {
+    async page(filter: StoredTitleFilter, sort: StoredSort, dir: "asc" | "desc", limit: number, offset: number) {
       const where = whereOf(filter);
-      const total = CountRow.parse(db.prepare(`SELECT COUNT(*) AS n FROM titles ${where.sql}`).get(...where.params)).n;
-      const rows = db
-        .prepare(`SELECT ${columns} FROM titles ${where.sql} ${orderOf(sort, dir)} LIMIT ? OFFSET ?`)
-        .all(...where.params, limit, offset)
-        .map(toStored);
-      return { rows, total };
+      const total = CountRow.parse(
+        (await db.execute({ sql: `SELECT COUNT(*) AS n FROM titles ${where.sql}`, args: where.params })).rows[0],
+      ).n;
+      const rows = (await db.execute({
+        sql: `SELECT ${columns} FROM titles ${where.sql} ${orderOf(sort, dir)} LIMIT ? OFFSET ?`,
+        args: [...where.params, limit, offset],
+      })).rows;
+      return { rows: await Promise.all(rows.map(toStored)), total };
     },
-    inventory(): { counts: TitleInventory; version: string } {
-      const { version, ...counts } = InventoryRow.parse(inventory.get());
+    async inventory(): Promise<{ counts: TitleInventory; version: string }> {
+      const { version, ...counts } = InventoryRow.parse((await db.execute(INVENTORY_SQL)).rows[0]);
       return {
         counts: {
           movie: counts.movie ?? 0, tv: counts.tv ?? 0, manual: counts.manual ?? 0,

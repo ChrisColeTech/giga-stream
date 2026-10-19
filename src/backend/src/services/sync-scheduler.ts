@@ -32,11 +32,11 @@ export function createSyncScheduler(deps: {
   const dueAt = (job: JobRecord, interval: number): number =>
     Math.max(job.lastRunAt === undefined ? 0 : job.lastRunAt + interval, notBefore);
 
-  function next(): { job: JobRecord; at: number } | undefined {
+  async function next(): Promise<{ job: JobRecord; at: number } | undefined> {
     let best: { job: JobRecord; at: number } | undefined;
-    for (const job of store.jobs.list()) {
+    for (const job of await store.jobs.list()) {
       const interval = intervalOf(job.schedule);
-      if (interval === undefined || runner.scheduledRefusal(job) !== undefined || runner.isRunning(job.id)) continue;
+      if (interval === undefined || (await runner.scheduledRefusal(job)) !== undefined || runner.isRunning(job.id)) continue;
       if (job.type === "catalog" && !deps.tmdbConfigured) continue;
       const at = dueAt(job, interval);
       if (best === undefined || at < best.at) best = { job, at };
@@ -44,24 +44,25 @@ export function createSyncScheduler(deps: {
     return best;
   }
 
-  function fire(id: number): void {
-    const job = store.jobs.find(id);
-    const retry = job !== undefined && !stopped && runner.runScheduled(job) === "busy";
+  async function fire(id: number): Promise<void> {
+    const job = await store.jobs.find(id);
+    const retry = job !== undefined && !stopped && (await runner.runScheduled(job)) === "busy";
     arm(retry ? BUSY_RETRY_MS : undefined);
   }
 
   /** Arms the one timer for the earliest due job (or `delayMs` from now), replacing whatever it was waiting for. */
-  function arm(delayMs?: number): void {
+  async function arm(delayMs?: number): Promise<void> {
     if (timer !== undefined) clearTimeout(timer);
     timer = undefined;
     if (stopped) return;
-    const due = next();
+    const due = await next();
     if (due === undefined) return;
-    timer = setTimeout(() => fire(due.job.id), Math.min(Math.max(delayMs ?? due.at - now(), 0), MAX_WAIT_MS));
+    timer = setTimeout(() => void fire(due.job.id), Math.min(Math.max(delayMs ?? due.at - now(), 0), MAX_WAIT_MS));
   }
 
   return {
-    arm: () => arm(),
+    /** Arms for the earliest due job; the promise settles once the timer is set (a test may await it). */
+    arm: (delayMs?: number): Promise<void> => arm(delayMs),
     /** Whether a timer is waiting (a test seam: it says whether anything is armed). */
     armed: (): boolean => timer !== undefined,
     /** Shutdown: no more runs, no timer. */

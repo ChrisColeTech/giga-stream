@@ -12,10 +12,10 @@ const HOME = { kind: "movie", title: "Home Movie", year: 2020, genres: ["Drama"]
 test("every write needs a signed-in admin: 401 without a token, and for the deleted list", async () => {
   const { t } = await titleApp();
   const writes = [
-    ["POST", "/api/titles", HOME],
-    ["PATCH", "/api/titles/movie-603", { plot: "x" }],
-    ["DELETE", "/api/titles/movie-603", undefined],
-    ["POST", "/api/titles/movie-603/revert", undefined],
+    ["POST", "/api/admin/titles", HOME],
+    ["PATCH", "/api/admin/titles/movie-603", { plot: "x" }],
+    ["DELETE", "/api/admin/titles/movie-603", undefined],
+    ["POST", "/api/admin/titles/movie-603/revert", undefined],
   ] as const;
   for (const [method, url, body] of writes) {
     for (const token of [undefined, "not-a-token"]) {
@@ -29,7 +29,7 @@ test("a title made by hand is created, read, edited, cleared and deleted; the re
   const { t, token } = await titleApp();
   const revision = async () => pick((await send(t.app, "GET", "/healthz")).body, "data.revision");
   const before = await revision();
-  const made = await send(t.app, "POST", "/api/titles", { ...HOME, posterUrl: "https://img.example/p.jpg", streamUrl: "https://s.example/a.m3u8" }, token);
+  const made = await send(t.app, "POST", "/api/admin/titles", { ...HOME, posterUrl: "https://img.example/p.jpg", streamUrl: "https://s.example/a.m3u8" }, token);
   assert.equal(made.status, 201);
   const id = String(field(made, "id"));
   assert.match(id, /^custom-[0-9a-f-]{36}$/);
@@ -37,15 +37,15 @@ test("a title made by hand is created, read, edited, cleared and deleted; the re
   const read = await send(t.app, "GET", `/api/titles/${id}`);
   assert.deepEqual([read.status, field(read, "streamUrl"), field(read, "genres"), field(read, "state")], [200, "https://s.example/a.m3u8", ["Drama"], "manual"]);
 
-  const edited = await send(t.app, "PATCH", `/api/titles/${id}`, { title: "Home Movie 2", year: 2021, plot: null, cast: ["Me"], runtimeMs: 5_400_000 }, token);
+  const edited = await send(t.app, "PATCH", `/api/admin/titles/${id}`, { title: "Home Movie 2", year: 2021, plot: null, cast: ["Me"], runtimeMs: 5_400_000 }, token);
   assert.deepEqual(["title", "year", "plot", "cast", "runtimeMs", "state"].map((f) => field(edited, f)), ["Home Movie 2", 2021, undefined, ["Me"], 5_400_000, "manual"]);
   assert.equal(await revision(), before, "titles are not channel data");
 
-  const gone = await send(t.app, "DELETE", `/api/titles/${id}`, undefined, token);
+  const gone = await send(t.app, "DELETE", `/api/admin/titles/${id}`, undefined, token);
   assert.deepEqual([gone.status, gone.body], [200, { ok: true, data: { id } }]);
   assert.equal((await send(t.app, "GET", `/api/titles/${id}`)).status, 404);
-  assert.equal((await send(t.app, "DELETE", `/api/titles/${id}`, undefined, token)).status, 404);
-  const actions = (pick((await send(t.app, "GET", "/api/audit?limit=10", undefined, token)).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
+  assert.equal((await send(t.app, "DELETE", `/api/admin/titles/${id}`, undefined, token)).status, 404);
+  const actions = (pick((await send(t.app, "GET", "/api/admin/audit?limit=10", undefined, token)).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
   assert.deepEqual(actions.slice(0, 3), ["title.deleted", "title.updated", "title.created"]);
 });
 
@@ -54,7 +54,7 @@ test("a bad title is refused with the field named", async () => {
   const { t, token } = h;
   await syncAll(h);
   const refusal = async (body: unknown) => {
-    const answer = await send(t.app, "POST", "/api/titles", body, token);
+    const answer = await send(t.app, "POST", "/api/admin/titles", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   const invalid = (f: string) => [422, "title.invalid", f];
@@ -69,9 +69,9 @@ test("a bad title is refused with the field named", async () => {
   assert.deepEqual(await refusal({ ...HOME, backdropUrl: "ftp://x" }), invalid("backdropUrl"));
   assert.deepEqual(await refusal({ ...HOME, streamUrl: "ftp://s.example/a.m3u8" }), invalid("streamUrl"));
   assert.deepEqual(await refusal({ ...HOME, kind: "tv", seasons: [{ season: 1, episodes: [{ episode: 1, streamUrl: "ftp://s.example/e.m3u8" }] }] }), invalid("seasons"));
-  const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
+  const id = String(field(await send(t.app, "POST", "/api/admin/titles", HOME, token), "id"));
   const patch = async (target: string, body: unknown) => {
-    const answer = await send(t.app, "PATCH", `/api/titles/${target}`, body, token);
+    const answer = await send(t.app, "PATCH", `/api/admin/titles/${target}`, body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   assert.deepEqual(await patch(id, { kind: "tv" }), invalid("kind"));
@@ -83,11 +83,11 @@ test("a bad title is refused with the field named", async () => {
 
 test("a manual series carries its seasons; a manual title with a TMDB id gets provider sources, one without does not", async () => {
   const { t, token } = await titleApp();
-  await send(t.app, "POST", "/api/providers", {
+  await send(t.app, "POST", "/api/admin/providers", {
     name: "First", source: "first", order: 1, family: "embed",
     movieTemplate: "https://first.example/movie/{tmdbId}", episodeTemplate: "https://first.example/tv/{tmdbId}/{season}/{episode}",
   }, token);
-  const series = await send(t.app, "POST", "/api/titles", {
+  const series = await send(t.app, "POST", "/api/admin/titles", {
     kind: "tv", title: "Home Show", tmdbId: 1399,
     seasons: [{ season: 1, episodes: [{ episode: 1, title: "Pilot", runtimeMs: 60_000 }, { episode: 2 }] }],
   }, token);
@@ -98,19 +98,19 @@ test("a manual series carries its seasons; a manual title with a TMDB id gets pr
   assert.deepEqual((await send(t.app, "GET", `/api/titles/${id}/seasons/9`)).body, { ok: true, data: { episodes: [] } });
   assert.deepEqual((await send(t.app, "GET", `/api/titles/${id}/recommendations`)).body, { ok: true, data: { items: [] } });
 
-  const withId = String(field(await send(t.app, "POST", "/api/titles", { kind: "movie", title: "With", tmdbId: 603 }, token), "id"));
-  const without = String(field(await send(t.app, "POST", "/api/titles", { kind: "movie", title: "Without", streamUrl: "https://s.example/w.m3u8" }, token), "id"));
+  const withId = String(field(await send(t.app, "POST", "/api/admin/titles", { kind: "movie", title: "With", tmdbId: 603 }, token), "id"));
+  const without = String(field(await send(t.app, "POST", "/api/admin/titles", { kind: "movie", title: "Without", streamUrl: "https://s.example/w.m3u8" }, token), "id"));
   assert.equal(pick((await send(t.app, "GET", `/api/titles/${withId}`)).body, "data.sources.0.url"), "https://first.example/movie/603");
   const plain = await send(t.app, "GET", `/api/titles/${without}`);
   assert.deepEqual([pick(plain.body, "data.sources"), pick(plain.body, "data.streamUrl")], [undefined, "https://s.example/w.m3u8"]);
-  const gained = await send(t.app, "PATCH", `/api/titles/${without}`, { tmdbId: 603 }, token);
+  const gained = await send(t.app, "PATCH", `/api/admin/titles/${without}`, { tmdbId: 603 }, token);
   assert.equal(field(gained, "tmdbId"), 603);
   assert.equal(pick((await send(t.app, "GET", `/api/titles/${without}`)).body, "data.sources.0.url"), "https://first.example/movie/603");
 });
 
 test("without TMDB the store still answers: a title made by hand reads and the public browse and search routes are gone", async () => {
   const { t, token } = await titleApp({ tmdb: false });
-  const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
+  const id = String(field(await send(t.app, "POST", "/api/admin/titles", HOME, token), "id"));
   assert.equal(field(await send(t.app, "GET", `/api/titles/${id}`), "title"), "Home Movie");
   for (const url of ["/api/titles?kind=movie&sort=newest", "/api/titles/search?kind=movie&q=home"]) {
     const gone = await send(t.app, "GET", url);
@@ -122,40 +122,40 @@ test("every item carries its state: synced, edited or manual", async () => {
   const h = await titleApp();
   const { t, token } = h;
   await syncAll(h);
-  await send(t.app, "POST", "/api/titles", HOME, token);
+  await send(t.app, "POST", "/api/admin/titles", HOME, token);
   const states = async () =>
-    itemsOf((await send(t.app, "GET", "/api/titles/stored?kind=movie&sort=title", undefined, token)).body).map((i) => [i.title, i.state]);
+    itemsOf((await send(t.app, "GET", "/api/admin/titles/stored?kind=movie&sort=title", undefined, token)).body).map((i) => [i.title, i.state]);
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "synced"]]);
-  await send(t.app, "PATCH", "/api/titles/movie-603", { plot: "Mine" }, token);
+  await send(t.app, "PATCH", "/api/admin/titles/movie-603", { plot: "Mine" }, token);
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "edited"]]);
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603"), "state"), "edited");
-  const revert = await send(t.app, "POST", "/api/titles/movie-603/revert", undefined, token);
+  const revert = await send(t.app, "POST", "/api/admin/titles/movie-603/revert", undefined, token);
   assert.equal(field(revert, "state"), "synced");
   assert.deepEqual(await states(), [["Home Movie", "manual"], ["The Matrix", "synced"]]);
 });
 
 test("revert has nothing to go back to for a title made by hand, and a missing title is 404", async () => {
   const { t, token } = await titleApp();
-  const id = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
-  const refused = await send(t.app, "POST", `/api/titles/${id}/revert`, undefined, token);
+  const id = String(field(await send(t.app, "POST", "/api/admin/titles", HOME, token), "id"));
+  const refused = await send(t.app, "POST", `/api/admin/titles/${id}/revert`, undefined, token);
   assert.deepEqual([refused.status, pick(refused.body, "error.code")], [409, "title.manual"]);
-  assert.equal((await send(t.app, "POST", "/api/titles/movie-999/revert", undefined, token)).status, 404);
+  assert.equal((await send(t.app, "POST", "/api/admin/titles/movie-999/revert", undefined, token)).status, 404);
 });
 
 test("enabled is a field of the title: a disabled title leaves the public reads, and an admin's read keeps it", async () => {
   const h = await titleApp();
   const { t, token } = h;
   await syncAll(h);
-  const manual = String(field(await send(t.app, "POST", "/api/titles", HOME, token), "id"));
+  const manual = String(field(await send(t.app, "POST", "/api/admin/titles", HOME, token), "id"));
   assert.equal(field(await send(t.app, "GET", `/api/titles/${manual}?includeDisabled=true`, undefined, token), "enabled"), true);
   await send(t.app, "GET", "/api/titles/movie-603");
   for (const id of ["movie-603", manual]) {
-    const off = await send(t.app, "PATCH", `/api/titles/${id}`, { enabled: false }, token);
+    const off = await send(t.app, "PATCH", `/api/admin/titles/${id}`, { enabled: false }, token);
     assert.deepEqual([off.status, field(off, "enabled"), field(off, "state")], [200, false, id === manual ? "manual" : "synced"], "enabled is not an edit");
   }
   const catalog = itemsOf((await send(t.app, "GET", "/api/titles/catalog")).body).map((i) => i.id);
   assert.deepEqual(catalog, ["tv-1399"], "the public catalog leaves the disabled titles out");
-  const stored = itemsOf((await send(t.app, "GET", "/api/titles/stored?kind=movie", undefined, token)).body);
+  const stored = itemsOf((await send(t.app, "GET", "/api/admin/titles/stored?kind=movie", undefined, token)).body);
   assert.deepEqual(stored.map((i) => [i.title, i.enabled]), [["Home Movie", false], ["The Matrix", false]], "the admin's list keeps them");
   for (const id of ["movie-603", manual]) {
     assert.equal((await send(t.app, "GET", `/api/titles/${id}`)).status, 404, id);
@@ -166,7 +166,7 @@ test("enabled is a field of the title: a disabled title leaves the public reads,
   await later(h, FOUR_DAYS_MS);
   await syncAll(h);
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603?includeDisabled=true", undefined, await later(h, 0)), "enabled"), false);
-  await send(t.app, "PATCH", "/api/titles/movie-603", { enabled: true }, await later(h, 0));
+  await send(t.app, "PATCH", "/api/admin/titles/movie-603", { enabled: true }, await later(h, 0));
   assert.equal(field(await send(t.app, "GET", "/api/titles/movie-603"), "title"), "The Matrix");
   assert.equal(pick((await send(t.app, "GET", "/api/titles/movie-603")).body, "data.enabled"), undefined, "no enabled on a public answer");
 });

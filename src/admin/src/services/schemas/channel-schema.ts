@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AdminChannel } from "@/types/admin-channel";
 
-/* `GET /api/admin-channels` (`29` section 5). A live and a stream row share the base and differ by `kind`. A `number` the backend
+/* `GET /api/admin/channels` (`29` section 5). A live and a stream row share the base and differ by `kind`. A `number` the backend
  * still sends for an old channel is ignored (owner, 2026-10-17). */
 const base = {
   id: z.string(),
@@ -59,7 +59,7 @@ export interface ChannelList {
   readonly unreadable: number;
 }
 
-/** One PAGE of the list (`GET /api/admin-channels?limit=...`, `41` section 3.1): `total` counts the rows after the
+/** One PAGE of the list (`GET /api/admin/channels?limit=...`, `41` section 3.1): `total` counts the rows after the
  *  filters, before `limit`. Rows stay `unknown`, parsed one by one like the whole list's. */
 export const ChannelPageLenientSchema = z.object({
   items: z.array(z.unknown()),

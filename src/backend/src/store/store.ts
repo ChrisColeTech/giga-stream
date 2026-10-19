@@ -1,10 +1,10 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { Transaction } from "@libsql/client";
 
 import { createAccountRepository } from "./account-repository.js";
 import { createAuditRepository } from "./audit-repository.js";
 import { createChannelHealth } from "./channel-health.js";
 import { createChannelRepository } from "./channel-repository.js";
-import { openDatabase, runInTransaction } from "./database.js";
+import { openDatabase, runInTransaction, type Database } from "./database.js";
 import { createDeletedTitleRepository } from "./deleted-title-repository.js";
 import { createJobRepository } from "./job-repository.js";
 import { migrate } from "./migrate.js";
@@ -15,11 +15,14 @@ import { createRevisionRepository } from "./revision-repository.js";
 import { createTitleRepository } from "./title-repository.js";
 import { createUiStateRepository } from "./ui-state-repository.js";
 
-/** The store composition root: opens and migrates the one database, and hands out its repositories. */
-export function createStore(file: string) {
-  const db: DatabaseSync = openDatabase(file);
+/**
+ * The store composition root: opens and migrates the one database, and hands out its repositories. The read is the
+ * startup's async init: the migrations have run before the first request is answered.
+ */
+export async function createStore(file: string) {
+  const db: Database = await openDatabase(file);
   try {
-    migrate(db);
+    await migrate(db);
   } catch (error) {
     db.close();
     throw error;
@@ -37,9 +40,9 @@ export function createStore(file: string) {
     refreshTokens: createRefreshTokenRepository(db),
     audit: createAuditRepository(db),
     uiState: createUiStateRepository(db),
-    transaction: <T>(work: () => T): T => runInTransaction(db, work),
+    transaction: <T>(work: (txn: Transaction) => Promise<T>): Promise<T> => runInTransaction(db, work),
     close: (): void => db.close(),
   };
 }
 
-export type Store = ReturnType<typeof createStore>;
+export type Store = Awaited<ReturnType<typeof createStore>>;

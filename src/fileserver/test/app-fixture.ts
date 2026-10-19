@@ -52,6 +52,8 @@ export async function makeApp(
     clock?: ReturnType<typeof testClock>;
     webDist?: string;
     scan?: FolderScanner;
+    /** The admin backend the reverse proxy points at (test/admin-proxy.test.ts); unset leaves it off. */
+    adminProxyTarget?: string;
   } = {},
 ): Promise<FileserverApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-fileserver-test-"));
@@ -63,6 +65,7 @@ export async function makeApp(
     syncOnStart: options.syncOnStart ?? false,
     ...(options.adminFetch !== undefined && { adminFetch: options.adminFetch }),
     ...(options.webDist !== undefined && { webDist: options.webDist }),
+    ...(options.adminProxyTarget !== undefined && { adminProxyTarget: options.adminProxyTarget }),
     // No test probes real files through the app: the stand-in scanner never spawns ffprobe (see fake-scan.ts).
     scan: options.scan ?? fakeScan,
   });
@@ -197,12 +200,7 @@ export interface Answer {
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
-export async function send(
-  app: FastifyInstance,
-  method: Method,
-  url: string,
-  body?: unknown,
-): Promise<Answer> {
+export async function send(app: FastifyInstance, method: Method, url: string, body?: unknown): Promise<Answer> {
   const reply = await app.inject({
     method,
     url,
@@ -224,7 +222,7 @@ export function pick(value: unknown, dotted: string): unknown {
 
 /** A sign-in against the real backend and the session's access token. */
 export async function backendToken(backendUrl: string): Promise<string> {
-  const response = await fetch(`${backendUrl}/api/auth/login`, {
+  const response = await fetch(`${backendUrl}/api/admin/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ username: OWNER_USERNAME, password: OWNER_PASSWORD }),

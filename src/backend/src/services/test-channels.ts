@@ -50,16 +50,24 @@ function isLegacyTestRow(record: ChannelRecord | undefined, id: string): boolean
  * port; each such legacy row (and only it) becomes the live row, keeping its id. A non-empty table gains no
  * new channels, and a row that is already live, was edited, or is shaped otherwise is never touched.
  */
-export function seedTestChannels(channels: ChannelService, fixtureDir: string): { created: number; repaired: number } {
-  const empty = channels.isEmpty();
-  const repairs = empty ? [] : TEST_CHANNELS.filter((c) => isLegacyTestRow(channels.peek(c.id), c.id));
+export async function seedTestChannels(
+  channels: ChannelService,
+  fixtureDir: string,
+): Promise<{ created: number; repaired: number }> {
+  const empty = await channels.isEmpty();
+  const repairs: Array<(typeof TEST_CHANNELS)[number]> = [];
+  if (!empty) {
+    for (const c of TEST_CHANNELS) {
+      if (isLegacyTestRow(await channels.peek(c.id), c.id)) repairs.push(c);
+    }
+  }
   if (!empty && repairs.length === 0) return { created: 0, repaired: 0 };
   const missing = TEST_CHANNELS.flatMap((c) => fixtureVideos(fixtureDir, c.id)).find((file) => !existsSync(file));
   if (missing !== undefined) throw new Error(`${SEED_NEEDS_FIXTURES} (${missing} is missing)`);
   if (empty) {
-    for (const c of TEST_CHANNELS) channels.create(liveInput(c, fixtureDir), SEED_ACTOR, "");
+    for (const c of TEST_CHANNELS) await channels.create(liveInput(c, fixtureDir), SEED_ACTOR, "");
     return { created: TEST_CHANNELS.length, repaired: 0 };
   }
-  for (const c of repairs) channels.replaceStreamWithLive(liveInput(c, fixtureDir), SEED_ACTOR);
+  for (const c of repairs) await channels.replaceStreamWithLive(liveInput(c, fixtureDir), SEED_ACTOR);
   return { created: 0, repaired: repairs.length };
 }

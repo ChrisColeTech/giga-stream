@@ -14,7 +14,7 @@ import {
   type FlowResult,
 } from "./account-flow-support";
 
-/** Set a new password on an account (`35` decision 6): always `PATCH /api/admin-accounts/:id { password }`, which revokes
+/** Set a new password on an account (`35` decision 6): always `PATCH /api/admin/accounts/:id { password }`, which revokes
  *  that account's sessions. On the signed-in account the token is already dead, so the session ends locally with the gate's
  *  `Password changed. Sign in again.` and no logout call is made. On failure the field is not cleared (the caller keeps it).
  *  The password goes to the service and nowhere else. */

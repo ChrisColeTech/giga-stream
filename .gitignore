@@ -7,8 +7,14 @@ build/
 out/
 release/
 
+# The admin console staged into the backend by scripts/build.sh (a build artifact)
+src/backend/public/
+
 # Secrets, never committed
 docs/tmdb_apiKey.txt
+docs/secrets.env
+src/secrets.env
+production.env
 .secrets/
 .env
 .env.*

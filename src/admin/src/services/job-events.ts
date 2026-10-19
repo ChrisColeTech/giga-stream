@@ -8,7 +8,7 @@ import type { SessionApi } from "./session-api";
 import { createSseParser, type SseFrame } from "./sse-parser";
 
 /** The route (`44` section 3.3): one read-only stream of server-sent events, signed in, authorized at connect. */
-export const JOB_EVENTS_PATH = "/api/jobs/events";
+export const JOB_EVENTS_PATH = "/api/admin/jobs/events";
 
 /** The part of the store the stream writes; `useAppStore.getState` satisfies it, a test passes the same. */
 export type JobEventsStore = Pick<

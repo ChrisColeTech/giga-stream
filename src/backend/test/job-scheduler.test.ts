@@ -21,7 +21,7 @@ test("a playlist job runs by schedule once due, and every change to its switches
     s.t.clock.advance(ms);
     token = (await signIn(s.t.app)).access;
   };
-  const job = async () => (pick((await api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>).find((j) => j.type === "playlist") ?? {};
+  const job = async () => (pick((await api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>).find((j) => j.type === "playlist") ?? {};
   const id = Number((await job()).id);
   const stays = async (what: string) => {
     await nap(250);
@@ -32,30 +32,30 @@ test("a playlist job runs by schedule once due, and every change to its switches
   assert.equal(s.feed.asked.length, 1, "only the import has fetched: nothing runs during boot");
 
   await later(FIRST_RUN_GRACE_MS + 1);
-  await api("PATCH", `/api/jobs/${id}`, { schedule: "15m" });
+  await api("PATCH", `/api/admin/jobs/${id}`, { schedule: "15m" });
   await until(async () => (await job()).lastResult === "ok", "the first scheduled run");
   assert.equal(s.feed.asked.length, 2);
   assert.equal((await job()).lastRunAt, s.t.clock.now());
 
   await later(16 * 60_000);
-  await api("PATCH", `/api/jobs/${id}`, { enabled: false });
+  await api("PATCH", `/api/admin/jobs/${id}`, { enabled: false });
   await stays("a disabled job is not scheduled");
   const idle = s.feed.asked.length;
-  await api("PATCH", `/api/jobs/${id}`, { enabled: true });
+  await api("PATCH", `/api/admin/jobs/${id}`, { enabled: true });
   await until(() => s.feed.asked.length > idle, "enabling re-arms");
 
   await later(16 * 60_000);
-  await api("PATCH", `/api/jobs/${id}`, { schedule: "off" });
+  await api("PATCH", `/api/admin/jobs/${id}`, { schedule: "off" });
   await stays("an off schedule is not scheduled");
   const off = s.feed.asked.length;
-  await api("PATCH", `/api/jobs/${id}`, { schedule: "15m" });
+  await api("PATCH", `/api/admin/jobs/${id}`, { schedule: "15m" });
   await until(() => s.feed.asked.length > off, "a schedule re-arms");
 
   await later(16 * 60_000);
-  await api("PATCH", "/api/playlists/1", { enabled: false });
+  await api("PATCH", "/api/admin/playlists/1", { enabled: false });
   await stays("a disabled playlist is not scheduled");
   const paused = s.feed.asked.length;
-  await api("PATCH", "/api/playlists/1", { enabled: true });
+  await api("PATCH", "/api/admin/playlists/1", { enabled: true });
   await until(() => s.feed.asked.length > paused, "enabling the playlist re-arms");
 });
 
@@ -64,10 +64,10 @@ test("a long run does not hold up the timer: another job runs while the first is
   await s.importUrl(ONE);
   s.feed.set("https://other.example/all.m3u", "#EXTM3U");
   await s.importUrl("https://other.example/all.m3u");
-  const jobs = async () => (pick((await s.api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>).filter((j) => j.type === "playlist");
+  const jobs = async () => (pick((await s.api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>).filter((j) => j.type === "playlist");
   const gate = s.feed.hold(ONE);
   s.t.clock.advance(FIRST_RUN_GRACE_MS + 1);
-  await s.api("PATCH", `/api/jobs/${(await jobs())[0]?.id}`, { schedule: "15m" });
+  await s.api("PATCH", `/api/admin/jobs/${(await jobs())[0]?.id}`, { schedule: "15m" });
   await gate.started;
   await until(async () => (await jobs())[1]?.lastResult === "ok", "the second job, while the first is held");
   assert.equal((await jobs())[0]?.running, true);
@@ -80,27 +80,27 @@ test("a catalog job is scheduled only when TMDB has a token; turning it off leav
   const idle = await makeApp();
   const idleToken = (await signIn(idle.app)).access;
   idle.clock.advance(FIRST_RUN_GRACE_MS + 1);
-  await send(idle.app, "PATCH", "/api/jobs/1", { enabled: true, schedule: "150ms" }, idleToken);
+  await send(idle.app, "PATCH", "/api/admin/jobs/1", { enabled: true, schedule: "150ms" }, idleToken);
   await nap(450);
-  assert.equal(pick((await send(idle.app, "GET", "/api/jobs/1", undefined, idleToken)).body, "data.lastRunAt"), undefined, "no token: never scheduled");
+  assert.equal(pick((await send(idle.app, "GET", "/api/admin/jobs/1", undefined, idleToken)).body, "data.lastRunAt"), undefined, "no token: never scheduled");
 
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
-  await send(t.app, "PATCH", "/api/jobs/2", { schedule: "off" }, token); // the seeded Library update would start too (docs/49)
+  await send(t.app, "PATCH", "/api/admin/jobs/2", { schedule: "off" }, token); // the seeded Library update would start too (docs/49)
   t.clock.advance(FIRST_RUN_GRACE_MS + 1);
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, schedule: "150ms", config: { pages: 1 } }, token);
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: true, schedule: "150ms", config: { pages: 1 } }, token);
   await until(() => tmdb.calls.includes("/discover/movie") && tmdb.calls.includes("/discover/tv"), "the scheduled catalog run");
-  assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.schedule"), "150ms");
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: false }, token);
-  await until(async () => pick((await send(t.app, "GET", "/api/jobs/1", undefined, token)).body, "data.running") === false, "the run in flight");
+  assert.equal(pick((await send(t.app, "GET", "/api/admin/titles/sync", undefined, token)).body, "data.schedule"), "150ms");
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: false }, token);
+  await until(async () => pick((await send(t.app, "GET", "/api/admin/jobs/1", undefined, token)).body, "data.running") === false, "the run in flight");
   await nap(150);
   const stopped = tmdb.calls.length;
   await nap(450);
   assert.equal(tmdb.calls.length, stopped, "off clears the timer");
-  assert.equal(pick((await send(t.app, "GET", "/api/titles/sync", undefined, token)).body, "data.schedule"), "off");
+  assert.equal(pick((await send(t.app, "GET", "/api/admin/titles/sync", undefined, token)).body, "data.schedule"), "off");
   tmdb.calls.length = 0;
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, schedule: "off" }, token);
-  const started = await send(t.app, "POST", "/api/titles/sync", undefined, token);
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: true, schedule: "off" }, token);
+  const started = await send(t.app, "POST", "/api/admin/titles/sync", undefined, token);
   assert.equal(started.status, 202);
   await until(() => tmdb.calls.includes("/discover/movie"), "the manual sync's TMDB call");
 });
@@ -109,21 +109,21 @@ test("the sync status is the most recent run, whether a job or a manual start ma
   const tmdb = await mutableTmdb();
   const t = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
-  const status = async () => (await send(t.app, "GET", "/api/titles/sync", undefined, token)).body;
+  const status = async () => (await send(t.app, "GET", "/api/admin/titles/sync", undefined, token)).body;
   const settled = () => until(async () => pick(await status(), "data.running") === false, "the sync to end");
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, token);
-  await send(t.app, "POST", "/api/jobs/1/run", {}, token);
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: true, config: { pages: 1 } }, token);
+  await send(t.app, "POST", "/api/admin/jobs/1/run", {}, token);
   await until(async () => pick(await status(), "data.lastOutcome") === "ok", "the job's run");
   await settled();
-  assert.equal(pick((await send(t.app, "GET", "/api/jobs/1", undefined, token)).body, "data.lastResult"), "ok");
+  assert.equal(pick((await send(t.app, "GET", "/api/admin/jobs/1", undefined, token)).body, "data.lastResult"), "ok");
 
   // A manual start that fails (TMDB cannot be reached) replaces the job's "ok" in the status, and is reported running.
   tmdb.fail(true);
-  const started = await send(t.app, "POST", "/api/titles/sync", undefined, token);
+  const started = await send(t.app, "POST", "/api/admin/titles/sync", undefined, token);
   assert.deepEqual([started.status, pick(started.body, "data.running")], [202, true]);
   await settled();
   const after = await status();
   assert.equal(pick(after, "data.lastOutcome"), "tmdb.unavailable", "the manual run's outcome, not the job's");
   assert.equal(typeof pick(after, "data.lastRunAt"), "number");
-  assert.deepEqual(pick((await send(t.app, "GET", "/api/jobs/1", undefined, token)).body, "data.lastCounts"), { code: "tmdb.unavailable" });
+  assert.deepEqual(pick((await send(t.app, "GET", "/api/admin/jobs/1", undefined, token)).body, "data.lastCounts"), { code: "tmdb.unavailable" });
 });

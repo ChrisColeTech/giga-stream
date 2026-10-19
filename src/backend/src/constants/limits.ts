@@ -112,7 +112,7 @@ export const DATABASE_BUSY_TIMEOUT_MS = 5000;
 /** Same-phase `done` increments of one job reach the stream at most this often a second. */
 export const PROGRESS_EVENTS_PER_SECOND = 4;
 export const PROGRESS_MIN_GAP_MS = 1000 / PROGRESS_EVENTS_PER_SECOND;
-/** Open `GET /api/jobs/events` streams; the next one is refused. */
+/** Open `GET /api/admin/jobs/events` streams; the next one is refused. */
 export const EVENT_SUBSCRIBERS_MAX = 8;
 /** The share of a playlist run's bar that the logo phase fills; the stream check fills the rest. */
 export const PLAYLIST_LOGOS_SHARE = 0.2;

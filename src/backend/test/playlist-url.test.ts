@@ -11,7 +11,7 @@ const SECRETS = ["SECRET-VALUE", "ANOTHER-SECRET", "token=", "key=", "lists/us"]
 test("importing needs a signed-in admin", async () => {
   const { t } = await setupPlaylists();
   for (const token of [undefined, "not-a-token"]) {
-    const answer = await send(t.app, "POST", "/api/playlists", { url: ONE }, token);
+    const answer = await send(t.app, "POST", "/api/admin/playlists", { url: ONE }, token);
     assert.deepEqual([answer.status, pick(answer.body, "error.code")], [401, "auth.unauthorized"]);
   }
 });
@@ -19,7 +19,7 @@ test("importing needs a signed-in admin", async () => {
 test("an address is fetched once and becomes a playlist with disabled channels and a job; only the playlist reads show the address", async () => {
   const { api, feed, adminChannels, revision, audit } = await setupPlaylists();
   const before = await revision();
-  const made = await api("POST", "/api/playlists", { url: ONE });
+  const made = await api("POST", "/api/admin/playlists", { url: ONE });
   assert.equal(made.status, 201);
   assert.deepEqual(
     ["name", "kind", "url", "host", "fileName", "created", "masked"].map((f) => pick(made.body, `data.${f}`)),
@@ -29,9 +29,9 @@ test("an address is fetched once and becomes a playlist with disabled channels a
   assert.deepEqual(feed.asked, [ONE], "one fetch");
   assert.equal(await revision(), before + 1);
   assert.deepEqual((await adminChannels()).map((r) => [r.name, r.enabled, r.source]), [["ABC", false, "cdn.example"], ["ESPN", false, "cdn.example"]]);
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.0.url"), ONE, "the list shows the address in full");
-  assert.equal(pick((await api("GET", "/api/playlists/1")).body, "data.url"), ONE, "so does a read");
-  const reads = [pick(made.body, "data.imported"), (await api("GET", "/api/jobs")).body, await audit(), await adminChannels()];
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.0.url"), ONE, "the list shows the address in full");
+  assert.equal(pick((await api("GET", "/api/admin/playlists/1")).body, "data.url"), ONE, "so does a read");
+  const reads = [pick(made.body, "data.imported"), (await api("GET", "/api/admin/jobs")).body, await audit(), await adminChannels()];
   const text = JSON.stringify(reads);
   for (const secret of SECRETS) assert.equal(text.includes(secret), false, secret);
   assert.deepEqual(pick(await audit(), "0.detail.source"), "cdn.example");
@@ -51,16 +51,16 @@ test("a typed name is kept and is 409 when held, ignoring case; a derived name t
   assert.deepEqual([derived.status, pick(derived.body, "data.name")], [201, "all (2)"], "a derived clash is suffixed");
   feed.set("https://host-only.example/", M3U);
   assert.equal(pick(await importUrl("https://host-only.example/"), "body.data.name"), "host-only.example", "no path: the host");
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 4);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 4);
 });
 
 test("an address that breaks the rule is 422 on url; unknown fields are refused", async () => {
   const { api, feed } = await setupPlaylists();
   for (const url of ["ftp://x/a", "not a url", "https://user:pw@cdn.example/a.m3u", "http://user@cdn.example/a.m3u", "file:///a.m3u"]) {
-    const refused = await api("POST", "/api/playlists", { url });
+    const refused = await api("POST", "/api/admin/playlists", { url });
     assert.deepEqual([refused.status, pick(refused.body, "error.code"), pick(refused.body, "error.details.field")], [422, "playlist.invalid", "url"], url);
   }
-  assert.equal((await api("POST", "/api/playlists", { url: ONE, colour: "red" })).status, 422);
+  assert.equal((await api("POST", "/api/admin/playlists", { url: ONE, colour: "red" })).status, 422);
   assert.deepEqual(feed.asked, [], "nothing was fetched");
 });
 
@@ -82,8 +82,8 @@ test("a fetch that fails, a body that is no playlist, or an address the guard re
   feed.set(ONE, "<html>not a playlist</html>");
   assert.deepEqual([(await importUrl(ONE)).status, (await importUrl(ONE)).status], [422, 422]);
   assert.equal(pick((await importUrl("https://gone.example/none.m3u")).body, "error.code"), "playlist.unreachable", "a 404");
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 0);
-  assert.equal(pick((await api("GET", "/api/jobs")).body, "data.items.length"), 2, "only the seeded catalog jobs (fill, update)");
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 0);
+  assert.equal(pick((await api("GET", "/api/admin/jobs")).body, "data.items.length"), 2, "only the seeded catalog jobs (fill, update)");
   assert.equal(await revision(), before);
 });
 
@@ -92,5 +92,5 @@ test("two imports of one address at once: one wins, the other is 409 playlist.ta
   const [a, b] = await Promise.all([importUrl(ONE), importUrl(ONE)]);
   assert.deepEqual([a.status, b.status].sort(), [201, 409]);
   assert.equal(pick(([a, b].find((x) => x.status === 409))?.body, "error.code"), "playlist.taken");
-  assert.equal(pick((await api("GET", "/api/admin-channels")).body, "data.items.length"), 2, "one set of channels");
+  assert.equal(pick((await api("GET", "/api/admin/channels")).body, "data.items.length"), 2, "one set of channels");
 });

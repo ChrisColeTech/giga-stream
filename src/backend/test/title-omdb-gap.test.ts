@@ -10,7 +10,7 @@ import { fillApp, walkTmdb, type FillApp } from "./walk-kit.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const run = async (f: FillApp): Promise<Record<string, unknown>> => {
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   return f.job();
 };
@@ -30,7 +30,7 @@ test("a title with no gap makes no OMDb call, gets no block and is not marked fa
   const job = await run(f);
   assert.deepEqual([job.lastResult, pick(job, "lastCounts.detailed"), enriched(job)], ["ok", 4, 0]);
   assert.deepEqual(omdb.calls, []);
-  assert.deepEqual([await read(f, "movie-1010", "omdb"), column(f.t, "movie-1010", "omdb_failed_at")], [undefined, null]);
+  assert.deepEqual([await read(f, "movie-1010", "omdb"), await column(f.t, "movie-1010", "omdb_failed_at")], [undefined, null]);
   await run(f);
   assert.deepEqual(omdb.calls, [], "and the next run does not queue it for OMDb alone");
 });
@@ -64,7 +64,7 @@ test("an imdbRating of 'N/A' fills nothing, is no failure, and the title is not 
   omdb.state.answer = { imdbRating: "N/A" };
   const job = await run(f);
   assert.deepEqual([job.lastResult, enriched(job), omdb.calls], ["ok", 0, ["tt1010"]]);
-  assert.deepEqual([await read(f, "movie-1010", "rating"), column(f.t, "movie-1010", "omdb_failed_at")], [undefined, null]);
+  assert.deepEqual([await read(f, "movie-1010", "rating"), await column(f.t, "movie-1010", "omdb_failed_at")], [undefined, null]);
   assert.equal(typeof (await read(f, "movie-1010", "omdb.fetchedAt")), "number");
   await run(f);
   assert.equal(omdb.calls.length, 1);
@@ -79,12 +79,12 @@ test("a rating gap is filled from imdbRating", async () => {
 test("a nulled field reads back as absent or empty, never as a missing title", async () => {
   const { f } = await setup([]);
   await run(f);
-  const patch = await f.api("PATCH", "/api/titles/movie-1010", { genres: null, plot: null, rating: null });
+  const patch = await f.api("PATCH", "/api/admin/titles/movie-1010", { genres: null, plot: null, rating: null });
   assert.equal(patch.status, 200);
   const shown = await f.api("GET", "/api/titles/movie-1010");
   assert.equal(shown.status, 200);
   assert.deepEqual(["genres", "plot", "rating", "title"].map((k) => pick(shown.body, `data.${k}`)), [[], undefined, undefined, "movie 1010"]);
-  const stored = await f.api("GET", "/api/titles/stored?limit=10");
+  const stored = await f.api("GET", "/api/admin/titles/stored?limit=10");
   assert.equal(stored.status, 200);
 });
 
@@ -92,7 +92,7 @@ test("an admin-edited field is untouched: emptied genres stay empty while the em
   const { omdb, f } = await setup([[1010, ["overview"]]]);
   omdb.state.limitAfter = 0; // the first run: OMDb refuses, the gap stays
   assert.equal(enriched(await run(f)), 0);
-  assert.equal((await f.api("PATCH", "/api/titles/movie-1010", { genres: [] })).status, 200);
+  assert.equal((await f.api("PATCH", "/api/admin/titles/movie-1010", { genres: [] })).status, 200);
   omdb.state.limitAfter = undefined;
   f.t.clock.advance(DAY_MS + 60_000);
   await f.renew();

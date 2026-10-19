@@ -30,32 +30,37 @@ export function createChannelService(deps: {
   const { store, audit, live, now } = deps;
 
   /** One audit line about a channel, named: the log shows the channel's name, not only its id (docs/29 B5). */
-  const named = (actor: Actor, action: string, id: string, name: string, detail: Record<string, unknown> = {}): void =>
-    audit.record(actor, { action, subject: id, detail: { name, ...detail } });
+  const named = async (
+    actor: Actor,
+    action: string,
+    id: string,
+    name: string,
+    detail: Record<string, unknown> = {},
+  ): Promise<void> => audit.record(actor, { action, subject: id, detail: { name, ...detail } });
 
-  function existing(id: string): ChannelRecord {
-    const found = store.channels.find(id);
+  async function existing(id: string): Promise<ChannelRecord> {
+    const found = await store.channels.find(id);
     if (!found) throw new AppError(ERRORS.channelNotFound);
     return found;
   }
 
-  function existingLive(id: string): LiveRecord {
-    const found = existing(id);
+  async function existingLive(id: string): Promise<LiveRecord> {
+    const found = await existing(id);
     if (found.kind !== "live") throw invalid("kind", "That is a stream channel; this applies to live channels only.");
     return found;
   }
 
   /** A live number is unique among live rows. */
-  function claimNumber(record: LiveRecord): void {
-    const holder = record.number === null ? undefined : store.channels.liveNumberHolder(record.number);
+  async function claimNumber(record: LiveRecord): Promise<void> {
+    const holder = record.number === null ? undefined : await store.channels.liveNumberHolder(record.number);
     if (holder !== undefined && holder !== record.id) throw new AppError(ERRORS.channelTaken, { field: "number", holder });
   }
 
-  function createRecord(input: ChannelInput): ChannelRecord {
+  async function createRecord(input: ChannelInput): Promise<ChannelRecord> {
     if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`);
     const record = newLiveRecord({ ...input, id: input.id ?? `live-${randomUUID()}` }); // none sent: assigned, docs/36
-    if (store.channels.find(record.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
-    claimNumber(record);
+    if (await store.channels.find(record.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
+    await claimNumber(record);
     checkLiveSource(record.live);
     return record;
   }
@@ -65,13 +70,13 @@ export function createChannelService(deps: {
     ...createChannelVerdict({ store, audit, live, now }),
 
     /** The public read: a channel that is not published (itself or its playlist disabled) is not in it (docs/43 3.1). */
-    list: (base: string): ChannelList => ({
-      items: store.channels.list().filter((record) => record.published).map((record) => publicChannel(record, base)),
-      revision: store.revisions.current(),
+    list: async (base: string): Promise<ChannelList> => ({
+      items: (await store.channels.list()).filter((record) => record.published).map((record) => publicChannel(record, base)),
+      revision: await store.revisions.current(),
     }),
 
-    get(id: string, base: string): BackendChannel {
-      const record = existing(id);
+    get: async (id: string, base: string): Promise<BackendChannel> => {
+      const record = await existing(id);
       if (!record.published) throw new AppError(ERRORS.channelNotFound);
       return publicChannel(record, base);
     },
@@ -80,19 +85,20 @@ export function createChannelService(deps: {
     listAdmin: (base: string, query?: AdminChannelQuery) => adminChannels(store, live, base, query),
 
     /** The admin view of ONE row, by the list's own view code (docs/36 section 8.2): the Preview reads one channel. */
-    getAdmin: (id: string, base: string): AdminChannel => adminChannel(existing(id), base, live),
+    getAdmin: async (id: string, base: string): Promise<AdminChannel> => adminChannel(await existing(id), base, live),
 
-    create(input: ChannelInput, actor: Actor, base: string): AdminChannel {
-      const record = createRecord(input);
-      store.transaction(() => store.channels.insert({ ...record, revision: store.revisions.next() }, now()));
-      named(actor, "channel.created", record.id, record.name, { kind: record.kind });
-      const saved = existing(record.id);
+    async create(input: ChannelInput, actor: Actor, base: string): Promise<AdminChannel> {
+      const record = await createRecord(input);
+      await store.transaction(async () =>
+        store.channels.insert({ ...record, revision: await store.revisions.next() }, now()));
+      await named(actor, "channel.created", record.id, record.name, { kind: record.kind });
+      const saved = await existing(record.id);
       if (saved.kind === "live") live.apply(liveSpecOf(saved));
       return adminChannel(saved, base, live);
     },
 
     async update(id: string, patch: ChannelPatch, actor: Actor, base: string): Promise<AdminChannel> {
-      const current = existing(id);
+      const current = await existing(id);
       if (patch.kind !== undefined && patch.kind !== current.kind) {
         throw invalid("kind", "A channel's kind cannot be changed.");
       }
@@ -101,14 +107,14 @@ export function createChannelService(deps: {
         record = withEdits(current, patchedStreamRecord(current, patch));
       } else {
         const next = patchedLiveRecord(current, patch);
-        claimNumber(next);
+        await claimNumber(next);
         checkLiveSource(next.live);
         record = next;
       }
       const next: ChannelRecord = { ...record, enabled: patch.enabled ?? current.enabled };
-      store.transaction(() => store.channels.update({ ...next, revision: store.revisions.next() }));
-      named(actor, "channel.updated", id, next.name, { fields: Object.keys(patch) });
-      const saved = existing(id);
+      await store.transaction(async () => store.channels.update({ ...next, revision: await store.revisions.next() }));
+      await named(actor, "channel.updated", id, next.name, { fields: Object.keys(patch) });
+      const saved = await existing(id);
       // A disabled live channel is not running: it stops, and an edit does not start it.
       if (saved.kind === "live") {
         if (saved.enabled) live.apply(liveSpecOf(saved));
@@ -119,13 +125,13 @@ export function createChannelService(deps: {
 
     /** Stops a live row's runtime, then deletes the row. A synced row is deleted for real; a sync may add it back. */
     async remove(id: string, actor: Actor): Promise<{ id: string }> {
-      const current = existing(id);
+      const current = await existing(id);
       if (current.kind === "live") await live.remove(id);
-      store.transaction(() => {
-        store.channels.remove(id);
-        store.revisions.next();
+      await store.transaction(async () => {
+        await store.channels.remove(id);
+        await store.revisions.next();
       });
-      named(actor, "channel.deleted", id, current.name, { kind: current.kind });
+      await named(actor, "channel.deleted", id, current.name, { kind: current.kind });
       return { id };
     },
 
@@ -133,62 +139,67 @@ export function createChannelService(deps: {
      * Forgets an admin's edits to a synced row: the next sync supplies the values again (docs/26 section 3.10,
      * rule 5). Nothing the readers see changes at once, so the revision stays.
      */
-    revert(id: string, actor: Actor, base: string): AdminChannel {
-      const current = existing(id);
+    revert: async (id: string, actor: Actor, base: string): Promise<AdminChannel> => {
+      const current = await existing(id);
       if (current.kind !== "stream" || current.playlistId === null) {
         throw invalid("playlistId", "Only a channel that belongs to a playlist can be reverted.");
       }
-      store.transaction(() => store.channels.update({ ...current, editedFields: [] }));
-      named(actor, "channel.reverted", id, current.name, { fields: current.editedFields });
-      return adminChannel(existing(id), base, live);
+      await store.transaction(() => store.channels.update({ ...current, editedFields: [] }));
+      await named(actor, "channel.reverted", id, current.name, { fields: current.editedFields });
+      return adminChannel(await existing(id), base, live);
     },
 
     /** Re-reads a folder source and rebuilds the channel; the old stream keeps playing until the new is ready. */
-    rebuild(id: string, actor: Actor, base: string): AdminChannel {
-      const current = existingLive(id);
+    rebuild: async (id: string, actor: Actor, base: string): Promise<AdminChannel> => {
+      const current = await existingLive(id);
       if (!current.enabled) throw invalid("enabled", "A disabled channel is not running; enable it first.");
       checkLiveSource(current.live);
       live.apply(liveSpecOf(current));
-      named(actor, "channel.rebuilt", id, current.name);
-      return adminChannel(current, base, live);
+      // The answer is the state at the moment of the apply (a build takes it out of `live`); the audit write
+      // awaits, and must not let the answer describe a later state.
+      const view = adminChannel(current, base, live);
+      await named(actor, "channel.rebuilt", id, current.name);
+      return view;
     },
 
     /** Faults are an in-memory test tool on a live channel (docs/10 section 2, item 5). */
-    setFault(id: string, fault: Fault, durationMs: number | undefined, delayMs: number | undefined, actor: Actor) {
-      const channel = existingLive(id);
+    setFault: async (id: string, fault: Fault, durationMs: number | undefined, delayMs: number | undefined, actor: Actor) => {
+      const channel = await existingLive(id);
       const described = live.setFault(id, fault, durationMs, delayMs);
-      named(actor, "channel.fault_set", id, channel.name, { fault });
+      await named(actor, "channel.fault_set", id, channel.name, { fault });
       return { id, fault: described };
     },
 
-    clearFault(id: string, actor: Actor) {
-      const channel = existingLive(id);
+    clearFault: async (id: string, actor: Actor) => {
+      const channel = await existingLive(id);
       live.clearFault(id);
-      named(actor, "channel.fault_cleared", id, channel.name);
+      await named(actor, "channel.fault_cleared", id, channel.name);
       return { id, fault: null };
     },
 
     /** The seed's repair: a stream row becomes the live row `input` describes, same id, one revision. */
-    replaceStreamWithLive(input: LiveChannelInput, actor: Actor): void {
-      if (existing(input.id).kind !== "stream") throw invalid("kind", "Only a stream channel is replaced by a live one.");
+    replaceStreamWithLive: async (input: LiveChannelInput, actor: Actor): Promise<void> => {
+      if ((await existing(input.id)).kind !== "stream") throw invalid("kind", "Only a stream channel is replaced by a live one.");
       const record = newLiveRecord(input);
-      claimNumber(record);
+      await claimNumber(record);
       checkLiveSource(record.live);
-      store.transaction(() => {
-        store.channels.remove(input.id);
-        store.channels.insert({ ...record, revision: store.revisions.next() }, now());
+      await store.transaction(async () => {
+        await store.channels.remove(input.id);
+        await store.channels.insert({ ...record, revision: await store.revisions.next() }, now());
       });
-      named(actor, "channel.updated", input.id, input.name, { fields: ["kind"], from: "stream" });
-      live.apply(liveSpecOf({ ...record, revision: existing(input.id).revision }));
+      await named(actor, "channel.updated", input.id, input.name, { fields: ["kind"], from: "stream" });
+      live.apply(liveSpecOf({ ...record, revision: (await existing(input.id)).revision }));
     },
     /** The row with this id, if any (the seed's read). */
-    peek: (id: string): ChannelRecord | undefined => store.channels.find(id),
+    peek: (id: string): Promise<ChannelRecord | undefined> => store.channels.find(id),
 
-    isEmpty: (): boolean => store.channels.isEmpty(),
+    isEmpty: (): Promise<boolean> => store.channels.isEmpty(),
 
     /** The start: every saved live row builds in the background, so the server answers at once. */
-    startLive(): void {
-      for (const record of store.channels.list()) if (record.kind === "live" && record.enabled) live.apply(liveSpecOf(record));
+    startLive: async (): Promise<void> => {
+      for (const record of await store.channels.list()) {
+        if (record.kind === "live" && record.enabled) live.apply(liveSpecOf(record));
+      }
     },
   };
 }

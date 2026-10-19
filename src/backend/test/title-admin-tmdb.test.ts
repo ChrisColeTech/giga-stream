@@ -1,5 +1,5 @@
 // Browse TMDB (docs/47 section 3.3): the admin-only routes read TMDB and write nothing, and say per row whether the
-// store holds it or has it deleted; an add is the explicit POST /api/titles/from-tmdb.
+// store holds it or has it deleted; an add is the explicit POST /api/admin/titles/from-tmdb.
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -10,7 +10,7 @@ async function setup() {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) });
   const token = (await signIn(t.app)).access;
-  const stored = async (): Promise<unknown> => pick((await send(t.app, "GET", "/api/titles/stored?limit=1", undefined, token)).body, "data.total");
+  const stored = async (): Promise<unknown> => pick((await send(t.app, "GET", "/api/admin/titles/stored?limit=1", undefined, token)).body, "data.total");
   return { tmdb, t, token, stored };
 }
 
@@ -24,7 +24,7 @@ test("both routes need a sign-in and answer no-store", async () => {
     const answered = await send(t.app, "GET", url, undefined, token);
     assert.deepEqual([answered.status, answered.headers["cache-control"]], [200, "no-store"], url);
   }
-  assert.equal((await send(t.app, "POST", "/api/titles/from-tmdb", { id: "movie-603" })).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "movie-603" })).status, 401);
 });
 
 test("browse and search show TMDB's rows with stored and deleted, and write nothing to the store", async () => {
@@ -44,10 +44,10 @@ test("browse and search show TMDB's rows with stored and deleted, and write noth
   assert.equal((await send(t.app, "GET", "/api/titles/movie-603")).status, 404);
 
   // Added explicitly, the row says stored; deleted, it says deleted.
-  assert.equal((await send(t.app, "POST", "/api/titles/from-tmdb", { id: "movie-603" }, token)).status, 201);
+  assert.equal((await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "movie-603" }, token)).status, 201);
   const after = await send(t.app, "GET", "/api/admin/tmdb/titles?kind=movie", undefined, token);
   assert.deepEqual([pick(after.body, "data.items.0.stored"), pick(after.body, "data.items.0.deleted")], [true, false]);
-  await send(t.app, "DELETE", "/api/titles/movie-603", undefined, token);
+  await send(t.app, "DELETE", "/api/admin/titles/movie-603", undefined, token);
   const gone = await send(t.app, "GET", "/api/admin/tmdb/titles?kind=movie", undefined, token);
   assert.deepEqual([pick(gone.body, "data.items.0.stored"), pick(gone.body, "data.items.0.deleted")], [false, true]);
   assert.equal(await stored(), 0);
@@ -79,26 +79,26 @@ test("TMDB out of reach is 503 tmdb.unavailable, never a stored answer", async (
   assert.deepEqual([answer.status, pick(answer.body, "error.code")], [503, "tmdb.unavailable"]);
 });
 
-test("POST /api/titles/from-tmdb fetches one title, stores it, audits title.created; 409 when taken, 422 for a bad id", async () => {
+test("POST /api/admin/titles/from-tmdb fetches one title, stores it, audits title.created; 409 when taken, 422 for a bad id", async () => {
   const { tmdb, t, token, stored } = await setup();
-  const added = await send(t.app, "POST", "/api/titles/from-tmdb", { id: "tv-1399" }, token);
+  const added = await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "tv-1399" }, token);
   assert.equal(added.status, 201);
   assert.deepEqual(["id", "shape", "state", "title", "seasons.0.episodeCount"].map((f) => pick(added.body, `data.${f}`)),
     ["tv-1399", "detail", "synced", "Game of Thrones", 10]);
   assert.equal(await stored(), 1);
   assert.equal(pick((await send(t.app, "GET", "/api/titles/tv-1399/seasons/1")).body, "data.episodes.0.title"), "Winter Is Coming");
-  const entry = (pick((await send(t.app, "GET", "/api/audit?limit=5", undefined, token)).body, "data.items") as Array<Record<string, unknown>>)[0];
+  const entry = (pick((await send(t.app, "GET", "/api/admin/audit?limit=5", undefined, token)).body, "data.items") as Array<Record<string, unknown>>)[0];
   assert.deepEqual([entry?.action, entry?.subject], ["title.created", "tv-1399"]);
   const calls = tmdb.calls.length;
 
-  const again = await send(t.app, "POST", "/api/titles/from-tmdb", { id: "tv-1399" }, token);
+  const again = await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "tv-1399" }, token);
   assert.deepEqual([again.status, pick(again.body, "error.code")], [409, "title.taken"]);
-  await send(t.app, "DELETE", "/api/titles/tv-1399", undefined, token);
-  assert.equal((await send(t.app, "POST", "/api/titles/from-tmdb", { id: "tv-1399" }, token)).status, 409, "deleted: restore it instead");
+  await send(t.app, "DELETE", "/api/admin/titles/tv-1399", undefined, token);
+  assert.equal((await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "tv-1399" }, token)).status, 409, "deleted: restore it instead");
   assert.equal(tmdb.calls.length, calls, "a refused add asks TMDB nothing");
   for (const body of [{ id: "movie-0" }, { id: "custom-1" }, { id: "movie-603", extra: 1 }, {}, { id: 603 }]) {
-    const bad = await send(t.app, "POST", "/api/titles/from-tmdb", body, token);
+    const bad = await send(t.app, "POST", "/api/admin/titles/from-tmdb", body, token);
     assert.deepEqual([bad.status, pick(bad.body, "error.code")], [422, "title.invalid"], JSON.stringify(body));
   }
-  assert.equal((await send(t.app, "POST", "/api/titles/from-tmdb", { id: "movie-999999" }, token)).status, 404, "TMDB does not know it");
+  assert.equal((await send(t.app, "POST", "/api/admin/titles/from-tmdb", { id: "movie-999999" }, token)).status, 404, "TMDB does not know it");
 });

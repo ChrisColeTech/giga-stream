@@ -14,24 +14,25 @@ const JobParams = z.object({ jobId: z.string().regex(/^\d{1,12}$/) });
  * The sync jobs (docs/26 section 3.11, docs/43 section 3.4): records with a type, `Enabled`, a schedule and a config,
  * for a signed-in admin, audited. `POST` creates catalog jobs only (a playlist's job is made with the playlist) and
  * `DELETE` refuses a playlist's job. `run` STARTS the job and answers `202` with the job as it stands, `running`;
- * the result is read on a refresh. `events` is the one read-only progress stream (docs/44 section 3.3).
+ * the result is read on a refresh. `events` is the one read-only progress stream (docs/44 section 3.3). Every path
+ * here is `/api/admin/jobs/...`.
  */
 export function registerJobs(app: FastifyInstance, services: Services): void {
-  app.get("/api/jobs", async (request, reply) => {
-    signedIn(services, request);
-    return ok(reply, services.jobs.list());
+  app.get("/jobs", async (request, reply) => {
+    await signedIn(services, request);
+    return ok(reply, await services.jobs.list());
   });
 
-  app.post("/api/jobs", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.post("/jobs", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const input = parseInput(JobInputSchema, request.body, ERRORS.jobInvalid);
-    return ok(reply, services.jobs.create(input, actorOf(request, principal)), 201);
+    return ok(reply, await services.jobs.create(input, actorOf(request, principal)), 201);
   });
 
-  // Before `/api/jobs/:jobId`. A hijacked reply skips every hook (CORS, `no-store`), so the headers are written by hand;
+  // Before `/jobs/:jobId`. A hijacked reply skips every hook (CORS, `no-store`), so the headers are written by hand;
   // the subscriber joins in the same synchronous step that writes the snapshot. No heartbeat, no timer (docs/44 section 3.3).
-  app.get("/api/jobs/events", async (request, reply) => {
-    signedIn(services, request);
+  app.get("/jobs/events", async (request, reply) => {
+    await signedIn(services, request);
     services.events.assertRoom();
     reply.hijack();
     const { raw } = reply;
@@ -47,34 +48,34 @@ export function registerJobs(app: FastifyInstance, services: Services): void {
     raw.once("error", leave);
   });
 
-  app.get("/api/jobs/:jobId", async (request, reply) => {
-    signedIn(services, request);
+  app.get("/jobs/:jobId", async (request, reply) => {
+    await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);
-    return ok(reply, services.jobs.get(Number(jobId)));
+    return ok(reply, await services.jobs.get(Number(jobId)));
   });
 
-  app.patch("/api/jobs/:jobId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.patch("/jobs/:jobId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);
     const patch = parseInput(JobPatchSchema, request.body, ERRORS.jobInvalid);
-    return ok(reply, services.jobs.update(Number(jobId), patch, actorOf(request, principal)));
+    return ok(reply, await services.jobs.update(Number(jobId), patch, actorOf(request, principal)));
   });
 
-  app.delete("/api/jobs/:jobId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.delete("/jobs/:jobId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);
-    return ok(reply, services.jobs.remove(Number(jobId), actorOf(request, principal)));
+    return ok(reply, await services.jobs.remove(Number(jobId), actorOf(request, principal)));
   });
 
-  app.post("/api/jobs/:jobId/run", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.post("/jobs/:jobId/run", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);
-    return ok(reply, services.jobs.run(Number(jobId), actorOf(request, principal)), 202);
+    return ok(reply, await services.jobs.run(Number(jobId), actorOf(request, principal)), 202);
   });
 
-  app.post("/api/jobs/:jobId/stop", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.post("/jobs/:jobId/stop", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);
-    return ok(reply, services.jobs.stop(Number(jobId), actorOf(request, principal)), 202);
+    return ok(reply, await services.jobs.stop(Number(jobId), actorOf(request, principal)), 202);
   });
 }

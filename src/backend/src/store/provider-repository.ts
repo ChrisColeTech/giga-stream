@@ -1,6 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
+import type { Database } from "./database.js";
 import type { ProviderFamily, ProviderMessageShape } from "../types/provider.js";
 import type { BackendProvider } from "../types/provider.js";
 
@@ -82,50 +82,57 @@ const COLUMNS = `
   id, name, source, is_active, created_at, "order", family, movie_template, episode_template,
   start_param, subtitles_param, origin, frame_origins, message_shape`;
 
-/**
- * The providers table (docs/03 section 7.2b). Ordered by preference order then id, the order the
- * sources fill answers in (docs/03 section 7.5).
- */
-export function createProviderRepository(db: DatabaseSync) {
-  const all = db.prepare(`SELECT ${COLUMNS} FROM providers ORDER BY "order", id`);
-  const one = db.prepare(`SELECT ${COLUMNS} FROM providers WHERE id = ?`);
-  const insert = db.prepare(`
+const SQL = {
+  all: `SELECT ${COLUMNS} FROM providers ORDER BY "order", id`,
+  one: `SELECT ${COLUMNS} FROM providers WHERE id = ?`,
+  insert: `
     INSERT INTO providers (
       name, source, is_active, created_at, "order", family, movie_template, episode_template,
       start_param, subtitles_param, origin, frame_origins, message_shape
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const update = db.prepare(`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  update: `
     UPDATE providers SET
       name = ?, source = ?, is_active = ?, "order" = ?, family = ?, movie_template = ?,
       episode_template = ?, start_param = ?, subtitles_param = ?, origin = ?, frame_origins = ?,
       message_shape = ?
-    WHERE id = ?`);
-  const remove = db.prepare("DELETE FROM providers WHERE id = ?");
+    WHERE id = ?`,
+  remove: "DELETE FROM providers WHERE id = ?",
+};
 
+/**
+ * The providers table (docs/03 section 7.2b). Ordered by preference order then id, the order the
+ * sources fill answers in (docs/03 section 7.5).
+ */
+export function createProviderRepository(db: Database) {
   return {
-    list: (): BackendProvider[] => all.all().map(toProvider),
-    find(id: number): BackendProvider | undefined {
-      const row = one.get(id);
+    list: async (): Promise<BackendProvider[]> => (await db.execute(SQL.all)).rows.map(toProvider),
+    find: async (id: number): Promise<BackendProvider | undefined> => {
+      const row = (await db.execute({ sql: SQL.one, args: [id] })).rows[0];
       return row === undefined ? undefined : toProvider(row);
     },
-    isEmpty: (): boolean => all.all().length === 0,
-    insert(c: Omit<ProviderRecord, "id">): number {
-      const result = insert.run(
-        c.name, c.source, c.is_active, c.created_at, c.order, c.family, c.movie_template,
-        c.episode_template, c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape,
-      );
+    isEmpty: async (): Promise<boolean> => (await db.execute(SQL.all)).rows.length === 0,
+    async insert(c: Omit<ProviderRecord, "id">): Promise<number> {
+      const result = await db.execute({
+        sql: SQL.insert,
+        args: [
+          c.name, c.source, c.is_active, c.created_at, c.order, c.family, c.movie_template,
+          c.episode_template, c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape,
+        ],
+      });
       return Number(result.lastInsertRowid);
     },
-    update(c: ProviderRecord): boolean {
-      const result = update.run(
-        c.name, c.source, c.is_active, c.order, c.family, c.movie_template, c.episode_template,
-        c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape, c.id,
-      );
-      return Number(result.changes) > 0;
+    update: async (c: ProviderRecord): Promise<boolean> => {
+      const result = await db.execute({
+        sql: SQL.update,
+        args: [
+          c.name, c.source, c.is_active, c.order, c.family, c.movie_template, c.episode_template,
+          c.start_param, c.subtitles_param, c.origin, c.frame_origins, c.message_shape, c.id,
+        ],
+      });
+      return result.rowsAffected > 0;
     },
-    remove(id: number): boolean {
-      return Number(remove.run(id).changes) > 0;
-    },
+    remove: async (id: number): Promise<boolean> =>
+      (await db.execute({ sql: SQL.remove, args: [id] })).rowsAffected > 0,
   };
 }
 

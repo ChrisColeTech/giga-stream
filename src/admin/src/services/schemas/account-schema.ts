@@ -14,7 +14,7 @@ export const AccountSchema = z.object({
 
 export const AccountListSchema = z.object({ items: z.array(AccountSchema) });
 
-/** `PUT /api/admin-accounts/:id/security-question` answers `{ set: true }` (docs/54 section 2): never the account, and
+/** `PUT /api/admin/accounts/:id/security-question` answers `{ set: true }` (docs/54 section 2): never the account, and
  *  never the question or its answer. */
 export const QuestionSavedSchema = z.object({ set: z.literal(true) });
 

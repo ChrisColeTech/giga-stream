@@ -106,16 +106,16 @@ describe("SessionApi.stream", () => {
     const backend = scripted(() => sse());
     const logged: unknown[] = [];
     const api = createSessionApi(rig(backend.fetch, TOKENS).deps);
-    const body = await api.stream("/api/jobs/events", { quiet: true });
+    const body = await api.stream("/api/admin/jobs/events", { quiet: true });
     assert.equal(backend.calls[0]?.headers.authorization, "Bearer access-1");
-    assert.equal(backend.calls[0]?.url, "/api/jobs/events");
+    assert.equal(backend.calls[0]?.url, "/api/admin/jobs/events");
     assert.ok(body instanceof ReadableStream && logged.length === 0);
   });
 
   it("refreshes ahead of an expiring token, and retries once after a 401", async () => {
     let first = true;
     const backend = scripted((call) => {
-      if (call.url === "/api/auth/refresh") {
+      if (call.url === "/api/admin/auth/refresh") {
         return success({ accessToken: "access-2", accessExpiresAt: 9_000_000, refreshToken: "r2", refreshExpiresAt: 9_999_999,
           account: { id: 7, username: "ada@example.test", name: "Ada", disabled: false, createdAt: 1, updatedAt: 2 } });
       }
@@ -127,8 +127,8 @@ describe("SessionApi.stream", () => {
     });
     const base = rig(backend.fetch, TOKENS);
     const api = createSessionApi(base.deps);
-    await api.stream("/api/jobs/events", { quiet: true });
-    assert.deepEqual(backend.calls.map((call) => call.url), ["/api/jobs/events", "/api/auth/refresh", "/api/jobs/events"]);
+    await api.stream("/api/admin/jobs/events", { quiet: true });
+    assert.deepEqual(backend.calls.map((call) => call.url), ["/api/admin/jobs/events", "/api/admin/auth/refresh", "/api/admin/jobs/events"]);
     assert.equal(backend.calls[2]?.headers.authorization, "Bearer access-2");
     assert.deepEqual(base.ended, []);
   });

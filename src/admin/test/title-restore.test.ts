@@ -67,9 +67,9 @@ describe("the service", () => {
       async (calls) => {
         const list = await titles.listDeleted();
         assert.deepEqual(list.map((one) => [one.id, one.title]), [["movie-603", "The Matrix"], ["tv-1399", undefined]]);
-        assert.deepEqual([calls[0]?.url, calls[0]?.headers["authorization"]], ["/api/titles/deleted", "Bearer a"]);
+        assert.deepEqual([calls[0]?.url, calls[0]?.headers["authorization"]], ["/api/admin/titles/deleted", "Bearer a"]);
         assert.deepEqual(await titles.restore("movie-603"), { id: "movie-603" });
-        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/titles/deleted/movie-603"]);
+        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/admin/titles/deleted/movie-603"]);
       },
     );
   });

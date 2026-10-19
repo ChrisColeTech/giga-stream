@@ -1,9 +1,10 @@
 // The iptv-org logo index (docs/43 section 3.4 step 3): a malformed row is skipped, a failed load is stamped on disk and
 // retried after an hour (not once per entry), accents are folded, and every fetch goes through the guarded function.
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test, { after } from "node:test";
 
 import { LOGO_INDEX_RETRY_MS } from "../src/constants/limits.js";
@@ -13,7 +14,7 @@ import { fakeNet, type Net } from "./sync-kit.js";
 const LOGOS = "https://iptv-org.github.io/api/logos.json";
 const CHANNELS = "https://iptv-org.github.io/api/channels.json";
 const dirs: string[] = [];
-after(() => dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+after(() => dirs.forEach((dir) => removeDir(dir)));
 
 function resolverOn(net: Net, dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-logo-index-"))) {
   dirs.push(dataDir);

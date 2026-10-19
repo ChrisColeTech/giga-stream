@@ -20,7 +20,7 @@ describe("the on-load probe", () => {
     const backend = scripted(() => success(sessionBody("a9", "r9", 5000)));
     const session = await restoring(backend).restore();
     assert.deepEqual(backend.calls.map((c) => [c.method, c.url, c.body, c.headers.authorization]), [
-      ["POST", "/api/auth/refresh", undefined, undefined],
+      ["POST", "/api/admin/auth/refresh", undefined, undefined],
     ]);
     assert.deepEqual(session?.actor, { id: 7, username: "ada@example.test", securityQuestionSet: false });
     assert.equal(session?.tokens.accessToken, "a9");

@@ -7,7 +7,7 @@ export type StoredSort = (typeof STORED_SORTS)[number];
 
 const flag = z.enum(["true", "false"]).optional().transform((value) => (value === undefined ? undefined : value === "true"));
 
-/** The query of `GET /api/titles/stored` (docs/41 section 3.2). An empty search is no search. */
+/** The query of `GET /api/admin/titles/stored` (docs/41 section 3.2). An empty search is no search. */
 export const StoredTitlesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(LIST_PAGE_MAX).default(LIST_PAGE_DEFAULT),
   offset: z.coerce.number().int().min(0).max(LIST_OFFSET_MAX).default(0),

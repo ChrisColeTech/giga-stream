@@ -8,22 +8,22 @@ const code = (answer: { body: unknown }): unknown => pick(answer.body, "error.co
 
 test("sign-in answers a session, and the access token reaches /api/auth/me", async () => {
   const t = await makeApp();
-  const login = await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD });
+  const login = await send(t.app, "POST", "/api/admin/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD });
   assert.equal(login.status, 200);
   assert.equal(login.headers["cache-control"], "no-store");
   assert.equal(pick(login.body, "data.account.username"), ADMIN_USERNAME);
   assert.equal(pick(login.body, "data.account.role"), undefined);
   assert.equal(pick(login.body, "data.accessExpiresAt"), t.clock.now() + 30 * 24 * 60 * 60 * 1000);
   assert.equal(JSON.stringify(login.body).includes("password"), false, "no hash or password is ever answered");
-  const me = await send(t.app, "GET", "/api/auth/me", undefined, String(pick(login.body, "data.accessToken")));
+  const me = await send(t.app, "GET", "/api/admin/auth/me", undefined, String(pick(login.body, "data.accessToken")));
   assert.equal(pick(me.body, "data.username"), ADMIN_USERNAME);
 });
 
 test("username compares without case; a wrong password and an unknown username give the same answer", async () => {
   const t = await makeApp();
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME.toUpperCase(), password: ADMIN_PASSWORD })).status, 200);
-  const wrong = await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: "not-the-password" });
-  const unknown = await send(t.app, "POST", "/api/auth/login", { username: "nobody@example.test", password: "whatever-password" });
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/login", { username:ADMIN_USERNAME.toUpperCase(), password: ADMIN_PASSWORD })).status, 200);
+  const wrong = await send(t.app, "POST", "/api/admin/auth/login", { username:ADMIN_USERNAME, password: "not-the-password" });
+  const unknown = await send(t.app, "POST", "/api/admin/auth/login", { username: "nobody@example.test", password: "whatever-password" });
   assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"]);
   assert.deepEqual(wrong.body, unknown.body);
 });
@@ -31,11 +31,11 @@ test("username compares without case; a wrong password and an unknown username g
 test("an access token stops working when it expires", async () => {
   const t = await makeApp();
   const { access } = await signIn(t.app);
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, access)).status, 200);
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, access)).status, 200);
   t.clock.advance(15 * 60 * 1000 + 1000);
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, access)).status, 200, "no 15-minute timeout any more");
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, access)).status, 200, "no 15-minute timeout any more");
   t.clock.advance(30 * 24 * 60 * 60 * 1000);
-  const late = await send(t.app, "GET", "/api/auth/me", undefined, access);
+  const late = await send(t.app, "GET", "/api/admin/auth/me", undefined, access);
   assert.deepEqual([late.status, code(late)], [401, "auth.unauthorized"]);
 });
 
@@ -47,7 +47,7 @@ test("a token with a changed payload, another algorithm or no signature is refus
   const edited = Buffer.from(JSON.stringify({ ...claims, sub: "acct_other" })).toString("base64url");
   const none = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
   for (const forged of [`${header}.${edited}.${access.split(".")[2]}`, `${none}.${payload}.`, `${header}.${payload}`]) {
-    assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, forged)).status, 401);
+    assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, forged)).status, 401);
   }
 });
 
@@ -59,7 +59,7 @@ test("a still-valid token issued before roles were removed, carrying a role clai
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(JSON.stringify({ ...claims, role: "owner" })).toString("base64url");
   const signature = createHmac("sha256", JWT_SECRET).update(`${header}.${body}`).digest("base64url");
-  const legacy = await send(t.app, "GET", "/api/auth/me", undefined, `${header}.${body}.${signature}`);
+  const legacy = await send(t.app, "GET", "/api/admin/auth/me", undefined, `${header}.${body}.${signature}`);
   assert.equal(legacy.status, 200);
   assert.equal(pick(legacy.body, "data.username"), ADMIN_USERNAME);
 });
@@ -67,66 +67,66 @@ test("a still-valid token issued before roles were removed, carrying a role clai
 test("refresh gives a new session and the old refresh token stops working", async () => {
   const t = await makeApp();
   const first = await signIn(t.app);
-  const renewed = await send(t.app, "POST", "/api/auth/refresh", { refreshToken: first.refresh });
+  const renewed = await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: first.refresh });
   assert.equal(renewed.status, 200);
   const next = String(pick(renewed.body, "data.refreshToken"));
   assert.notEqual(next, first.refresh);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: next })).status, 200);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: next })).status, 200);
 });
 
 test("a used refresh token presented again ends every session of that account", async () => {
   const t = await makeApp();
   const first = await signIn(t.app);
-  const renewed = await send(t.app, "POST", "/api/auth/refresh", { refreshToken: first.refresh });
+  const renewed = await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: first.refresh });
   const latest = { access: String(pick(renewed.body, "data.accessToken")), refresh: String(pick(renewed.body, "data.refreshToken")) };
-  const replay = await send(t.app, "POST", "/api/auth/refresh", { refreshToken: first.refresh });
+  const replay = await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: first.refresh });
   assert.deepEqual([replay.status, code(replay)], [401, "auth.refresh_invalid"]);
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, latest.access)).status, 401);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: latest.refresh })).status, 401);
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, latest.access)).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: latest.refresh })).status, 401);
 });
 
 test("logout ends that session only", async () => {
   const t = await makeApp();
   const one = await signIn(t.app);
   const two = await signIn(t.app);
-  assert.deepEqual((await send(t.app, "POST", "/api/auth/logout", { refreshToken: one.refresh })).body, { ok: true, data: { signedOut: true } });
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: one.refresh })).status, 401);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: two.refresh })).status, 200);
+  assert.deepEqual((await send(t.app, "POST", "/api/admin/auth/logout", { refreshToken: one.refresh })).body, { ok: true, data: { signedOut: true } });
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: one.refresh })).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: two.refresh })).status, 200);
 });
 
 test("a refresh token expires after 365 days, not 30", async () => {
   const t = await makeApp();
   const { refresh } = await signIn(t.app);
   t.clock.advance(31 * 24 * 60 * 60 * 1000);
-  const rotated = await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh });
+  const rotated = await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: refresh });
   assert.equal(rotated.status, 200);
   t.clock.advance(365 * 24 * 60 * 60 * 1000 + 1000);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: String(pick(rotated.body, "data.refreshToken")) })).status, 401);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh })).status, 401, "the used one stays dead");
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: String(pick(rotated.body, "data.refreshToken")) })).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: refresh })).status, 401, "the used one stays dead");
 });
 
 test("changing the password needs the current one and ends every session", async () => {
   const t = await makeApp();
   const session = await signIn(t.app);
-  const wrong = await send(t.app, "POST", "/api/auth/password", { currentPassword: "nope", newPassword: "a-brand-new-password" }, session.access);
+  const wrong = await send(t.app, "POST", "/api/admin/auth/password", { currentPassword: "nope", newPassword: "a-brand-new-password" }, session.access);
   assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"]);
   for (const bad of ["", "x".repeat(257)]) {
-    const refused = await send(t.app, "POST", "/api/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: bad }, session.access);
+    const refused = await send(t.app, "POST", "/api/admin/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: bad }, session.access);
     assert.equal(refused.status, 400);
   }
-  const changed = await send(t.app, "POST", "/api/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: "a-brand-new-password" }, session.access);
+  const changed = await send(t.app, "POST", "/api/admin/auth/password", { currentPassword: ADMIN_PASSWORD, newPassword: "a-brand-new-password" }, session.access);
   assert.equal(changed.status, 200);
-  assert.equal((await send(t.app, "GET", "/api/auth/me", undefined, session.access)).status, 401);
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: session.refresh })).status, 401);
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD })).status, 401);
+  assert.equal((await send(t.app, "GET", "/api/admin/auth/me", undefined, session.access)).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: session.refresh })).status, 401);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/login", { username:ADMIN_USERNAME, password: ADMIN_PASSWORD })).status, 401);
   await signIn(t.app, ADMIN_USERNAME, "a-brand-new-password");
 });
 
 test("no number of wrong passwords or attempts from one address blocks the right password", async () => {
   const t = await makeApp();
   for (let n = 0; n < 25; n += 1) {
-    const wrong = await send(t.app, "POST", "/api/auth/login", { username: n % 2 ? ADMIN_USERNAME : `x${n}@example.test`, password: "wrong-password" }, undefined, "10.9.9.9");
+    const wrong = await send(t.app, "POST", "/api/admin/auth/login", { username: n % 2 ? ADMIN_USERNAME : `x${n}@example.test`, password: "wrong-password" }, undefined, "10.9.9.9");
     assert.deepEqual([wrong.status, code(wrong)], [401, "auth.invalid_credentials"], "a wrong pair is always invalid");
   }
-  assert.equal((await send(t.app, "POST", "/api/auth/login", { username: ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.9.9.9")).status, 200);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/login", { username: ADMIN_USERNAME, password: ADMIN_PASSWORD }, undefined, "10.9.9.9")).status, 200);
 });

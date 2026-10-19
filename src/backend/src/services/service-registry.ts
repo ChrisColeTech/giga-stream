@@ -63,7 +63,7 @@ export interface ServiceOptions {
 }
 
 /** Every service, built once from the store; routes receive this and call one service each. */
-export function createServices(store: Store, options: ServiceOptions) {
+export async function createServices(store: Store, options: ServiceOptions) {
   const { now } = options;
   const audit = createAuditService(store, now);
   const auth = createAuthService({ store, audit, secret: options.jwtSecret, now });
@@ -81,8 +81,8 @@ export function createServices(store: Store, options: ServiceOptions) {
     dataDir: options.dataDir,
     now,
     log: options.log,
-    knows: (id) => {
-      const record = store.channels.find(id);
+    knows: async (id) => {
+      const record = await store.channels.find(id);
       return record?.kind === "live" && record.enabled;
     },
     ...(options.live && { seams: options.live }),
@@ -90,13 +90,13 @@ export function createServices(store: Store, options: ServiceOptions) {
   options.live?.onEngine?.(live);
 
   // The first start seeds the catalog job from the environment; after that it is the truth. Playlists come from imports.
-  seedSyncRecords(store, { titleSchedule: options.titleSchedule }, now());
+  await seedSyncRecords(store, { titleSchedule: options.titleSchedule }, now());
   /**
    * The schedule a sync status shows: the first enabled job of the type that has one. The Library update (scope `recent`)
    * is not the fill, so the status never shows its schedule.
    */
-  const scheduleOf = (type: "playlist" | "catalog"): string =>
-    store.jobs.list().find((j) => j.type === type && j.enabled && j.schedule !== "off"
+  const scheduleOf = async (type: "playlist" | "catalog"): Promise<string> =>
+    (await store.jobs.list()).find((j) => j.type === type && j.enabled && j.schedule !== "off"
       && !(j.type === "catalog" && j.config.scope === "recent"))?.schedule ?? "off";
   const titles = createTitleService({
     store, audit, tmdb, omdb, streams, now,
@@ -146,16 +146,18 @@ export function createServices(store: Store, options: ServiceOptions) {
     titleCatalog: createTitleCatalog(store),
     playlists: createPlaylistService({ store, audit, runner, onChange: scheduler.arm }),
     jobs: createJobService({ store, audit, now, runner, progress, onChange: scheduler.arm }),
-    hasAccounts: (): boolean => store.accounts.count() > 0,
-    purgeExpiredSessions: (): void => store.refreshTokens.purgeExpired(now()),
-    health: () => ({
+    hasAccounts: async (): Promise<boolean> => (await store.accounts.count()) > 0,
+    purgeExpiredSessions: async (): Promise<void> => {
+      await store.refreshTokens.purgeExpired(now());
+    },
+    health: async () => ({
       role: APP_ROLE,
       version: APP_VERSION,
-      revision: store.revisions.current(),
+      revision: await store.revisions.current(),
       tmdb: options.tmdbToken !== "" ? ("configured" as const) : ("absent" as const),
-      liveChannels: store.channels.countLive(),
+      liveChannels: await store.channels.countLive(),
     }),
   };
 }
 
-export type Services = ReturnType<typeof createServices>;
+export type Services = Awaited<ReturnType<typeof createServices>>;

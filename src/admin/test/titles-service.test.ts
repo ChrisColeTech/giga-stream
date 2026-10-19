@@ -50,12 +50,12 @@ describe("the titles service reads", () => {
     );
   });
 
-  it("adds a TMDB title with POST /api/titles/from-tmdb { id }", async () => {
+  it("adds a TMDB title with POST /api/admin/titles/from-tmdb { id }", async () => {
     await withBackend(
       () => success(row("movie-603", { plot: "P" })),
       async (calls) => {
         const added = await titles.addFromTmdb("movie-603");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/titles/from-tmdb"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["POST", "/api/admin/titles/from-tmdb"]);
         assert.deepEqual(calls[0]?.body, { id: "movie-603" });
         assert.equal(added.id, "movie-603");
       },
@@ -114,7 +114,7 @@ describe("the titles service writes", () => {
       async (calls) => {
         await titles.create(titleCreateBody({ title: " New ", kind: "tv", year: "2020" }));
         const sent = [calls[0]?.method, calls[0]?.url, calls[0]?.body];
-        assert.deepEqual(sent, ["POST", "/api/titles", { kind: "tv", title: "New", year: 2020 }]);
+        assert.deepEqual(sent, ["POST", "/api/admin/titles", { kind: "tv", title: "New", year: 2020 }]);
       },
     );
   });
@@ -127,9 +127,9 @@ describe("the titles service writes", () => {
         await titles.remove("movie-1");
         await titles.revert("movie-1");
         const sent = [calls[0]?.method, calls[0]?.url, calls[0]?.body];
-        assert.deepEqual(sent, ["PATCH", "/api/titles/movie-1", { plot: null, enabled: false }]);
-        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/titles/movie-1"]);
-        assert.deepEqual([calls[2]?.method, calls[2]?.url], ["POST", "/api/titles/movie-1/revert"]);
+        assert.deepEqual(sent, ["PATCH", "/api/admin/titles/movie-1", { plot: null, enabled: false }]);
+        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/admin/titles/movie-1"]);
+        assert.deepEqual([calls[2]?.method, calls[2]?.url], ["POST", "/api/admin/titles/movie-1/revert"]);
       },
     );
   });

@@ -4,9 +4,10 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
-import { DatabaseSync } from "node:sqlite";
+
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
+import { openTestDatabase, queryRow } from "./db-kit.js";
 import { until } from "./playlist-kit.js";
 import { pick } from "./test-app.js";
 import { stubOmdb } from "./title-stubs.js";
@@ -14,14 +15,14 @@ import { fillApp, walkTmdb, type FillApp } from "./walk-kit.js";
 
 const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
 const run = async (f: FillApp): Promise<Record<string, unknown>> => {
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   return f.job();
 };
-const failures = (f: FillApp, id: string): unknown => {
-  const db = new DatabaseSync(path.join(f.t.dataDir, DATABASE_FILE_NAME), { readOnly: true });
+const failures = async (f: FillApp, id: string): Promise<unknown> => {
+  const db = await openTestDatabase(path.join(f.t.dataDir, DATABASE_FILE_NAME));
   try {
-    return db.prepare("SELECT detail_failures AS n FROM titles WHERE id = ?").get(id)?.n;
+    return (await queryRow(db, "SELECT detail_failures AS n FROM titles WHERE id = ?", [id]))?.n;
   } finally {
     db.close();
   }
@@ -43,9 +44,9 @@ test("Stop between titles keeps what was written; running again continues with t
   const tmdb = await walkTmdb({ movie: 2, tv: 1 });
   const f = await fillApp(tmdb, 2);
   const gate = tmdb.hold("movie", "detail:1011");
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await gate.started;
-  await f.api("POST", "/api/jobs/1/stop");
+  await f.api("POST", "/api/admin/jobs/1/stop");
   await f.finished();
   const stopped = await f.job();
   assert.deepEqual([stopped.lastResult, pick(stopped, "lastCounts.detailed")], ["stopped", 2]);
@@ -67,10 +68,10 @@ test("a title TMDB 404s is recorded and the run goes on; three failed runs in a 
   const f = await fillApp(tmdb, 2);
   const first = await run(f);
   assert.deepEqual([first.lastResult, pick(first, "lastCounts.detailed")], ["ok", 5], "the other five were detailed");
-  assert.deepEqual([await shapeOf(f, "movie-1021"), failures(f, "movie-1021")], ["list", 1]);
+  assert.deepEqual([await shapeOf(f, "movie-1021"), await failures(f, "movie-1021")], ["list", 1]);
   await run(f);
   await run(f);
-  assert.equal(failures(f, "movie-1021"), 3);
+  assert.equal(await failures(f, "movie-1021"), 3);
   const asked = (): number => tmdb.details().filter((d) => d === "movie:detail:1021").length;
   assert.equal(asked(), 3);
   await run(f);
@@ -87,7 +88,7 @@ test("a title TMDB 404s is recorded and the run goes on; three failed runs in a 
   await f.renew();
   await run(f);
   assert.equal(asked(), 4);
-  assert.equal(failures(f, "movie-1021"), 1);
+  assert.equal(await failures(f, "movie-1021"), 1);
 });
 
 test("an edited title keeps its edits, a manual title is never fetched, and a removed title does not stop the others", async () => {
@@ -95,9 +96,9 @@ test("an edited title keeps its edits, a manual title is never fetched, and a re
   tmdb.state.fail.set("movie:detail:1010", 404);
   const f = await fillApp(tmdb, 1);
   await run(f);
-  const edited = await f.api("PATCH", "/api/titles/movie-1010", { title: "My own title", plot: "My plot" });
+  const edited = await f.api("PATCH", "/api/admin/titles/movie-1010", { title: "My own title", plot: "My plot" });
   assert.equal(edited.status, 200, "a list-only stored title can be edited");
-  const manual = await f.api("POST", "/api/titles", { kind: "movie", title: "Home", tmdbId: 1011, plot: "Mine" });
+  const manual = await f.api("POST", "/api/admin/titles", { kind: "movie", title: "Home", tmdbId: 1011, plot: "Mine" });
   assert.equal(manual.status, 201);
   tmdb.state.fail.delete("movie:detail:1010");
   const before = tmdb.details().length;
@@ -176,7 +177,7 @@ test("the progress total of the details phase is the titles still needing detail
   const tmdb = await walkTmdb({ movie: 2, tv: 1 });
   const f = await fillApp(tmdb, 2);
   const gate = tmdb.hold("movie", "detail:1020");
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await gate.started;
   await until(async () => pick(await f.job(), "progress.phase") === "details", "the details phase");
   assert.deepEqual(pick(await f.job(), "progress"), { jobId: 1, phase: "details", done: 1, total: 6 });

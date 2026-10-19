@@ -21,12 +21,12 @@ beforeEach(() => {
 });
 
 describe("the jobs service", () => {
-  it("lists /api/jobs, dropping and counting a row it cannot read", async () => {
+  it("lists /api/admin/jobs, dropping and counting a row it cannot read", async () => {
     await withBackend(
       () => success({ items: [playlistJob, { id: 9 }, catalogJob] }),
       async (calls) => {
         const list = await jobs.list();
-        assert.equal(calls[0]?.url, "/api/jobs");
+        assert.equal(calls[0]?.url, "/api/admin/jobs");
         assert.deepEqual([list.items.map((item) => item.id), list.unreadable], [[3, 4], 1]);
       },
     );
@@ -91,7 +91,7 @@ describe("the jobs service", () => {
       async (calls) => {
         const draft = { ...draftOf(catalogJob), pages: "8", schedule: " 12H " };
         await jobs.update(4, changedFields(catalogJob, draft));
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PATCH", "/api/jobs/4"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["PATCH", "/api/admin/jobs/4"]);
         assert.deepEqual(calls[0]?.body, { schedule: "12h", config: { pages: 8 } });
         const edited = { ...draftOf(playlistJob), name: "Renamed", enabled: false, schedule: "30m" };
         assert.deepEqual(changedFields(playlistJob, edited), { enabled: false, schedule: "30m" });
@@ -102,12 +102,12 @@ describe("the jobs service", () => {
 
   it("runs with no body at all (no dry run, no prune) and reads the 202 as the job, running", async () => {
     await withBackend(
-      (call) => success({ ...(call.url === "/api/jobs/4/run" ? catalogJob : playlistJob), running: true }, 202),
+      (call) => success({ ...(call.url === "/api/admin/jobs/4/run" ? catalogJob : playlistJob), running: true }, 202),
       async (calls) => {
         const started = await jobs.run(3);
         await jobs.run(4);
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["POST", "/api/jobs/3/run", undefined]);
-        assert.deepEqual([calls[1]?.url, calls[1]?.body], ["/api/jobs/4/run", undefined]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["POST", "/api/admin/jobs/3/run", undefined]);
+        assert.deepEqual([calls[1]?.url, calls[1]?.body], ["/api/admin/jobs/4/run", undefined]);
         assert.equal(started.running, true);
       },
     );
@@ -118,7 +118,7 @@ describe("the jobs service", () => {
       () => success({ id: 4 }),
       async (calls) => {
         assert.deepEqual(await jobs.remove(4), { id: 4 });
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/jobs/4"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/admin/jobs/4"]);
       },
     );
   });

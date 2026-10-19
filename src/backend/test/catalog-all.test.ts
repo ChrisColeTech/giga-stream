@@ -3,6 +3,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { Transaction } from "@libsql/client";
+
 import { createTitleWalk } from "../src/services/title-walk.js";
 import type { ProgressUpdate } from "../src/types/job-progress.js";
 
@@ -11,14 +13,14 @@ for (const scope of ["trending", "popular"] as const) {
     const calls: string[] = [];
     const reports: ProgressUpdate[] = [];
     const walk = createTitleWalk({
-      store: { transaction: (work) => work() },
+      store: { transaction: async (work) => work({} as Transaction) },
       tmdb: {
         get: async <T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> => {
           calls.push(`${path}?page=${String(params?.page)}`);
           return { total_pages: 2, results: [{ id: calls.length, title: "Title", name: "Series" }] } as T;
         },
       },
-      storeRow: () => true,
+      storeRow: async () => true,
       now: () => 0,
     });
     const seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 };

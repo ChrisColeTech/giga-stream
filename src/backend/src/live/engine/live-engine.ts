@@ -26,7 +26,7 @@ export interface LiveEngineOptions {
   now: () => number;
   log: (line: string) => void;
   /** Whether an id is a live channel in the store (a logo exists for it). */
-  knows: (id: string) => boolean;
+  knows: (id: string) => Promise<boolean>;
   seams?: LiveSeams;
 }
 

@@ -91,9 +91,9 @@ export async function setupSync(net: Net, entries: string[]) {
   const api = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: unknown) => send(t.app, method, url, body, token);
   await uploadFile(t, token, "list.m3u", m3u(...entries));
   const jobs = async (): Promise<Array<Record<string, unknown>>> =>
-    pick((await api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
+    pick((await api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>;
   const job = async (): Promise<Record<string, unknown>> => (await jobs()).find((j) => j.type === "playlist") ?? {};
-  const channels = async () => itemsOf((await api("GET", "/api/admin-channels")).body);
+  const channels = async () => itemsOf((await api("GET", "/api/admin/channels")).body);
   const revision = async (): Promise<number> => Number(pick((await send(t.app, "GET", "/healthz")).body, "data.revision"));
   /** Starts the job and waits for it to settle; the session is renewed first, as the clock moves past its lifetime. */
   async function run(advanceMs = 1000): Promise<Record<string, unknown>> {
@@ -101,7 +101,7 @@ export async function setupSync(net: Net, entries: string[]) {
     token = (await signIn(t.app)).access;
     const before = (await job()).lastRunAt;
     const id = Number((await job()).id);
-    const started = await api("POST", `/api/jobs/${id}/run`);
+    const started = await api("POST", `/api/admin/jobs/${id}/run`);
     if (started.status !== 202) throw new Error(`run refused: ${started.status}`);
     await until(async () => (await job()).lastRunAt !== before && (await job()).running === false, "the run");
     return job();

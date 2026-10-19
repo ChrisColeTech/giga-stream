@@ -12,11 +12,12 @@ import {
 } from "./schemas/playlist-schema";
 import type { RecordInput } from "./service-types";
 
-/** The Playlists routes (`43` section 3.2, `03` section 7.2c), REAL: `GET /api/playlists`, the two imports, `PATCH` and
- *  `DELETE /api/playlists/:id`. `importFile` posts `name` and the chosen multipart `file`; `create` is the
- *  web-address import and takes `{ url, name?, enabled? }`. Both answer the playlist, whether it is new, and what the
- *  import did. A web playlist's answer carries its address in full (`url`) and its `host`. `422 playlist.invalid` names its field (`url` or `file`), `409 playlist.taken` a name or address already
- *  held. A patch takes `name`, `enabled`, and for a web playlist a replacement `url`. `remove` answers
+/** The Playlists routes (`43` section 3.2, `03` section 7.2c), REAL: `GET /api/admin/playlists`, the two imports,
+ *  `PATCH` and `DELETE /api/admin/playlists/:id`. `importFile` posts `name` and the chosen multipart `file`; `create`
+ *  is the web-address import and takes `{ url, name?, enabled? }`. Both answer the playlist, whether it is new, and
+ *  what the import did. A web playlist's answer carries its address in full (`url`) and its `host`. `422
+ * playlist.invalid` names its field (`url` or `file`), `409 playlist.taken` a name or address already held. A patch
+ *  takes `name`, `enabled`, and for a web playlist a replacement `url`. `remove` answers
  *  `{ id, deletedChannels, deletedJobs }`. The list is read row by row: an unreadable row is dropped and counted. A
  *  write answer that does not parse is `backend.bad_response`. */
 export interface PlaylistsService {
@@ -27,10 +28,10 @@ export interface PlaylistsService {
   remove: (id: number) => Promise<PlaylistDeleted>;
 }
 
-const path = (id: number): string => `/api/playlists/${encodeURIComponent(String(id))}`;
+const path = (id: number): string => `/api/admin/playlists/${encodeURIComponent(String(id))}`;
 
 async function list(): Promise<PlaylistList> {
-  const answer = await request("/api/playlists", PlaylistListLenientSchema, { area: "Playlist" });
+  const answer = await request("/api/admin/playlists", PlaylistListLenientSchema, { area: "Playlist" });
   const items: AdminPlaylist[] = [];
   for (const row of answer.items) {
     const parsed = PlaylistSchema.safeParse(row);
@@ -50,13 +51,17 @@ async function importFile(name: string, file: File): Promise<PlaylistImport> {
   const form = new FormData();
   form.append("name", name);
   form.append("file", file, file.name);
-  return imported(await request("/api/playlists/import", PlaylistImportSchema, { method: "POST", form, area: "Playlist" }));
+  return imported(
+    await request("/api/admin/playlists/import", PlaylistImportSchema, { method: "POST", form, area: "Playlist" }),
+  );
 }
 
 export const playlists: PlaylistsService = {
   list,
   create: async (input) =>
-    imported(await request("/api/playlists", PlaylistImportSchema, { method: "POST", body: input, area: "Playlist" })),
+    imported(
+      await request("/api/admin/playlists", PlaylistImportSchema, { method: "POST", body: input, area: "Playlist" }),
+    ),
   importFile,
   update: (id, patch) => request(path(id), PlaylistSchema, { method: "PATCH", body: patch, area: "Playlist" }),
   remove: (id) => request(path(id), PlaylistDeletedSchema, { method: "DELETE", area: "Playlist" }),

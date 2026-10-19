@@ -53,7 +53,7 @@ export const AdminShellSchema = z
   .strict();
 export type AdminShell = z.infer<typeof AdminShellSchema>;
 
-/** `PUT /api/auth/me/state`: each present document replaces the stored one whole; at least one is required. */
+/** `PUT /api/admin/account-state`: each present document replaces the stored one whole; at least one is required. */
 export const UiStatePutSchema = z
   .object({ settings: AdminSettingsSchema.optional(), shell: AdminShellSchema.optional() })
   .strict()
@@ -62,7 +62,7 @@ export const UiStatePutSchema = z
   });
 export type UiStatePut = z.infer<typeof UiStatePutSchema>;
 
-/** What `GET` and `PUT /api/auth/me/state` answer (docs/29 section 5). */
+/** What `GET` and `PUT /api/admin/account-state` answer (docs/29 section 5). */
 export interface AccountState {
   settings: AdminSettings;
   shell: AdminShell;

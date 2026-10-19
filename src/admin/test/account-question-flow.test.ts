@@ -9,7 +9,7 @@ import type { AdminAccount } from "@/types/admin-account";
 import { resetStore, signInForTest } from "./support/store";
 
 /* The Security question group's flow (docs/54 section 2): `saveQuestion` sets a selected account's question through
- * `PUT /api/admin-accounts/:id/security-question`, and the pure helpers the group reads. */
+ * `PUT /api/admin/accounts/:id/security-question`, and the pure helpers the group reads. */
 
 const ANSWER = "  Rex  ";
 const ME = { id: 7, username: "ada@example.test", disabled: false, createdAt: 1, updatedAt: 1 };

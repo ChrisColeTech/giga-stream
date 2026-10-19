@@ -1,5 +1,6 @@
 import { AppError, ERRORS } from "../constants/errors.js";
 import type { Store } from "../store/store.js";
+import type { StoredTitle } from "../store/title-repository.js";
 import type { AuditService } from "./audit-service.js";
 import type { OmdbClient } from "./omdb-client.js";
 import { createDetailFetch } from "./title-detail-fetch.js";
@@ -41,7 +42,7 @@ export function createTitleService(deps: {
   streams: StreamTemplates;
   now: () => number;
   /** The schedule shown in the sync status: the first enabled catalog job's. */
-  scheduleLabel?: () => string;
+  scheduleLabel?: () => Promise<string>;
 }) {
   const { store } = deps;
   const deleted = createTitleDeleted(deps);
@@ -53,16 +54,16 @@ export function createTitleService(deps: {
   const tmdbBrowse = createTmdbBrowse(deps);
 
   /** A manual title, or 404 when it is not there or is disabled and the read is public. */
-  function manualRow(titleId: string, options: ReadOptions) {
-    const row = store.titles.findById(titleId);
+  async function manualRow(titleId: string, options: ReadOptions): Promise<StoredTitle> {
+    const row = await store.titles.findById(titleId);
     if (row?.origin !== "manual" || (!row.enabled && options.includeDisabled !== true)) throw notFound(titleId);
     return row;
   }
 
-  function manualDetail(titleId: string, options: ReadOptions): Record<string, unknown> {
-    const row = manualRow(titleId, options);
+  async function manualDetail(titleId: string, options: ReadOptions): Promise<Record<string, unknown>> {
+    const row = await manualRow(titleId, options);
     const view = viewOf(row, options.includeDisabled === true);
-    const filled = row.tmdbId === null ? view : sources.withDetail({ ...view, tmdbId: row.tmdbId });
+    const filled = row.tmdbId === null ? view : await sources.withDetail({ ...view, tmdbId: row.tmdbId });
     // The admin's own address wins; the stream rule only fills a manual title that has none.
     return typeof view.streamUrl === "string" || row.tmdbId === null ? filled : streams.withDetail(filled);
   }
@@ -77,39 +78,41 @@ export function createTitleService(deps: {
     browseTmdb: tmdbBrowse.browse,
     searchTmdb: tmdbBrowse.search,
 
-    detail(titleId: string, options: ReadOptions = {}): Record<string, unknown> {
+    detail: async (titleId: string, options: ReadOptions = {}): Promise<Record<string, unknown>> => {
       if (isManualId(titleId)) return manualDetail(titleId, options);
-      const answer = reads.detail(titleId, options.includeDisabled === true);
-      const filled = streams.withDetail(sources.withDetail(answer));
+      const answer = await reads.detail(titleId, options.includeDisabled === true);
+      const filled = streams.withDetail(await sources.withDetail(answer));
       // An address the admin edited outranks the stream rule's.
-      const row = reads.find(titleId, options.includeDisabled === true).row;
+      const row = (await reads.find(titleId, options.includeDisabled === true)).row;
       const own = row.editedFields.includes("streamUrl") ? asRecord(row.payload).streamUrl : undefined;
       return typeof own === "string" ? { ...filled, streamUrl: own } : filled;
     },
 
-    seasons(titleId: string, season: number, options: ReadOptions = {}): { episodes: unknown[] } {
+    seasons: async (titleId: string, season: number, options: ReadOptions = {}): Promise<{ episodes: unknown[] }> => {
       if (isManualId(titleId)) {
-        const row = manualRow(titleId, options);
+        const row = await manualRow(titleId, options);
         const known = listOf(asRecord(row.payload).seasons).find((s) => num(asRecord(s).season) === season);
         const answer = { episodes: listOf(asRecord(known).episodes) };
         return row.tmdbId === null ? answer : sources.withEpisodes(answer, row.tmdbId);
       }
       const [, tmdbId] = parseTitleId(titleId);
-      const answer = reads.episodes(titleId, season, options.includeDisabled === true);
-      return streams.withEpisodes(sources.withEpisodes(answer, tmdbId), tmdbId);
+      const answer = await reads.episodes(titleId, season, options.includeDisabled === true);
+      return streams.withEpisodes(await sources.withEpisodes(answer, tmdbId), tmdbId);
     },
 
-    recommendations(titleId: string, options: ReadOptions = {}): { items: Record<string, unknown>[] } {
+    recommendations: async (
+      titleId: string,
+      options: ReadOptions = {},
+    ): Promise<{ items: Record<string, unknown>[] }> => {
       if (isManualId(titleId)) {
-        manualRow(titleId, options);
+        await manualRow(titleId, options);
         return { items: [] };
       }
       return reads.recommendations(titleId, options.includeDisabled === true);
     },
 
-    status(): SyncStatus {
-      return { ...sync.status(), schedule: deps.scheduleLabel?.() ?? "off" };
-    },
+    status: async (): Promise<SyncStatus> =>
+      ({ ...(await sync.status()), schedule: (await deps.scheduleLabel?.()) ?? "off" }),
     close(): void {
       sync.stop();
     },

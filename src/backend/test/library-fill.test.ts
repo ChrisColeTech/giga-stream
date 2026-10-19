@@ -3,9 +3,10 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
-import { DatabaseSync } from "node:sqlite";
+
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
+import { openTestDatabase, queryRow } from "./db-kit.js";
 import { fractionOf } from "../src/services/job-progress.js";
 import { until } from "./playlist-kit.js";
 import { openEvents } from "./sse-kit.js";
@@ -19,7 +20,7 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   const f = await fillApp(tmdb, 5);
   const stream = await openEvents(f.base, f.token());
   await stream.waitFor((frames) => frames.length > 0, "the snapshot");
-  assert.equal((await f.api("POST", "/api/jobs/1/run")).status, 202);
+  assert.equal((await f.api("POST", "/api/admin/jobs/1/run")).status, 202);
   await f.finished();
   await stream.waitFor((frames) => frames.some((x) => x.event === "finished"), "the finished event");
 
@@ -44,16 +45,16 @@ test("Run job walks both kinds, ends each at TMDB's total_pages, and streams pro
   stream.destroy();
 });
 
-test("a running job carries its progress on GET /api/jobs and GET /api/jobs/:id, and the stream's snapshot", async () => {
+test("a running job carries its progress on GET /api/admin/jobs and GET /api/admin/jobs/:id, and the stream's snapshot", async () => {
   const tmdb = await walkTmdb({ movie: 3, tv: 3 });
   const f = await fillApp(tmdb, 3);
   const gate = tmdb.hold("movie", 2);
-  await f.api("POST", "/api/titles/sync");
+  await f.api("POST", "/api/admin/titles/sync");
   await gate.started;
   const running = await f.job();
   const where = { jobId: 1, phase: "movies", done: 102, total: 130 }; // 102 slices done: before 1900 and 1900 to 2000
   assert.deepEqual([running.running, running.progress], [true, where]);
-  const list = pick((await f.api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
+  const list = pick((await f.api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>;
   assert.deepEqual(list.find((j) => j.id === 1)?.progress, where);
   const late = await openEvents(f.base, f.token());
   await late.waitFor((frames) => frames.length > 0, "the snapshot");
@@ -68,9 +69,9 @@ test("Stop between pages ends the run stopped with the rows seen kept, audited s
   const tmdb = await walkTmdb({ movie: 4, tv: 4 });
   const f = await fillApp(tmdb, 4);
   const gate = tmdb.hold("movie", 2);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await gate.started;
-  const stopped = await f.api("POST", "/api/jobs/1/stop");
+  const stopped = await f.api("POST", "/api/admin/jobs/1/stop");
   assert.deepEqual([stopped.status, pick(stopped.body, "data.running")], [202, true]);
   await f.finished();
   const job = await f.job();
@@ -78,12 +79,12 @@ test("Stop between pages ends the run stopped with the rows seen kept, audited s
   assert.equal(await f.stored(), 2, "page one stays");
   gate.release();
   assert.deepEqual(tmdb.pages(), ["movie:1", "movie:2"], "no further page and no series");
-  const status = pick((await f.api("GET", "/api/titles/sync")).body, "data");
+  const status = pick((await f.api("GET", "/api/admin/titles/sync")).body, "data");
   assert.deepEqual([pick(status, "running"), pick(status, "lastOutcome")], [false, "stopped"]);
-  const actions = (pick((await f.api("GET", "/api/audit?limit=20")).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
+  const actions = (pick((await f.api("GET", "/api/admin/audit?limit=20")).body, "data.items") as Array<Record<string, unknown>>).map((e) => e.action);
   assert.ok(actions.includes("sync.stopped") && actions.includes("job.stopped") && !actions.includes("sync.finished"), actions.join());
-  assert.equal((await f.api("POST", "/api/jobs/1/stop")).status, 409, "idle again");
-  const again = await f.api("POST", "/api/jobs/1/run");
+  assert.equal((await f.api("POST", "/api/admin/jobs/1/stop")).status, 409, "idle again");
+  const again = await f.api("POST", "/api/admin/jobs/1/run");
   assert.equal(again.status, 202, "running again re-walks from page 1");
   await f.finished();
   assert.equal(tmdb.pages().filter((p) => p === "movie:1").length, 2);
@@ -93,11 +94,11 @@ test("Stop during a backoff sleep ends the run at once: the failing page is not 
   const tmdb = await walkTmdb({ movie: 4, tv: 4 });
   tmdb.state.fail.set("movie:2", 503);
   const f = await fillApp(tmdb, 4);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await until(() => tmdb.pages().includes("movie:2"), "the failing page");
   await new Promise((resolve) => setTimeout(resolve, 50)); // into the 2.5 s backoff sleep
   const started = Date.now();
-  await f.api("POST", "/api/jobs/1/stop");
+  await f.api("POST", "/api/admin/jobs/1/stop");
   await f.finished();
   assert.ok(Date.now() - started < 1_500, "it did not wait out the backoff");
   assert.equal((await f.job()).lastResult, "stopped");
@@ -108,48 +109,48 @@ test("an error mid-walk is a typed failure with its code, and the rows already w
   const tmdb = await walkTmdb({ movie: 4, tv: 4 });
   tmdb.state.fail.set("movie:3", 400);
   const f = await fillApp(tmdb, 4);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   const job = await f.job();
   assert.deepEqual([job.lastResult, job.lastCounts], ["failed", { code: "tmdb.unavailable" }]);
   assert.equal(await f.stored(), 4, "pages one and two are kept");
-  assert.equal(pick((await f.api("GET", "/api/titles/sync")).body, "data.lastOutcome"), "tmdb.unavailable");
-  const entries = pick((await f.api("GET", "/api/audit?limit=20")).body, "data.items") as Array<Record<string, unknown>>;
+  assert.equal(pick((await f.api("GET", "/api/admin/titles/sync")).body, "data.lastOutcome"), "tmdb.unavailable");
+  const entries = pick((await f.api("GET", "/api/admin/audit?limit=20")).body, "data.items") as Array<Record<string, unknown>>;
   const failed = entries.find((e) => e.action === "sync.failed");
   assert.deepEqual([pick(failed, "detail.code"), pick(failed, "detail.titles")], ["tmdb.unavailable", 4]);
 });
 
-test("POST /api/titles/sync with no Library fill is 409 job.no_library_fill", async () => {
+test("POST /api/admin/titles/sync with no Library fill is 409 job.no_library_fill", async () => {
   const f = await fillApp(await walkTmdb({ movie: 1, tv: 1 }), 1);
-  await f.api("DELETE", "/api/jobs/1");
-  const refused = await f.api("POST", "/api/titles/sync");
+  await f.api("DELETE", "/api/admin/jobs/1");
+  const refused = await f.api("POST", "/api/admin/titles/sync");
   assert.deepEqual([refused.status, pick(refused.body, "error.code")], [409, "job.no_library_fill"]);
 });
 
 test("a stale stored full detail is fetched again by the next run's details phase, its own fields standing", async () => {
   const tmdb = await walkTmdb({ movie: 1, tv: 1 });
   const f = await fillApp(tmdb, 1);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   assert.equal((await f.api("GET", "/api/titles/movie-1010")).status, 200, "the first run stored the full detail");
-  const row = (): { payload: Record<string, unknown>; fetched_at: number } => {
-    const db = new DatabaseSync(path.join(f.t.dataDir, DATABASE_FILE_NAME), { readOnly: true });
+  const row = async (): Promise<{ payload: Record<string, unknown>; fetched_at: number }> => {
+    const db = await openTestDatabase(path.join(f.t.dataDir, DATABASE_FILE_NAME));
     try {
-      const found = db.prepare("SELECT payload, fetched_at FROM titles WHERE id = 'movie-1010'").get();
+      const found = await queryRow(db, "SELECT payload, fetched_at FROM titles WHERE id = 'movie-1010'");
       return { payload: JSON.parse(String(found?.payload)) as Record<string, unknown>, fetched_at: Number(found?.fetched_at) };
     } finally {
       db.close();
     }
   };
-  const before = row();
+  const before = await row();
   assert.deepEqual([before.payload.shape, before.payload.plot], ["detail", "Plot 1010"]);
 
   f.t.clock.advance(FOUR_DAYS_MS);
   Object.assign(tmdb.state, { rating: 9.1, poster: "/new.jpg" });
   await f.renew(); // the clock moved past the session's lifetime
-  assert.equal((await f.api("POST", "/api/jobs/1/run")).status, 202);
+  assert.equal((await f.api("POST", "/api/admin/jobs/1/run")).status, 202);
   await f.finished();
-  const after = row();
+  const after = await row();
   assert.equal(after.payload.shape, "detail");
   assert.equal(after.payload.plot, "Plot 1010", "the detail's own fields stand");
   assert.equal(after.fetched_at - before.fetched_at, FOUR_DAYS_MS, "its age restarts: the detail was fetched again");

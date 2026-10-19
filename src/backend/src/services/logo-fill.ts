@@ -11,7 +11,7 @@ import type { LogoResolver } from "./logo-resolver.js";
 export function createLogoFill(deps: { store: Store; resolver: LogoResolver }) {
   const { store, resolver } = deps;
   return async function fillLogos(run: SyncRun): Promise<number> {
-    const names = store.health.namesWithoutLogo(run.playlistId);
+    const names = await store.health.namesWithoutLogo(run.playlistId);
     if (names.length === 0 || run.signal.aborted) return 0;
     await resolver.load(run.signal);
     if (run.signal.aborted) return 0;
@@ -21,7 +21,7 @@ export function createLogoFill(deps: { store: Store; resolver: LogoResolver }) {
       if (url !== undefined) found.set(syncName, url);
     }
     if (found.size === 0) return 0;
-    return store.health.fillLogoUrls(run.playlistId, found, () => void store.revisions.next());
+    return store.health.fillLogoUrls(run.playlistId, found, () => store.revisions.next());
   };
 }
 

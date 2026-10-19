@@ -32,11 +32,11 @@ export interface EventsClient {
   destroy: () => void;
 }
 
-/** `GET /api/jobs/events` on `base` with `token`; resolves once the response headers have arrived. */
+/** `GET /api/admin/jobs/events` on `base` with `token`; resolves once the response headers have arrived. */
 export function openEvents(base: string, token?: string, headers: Record<string, string> = {}): Promise<EventsClient> {
   return new Promise((resolve, reject) => {
     const authorization = token === undefined ? {} : { authorization: `Bearer ${token}` };
-    const request = http.get(`${base}/api/jobs/events`, { headers: { ...headers, ...authorization } });
+    const request = http.get(`${base}/api/admin/jobs/events`, { headers: { ...headers, ...authorization } });
     request.once("error", reject);
     request.once("response", (response) => {
       let text = "";

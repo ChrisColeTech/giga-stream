@@ -34,7 +34,7 @@ async function seedProviders() {
   const access = (await signIn(app)).access;
 
   // Check if already seeded
-  const existing = await send(app, "GET", "/api/providers");
+  const existing = await send(app, "GET", "/api/admin/providers");
   if (existing.body.data.items.length > 0) {
     console.log("Providers already seeded, skipping.");
     await app.close();
@@ -42,7 +42,7 @@ async function seedProviders() {
   }
 
   for (const provider of CATALOG) {
-    const result = await send(app, "POST", "/api/providers", provider, access);
+    const result = await send(app, "POST", "/api/admin/providers", provider, access);
     if (result.status !== 201) {
       console.log(`${provider.source}: ${result.status} - ${JSON.stringify(result.body)}`);
     } else {

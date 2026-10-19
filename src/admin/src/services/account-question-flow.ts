@@ -14,7 +14,7 @@ import {
   type FlowResult,
 } from "./account-flow-support";
 
-/** Sets or replaces a selected account's security question, `PUT /api/admin-accounts/:id/security-question` (docs/54
+/** Sets or replaces a selected account's security question, `PUT /api/admin/accounts/:id/security-question` (docs/54
  *  section 2). The actor is the signed-in admin, so no current password is asked; a question is not a credential, so
  *  nothing is signed out and the session is never ended. The backend answers `{ set: true }` (never the account), so
  *  the flow upserts the held row with its flag flipped: that is how the badge turns `Set` without a re-read. A save says

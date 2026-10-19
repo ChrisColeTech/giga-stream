@@ -4,12 +4,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { isPrivateRoute } from "../src/network-policy.js";
-import type { createStore } from "../src/store/store.js";
+import type { Store } from "../src/store/store.js";
 import { pageOf, seededDataDir } from "./paging-kit.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 import { stubTmdb, tmdbOn } from "./title-stubs.js";
 
-type Store = ReturnType<typeof createStore>;
 const AT = Date.UTC(2026, 0, 1);
 const BULK = 1_199;
 const payloadOf = (id: string, kind: "movie" | "tv", n: number, extra: Record<string, unknown> = {}) => ({
@@ -21,18 +20,18 @@ const payloadOf = (id: string, kind: "movie" | "tv", n: number, extra: Record<st
   ...extra,
 });
 
-function seed(store: Store): void {
-  const put = (kind: "movie" | "tv", n: number, extra: Record<string, unknown> = {}) =>
+async function seed(store: Store): Promise<void> {
+  const put = async (kind: "movie" | "tv", n: number, extra: Record<string, unknown> = {}): Promise<void> =>
     store.titles.put({ kind, tmdbId: n, payload: payloadOf(`${kind}-${n}`, kind, n, extra), popularityScore: null, popularityReadAt: null, fetchedAt: AT });
-  for (let i = 0; i < BULK; i++) put(i % 2 === 0 ? "movie" : "tv", 100_000 + i);
-  put("movie", 5, { title: "Original" });
-  store.titles.updateRecord("movie-5", { payload: payloadOf("movie-5", "movie", 5, { title: "Edited Name" }), editedFields: ["title"], tmdbId: 5, enabled: true });
-  put("movie", 6);
-  store.titles.updateRecord("movie-6", { payload: payloadOf("movie-6", "movie", 6), editedFields: [], tmdbId: 6, enabled: false });
-  put("tv", 7);
-  put("movie", 8, { title: undefined });
+  for (let i = 0; i < BULK; i++) await put(i % 2 === 0 ? "movie" : "tv", 100_000 + i);
+  await put("movie", 5, { title: "Original" });
+  await store.titles.updateRecord("movie-5", { payload: payloadOf("movie-5", "movie", 5, { title: "Edited Name" }), editedFields: ["title"], tmdbId: 5, enabled: true });
+  await put("movie", 6);
+  await store.titles.updateRecord("movie-6", { payload: payloadOf("movie-6", "movie", 6), editedFields: [], tmdbId: 6, enabled: false });
+  await put("tv", 7);
+  await put("movie", 8, { title: undefined });
   const manual = { id: "custom-1", kind: "tv" as const, shape: "detail", title: "By Hand", genres: ["Drama"], plot: "p", streamUrl: "https://s.example/m.m3u8" };
-  store.titles.insertManual({ id: "custom-1", kind: "tv", tmdbId: null, payload: manual, at: AT });
+  await store.titles.insertManual({ id: "custom-1", kind: "tv", tmdbId: null, payload: manual, at: AT });
 }
 
 const ENABLED_IDS = [
@@ -42,9 +41,9 @@ let shared: { t: TestApp; calls: string[]; token: string } | undefined;
 async function setup() {
   if (shared) return shared;
   const tmdb = await stubTmdb();
-  const t = await makeApp({ dataDir: seededDataDir(seed), config: tmdbOn(tmdb) });
+  const t = await makeApp({ dataDir: await seededDataDir(seed), config: tmdbOn(tmdb) });
   const token = (await signIn(t.app)).access;
-  assert.equal((await send(t.app, "DELETE", "/api/titles/tv-7", undefined, token)).status, 200);
+  assert.equal((await send(t.app, "DELETE", "/api/admin/titles/tv-7", undefined, token)).status, 200);
   tmdb.calls.length = 0;
   shared = { t, calls: tmdb.calls, token };
   return shared;

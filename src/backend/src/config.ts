@@ -20,6 +20,9 @@ const PROGRAM_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 /** The built admin app (`npm run build` in src/admin), served at `/admin/` (docs/26 section 4.1). */
 const DEFAULT_ADMIN_DIST = path.resolve(PROGRAM_ROOT, "..", "admin", "dist");
 
+/** The root-level admin UI served at `/` when it is built (`src/backend/public`). */
+const DEFAULT_PUBLIC_DIR = path.resolve(PROGRAM_ROOT, "public");
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   // Tests use port 0; unset, the port follows NODE_ENV.
@@ -66,6 +69,12 @@ const EnvSchema = z.object({
   TEST_PAGE: BooleanFlag,
   // The built admin app, served at /admin/ (docs/26 section 4.1); with no index.html there, nothing is.
   ADMIN_DIST: z.string().default(""),
+  // The root-level admin UI served at / when it has an index.html; tests point it at a temporary directory.
+  PUBLIC_DIR: z.string().default(""),
+  // The store in production is the remote Turso database (docs/13): a local file would be the ephemeral Render
+  // disk and would silently lose every admin account on each deploy. The token authenticates it.
+  TURSO_DATABASE_URL: z.string().default(""),
+  TURSO_AUTH_TOKEN: z.string().default(""),
   // The playlist import and sync (docs/03 section 7.2c). A playlist and its job come from an import; no
   // environment seeds them (PLAYLIST_URLS and PLAYLIST_SYNC_SCHEDULE are retired, docs/43).
   PLAYLIST_SYNC_MAX_BYTES: z.coerce.number().int().min(1).default(PLAYLIST_IMPORT_MAX_BYTES),
@@ -81,6 +90,7 @@ export const config = {
   DATA_DIR: parsed.DATA_DIR || path.join(os.homedir(), ".giga-stream-admin"),
   FIXTURE_DIR: parsed.FIXTURE_DIR || path.join(os.tmpdir(), "giga-stream-fixtures"),
   ADMIN_DIST: path.resolve(parsed.ADMIN_DIST || DEFAULT_ADMIN_DIST),
+  PUBLIC_DIR: path.resolve(parsed.PUBLIC_DIR || DEFAULT_PUBLIC_DIR),
 };
 
 export type Config = typeof config;

@@ -1,50 +1,50 @@
 // Migration 026 (docs/47 sections 3.1 and 3.4): the details bookkeeping columns on `titles` (nullable, so every stored
 // title is kept as it was) and the stored genre dictionary. Forward-only.
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 import { createStore } from "../src/store/store.js";
+import { removeDir, openTestDatabase, queryRow, queryRows, runSql } from "./db-kit.js";
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "store", "migrations");
 
-test("026 lands on a version-25 database: the titles are kept, the new columns are empty, the genre table is there", () => {
+test("026 lands on a version-25 database: the titles are kept, the new columns are empty, the genre table is there", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "giga-details-migration-"));
   try {
     const file = path.join(dir, "admin.db");
-    const old = new DatabaseSync(file);
+    const old = await openTestDatabase(file);
     for (const name of readdirSync(MIGRATIONS).sort()) {
       const version = Number(name.slice(0, 3));
       if (version > 25) continue;
-      old.exec(readFileSync(path.join(MIGRATIONS, name), "utf-8"));
-      old.exec(`PRAGMA user_version = ${version}`);
+      await runSql(old, readFileSync(path.join(MIGRATIONS, name), "utf-8"));
+      await runSql(old, `PRAGMA user_version = ${version}`);
     }
-    old.prepare("INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES ('movie-1', 'movie', 1, 'tmdb', '{\"shape\":\"list\"}', 5)").run();
+    await runSql(old, "INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES ('movie-1', 'movie', 1, 'tmdb', '{\"shape\":\"list\"}', 5)");
     old.close();
 
-    const store = createStore(file);
-    assert.equal(store.titles.find("movie", 1)?.fetchedAt, 5);
-    assert.deepEqual(store.titles.genres("movie"), []);
-    store.titles.replaceGenres("movie", [{ id: 18, name: "Drama" }]);
-    assert.deepEqual(store.titles.genres("movie"), [{ id: 18, name: "Drama" }]);
+    const store = await createStore(file);
+    assert.equal((await store.titles.find("movie", 1))?.fetchedAt, 5);
+    assert.deepEqual(await store.titles.genres("movie"), []);
+    await store.titles.replaceGenres("movie", [{ id: 18, name: "Drama" }]);
+    assert.deepEqual(await store.titles.genres("movie"), [{ id: 18, name: "Drama" }]);
     store.close();
 
-    const db = new DatabaseSync(file, { readOnly: true });
+    const db = await openTestDatabase(file);
     try {
-      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 30);
-      const columns = db.prepare("PRAGMA table_info(titles)").all().filter((c) => String(c.name).startsWith("detail_"));
+      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 30);
+      const columns = (await queryRows(db, "PRAGMA table_info(titles)")).filter((c) => String(c.name).startsWith("detail_"));
       assert.deepEqual(columns.map((c) => [c.name, c.notnull]), [["detail_failed_at", 0], ["detail_failures", 0]]);
-      assert.deepEqual(db.prepare("SELECT detail_failed_at, detail_failures FROM titles").all().map((r) => ({ ...r })),
+      assert.deepEqual(await queryRows(db, "SELECT detail_failed_at, detail_failures FROM titles"),
         [{ detail_failed_at: null, detail_failures: null }]);
-      assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+      assert.deepEqual(await queryRows(db, "PRAGMA foreign_key_check"), []);
     } finally {
       db.close();
     }
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    removeDir(dir);
   }
 });

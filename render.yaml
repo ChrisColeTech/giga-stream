@@ -1,0 +1,73 @@
+# Render blueprint — the single giga-stream service.
+#
+# ONE web service, TWO node processes (scripts/start.sh):
+#   • the fileserver, public on $PORT — the interface at /, its /api surface,
+#     and the reverse proxy for the admin half of the domain;
+#   • the admin backend, loopback-only on BACKEND_PORT (default 8191) — the
+#     admin console (staged into src/backend/public, served at /), the
+#     /api/admin routes and the live streams (/live, /logos).
+# Public shape: / and /api/* are the frontend's; /admin is the console (login
+# gate first); every admin API route is /api/admin/*.
+#
+# The backend's database is Turso (libSQL over the network) in production:
+# TURSO_DATABASE_URL + TURSO_AUTH_TOKEN. Locally and in tests the same code
+# opens a local file, so the store has one driver everywhere.
+#
+# Secrets are `sync: false`: their NAMES live here, their VALUES are set on
+# the service (from docs/secrets.env, which is gitignored) — never in git.
+#
+# Deliberately NOT set here:
+#   • PORT            — Render injects it (the fileserver's public port)
+#   • ADMIN_PROXY_TARGET — start.sh injects the loopback target
+#   • JWT_SECRET, ADMIN_BOOTSTRAP_*, TURSO_*, TMDB_READ_TOKEN — secrets
+
+services:
+  - type: web
+    name: giga-stream
+    runtime: node
+    region: ohio
+    plan: starter
+    # The migration branch while the Turso move lands; merge back to
+    # family-port and flip this with it.
+    branch: turso-migration
+    numInstances: 1
+    autoDeploy: false # a deploy restarts the pair; an explicit owner action
+    healthCheckPath: /healthz
+    buildCommand: bash ./scripts/build.sh
+    startCommand: bash ./scripts/start.sh
+    envVars:
+      # ── fixed, non-secret ──────────────────────────────────────────────
+      - key: NODE_VERSION
+        value: 24.11.1
+      - key: NODE_ENV
+        value: production
+      # The fileserver must answer the internet, not only loopback.
+      - key: HOST
+        value: 0.0.0.0
+      # The backend's loopback sibling port (start.sh's default; pinned here
+      # so the fileserver's saved admin address and the proxy agree).
+      - key: BACKEND_PORT
+        value: "8191"
+      # The backend sits behind the fileserver's proxy: honor X-Forwarded-For
+      # so its sign-in limiter keys on the real client address.
+      - key: TRUST_PROXY
+        value: "true"
+      # ── identity (the console's sign-in) ───────────────────────────────
+      - key: JWT_SECRET # signs access tokens; >= 32 chars
+        sync: false
+      - key: ADMIN_BOOTSTRAP_USERNAME # the first admin, seeded at boot
+        sync: false
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false
+      # ── database (Turso in production) ─────────────────────────────────
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      # ── providers ──────────────────────────────────────────────────────
+      - key: TMDB_READ_TOKEN
+        sync: false
+      - key: TMDB_SYNC_SCHEDULE # e.g. "6h"; empty disables the catalog sync
+        value: ""
+      - key: OMDB_API_KEY # optional detail enrichment
+        sync: false

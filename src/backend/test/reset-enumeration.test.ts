@@ -31,12 +31,12 @@ test("twenty wrong answers lock nothing: the right answer still resets, and ever
 test("every failure is byte-identical: wrong, unknown, no question, disabled", async () => {
   const { t, access } = await withQuestion();
   const made = async (username: string) =>
-    String(pick((await send(t.app, "POST", "/api/admin-accounts", { username, password: ADMIN_PASSWORD }, access)).body, "data.id"));
+    String(pick((await send(t.app, "POST", "/api/admin/accounts", { username, password: ADMIN_PASSWORD }, access)).body, "data.id"));
   await made("plain@example.test");
   const offId = await made("off@example.test");
   const off = await signIn(t.app, "off@example.test", ADMIN_PASSWORD);
   assert.equal((await setQuestion(t.app, off.access, SECRET_ANSWER)).status, 200);
-  assert.equal((await send(t.app, "PATCH", `/api/admin-accounts/${offId}`, { disabled: true }, access)).status, 200);
+  assert.equal((await send(t.app, "PATCH", `/api/admin/accounts/${offId}`, { disabled: true }, access)).status, 200);
 
   const failures = [
     await resetWith(t.app, ADMIN_USERNAME, "wrong"),

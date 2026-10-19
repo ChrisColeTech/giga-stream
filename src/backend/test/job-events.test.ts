@@ -1,4 +1,4 @@
-// GET /api/jobs/events (docs/44 section 3.3) over a real socket: signed in at connect, the hand-written event-stream headers
+// GET /api/admin/jobs/events (docs/44 section 3.3) over a real socket: signed in at connect, the hand-written event-stream headers
 // of a hijacked reply, the snapshot first, at most eight streams, a closed client leaves, and shutdown ends open streams.
 import assert from "node:assert/strict";
 import test from "node:test";

@@ -18,7 +18,7 @@ const optionalText = (max: number) =>
 const flag = z.enum(["true", "false"]).optional().transform((value) => (value === undefined ? undefined : value === "true"));
 
 /**
- * The query of `GET /api/admin-channels` (docs/41 section 3.1). `limit` turns paging on; without it no other parameter
+ * The query of `GET /api/admin/channels` (docs/41 section 3.1). `limit` turns paging on; without it no other parameter
  * is accepted, so the bare read stays the old whole answer and a filter is never silently ignored.
  */
 export const AdminChannelQuerySchema = z

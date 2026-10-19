@@ -35,20 +35,22 @@ export function createTmdbBrowse(deps: { store: Store; tmdb: TmdbClient; now: ()
     return new AppError(ERRORS.tmdbUnavailable, { reason: "not configured" });
   }
 
-  function marked(kind: Kind, rows: Record<string, unknown>[]): TmdbRow[] {
-    return rows.map((row) => {
+  async function marked(kind: Kind, rows: Record<string, unknown>[]): Promise<TmdbRow[]> {
+    return Promise.all(rows.map(async (row) => {
       const id = num(row.tmdbId);
       const known = id !== undefined;
-      return { ...row, state: "synced", stored: known && store.titles.find(kind, id) !== undefined,
-        deleted: known && store.deletedTitles.has(kind, id) };
-    });
+      return {
+        ...row, state: "synced", stored: known && (await store.titles.find(kind, id)) !== undefined,
+        deleted: known && (await store.deletedTitles.has(kind, id)),
+      };
+    }));
   }
 
   async function page(kind: Kind, path: string, params: Record<string, string | number | undefined>, wanted: number) {
     if (!tmdb.configured) throw unavailable();
     const answer = asRecord(await tmdb.get(path, params));
     const candidates = listOf(answer.results).filter((r) => asRecord(r).media_type !== "person");
-    const items = marked(kind, rowsOf(kind, candidates, now()));
+    const items = await marked(kind, rowsOf(kind, candidates, now()));
     const totalPages = Math.min(num(answer.total_pages) ?? 1, 500);
     return { items, page: wanted, totalPages, totalResults: num(answer.total_results) ?? items.length, skipped: 0 };
   }

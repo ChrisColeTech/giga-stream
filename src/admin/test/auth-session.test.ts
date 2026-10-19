@@ -12,7 +12,7 @@ import { TOKENS, failure, rig, scripted, sessionBody, success, type Call } from 
 import { resetStore } from "./support/store";
 
 const Item = z.object({ n: z.number() });
-const isRefresh = (call: Call): boolean => call.url === "/api/auth/refresh";
+const isRefresh = (call: Call): boolean => call.url === "/api/admin/auth/refresh";
 
 describe("login", () => {
   it("answers the actor and the tokens, to be held in memory by the store", async () => {
@@ -25,7 +25,7 @@ describe("login", () => {
     assert.deepEqual(result.session.tokens, {
       accessToken: "a1", accessExpiresAt: 5000, refreshToken: "r1", refreshExpiresAt: 6000,
     });
-    assert.equal(backend.calls[0]?.url, "/api/auth/login");
+    assert.equal(backend.calls[0]?.url, "/api/admin/auth/login");
   });
 
   it("refuses with the gate's kinds: invalid and unreachable", async () => {
@@ -47,7 +47,7 @@ describe("the refresh", () => {
     const backend = scripted((call) => (isRefresh(call) ? success(sessionBody("access-2", "refresh-2", 9_000_000)) : success({ n: 1 })));
     const state = rig(backend.fetch, { ...TOKENS, accessExpiresAt: 1_010 });
     await createSessionApi(state.deps).request("/api/x", Item);
-    assert.deepEqual(backend.calls.map((call) => call.url), ["/api/auth/refresh", "/api/x"]);
+    assert.deepEqual(backend.calls.map((call) => call.url), ["/api/admin/auth/refresh", "/api/x"]);
     assert.equal(backend.calls[0]?.body, undefined, "no body: the httpOnly cookie carries the refresh token");
     assert.equal(backend.calls[1]?.headers.authorization, "Bearer access-2");
     assert.equal(state.tokens?.refreshToken, "refresh-2", "the new session replaces the old whole");
@@ -115,7 +115,7 @@ describe("logout", () => {
   it("posts with the bearer and no body: the cookie names the session", async () => {
     const backend = scripted(() => success({}));
     await createSessionApi(rig(backend.fetch, TOKENS).deps).logout();
-    assert.deepEqual(backend.calls.map((call) => [call.url, call.body]), [["/api/auth/logout", undefined]]);
+    assert.deepEqual(backend.calls.map((call) => [call.url, call.body]), [["/api/admin/auth/logout", undefined]]);
     assert.equal(backend.calls[0]?.headers.authorization, "Bearer access-1");
   });
 

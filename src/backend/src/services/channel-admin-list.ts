@@ -11,21 +11,26 @@ import { adminChannel } from "./channel-views.js";
  * asks the engine about the live rows (a handful), keeps the ones in that state and applies them as an id set; it
  * implies `kind=live`, as `origin` implies `kind=stream` (both together match nothing).
  */
-export function adminChannels(
+export async function adminChannels(
   store: Store,
   live: LiveEngine,
   base: string,
   query?: AdminChannelQuery,
-): AdminChannelList | AdminChannelPage {
-  const revision = store.revisions.current();
+): Promise<AdminChannelList | AdminChannelPage> {
+  const revision = await store.revisions.current();
   if (query?.limit === undefined) {
-    return { items: store.channels.list().map((record) => adminChannel(record, base, live)), revision };
+    return {
+      items: (await store.channels.list()).map((record) => adminChannel(record, base, live)),
+      revision,
+    };
   }
   const { limit, offset = 0, sort = "number", dir = "asc", state, ...rest } = query;
   const filter: ChannelFilter = { ...rest };
   if (state !== undefined) {
-    filter.ids = store.channels.liveIds().filter((id) => live.status(id).state === state);
+    filter.ids = (await store.channels.liveIds()).filter((id) => live.status(id).state === state);
   }
-  const { rows, total } = store.channels.page({ filter, sort, dir, limit: Math.min(limit, LIST_PAGE_MAX), offset });
+  const { rows, total } = await store.channels.page({
+    filter, sort, dir, limit: Math.min(limit, LIST_PAGE_MAX), offset,
+  });
   return { items: rows.map((record) => adminChannel(record, base, live)), revision, total, offset, limit };
 }

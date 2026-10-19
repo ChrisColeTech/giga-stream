@@ -14,11 +14,11 @@ const AuditQuery = z
   })
   .strict();
 
-/** The audit log (docs/03 section 7.13): any signed-in admin, newest first. */
+/** The audit log (docs/03 section 7.13): any signed-in admin, newest first, under `/api/admin/audit`. */
 export function registerAudit(app: FastifyInstance, services: Services): void {
-  app.get("/api/audit", async (request, reply) => {
-    signedIn(services, request);
+  app.get("/audit", async (request, reply) => {
+    await signedIn(services, request);
     const { limit, before } = parseInput(AuditQuery, request.query);
-    return ok(reply, services.audit.page(limit, before));
+    return ok(reply, await services.audit.page(limit, before));
   });
 }

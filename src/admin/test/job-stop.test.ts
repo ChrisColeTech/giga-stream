@@ -51,12 +51,12 @@ beforeEach(() => {
 });
 
 describe("the jobs service stops", () => {
-  it("posts to /api/jobs/:id/stop with no body and reads the 202 as the job, still running", async () => {
+  it("posts to /api/admin/jobs/:id/stop with no body and reads the 202 as the job, still running", async () => {
     await withBackend(
       () => success({ ...job(3), running: true }, 202),
       async (calls) => {
         const answer = await jobs.stop(3);
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["POST", "/api/jobs/3/stop", undefined]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["POST", "/api/admin/jobs/3/stop", undefined]);
         assert.equal(answer.running, true);
       },
     );

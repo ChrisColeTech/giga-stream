@@ -124,11 +124,11 @@ export async function fillApp(tmdb: WalkTmdb, pages: number, config: Record<stri
   let token = (await signIn(t.app)).access;
   const renew = async (): Promise<void> => void (token = (await signIn(t.app)).access);
   const api = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: unknown) => send(t.app, method, url, body, token);
-  await api("PATCH", "/api/jobs/1", { enabled: true, config: { pages } });
-  await api("PATCH", "/api/jobs/2", { schedule: "off" }); // the seeded Library update must not start by itself (docs/49)
-  const job = async (): Promise<Record<string, unknown>> => pick((await api("GET", "/api/jobs/1")).body, "data") as Record<string, unknown>;
+  await api("PATCH", "/api/admin/jobs/1", { enabled: true, config: { pages } });
+  await api("PATCH", "/api/admin/jobs/2", { schedule: "off" }); // the seeded Library update must not start by itself (docs/49)
+  const job = async (): Promise<Record<string, unknown>> => pick((await api("GET", "/api/admin/jobs/1")).body, "data") as Record<string, unknown>;
   const finished = (): Promise<void> => until(async () => (await job()).running === false && (await job()).lastResult !== undefined, "the run to end");
-  const stored = async (): Promise<number> => Number(pick((await api("GET", "/api/titles/stored?limit=1")).body, "data.total"));
+  const stored = async (): Promise<number> => Number(pick((await api("GET", "/api/admin/titles/stored?limit=1")).body, "data.total"));
   return { t, base, token: (): string => token, api, job, finished, stored, renew };
 }
 

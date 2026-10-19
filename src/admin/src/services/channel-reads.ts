@@ -23,7 +23,7 @@ export interface ChannelReads {
   refresh: () => Promise<FlowResult>;
   /** One page of the list by the held query (what the window asks for). */
   readPage: (index: number) => Promise<FlowResult>;
-  /** The Preview's read: ONE channel by id (`GET /api/admin-channels/:id`); it never reads or drops the list. */
+  /** The Preview's read: ONE channel by id (`GET /api/admin/channels/:id`); it never reads or drops the list. */
   readOne: (id: string) => Promise<FlowResult>;
   /** A new query: the pages are dropped and the first is read. */
   setQuery: (query: ChannelQuery) => Promise<FlowResult>;

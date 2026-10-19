@@ -1,8 +1,8 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { z } from "zod";
 
 import type { ChannelRecord } from "../types/channel.js";
 import type { ChannelFilter, ChannelPageRequest, ChannelSort, SortDir } from "../types/channel-query.js";
+import type { Database, SqlArgs } from "./database.js";
 import { CHANNEL_FROM, CHANNEL_SELECT } from "./channel-columns.js";
 import { LIKE_ESCAPE, containsPattern } from "./like-pattern.js";
 
@@ -25,9 +25,9 @@ const STATUS_WHERE = {
 
 const SEARCHED = ["c.name", "c.number", "c.tvg_id", "p.name", "p.host"] as const;
 
-function whereOf(filter: ChannelFilter): { sql: string; params: SQLInputValue[] } {
+function whereOf(filter: ChannelFilter): { sql: string; params: SqlArgs } {
   const clauses: string[] = [];
-  const params: SQLInputValue[] = [];
+  const params: SqlArgs = [];
   if (filter.q !== undefined) {
     clauses.push(`(${SEARCHED.map((column) => `${column} LIKE ? ${LIKE_ESCAPE}`).join(" OR ")})`);
     const pattern = containsPattern(filter.q);
@@ -71,14 +71,16 @@ function orderOf(sort: ChannelSort, dir: SortDir): string {
 }
 
 /** One page of the channels in SQL, and the count of every row the filters keep (docs/41 section 3.1). */
-export function createChannelPage(db: DatabaseSync, toRecord: (row: unknown) => ChannelRecord) {
-  return (request: ChannelPageRequest): { rows: ChannelRecord[]; total: number } => {
+export function createChannelPage(db: Database, toRecord: (row: unknown) => Promise<ChannelRecord>) {
+  return async (request: ChannelPageRequest): Promise<{ rows: ChannelRecord[]; total: number }> => {
     const where = whereOf(request.filter);
-    const total = CountRow.parse(db.prepare(`SELECT COUNT(*) AS n FROM ${CHANNEL_FROM} ${where.sql}`).get(...where.params)).n;
-    const rows = db
-      .prepare(`SELECT ${CHANNEL_SELECT} FROM ${CHANNEL_FROM} ${where.sql} ${orderOf(request.sort, request.dir)} LIMIT ? OFFSET ?`)
-      .all(...where.params, request.limit, request.offset)
-      .map(toRecord);
-    return { rows, total };
+    const total = CountRow.parse(
+      (await db.execute({ sql: `SELECT COUNT(*) AS n FROM ${CHANNEL_FROM} ${where.sql}`, args: where.params })).rows[0],
+    ).n;
+    const rows = (await db.execute({
+      sql: `SELECT ${CHANNEL_SELECT} FROM ${CHANNEL_FROM} ${where.sql} ${orderOf(request.sort, request.dir)} LIMIT ? OFFSET ?`,
+      args: [...where.params, request.limit, request.offset],
+    })).rows;
+    return { rows: await Promise.all(rows.map(toRecord)), total };
   };
 }

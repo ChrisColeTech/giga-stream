@@ -5,7 +5,7 @@ import { REFRESH_TOKEN_TTL_MS } from "../constants/limits.js";
 /** The cookie that carries the rotating refresh token (docs/03 section 7.12): the admin app keeps no browser storage,
  *  so a reload restores the session through this httpOnly cookie. The access token is never in it. */
 export const REFRESH_COOKIE = "giga_refresh";
-const COOKIE_PATH = "/api/auth";
+const COOKIE_PATH = "/api/admin/auth";
 
 const attributes = (request: FastifyRequest): string =>
   `Path=${COOKIE_PATH}; HttpOnly; SameSite=Strict${request.protocol === "https" ? "; Secure" : ""}`;

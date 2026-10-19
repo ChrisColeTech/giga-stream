@@ -60,8 +60,8 @@ export function createTitleRecords(deps: {
     }
   }
 
-  const found = (titleId: string): StoredTitle => {
-    const row = store.titles.findById(titleId);
+  const found = async (titleId: string): Promise<StoredTitle> => {
+    const row = await store.titles.findById(titleId);
     if (row === undefined) throw new AppError(ERRORS.titleNotFound, { titleId });
     return row;
   };
@@ -73,20 +73,20 @@ export function createTitleRecords(deps: {
      */
     async addFromTmdb(titleId: string, actor: Actor): Promise<Record<string, unknown>> {
       const [kind, tmdbId] = parseTitleId(titleId);
-      if (store.titles.find(kind, tmdbId) !== undefined || deleted.isDeleted(kind, tmdbId)) {
-        throw new AppError(ERRORS.titleTaken, { titleId, deleted: deleted.isDeleted(kind, tmdbId) });
+      if ((await store.titles.find(kind, tmdbId)) !== undefined || (await deleted.isDeleted(kind, tmdbId))) {
+        throw new AppError(ERRORS.titleTaken, { titleId, deleted: await deleted.isDeleted(kind, tmdbId) });
       }
       try {
         await fetchDetail(kind, tmdbId, { force: true });
       } catch (error) {
         return mapTitle404(error, titleId);
       }
-      const saved = found(titleId);
-      audit.record(actor, { action: "title.created", subject: titleId, detail: { title: nameOf(saved), kind, source: "tmdb" } });
+      const saved = await found(titleId);
+      await audit.record(actor, { action: "title.created", subject: titleId, detail: { title: nameOf(saved), kind, source: "tmdb" } });
       return viewOf(saved);
     },
 
-    create(input: TitleInput, actor: Actor): Record<string, unknown> {
+    async create(input: TitleInput, actor: Actor): Promise<Record<string, unknown>> {
       const { kind, tmdbId, seasons, ...fields } = input;
       checkAddresses({ ...fields, seasons });
       const id = `${MANUAL_PREFIX}${randomUUID()}`;
@@ -94,13 +94,13 @@ export function createTitleRecords(deps: {
         id, kind, shape: "detail", ...fields, ...(tmdbId !== undefined && { tmdbId }),
         ...(seasons !== undefined && { seasons: seasonsOf(seasons) }),
       };
-      store.titles.insertManual({ id, kind, tmdbId: tmdbId ?? null, payload, at: now() });
-      audit.record(actor, { action: "title.created", subject: id, detail: { title: input.title, kind } });
-      return viewOf(found(id));
+      await store.titles.insertManual({ id, kind, tmdbId: tmdbId ?? null, payload, at: now() });
+      await audit.record(actor, { action: "title.created", subject: id, detail: { title: input.title, kind } });
+      return viewOf(await found(id));
     },
 
     async update(titleId: string, patch: TitlePatch, actor: Actor): Promise<Record<string, unknown>> {
-      const row = found(titleId);
+      const row = await found(titleId);
       if (row.origin === "tmdb" && patch.tmdbId !== undefined) {
         throw invalid("tmdbId", "A title from TMDB keeps its TMDB id.");
       }
@@ -122,11 +122,11 @@ export function createTitleRecords(deps: {
         if (tmdbId === null) delete payload.tmdbId;
         else if (tmdbId !== undefined) payload.tmdbId = tmdbId;
       }
-      store.titles.updateRecord(titleId, { payload, editedFields, tmdbId: nextTmdbId, enabled: enabled ?? row.enabled });
+      await store.titles.updateRecord(titleId, { payload, editedFields, tmdbId: nextTmdbId, enabled: enabled ?? row.enabled });
       const touched = [...fields, ...(tmdbId === undefined ? [] : ["tmdbId"]), ...(enabled === undefined ? [] : ["enabled"])];
-      const saved = found(titleId);
+      const saved = await found(titleId);
       const detail = { name: nameOf(saved), fields: touched };
-      audit.record(actor, { action: "title.updated", subject: titleId, detail });
+      await audit.record(actor, { action: "title.updated", subject: titleId, detail });
       return viewOf(saved);
     },
 
@@ -134,33 +134,33 @@ export function createTitleRecords(deps: {
      * A title made by hand is deleted for real. A synced one is deleted and stays deleted: its TMDB identity is
      * recorded (migration 020), so the browse, search, detail and the sync skip it until it is restored.
      */
-    remove(titleId: string, actor: Actor): { id: string } {
-      const row = found(titleId);
-      store.transaction(() => {
-        store.titles.remove(titleId);
+    remove: async (titleId: string, actor: Actor): Promise<{ id: string }> => {
+      const row = await found(titleId);
+      await store.transaction(async () => {
+        await store.titles.remove(titleId);
         if (row.origin === "tmdb" && row.tmdbId !== null) {
-          store.deletedTitles.record(row.kind, row.tmdbId, nameOf(row), now());
+          await store.deletedTitles.record(row.kind, row.tmdbId, nameOf(row), now());
         }
       });
-      audit.record(actor, { action: "title.deleted", subject: titleId, detail: { origin: row.origin } });
+      await audit.record(actor, { action: "title.deleted", subject: titleId, detail: { origin: row.origin } });
       return { id: titleId };
     },
 
     /** Drops an admin's edits and takes TMDB's record again; a title made by hand has nothing to go back to. */
     async revert(titleId: string, actor: Actor): Promise<Record<string, unknown>> {
-      const row = found(titleId);
+      const row = await found(titleId);
       if (row.origin === "manual" || row.tmdbId === null) throw new AppError(ERRORS.titleManual, { titleId });
-      store.titles.clearEdits(titleId);
+      await store.titles.clearEdits(titleId);
       try {
         await fetchDetail(row.kind, row.tmdbId, { force: true });
       } catch (error) {
         // The refetch failed: the edits were not given up.
-        store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId, enabled: row.enabled });
+        await store.titles.updateRecord(titleId, { payload: row.payload, editedFields: row.editedFields, tmdbId: row.tmdbId, enabled: row.enabled });
         return mapTitle404(error, titleId);
       }
-      const saved = found(titleId);
+      const saved = await found(titleId);
       const detail = { name: nameOf(saved), fields: row.editedFields };
-      audit.record(actor, { action: "title.reverted", subject: titleId, detail });
+      await audit.record(actor, { action: "title.reverted", subject: titleId, detail });
       return viewOf(saved);
     },
   };

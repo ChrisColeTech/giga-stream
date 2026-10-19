@@ -1,6 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
+import type { Database } from "./database.js";
 import { applyFields } from "./title-edits.js";
 import { createTitleCatalog } from "./title-catalog.js";
 import { createTitleDetails } from "./title-details.js";
@@ -75,16 +75,11 @@ const COLUMNS =
 /** A rewrite that changes nothing but the popularity read keeps a title's detail-failure record (docs/47 section 3.1). */
 const SAME_PAYLOAD = "json_remove(excluded.payload, '$.popularity') IS json_remove(titles.payload, '$.popularity')";
 
-/**
- * The title store (docs/03 section 7.6b): `titles` and `title_lists`. A TMDB title is written whole on every sync or
- * fill-through, but `put` is the one place that decides what a write may change: it merges TMDB's payload under the
- * fields an admin edited and leaves `enabled` alone. Manual titles are never written by it.
- */
-export function createTitleRepository(db: DatabaseSync) {
-  const byTmdb = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE kind = ? AND tmdb_id = ? AND origin = 'tmdb'`);
-  const byId = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE id = ?`);
-  const manual = db.prepare(`SELECT ${COLUMNS} FROM titles WHERE origin = 'manual' ORDER BY fetched_at DESC, id`);
-  const upsert = db.prepare(`
+const SQL = {
+  byTmdb: `SELECT ${COLUMNS} FROM titles WHERE kind = ? AND tmdb_id = ? AND origin = 'tmdb'`,
+  byId: `SELECT ${COLUMNS} FROM titles WHERE id = ?`,
+  manual: `SELECT ${COLUMNS} FROM titles WHERE origin = 'manual' ORDER BY fetched_at DESC, id`,
+  upsert: `
     INSERT INTO titles (id, kind, tmdb_id, origin, payload, popularity_score, popularity_read_at, fetched_at)
     VALUES (?, ?, ?, 'tmdb', ?, ?, ?, ?)
     ON CONFLICT (kind, tmdb_id) WHERE origin = 'tmdb' DO UPDATE SET
@@ -93,23 +88,34 @@ export function createTitleRepository(db: DatabaseSync) {
       popularity_read_at = COALESCE(excluded.popularity_read_at, titles.popularity_read_at),
       fetched_at = excluded.fetched_at,
       detail_failed_at = CASE WHEN ${SAME_PAYLOAD} THEN titles.detail_failed_at END,
-      detail_failures = CASE WHEN ${SAME_PAYLOAD} THEN titles.detail_failures END`);
-  const insertManual = db.prepare(`
-    INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES (?, ?, ?, 'manual', ?, ?)`);
-  const update = db.prepare("UPDATE titles SET payload = ?, edited_fields = ?, tmdb_id = ?, enabled = ? WHERE id = ?");
-  const clearEdits = db.prepare("UPDATE titles SET edited_fields = NULL WHERE id = ?");
-  const remove = db.prepare("DELETE FROM titles WHERE id = ?");
-  const counts = db.prepare("SELECT COUNT(*) AS total, SUM(fetched_at < ?) AS stale FROM titles WHERE origin = 'tmdb'");
+      detail_failures = CASE WHEN ${SAME_PAYLOAD} THEN titles.detail_failures END`,
+  insertManual: `INSERT INTO titles (id, kind, tmdb_id, origin, payload, fetched_at) VALUES (?, ?, ?, 'manual', ?, ?)`,
+  update: "UPDATE titles SET payload = ?, edited_fields = ?, tmdb_id = ?, enabled = ? WHERE id = ?",
+  clearEdits: "UPDATE titles SET edited_fields = NULL WHERE id = ?",
+  remove: "DELETE FROM titles WHERE id = ?",
+  counts: "SELECT COUNT(*) AS total, SUM(fetched_at < ?) AS stale FROM titles WHERE origin = 'tmdb'",
+};
 
-  function findById(id: string): StoredTitle | undefined {
-    const row = byId.get(id);
-    return row === undefined ? undefined : stored(TitleRow.parse(row));
+/** A stored title row as the readers map it (the page, the catalog and the reads share it). */
+async function storedAt(row: unknown): Promise<StoredTitle> {
+  return stored(TitleRow.parse(row));
+}
+
+/**
+ * The title store (docs/03 section 7.6b): `titles` and `title_lists`. A TMDB title is written whole on every sync or
+ * fill-through, but `put` is the one place that decides what a write may change: it merges TMDB's payload under the
+ * fields an admin edited and leaves `enabled` alone. Manual titles are never written by it.
+ */
+export function createTitleRepository(db: Database) {
+  async function findById(id: string): Promise<StoredTitle | undefined> {
+    const row = (await db.execute({ sql: SQL.byId, args: [id] })).rows[0];
+    return row === undefined ? undefined : storedAt(row);
   }
-  const pages = createTitlePage(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
+  const pages = createTitlePage(db, COLUMNS, storedAt);
 
-  const catalog = createTitleCatalog(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
+  const catalog = createTitleCatalog(db, COLUMNS, storedAt);
 
-  const related = createTitleRelated(db, COLUMNS, (row) => stored(TitleRow.parse(row)));
+  const related = createTitleRelated(db, COLUMNS, storedAt);
 
   return {
     /** The Library fill's work queues (docs/47 section 3.1). */
@@ -126,38 +132,51 @@ export function createTitleRepository(db: DatabaseSync) {
     page: pages.page,
     inventory: pages.inventory,
     /** The stored TMDB title, or undefined. */
-    find(kind: "movie" | "tv", tmdbId: number): StoredTitle | undefined {
-      const row = byTmdb.get(kind, tmdbId);
-      return row === undefined ? undefined : stored(TitleRow.parse(row));
+    find: async (kind: "movie" | "tv", tmdbId: number): Promise<StoredTitle | undefined> => {
+      const row = (await db.execute({ sql: SQL.byTmdb, args: [kind, tmdbId] })).rows[0];
+      return row === undefined ? undefined : storedAt(row);
     },
     findById,
     /** Every title made by hand, newest first. */
-    listManual: (): StoredTitle[] => manual.all().map((row) => stored(TitleRow.parse(row))),
-    put(title: TitleWrite): void {
+    listManual: async (): Promise<StoredTitle[]> =>
+      Promise.all((await db.execute(SQL.manual)).rows.map(storedAt)),
+    async put(title: TitleWrite): Promise<void> {
       const id = `${title.kind}-${title.tmdbId}`;
-      const existing = findById(id);
+      const existing = await findById(id);
       const payload = existing && existing.editedFields.length > 0
         ? applyFields(title.payload, existing.payload, existing.editedFields)
         : title.payload;
-      upsert.run(id, title.kind, title.tmdbId, JSON.stringify(payload), title.popularityScore, title.popularityReadAt, title.fetchedAt);
+      await db.execute({
+        sql: SQL.upsert,
+        args: [id, title.kind, title.tmdbId, JSON.stringify(payload), title.popularityScore, title.popularityReadAt, title.fetchedAt],
+      });
     },
-    insertManual(title: { id: string; kind: "movie" | "tv"; tmdbId: number | null; payload: unknown; at: number }): void {
-      insertManual.run(title.id, title.kind, title.tmdbId, JSON.stringify(title.payload), title.at);
+    insertManual: async (title: { id: string; kind: "movie" | "tv"; tmdbId: number | null; payload: unknown; at: number }): Promise<void> => {
+      await db.execute({
+        sql: SQL.insertManual,
+        args: [title.id, title.kind, title.tmdbId, JSON.stringify(title.payload), title.at],
+      });
     },
     /** An admin's edit: the new payload, the fields now edited (none for a manual title), a manual title's TMDB id, `enabled`. */
-    updateRecord(id: string, change: { payload: unknown; editedFields: string[]; tmdbId: number | null; enabled: boolean }): void {
+    updateRecord: async (
+      id: string,
+      change: { payload: unknown; editedFields: string[]; tmdbId: number | null; enabled: boolean },
+    ): Promise<void> => {
       const edited = change.editedFields.length > 0 ? JSON.stringify(change.editedFields) : null;
-      update.run(JSON.stringify(change.payload), edited, change.tmdbId, change.enabled ? 1 : 0, id);
+      await db.execute({
+        sql: SQL.update,
+        args: [JSON.stringify(change.payload), edited, change.tmdbId, change.enabled ? 1 : 0, id],
+      });
     },
-    clearEdits(id: string): void {
-      clearEdits.run(id);
+    clearEdits: async (id: string): Promise<void> => {
+      await db.execute({ sql: SQL.clearEdits, args: [id] });
     },
-    remove(id: string): boolean {
-      return Number(remove.run(id).changes) > 0;
-    },
+    remove: async (id: string): Promise<boolean> =>
+      (await db.execute({ sql: SQL.remove, args: [id] })).rowsAffected > 0,
     /** `{ total, stale }` of the TMDB titles against the freshness age, for the sync status. */
-    counts(staleAgeMs: number): { total: number; stale: number } {
-      const row = z.object({ total: z.number(), stale: z.number().nullable() }).parse(counts.get(staleAgeMs));
+    counts: async (staleAgeMs: number): Promise<{ total: number; stale: number }> => {
+      const row = z.object({ total: z.number(), stale: z.number().nullable() })
+        .parse((await db.execute({ sql: SQL.counts, args: [staleAgeMs] })).rows[0]);
       return { total: row.total, stale: row.stale ?? 0 };
     },
   };

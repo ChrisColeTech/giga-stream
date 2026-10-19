@@ -24,28 +24,28 @@ export function createOmdbStep(deps: { store: Store; omdb: OmdbClient; now: () =
   const { store, omdb, now } = deps;
   return async function enrich(run: OmdbRun, kind: Kind, tmdbId: number, staleBefore: number, signal: AbortSignal): Promise<boolean> {
     if (run.off || !omdb.available()) return false;
-    const row = store.titles.find(kind, tmdbId);
+    const row = await store.titles.find(kind, tmdbId);
     const payload = asRecord(row?.payload);
     const imdbId = str(payload.imdbId);
     if (row === undefined || !row.enabled || payload.shape !== "detail" || imdbId === undefined) return false;
     if (!hasGap(gapsOf(kind, payload, row.editedFields))) return false; // TMDB has it all: OMDb is not asked
     if ((num(asRecord(payload.omdb).fetchedAt) ?? 0) >= staleBefore) return false;
     const id = titleIdOf(kind, tmdbId);
-    if (store.titles.queue.omdbFailedAt(id) >= staleBefore) return false; // a recent miss waits out the window
+    if ((await store.titles.queue.omdbFailedAt(id)) >= staleBefore) return false; // a recent miss waits out the window
     const answer = await omdb.lookup(imdbId, signal);
     if (answer.status === "over") run.off = true;
     else if (answer.status === "error") run.off = ++run.errors >= OMDB_MAX_ERRORS;
-    else if (answer.status === "miss") store.titles.queue.setOmdbFailure(id, now());
+    else if (answer.status === "miss") await store.titles.queue.setOmdbFailure(id, now());
     if (answer.status !== "found") return false;
     run.errors = 0;
-    return store.transaction(() => {
-      const current = store.titles.find(kind, tmdbId);
+    return store.transaction(async () => {
+      const current = await store.titles.find(kind, tmdbId);
       if (current === undefined) return false; // deleted while the call was in flight
       const base = asRecord(current.payload);
-      const dictionary = store.titles.genres(kind).map((genre) => genre.name);
+      const dictionary = (await store.titles.genres(kind)).map((genre) => genre.name);
       const gaps = gapsOf(kind, base, current.editedFields);
       const { payload: filled, filled: count } = fillGaps(base, gaps, answer.record, dictionary);
-      store.titles.put({
+      await store.titles.put({
         kind,
         tmdbId,
         payload: { ...filled, omdb: omdbBlockOf(answer.record, now()) },
@@ -53,7 +53,7 @@ export function createOmdbStep(deps: { store: Store; omdb: OmdbClient; now: () =
         popularityReadAt: current.popularityReadAt,
         fetchedAt: current.fetchedAt,
       });
-      store.titles.queue.setOmdbFailure(id, null);
+      await store.titles.queue.setOmdbFailure(id, null);
       return count > 0;
     });
   };

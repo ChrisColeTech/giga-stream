@@ -14,10 +14,10 @@ test("a playlist job shows its logo and stream-check progress while it runs, and
   const logoGate = net.hold(LOGO("a"));
   const s = await setupSync(net, ["a", "b", "c"].map((n) => m3uEntry(n, STREAM(`${n}.example`, n), n === "a" ? LOGO("a") : undefined)));
   const id = await s.id();
-  const progress = async (): Promise<unknown> => pick((await s.api("GET", `/api/jobs/${id}`)).body, "data.progress");
+  const progress = async (): Promise<unknown> => pick((await s.api("GET", `/api/admin/jobs/${id}`)).body, "data.progress");
   assert.equal(await progress(), undefined, "idle: no progress");
 
-  await s.api("POST", `/api/jobs/${id}/run`);
+  await s.api("POST", `/api/admin/jobs/${id}/run`);
   await logoGate.started;
   assert.deepEqual(await progress(), { jobId: id, phase: "logos", done: 0, total: 1 }, "one distinct logo address to try");
   logoGate.release();
@@ -26,7 +26,7 @@ test("a playlist job shows its logo and stream-check progress while it runs, and
   await checkGate.started;
   await until(async () => pick(await progress(), "done") === 2, "two of three streams checked");
   assert.deepEqual(await progress(), { jobId: id, phase: "checking", done: 2, total: 3 });
-  const listed = pick((await s.api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
+  const listed = pick((await s.api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>;
   assert.deepEqual(listed.find((j) => j.id === id)?.progress, { jobId: id, phase: "checking", done: 2, total: 3 });
 
   checkGate.release();

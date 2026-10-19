@@ -38,7 +38,7 @@ function rowOf(row: StoredTitle): StoredTitleRow {
  */
 export function createStoredTitles(store: Store) {
   return {
-    page(query: StoredTitlesQuery): StoredTitlesPage {
+    async page(query: StoredTitlesQuery): Promise<StoredTitlesPage> {
       const filter: StoredTitleFilter = {
         ...(query.q !== undefined && { q: query.q }),
         ...(query.kind !== "all" && { kind: query.kind }),
@@ -46,8 +46,8 @@ export function createStoredTitles(store: Store) {
         ...(query.edited !== undefined && { edited: query.edited }),
         ...(query.enabled !== undefined && { enabled: query.enabled }),
       };
-      const { rows, total } = store.titles.page(filter, query.sort, query.dir, query.limit, query.offset);
-      const { counts, version } = store.titles.inventory();
+      const { rows, total } = await store.titles.page(filter, query.sort, query.dir, query.limit, query.offset);
+      const { counts, version } = await store.titles.inventory();
       return { items: rows.map(rowOf), total, offset: query.offset, limit: query.limit, inventory: counts, version };
     },
   };

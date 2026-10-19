@@ -1,5 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+
+import type { Database } from "./database.js";
 
 const EntryRow = z.object({
   id: z.number().int(),
@@ -48,30 +49,32 @@ function toEntry(row: unknown): AuditEntry {
   };
 }
 
-/** The audit log: append and page newest first. */
-export function createAuditRepository(db: DatabaseSync) {
-  const insert = db.prepare(
-    "INSERT INTO audit_log (at, actor_id, actor_username, action, subject, detail, address) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
-  const page = db.prepare(`SELECT id, at, actor_id, actor_username, action, subject, detail, address FROM audit_log
-    WHERE id < ? ORDER BY id DESC LIMIT ?`);
+const SQL = {
+  insert: "INSERT INTO audit_log (at, actor_id, actor_username, action, subject, detail, address) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  page: `SELECT id, at, actor_id, actor_username, action, subject, detail, address FROM audit_log
+    WHERE id < ? ORDER BY id DESC LIMIT ?`,
+};
 
+/** The audit log: append and page newest first. */
+export function createAuditRepository(db: Database) {
   return {
-    append(entry: AuditWrite, at: number): void {
-      insert.run(
-        at,
-        entry.actorId ?? null,
-        entry.actorUsername ?? null,
-        entry.action,
-        entry.subject ?? null,
-        entry.detail === undefined ? null : JSON.stringify(entry.detail),
-        entry.address ?? null,
-      );
+    append: async (entry: AuditWrite, at: number): Promise<void> => {
+      await db.execute({
+        sql: SQL.insert,
+        args: [
+          at,
+          entry.actorId ?? null,
+          entry.actorUsername ?? null,
+          entry.action,
+          entry.subject ?? null,
+          entry.detail === undefined ? null : JSON.stringify(entry.detail),
+          entry.address ?? null,
+        ],
+      });
     },
     /** Up to `limit` entries older than `before` (an entry id), newest first. */
-    page(before: number, limit: number): AuditEntry[] {
-      return page.all(before, limit).map(toEntry);
-    },
+    page: async (before: number, limit: number): Promise<AuditEntry[]> =>
+      (await db.execute({ sql: SQL.page, args: [before, limit] })).rows.map(toEntry),
   };
 }
 

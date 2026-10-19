@@ -30,7 +30,7 @@ const sleepFor = (ms: number) => new Promise<void>((resolve) => setTimeout(resol
 export function createStreamService(
   runtime: ChannelRuntime,
   faults: FaultState,
-  knows: (id: string) => boolean,
+  knows: (id: string) => Promise<boolean>,
   sleep: (ms: number) => Promise<void> = sleepFor,
 ) {
   return {
@@ -62,8 +62,8 @@ export function createStreamService(
         cacheControl: isPlaylist ? PLAYLIST_CACHE : SEGMENT_CACHE,
       };
     },
-    logo(channelId: string): MediaAnswer {
-      if (!knows(channelId)) throw new AppError(ERRORS.channelNotFound, { id: channelId });
+    logo: async (channelId: string): Promise<MediaAnswer> => {
+      if (!(await knows(channelId))) throw new AppError(ERRORS.channelNotFound, { id: channelId });
       return { body: logoPng(channelId), contentType: "image/png", cacheControl: SEGMENT_CACHE };
     },
   };

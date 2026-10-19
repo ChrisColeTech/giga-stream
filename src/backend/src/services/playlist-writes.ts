@@ -6,10 +6,10 @@ import type { EntryPlan } from "./playlist-sync-plan.js";
  * writes nothing and bumps nothing (docs/43 section 3.2). Call it inside the caller's transaction. Answers whether
  * a row changed.
  */
-export function applyPlan(store: Store, plan: EntryPlan, now: number): boolean {
+export async function applyPlan(store: Store, plan: EntryPlan, now: number): Promise<boolean> {
   if (plan.creates.length + plan.updates.length === 0) return false;
-  const revision = store.revisions.next();
-  for (const record of plan.creates) store.channels.insert({ ...record, revision }, now);
-  for (const record of plan.updates) store.channels.update({ ...record, revision });
+  const revision = await store.revisions.next();
+  for (const record of plan.creates) await store.channels.insert({ ...record, revision }, now);
+  for (const record of plan.updates) await store.channels.update({ ...record, revision });
   return true;
 }

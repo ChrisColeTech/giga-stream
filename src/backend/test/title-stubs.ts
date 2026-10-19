@@ -182,11 +182,11 @@ export const omdbOn = (tmdb: { base: string }, omdb: { base: string }) => ({
   OMDB_BASE: omdb.base,
 });
 
-/** The Library fill, run and waited for: job 1 is enabled at one page a kind and started as `POST /api/titles/sync` does. */
+/** The Library fill, run and waited for: job 1 is enabled at one page a kind and started as `POST /api/admin/titles/sync` does. */
 export async function fillLibrary(t: Awaited<ReturnType<typeof makeApp>>): Promise<void> {
   const access = (await signIn(t.app)).access;
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, access);
-  const started = await send(t.app, "POST", "/api/titles/sync", undefined, access);
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: true, config: { pages: 1 } }, access);
+  const started = await send(t.app, "POST", "/api/admin/titles/sync", undefined, access);
   if (started.status !== 202) throw new Error(`sync refused: ${JSON.stringify(started.body)}`);
   await settled(t);
 }
@@ -195,7 +195,7 @@ export async function fillLibrary(t: Awaited<ReturnType<typeof makeApp>>): Promi
 export async function settled(t: Awaited<ReturnType<typeof makeApp>>): Promise<void> {
   const access = (await signIn(t.app)).access;
   for (let i = 0; i < 400; i++) {
-    const status = await send(t.app, "GET", "/api/titles/sync", undefined, access);
+    const status = await send(t.app, "GET", "/api/admin/titles/sync", undefined, access);
     if (pick(status.body, "data.running") === false) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }

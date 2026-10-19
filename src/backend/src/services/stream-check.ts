@@ -31,13 +31,13 @@ export function createStreamCheck(deps: { store: Store; safeFetch: SafeFetch; li
 
   return async function checkStreams(run: SyncRun): Promise<void> {
     const stopAt = Math.min(run.endsAt, now() + PROBE_BUDGET_MS);
-    const urls = store.health.streamUrls(run.playlistId);
+    const urls = await store.health.streamUrls(run.playlistId);
     let pending: Verdict[] = [];
-    const flush = (): void => {
-      if (pending.length === 0) return;
+    const flush = (): Promise<void> => {
+      if (pending.length === 0) return Promise.resolve();
       const batch = pending;
       pending = [];
-      store.health.writeVerdicts(run.playlistId, batch);
+      return store.health.writeVerdicts(run.playlistId, batch).then(() => undefined);
     };
     const one = (url: string): Promise<void> =>
       limiter.run(URL.canParse(url) ? new URL(url).host : "", async () => {
@@ -45,7 +45,7 @@ export function createStreamCheck(deps: { store: Store; safeFetch: SafeFetch; li
         const status = await probe(url, run.signal);
         if (status === undefined) return;
         pending.push({ url, status, at: now() });
-        if (pending.length >= HEALTH_BATCH) flush();
+        if (pending.length >= HEALTH_BATCH) await flush();
       });
     let finished = 0;
     run.report({ phase: "checking", done: 0, total: urls.length });
@@ -54,7 +54,7 @@ export function createStreamCheck(deps: { store: Store; safeFetch: SafeFetch; li
         one(url).catch(() => undefined).finally(() => run.report({ phase: "checking", done: ++finished, total: urls.length })),
       ));
     } finally {
-      flush();
+      await flush();
     }
   };
 }

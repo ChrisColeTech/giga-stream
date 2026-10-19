@@ -48,14 +48,14 @@ export function createUiStateService(deps: { store: Store; now: () => number; lo
   }
 
   return {
-    read(principal: Principal): AccountState {
-      const row = store.uiState.find(principal.accountId);
+    read: async (principal: Principal): Promise<AccountState> => {
+      const row = await store.uiState.find(principal.accountId);
       return { ...documentsOf(row), ...(row && { updatedAt: row.updatedAt }) };
     },
 
-    write(principal: Principal, body: UiStatePut): AccountState {
-      return store.transaction(() => {
-        const row = store.uiState.find(principal.accountId);
+    write(principal: Principal, body: UiStatePut): Promise<AccountState> {
+      return store.transaction(async () => {
+        const row = await store.uiState.find(principal.accountId);
         const at = now();
         // An absent section keeps its stored text byte for byte, so a corrupt one is not rewritten as defaults.
         const settingsText = body.settings !== undefined
@@ -64,7 +64,7 @@ export function createUiStateService(deps: { store: Store; now: () => number; lo
         const shellText = body.shell !== undefined
           ? JSON.stringify(body.shell)
           : (row?.shell ?? JSON.stringify(DEFAULT_SHELL));
-        store.uiState.upsert(principal.accountId, { settings: settingsText, shell: shellText }, at);
+        await store.uiState.upsert(principal.accountId, { settings: settingsText, shell: shellText }, at);
         const current = documentsOf(row);
         return { settings: body.settings ?? current.settings, shell: body.shell ?? current.shell, updatedAt: at };
       });

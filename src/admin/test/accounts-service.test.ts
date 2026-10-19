@@ -17,12 +17,12 @@ beforeEach(() => {
 });
 
 describe("the accounts service", () => {
-  it("lists /api/admin-accounts, dropping and counting a row it cannot read", async () => {
+  it("lists /api/admin/accounts, dropping and counting a row it cannot read", async () => {
     await withBackend(
       () => success({ items: [row("a", "a@x.test"), { id: "broken" }, row("b", "b@x.test")] }),
       async (calls) => {
         const list = await accounts.list();
-        assert.equal(calls[0]?.url, "/api/admin-accounts");
+        assert.equal(calls[0]?.url, "/api/admin/accounts");
         assert.deepEqual([list.items.map((item) => item.id), list.unreadable], [["a", "b"], 1]);
       },
     );
@@ -45,8 +45,8 @@ describe("the accounts service", () => {
       async (calls) => {
         await accounts.update("a b", { disabled: true });
         await accounts.remove("a b");
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/admin-accounts/a%20b", { disabled: true }]);
-        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/admin-accounts/a%20b"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/admin/accounts/a%20b", { disabled: true }]);
+        assert.deepEqual([calls[1]?.method, calls[1]?.url], ["DELETE", "/api/admin/accounts/a%20b"]);
       },
     );
   });
@@ -68,7 +68,7 @@ describe("the accounts service", () => {
         assert.deepEqual([saved, calls[0]?.method, calls[0]?.url, calls[0]?.body], [
           { set: true },
           "PUT",
-          "/api/admin-accounts/a%20b/security-question",
+          "/api/admin/accounts/a%20b/security-question",
           { question: 3, answer: " Rex " },
         ]);
       },

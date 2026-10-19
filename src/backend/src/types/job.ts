@@ -20,7 +20,7 @@ const CatalogConfigSchema = z
   .strict();
 
 /**
- * `POST /api/jobs` creates catalog jobs only (docs/43 section 3.1): a playlist job is part of its playlist and is made
+ * `POST /api/admin/jobs` creates catalog jobs only (docs/43 section 3.1): a playlist job is part of its playlist and is made
  * by the import that makes the playlist. A `type` other than `catalog` is not a valid body.
  */
 export const JobInputSchema = z
@@ -32,7 +32,7 @@ export const JobInputSchema = z
 export type JobInput = z.infer<typeof JobInputSchema>;
 
 /**
- * `PATCH /api/jobs/:id`: any of these; a `config` change is checked against the job's own type by the service
+ * `PATCH /api/admin/jobs/:id`: any of these; a `config` change is checked against the job's own type by the service
  * (its `type` never changes). A playlist job takes `enabled` and `schedule` only.
  */
 export const JobPatchSchema = z

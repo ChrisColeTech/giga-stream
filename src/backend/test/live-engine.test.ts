@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test, { before } from "node:test";
 
 import { ENGINE_TESTS, filesUnder, fixture, fixtures, probeVideo, realApp, SKIP_REASON } from "./live-engine-kit.js";
@@ -21,7 +22,7 @@ const channel = (overrides: Record<string, unknown> = {}) => ({
   videos: [fixture(dir, "kids", 1), fixture(dir, "music", 1)], ...overrides,
 });
 const admin = async (t: Awaited<ReturnType<typeof realApp>>, token: string) =>
-  (await send(t.app, "GET", "/api/admin-channels", undefined, token)).body;
+  (await send(t.app, "GET", "/api/admin/channels", undefined, token)).body;
 
 test("the seed makes the four test channels live from the real fixtures, with captions on news", { skip, timeout: 600_000 }, async () => {
   const t = await realApp({ seed: true });
@@ -62,7 +63,7 @@ test("a segment is real H.264, immutable, with Range and HEAD; the switch is a d
 test("a folder channel plays every video in the folder, in path order", { skip, timeout: 600_000 }, async () => {
   const t = await realApp();
   const token = (await signIn(t.app)).access;
-  await send(t.app, "POST", "/api/channels", channel({ videos: undefined, folder: path.join(dir, "live") }), token);
+  await send(t.app, "POST", "/api/admin/channels", channel({ videos: undefined, folder: path.join(dir, "live") }), token);
   await t.live.settled();
   const playlist = itemOf(await admin(t, token), "home").playlist as Array<Record<string, unknown>>;
   assert.equal(playlist.length, 12);
@@ -76,9 +77,9 @@ test("a video that cannot be played, or a folder with none, leaves that channel 
   try {
     const broken = path.join(scratch, "broken.mp4");
     writeFileSync(broken, "not a video");
-    await send(t.app, "POST", "/api/channels", channel(), token);
-    await send(t.app, "POST", "/api/channels", channel({ id: "bad", number: 8, videos: [fixture(dir, "kids", 1), broken] }), token);
-    await send(t.app, "POST", "/api/channels", channel({ id: "empty", number: 9, videos: undefined, folder: scratch }), token);
+    await send(t.app, "POST", "/api/admin/channels", channel(), token);
+    await send(t.app, "POST", "/api/admin/channels", channel({ id: "bad", number: 8, videos: [fixture(dir, "kids", 1), broken] }), token);
+    await send(t.app, "POST", "/api/admin/channels", channel({ id: "empty", number: 9, videos: undefined, folder: scratch }), token);
     await t.live.settled();
     const body = await admin(t, token);
     assert.deepEqual(["home", "bad", "empty"].map((id) => itemOf(body, id).state), ["live", "failed", "failed"]);
@@ -86,7 +87,7 @@ test("a video that cannot be played, or a folder with none, leaves that channel 
     assert.match(String(itemOf(body, "empty").problem), /no playable video/);
     assert.equal((await send(t.app, "GET", "/healthz")).status, 200);
   } finally {
-    rmSync(scratch, { recursive: true, force: true });
+    removeDir(scratch);
   }
 });
 
@@ -97,7 +98,7 @@ test("encode mode streams a playlist live through the real encoder and leaves no
     const token = (await signIn(t.app)).access;
     const body = { kind: "live", id: "enc", name: "Encode", category: "News", number: 1, mode: "encode", captions: true,
       videos: [fixture(dir, "news", 1), fixture(dir, "news", 2)] };
-    assert.equal((await send(t.app, "POST", "/api/channels", body, token)).status, 201);
+    assert.equal((await send(t.app, "POST", "/api/admin/channels", body, token)).status, 201);
     await t.live.settled();
     let media = "";
     for (let tries = 0; tries < 40 && !/seg\d{5}\.ts/.test(media); tries += 1) {

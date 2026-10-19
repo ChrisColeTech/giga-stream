@@ -1,14 +1,15 @@
 // The built admin app at /admin/ (docs/26 section 4.1): files, the index.html fallback, and nothing without a build.
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test, { after } from "node:test";
 
 import { makeApp, pick, send } from "./test-app.js";
 
 const roots: string[] = [];
-after(() => roots.forEach((root) => rmSync(root, { recursive: true, force: true })));
+after(() => roots.forEach((root) => removeDir(root)));
 
 /** A folder standing in for `src/admin/dist`, with a file beside it that must never be reachable. */
 function dist(files: Record<string, string>): string {

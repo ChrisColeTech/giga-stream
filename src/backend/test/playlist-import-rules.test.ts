@@ -16,7 +16,7 @@ test("a body that is not an M3U playlist creates nothing: plain text, an HTML pa
     const answer = await uploadFile(t, token, NAME, body);
     assert.deepEqual([answer.status, pick(answer.body, "error.code")], [422, "playlist.invalid"], body.slice(0, 30));
   }
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 0);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 0);
 });
 
 test("a header after a byte-order mark and blank lines, or an EXTINF within the first 20 lines, is a playlist", async () => {
@@ -73,7 +73,7 @@ test("a plain http, private or loopback playlist address is accepted by the rule
   const { api, feed } = await setupPlaylists({ feed: {} });
   for (const url of ["http://cdn.example/a.m3u", "http://10.0.0.5/b.m3u", "http://192.168.1.9:8080/c.m3u"]) {
     feed.set(url, M3U);
-    const made = await api("POST", "/api/playlists", { url });
+    const made = await api("POST", "/api/admin/playlists", { url });
     assert.equal(made.status, 201, url);
   }
 });

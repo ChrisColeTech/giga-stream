@@ -8,7 +8,7 @@ import { SECURITY_QUESTIONS } from "../src/constants/security-questions.js";
 import { auditEntries, code, makeAccount, QUESTION_ONE, resetStart, storedAnswerHash } from "./reset-kit.js";
 import { ADMIN_PASSWORD, ADMIN_USERNAME, makeApp, pick, send, signIn, type Answer } from "./test-app.js";
 
-const me = async (app: Parameters<typeof send>[0], token: string) => send(app, "GET", "/api/auth/me", undefined, token);
+const me = async (app: Parameters<typeof send>[0], token: string) => send(app, "GET", "/api/admin/auth/me", undefined, token);
 
 /** The route under test: a signed-in admin sets the account `id`'s question. */
 const putQuestion = (
@@ -17,7 +17,7 @@ const putQuestion = (
   id: string,
   question: number,
   answer: string,
-): Promise<Answer> => send(app, "PUT", `/api/admin-accounts/${id}/security-question`, { question, answer }, token);
+): Promise<Answer> => send(app, "PUT", `/api/admin/accounts/${id}/security-question`, { question, answer }, token);
 
 const ownId = async (app: Parameters<typeof send>[0], token: string): Promise<string> =>
   String(pick((await me(app, token)).body, "data.id"));
@@ -32,7 +32,7 @@ test("a signed-in admin sets and changes a selected account's question with no c
   assert.deepEqual([set.status, set.body], [200, { ok: true, data: { set: true } }]);
   assert.equal(set.headers["cache-control"], "no-store");
   assert.equal(pick((await me(t.app, access)).body, "data.securityQuestionSet"), true);
-  const hash = String(storedAnswerHash(t.dataDir, ADMIN_USERNAME));
+  const hash = String(await storedAnswerHash(t.dataDir, ADMIN_USERNAME));
   assert.match(hash, /^scrypt\$/);
   assert.equal(hash.toLowerCase().includes("rex"), false);
   assert.equal(pick((await resetStart(t.app, ADMIN_USERNAME)).body, "data.question"), QUESTION_ONE);
@@ -41,7 +41,7 @@ test("a signed-in admin sets and changes a selected account's question with no c
   assert.equal(changed.status, 200);
   assert.equal(pick((await resetStart(t.app, ADMIN_USERNAME)).body, "data.question"), SECURITY_QUESTIONS[2]);
   assert.equal((await me(t.app, access)).status, 200, "setting a question ends no session");
-  assert.equal((await send(t.app, "POST", "/api/auth/refresh", { refreshToken: refresh })).status, 200);
+  assert.equal((await send(t.app, "POST", "/api/admin/auth/refresh", { refreshToken: refresh })).status, 200);
 });
 
 test("an admin sets another account's question, not only its own", async () => {
@@ -49,8 +49,8 @@ test("an admin sets another account's question, not only its own", async () => {
   const { access } = await signIn(t.app);
   const otherId = await makeAccount(t.app, access, "second@example.test");
   assert.equal((await putQuestion(t.app, access, otherId, 5, "Spot")).status, 200);
-  assert.equal(storedAnswerHash(t.dataDir, ADMIN_USERNAME), null);
-  assert.match(String(storedAnswerHash(t.dataDir, "second@example.test")), /^scrypt\$/);
+  assert.equal(await storedAnswerHash(t.dataDir, ADMIN_USERNAME), null);
+  assert.match(String(await storedAnswerHash(t.dataDir, "second@example.test")), /^scrypt\$/);
   assert.equal(pick((await resetStart(t.app, "second@example.test")).body, "data.question"), SECURITY_QUESTIONS[4]);
 });
 
@@ -65,15 +65,15 @@ test("a question outside 1 to 8 or a long answer is 422 account.invalid naming i
   const long = await putQuestion(t.app, access, id, 1, "x".repeat(201));
   assert.deepEqual([long.status, pick(long.body, "error.details.field")], [422, "answer"]);
   // The old me-route's body shape (a currentPassword) is an extra field now, and refused.
-  const extra = await send(t.app, "PUT", `/api/admin-accounts/${id}/security-question`,
+  const extra = await send(t.app, "PUT", `/api/admin/accounts/${id}/security-question`,
     { question: 1, answer: "Rex", currentPassword: ADMIN_PASSWORD }, access);
   assert.deepEqual([extra.status, code(extra)], [422, "account.invalid"]);
-  assert.equal(storedAnswerHash(t.dataDir, ADMIN_USERNAME), null);
+  assert.equal(await storedAnswerHash(t.dataDir, ADMIN_USERNAME), null);
 });
 
 test("without a token the route is 401 auth.unauthorized", async () => {
   const t = await makeApp();
-  const refused = await send(t.app, "PUT", "/api/admin-accounts/acct_x/security-question", { question: 1, answer: "Rex" });
+  const refused = await send(t.app, "PUT", "/api/admin/accounts/acct_x/security-question", { question: 1, answer: "Rex" });
   assert.deepEqual([refused.status, code(refused)], [401, "auth.unauthorized"]);
 });
 
@@ -105,7 +105,7 @@ test("the audit records account.security_question_set with the username and neve
 test("the deleted me-route answers 404 route.not_found", async () => {
   const t = await makeApp();
   const { access } = await signIn(t.app);
-  const gone = await send(t.app, "PUT", "/api/auth/me/security-question", { question: 1, answer: "Rex" }, access);
+  const gone = await send(t.app, "PUT", "/api/admin/auth/me/security-question", { question: 1, answer: "Rex" }, access);
   assert.deepEqual([gone.status, code(gone), pick(gone.body, "error.message")],
     [404, "route.not_found", "There is nothing at that address."]);
 });

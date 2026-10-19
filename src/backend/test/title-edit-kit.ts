@@ -70,19 +70,19 @@ export async function titleApp(options: { tmdb?: boolean } = {}) {
   const t = await makeApp({ config: options.tmdb === false ? {} : { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base } });
   const token = (await signIn(t.app)).access;
   // The seeded Library update (job 2) must not start by itself when a test moves the clock past its grace (docs/49).
-  await send(t.app, "PATCH", "/api/jobs/2", { schedule: "off" }, token);
+  await send(t.app, "PATCH", "/api/admin/jobs/2", { schedule: "off" }, token);
   return { t, tmdb, token };
 }
 
 type Harness = Awaited<ReturnType<typeof titleApp>>;
 
-/** The Library fill, waited for: the seeded job is enabled and set to `pages` pages a kind, then started as `POST /api/titles/sync` does. */
+/** The Library fill, waited for: the seeded job is enabled and set to `pages` pages a kind, then started as `POST /api/admin/titles/sync` does. */
 export async function syncAll(h: Harness, pages = 1): Promise<void> {
   const token = (await signIn(h.t.app)).access;
-  const jobs = pick((await send(h.t.app, "GET", "/api/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
+  const jobs = pick((await send(h.t.app, "GET", "/api/admin/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
   const fill = jobs.find((job) => pick(job, "config.scope") === "discover");
-  await send(h.t.app, "PATCH", `/api/jobs/${fill?.id}`, { enabled: true, config: { pages } }, token);
-  const started = await send(h.t.app, "POST", "/api/titles/sync", undefined, token);
+  await send(h.t.app, "PATCH", `/api/admin/jobs/${fill?.id}`, { enabled: true, config: { pages } }, token);
+  const started = await send(h.t.app, "POST", "/api/admin/titles/sync", undefined, token);
   if (started.status !== 202) throw new Error(`sync refused: ${JSON.stringify(started.body)}`);
   await settled(h.t);
 }

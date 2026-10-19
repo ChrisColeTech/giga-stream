@@ -33,5 +33,5 @@ test("us.m3u imports in one request and one revision; uploading it again changes
   assert.deepEqual([again.status, pick(again.body, "data.imported.created"), pick(again.body, "data.imported.updated")], [200, 0, 0]);
   assert.equal(await revision(), before + 1, "no bump");
   assert.deepEqual((await adminChannels()).map((r) => r.id), ids, "same row ids");
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 1);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 1);
 });

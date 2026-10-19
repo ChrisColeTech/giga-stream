@@ -3,7 +3,7 @@ import type { Store } from "../store/store.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { type Kind, parseTitleId, titleIdOf } from "./title-shapes.js";
 
-/** A deleted synced title as `GET /api/titles/deleted` answers it (docs/03 section 7.4). */
+/** A deleted synced title as `GET /api/admin/titles/deleted` answers it (docs/03 section 7.4). */
 export interface DeletedTitleView {
   id: string;
   kind: Kind;
@@ -22,30 +22,34 @@ export function createTitleDeleted(deps: { store: Store; audit: AuditService }) 
   const notFound = (titleId: string): AppError => new AppError(ERRORS.titleNotFound, { titleId });
 
   return {
-    isDeleted: (kind: Kind, tmdbId: number): boolean => store.deletedTitles.has(kind, tmdbId),
+    isDeleted: (kind: Kind, tmdbId: number): Promise<boolean> => store.deletedTitles.has(kind, tmdbId),
 
     /** Rows of one kind without the deleted ones, and how many were left out. */
-    withoutDeleted<T extends Record<string, unknown>>(kind: Kind, rows: T[]): { kept: T[]; skipped: number } {
-      const kept = rows.filter((row) => typeof row.tmdbId !== "number" || !store.deletedTitles.has(kind, row.tmdbId));
-      return { kept, skipped: rows.length - kept.length };
+    async withoutDeleted<T extends Record<string, unknown>>(kind: Kind, rows: T[]): Promise<{ kept: T[]; skipped: number }> {
+      const kept: T[] = [];
+      let skipped = 0;
+      for (const row of rows) {
+        if (typeof row.tmdbId === "number" && (await store.deletedTitles.has(kind, row.tmdbId))) skipped += 1;
+        else kept.push(row);
+      }
+      return { kept, skipped };
     },
 
-    list(): { items: DeletedTitleView[] } {
-      const items = store.deletedTitles.list().map((row) => ({
+    list: async (): Promise<{ items: DeletedTitleView[] }> => ({
+      items: (await store.deletedTitles.list()).map((row) => ({
         id: titleIdOf(row.kind, row.tmdbId),
         kind: row.kind,
         tmdbId: row.tmdbId,
         ...(row.title !== undefined && { title: row.title }),
         deletedAt: row.deletedAt,
-      }));
-      return { items };
-    },
+      })),
+    }),
 
-    restore(titleId: string, actor: Actor): { id: string } {
+    restore: async (titleId: string, actor: Actor): Promise<{ id: string }> => {
       const [kind, tmdbId] = parseTitleId(titleId);
-      const name = store.deletedTitles.list().find((row) => row.kind === kind && row.tmdbId === tmdbId)?.title;
-      if (!store.deletedTitles.restore(kind, tmdbId)) throw notFound(titleId);
-      audit.record(actor, { action: "title.restored", subject: titleId, detail: { name } });
+      const name = (await store.deletedTitles.list()).find((row) => row.kind === kind && row.tmdbId === tmdbId)?.title;
+      if (!(await store.deletedTitles.restore(kind, tmdbId))) throw notFound(titleId);
+      await audit.record(actor, { action: "title.restored", subject: titleId, detail: { name } });
       return { id: titleId };
     },
   };

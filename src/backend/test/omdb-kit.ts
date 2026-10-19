@@ -4,9 +4,10 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { after } from "node:test";
-import { DatabaseSync } from "node:sqlite";
+
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
+import { openTestDatabase, queryRow } from "./db-kit.js";
 import type { TestApp } from "./test-app.js";
 
 export const OMDB_KEY = "omdb-test-key";
@@ -74,10 +75,10 @@ export const omdbConfig = (omdb: FakeOmdb, limit?: number): Record<string, unkno
 });
 
 /** One column of one title, read from the store file (read-only). */
-export function column(t: TestApp, id: string, name: "omdb_failed_at"): unknown {
-  const db = new DatabaseSync(path.join(t.dataDir, DATABASE_FILE_NAME), { readOnly: true });
+export async function column(t: TestApp, id: string, name: "omdb_failed_at"): Promise<unknown> {
+  const db = await openTestDatabase(path.join(t.dataDir, DATABASE_FILE_NAME));
   try {
-    return db.prepare(`SELECT ${name} AS v FROM titles WHERE id = ?`).get(id)?.v;
+    return (await queryRow(db, `SELECT ${name} AS v FROM titles WHERE id = ?`, [id]))?.v;
   } finally {
     db.close();
   }

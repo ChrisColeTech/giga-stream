@@ -13,14 +13,14 @@ import { adminChannel } from "./channel-views.js";
 export function createChannelVerdict(deps: { store: Store; audit: AuditService; live: LiveEngine; now: () => number }) {
   const { store, audit, live, now } = deps;
   return {
-    setStatus(id: string, status: "online" | "offline", actor: Actor, base: string): AdminChannel {
-      const current = store.channels.find(id);
+    setStatus: async (id: string, status: "online" | "offline", actor: Actor, base: string): Promise<AdminChannel> => {
+      const current = await store.channels.find(id);
       if (!current) throw new AppError(ERRORS.channelNotFound);
       if (current.kind !== "stream") throw new AppError(ERRORS.channelNotStream);
-      store.channels.setVerdict(id, status, now());
+      await store.channels.setVerdict(id, status, now());
       const detail = { name: current.name, from: current.status ?? null, to: status };
-      audit.record(actor, { action: "channel.status.set", subject: id, detail });
-      const saved = store.channels.find(id);
+      await audit.record(actor, { action: "channel.status.set", subject: id, detail });
+      const saved = await store.channels.find(id);
       if (!saved) throw new AppError(ERRORS.channelNotFound);
       return adminChannel(saved, base, live);
     },

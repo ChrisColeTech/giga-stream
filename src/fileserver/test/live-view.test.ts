@@ -18,7 +18,7 @@ test("a read inside the window serves the cache; a window later it answers the o
 
   // A new channel in the real backend raises its revision; the fileserver does not know yet.
   const token = await backendToken(backend.url);
-  const created = await fetch(`${backend.url}/api/channels`, {
+  const created = await fetch(`${backend.url}/api/admin/channels`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify({

@@ -14,25 +14,25 @@ const AccountParams = z.object({ accountId: z.string().min(1).max(200) });
 
 /** Admin accounts (docs/03 section 7.11): any signed-in admin. */
 export function registerAccounts(app: FastifyInstance, services: Services): void {
-  app.get("/api/admin-accounts", async (request, reply) => {
-    signedIn(services, request);
-    return ok(reply, services.accounts.list());
+  app.get("/accounts", async (request, reply) => {
+    await signedIn(services, request);
+    return ok(reply, await services.accounts.list());
   });
 
-  app.get("/api/admin-accounts/:accountId", async (request, reply) => {
-    signedIn(services, request);
+  app.get("/accounts/:accountId", async (request, reply) => {
+    await signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
-    return ok(reply, services.accounts.get(accountId));
+    return ok(reply, await services.accounts.get(accountId));
   });
 
-  app.post("/api/admin-accounts", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.post("/accounts", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const input = parseInput(AccountCreateSchema, request.body, ERRORS.accountInvalid);
     return ok(reply, await services.accounts.create(input, actorOf(request, principal)), 201);
   });
 
-  app.patch("/api/admin-accounts/:accountId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.patch("/accounts/:accountId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
     const patch = parseInput(AccountPatchSchema, request.body, ERRORS.accountInvalid);
     const saved = await services.accounts.update(accountId, patch, actorOf(request, principal));
@@ -43,16 +43,16 @@ export function registerAccounts(app: FastifyInstance, services: Services): void
     return ok(reply, saved);
   });
 
-  app.delete("/api/admin-accounts/:accountId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.delete("/accounts/:accountId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
-    return ok(reply, services.accounts.remove(accountId, actorOf(request, principal)));
+    return ok(reply, await services.accounts.remove(accountId, actorOf(request, principal)));
   });
 
   // Setting a question is an admin acting on a selected account (docs/54 section 2): no current password, and
   // changing it ends no session, so the refresh cookie stays.
-  app.put("/api/admin-accounts/:accountId/security-question", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.put("/accounts/:accountId/security-question", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
     const body = parseInput(AccountSecurityQuestionSchema, request.body, ERRORS.accountInvalid);
     const done = await services.securityQuestions.setFor(accountId, body.question, body.answer, actorOf(request, principal));

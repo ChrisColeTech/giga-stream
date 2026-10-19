@@ -13,7 +13,7 @@ import { fillApp, walkTmdb, type FillApp } from "./walk-kit.js";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ALL = ["tt1010", "tt1011", "tt2010", "tt2011"];
 const run = async (f: FillApp): Promise<Record<string, unknown>> => {
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   return f.job();
 };
@@ -67,9 +67,9 @@ test("a spent daily budget ends OMDb for the run while TMDB goes on; the rest is
   assert.deepEqual(omdb.calls, ["tt1011", "tt1010"], "popularity order");
   assert.equal(await read(f, "tv-2010", "shape"), "detail");
   assert.equal(await read(f, "tv-2010", "omdb"), undefined);
-  assert.deepEqual(pick((await f.api("GET", "/api/titles/sync")).body, "data.omdb"), { enabled: true, calls: 2, limit: 12 });
+  assert.deepEqual(pick((await f.api("GET", "/api/admin/titles/sync")).body, "data.omdb"), { enabled: true, calls: 2, limit: 12 });
 
-  assert.equal((await f.api("PATCH", "/api/titles/tv-2011", { enabled: false })).status, 200);
+  assert.equal((await f.api("PATCH", "/api/admin/titles/tv-2011", { enabled: false })).status, 200);
   assert.equal(pick(await run(f), "lastCounts.enriched"), 0, "the same day: nothing more is asked");
   assert.equal(omdb.calls.length, 2);
 
@@ -90,7 +90,7 @@ test("OMDb's 'Request limit reached.' or a refused key ends OMDb for the run wit
   const job = await run(f);
   assert.deepEqual([job.lastResult, pick(job, "lastCounts.detailed"), pick(job, "lastCounts.enriched")], ["ok", 4, 1]);
   assert.equal(omdb.calls.length, 2, "the refusal stops the asking");
-  assert.equal(column(f.t, "movie-1010", "omdb_failed_at"), null, "a refusal is not the title's miss");
+  assert.equal(await column(f.t, "movie-1010", "omdb_failed_at"), null, "a refusal is not the title's miss");
 
   const wrong = await fillApp(await withImdb(), 1, { ...omdbConfig(omdb), OMDB_API_KEY: "wrong" });
   const before = omdb.calls.length;
@@ -104,7 +104,7 @@ test("an OMDb miss is recorded and not asked again until the window passes; the 
   omdb.state.miss.add("tt1010");
   const f = await fillApp(tmdb, 1, omdbConfig(omdb));
   assert.equal(pick(await run(f), "lastCounts.enriched"), 3);
-  assert.notEqual(column(f.t, "movie-1010", "omdb_failed_at"), null);
+  assert.notEqual(await column(f.t, "movie-1010", "omdb_failed_at"), null);
   assert.equal(await read(f, "movie-1010", "omdb"), undefined);
   assert.equal(await read(f, "movie-1010", "shape"), "detail", "the detail itself stands");
 
@@ -123,9 +123,9 @@ test("Stop during an OMDb call ends the run there: the TMDB detail stays, no lat
   const [tmdb, omdb] = [await withImdb(), await fakeOmdb()];
   const gate = omdb.hold("tt1011");
   const f = await fillApp(tmdb, 1, omdbConfig(omdb));
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await gate.started;
-  await f.api("POST", "/api/jobs/1/stop");
+  await f.api("POST", "/api/admin/jobs/1/stop");
   await f.finished();
   const stopped = await f.job();
   assert.deepEqual([stopped.lastResult, pick(stopped, "lastCounts.detailed"), pick(stopped, "lastCounts.enriched")], ["stopped", 1, 0]);

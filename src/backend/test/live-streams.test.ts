@@ -10,7 +10,7 @@ import { makeApp, pick, send, signIn } from "./test-app.js";
 async function withChannel() {
   const t = await makeApp();
   const token = (await signIn(t.app)).access;
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
   await t.live.settled();
   return { t, token };
 }
@@ -64,7 +64,7 @@ test("byte ranges parse the way the live server parsed them", () => {
 test("the switch to the next video is a discontinuity in every rendition, and the channel says so", async () => {
   const { t, token } = await withChannel();
   const nowPlaying = async () => {
-    const items = pick((await send(t.app, "GET", "/api/admin-channels", undefined, token)).body, "data.items");
+    const items = pick((await send(t.app, "GET", "/api/admin/channels", undefined, token)).body, "data.items");
     return pick(Array.isArray(items) ? items[0] : undefined, "nowPlaying.name");
   };
   assert.equal(await nowPlaying(), "a.mp4");

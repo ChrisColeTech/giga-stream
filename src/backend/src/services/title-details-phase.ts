@@ -34,8 +34,8 @@ export function createDetailsPhase(deps: {
     const staleBefore = now() - TITLE_FRESH_MS;
     const phase = mode === undefined ? "details" : "refresh";
     const queue: Array<PendingDetail & { force?: boolean }> = mode === undefined
-      ? store.titles.queue.pendingDetails(staleBefore, TITLE_DETAIL_MAX_FAILURES, omdb.available())
-      : store.titles.update.refreshQueue(mode.forced, TITLE_DETAIL_MAX_FAILURES, omdb.available(), staleBefore);
+      ? await store.titles.queue.pendingDetails(staleBefore, TITLE_DETAIL_MAX_FAILURES, omdb.available())
+      : await store.titles.update.refreshQueue(mode.forced, TITLE_DETAIL_MAX_FAILURES, omdb.available(), staleBefore);
     const omdbRun = newOmdbRun();
     run.report({ phase, done: 0, total: queue.length });
     let done = 0;
@@ -57,7 +57,7 @@ export function createDetailsPhase(deps: {
       } catch (error: unknown) {
         if (isStopping(run)) return;
         if (!isRowFailure(error)) throw error;
-        store.titles.queue.noteDetailFailure(item.id, now());
+        await store.titles.queue.noteDetailFailure(item.id, now());
       }
       run.report({ phase, done: ++done, total: queue.length });
     }

@@ -1,5 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+
+import type { Database } from "./database.js";
 
 const CountsRow = z.object({
   playlist_id: z.number().int(),
@@ -17,16 +18,17 @@ export interface PlaylistChannelCounts {
   offline: number;
 }
 
+const GROUPED_SQL = `
+  SELECT playlist_id, COUNT(*) AS channels, COALESCE(SUM(enabled), 0) AS enabled,
+    COALESCE(SUM(status = 'online'), 0) AS online, COALESCE(SUM(status = 'offline'), 0) AS offline
+  FROM channels WHERE playlist_id IS NOT NULL GROUP BY playlist_id`;
+
 /** Per-playlist counts of channels, read in one grouped query (docs/43 section 3.1: the playlist view). */
-export function createChannelStats(db: DatabaseSync) {
-  const grouped = db.prepare(`
-    SELECT playlist_id, COUNT(*) AS channels, COALESCE(SUM(enabled), 0) AS enabled,
-      COALESCE(SUM(status = 'online'), 0) AS online, COALESCE(SUM(status = 'offline'), 0) AS offline
-    FROM channels WHERE playlist_id IS NOT NULL GROUP BY playlist_id`);
+export function createChannelStats(db: Database) {
   return {
-    byPlaylist(): Map<number, PlaylistChannelCounts> {
+    async byPlaylist(): Promise<Map<number, PlaylistChannelCounts>> {
       const counts = new Map<number, PlaylistChannelCounts>();
-      for (const row of grouped.all()) {
+      for (const row of (await db.execute(GROUPED_SQL)).rows) {
         const r = CountsRow.parse(row);
         counts.set(r.playlist_id, { channels: r.channels, enabled: r.enabled, online: r.online, offline: r.offline });
       }

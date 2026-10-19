@@ -61,7 +61,7 @@ describe("PATCH /api/channels from the service", () => {
       () => success({ changed: 3, unchanged: 1, skipped: 2 }),
       async (calls) => {
         const answer = await channels.setEnabled(["a", "b"], false);
-        assert.deepEqual([calls.length, calls[0]?.method, calls[0]?.url], [1, "PATCH", "/api/channels"]);
+        assert.deepEqual([calls.length, calls[0]?.method, calls[0]?.url], [1, "PATCH", "/api/admin/channels"]);
         assert.deepEqual(calls[0]?.body, { enabled: false, ids: ["a", "b"] });
         assert.deepEqual(answer, { changed: 3, unchanged: 1, skipped: 2 });
       },

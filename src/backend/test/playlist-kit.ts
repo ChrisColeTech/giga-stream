@@ -73,7 +73,7 @@ export function multipartOf(parts: Array<{ name: string; filename?: string; cont
   return { payload: Buffer.concat(chunks), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
-/** `POST /api/playlists/import` with these multipart parts. */
+/** `POST /api/admin/playlists/import` with these multipart parts. */
 export async function uploadParts(
   t: TestApp,
   token: string | undefined,
@@ -82,7 +82,7 @@ export async function uploadParts(
   const { payload, contentType } = multipartOf(parts);
   const reply = await t.app.inject({
     method: "POST",
-    url: "/api/playlists/import",
+    url: "/api/admin/playlists/import",
     headers: { "content-type": contentType, ...(token !== undefined && { authorization: `Bearer ${token}` }) },
     payload,
   });
@@ -104,11 +104,11 @@ export async function setupPlaylists(options: { feed?: Record<string, string>; c
   const token = (await signIn(t.app)).access;
   const api = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: unknown) => send(t.app, method, url, body, token);
   const channels = async () => itemsOf((await send(t.app, "GET", "/api/channels")).body);
-  const adminChannels = async () => itemsOf((await api("GET", "/api/admin-channels")).body);
+  const adminChannels = async () => itemsOf((await api("GET", "/api/admin/channels")).body);
   const revision = async (): Promise<number> => Number(pick((await send(t.app, "GET", "/healthz")).body, "data.revision"));
   const audit = async (limit = 50): Promise<Array<Record<string, unknown>>> =>
-    pick((await api("GET", `/api/audit?limit=${limit}`)).body, "data.items") as Array<Record<string, unknown>>;
-  const importUrl = (url: string, extra: Record<string, unknown> = {}) => api("POST", "/api/playlists", { url, ...extra });
+    pick((await api("GET", `/api/admin/audit?limit=${limit}`)).body, "data.items") as Array<Record<string, unknown>>;
+  const importUrl = (url: string, extra: Record<string, unknown> = {}) => api("POST", "/api/admin/playlists", { url, ...extra });
   return { t, token, feed, api, channels, adminChannels, revision, audit, importUrl };
 }
 

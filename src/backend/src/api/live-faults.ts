@@ -15,19 +15,20 @@ const FaultInput = z.object({ fault: z.enum(FAULTS), durationMs: millis.optional
 
 /**
  * Fault injection (docs/10 section 2, item 5; docs/26 section 3.3): set one fault on a live channel, or clear
- * it. A test tool, in memory only; any signed-in admin may use it.
+ * it. A test tool, in memory only; any signed-in admin may use it. The fault routes sit in their own
+ * `/api/admin/live-faults/...` namespace, beside the channel writes of `admin-channels.ts`.
  */
 export function registerLiveFaults(app: FastifyInstance, services: Services): void {
-  app.put("/api/channels/:channelId/fault", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.put("/live-faults/:channelId/fault", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
     const { fault, durationMs, delayMs } = parseInput(FaultInput, request.body, ERRORS.faultInvalid);
-    return ok(reply, services.channels.setFault(channelId, fault, durationMs, delayMs, actorOf(request, principal)));
+    return ok(reply, await services.channels.setFault(channelId, fault, durationMs, delayMs, actorOf(request, principal)));
   });
 
-  app.delete("/api/channels/:channelId/fault", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.delete("/live-faults/:channelId/fault", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { channelId } = parseInput(ChannelParams, request.params);
-    return ok(reply, services.channels.clearFault(channelId, actorOf(request, principal)));
+    return ok(reply, await services.channels.clearFault(channelId, actorOf(request, principal)));
   });
 }

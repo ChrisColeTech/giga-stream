@@ -25,7 +25,7 @@ describe("the playlists service", () => {
       () => success({ items: [row(1), { id: "broken" }, filePlaylist(2)] }),
       async (calls) => {
         const list = await playlists.list();
-        assert.deepEqual([calls[0]?.url, calls[0]?.method], ["/api/playlists", "GET"]);
+        assert.deepEqual([calls[0]?.url, calls[0]?.method], ["/api/admin/playlists", "GET"]);
         assert.ok(String(calls[0]?.headers["authorization"]).startsWith("Bearer "));
         assert.deepEqual([list.items.map((item) => item.id), list.unreadable], [[1, 2], 1]);
         assert.deepEqual(list.items.map((item) => item.kind), ["url", "file"]);
@@ -52,7 +52,7 @@ describe("the playlists service", () => {
       async (calls) => {
         const answer = await playlists.importFile("US", new File(["#EXTM3U\n"], "us.m3u"));
         const [call] = calls;
-        assert.deepEqual([call?.method, call?.url], ["POST", "/api/playlists/import"]);
+        assert.deepEqual([call?.method, call?.url], ["POST", "/api/admin/playlists/import"]);
         assert.ok(String(call?.headers["authorization"]).startsWith("Bearer "));
         assert.equal(call?.headers["content-type"], undefined, "the runtime adds the multipart boundary");
         const file = call?.form?.get("file");
@@ -86,7 +86,7 @@ describe("the playlists service", () => {
       async (calls) => {
         await playlists.update(4, changedFields(saved, { ...draftOf(saved), enabled: false }));
         await playlists.update(4, changedFields(saved, { ...draftOf(saved), address: SECRET }));
-        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/playlists/4", { enabled: false }]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url, calls[0]?.body], ["PATCH", "/api/admin/playlists/4", { enabled: false }]);
         assert.deepEqual(calls[1]?.body, { url: SECRET });
         assert.deepEqual(changedFields(saved, draftOf(saved)), {});
       },
@@ -98,7 +98,7 @@ describe("the playlists service", () => {
       () => success({ id: 4, deletedChannels: 2598, deletedJobs: 1 }),
       async (calls) => {
         assert.deepEqual(await playlists.remove(4), { id: 4, deletedChannels: 2598, deletedJobs: 1 });
-        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/playlists/4"]);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["DELETE", "/api/admin/playlists/4"]);
       },
     );
   });
@@ -106,7 +106,7 @@ describe("the playlists service", () => {
   it("carries the field of a 422 playlist.invalid and a 409 playlist.taken, and answers bad_response for an unreadable write", async () => {
     await withBackend(
       (call) =>
-        call.method === "POST" && call.url === "/api/playlists/import"
+        call.method === "POST" && call.url === "/api/admin/playlists/import"
           ? refusal(409, "playlist.taken")
           : call.method === "POST"
             ? refusal(422, "playlist.invalid", "url")

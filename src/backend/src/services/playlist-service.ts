@@ -27,70 +27,70 @@ export function createPlaylistService(deps: {
 }) {
   const { store, audit, runner, onChange } = deps;
 
-  function existing(id: number): PlaylistRecord {
-    const found = store.playlists.find(id);
+  async function existing(id: number): Promise<PlaylistRecord> {
+    const found = await store.playlists.find(id);
     if (!found) throw new AppError(ERRORS.playlistNotFound, { id });
     return found;
   }
 
   /** The new address of a web playlist: the rule, and not held by another playlist. */
-  function checkedUrl(current: PlaylistRecord, raw: string): { url: string; host: string } {
+  async function checkedUrl(current: PlaylistRecord, raw: string): Promise<{ url: string; host: string }> {
     if (current.kind !== "url") throw invalid("url", "A file playlist has no web address. Import the file again.");
     const url = raw.trim();
     if (url.length > ADDRESS_MAX || !isAcceptedAddress(url)) {
       throw invalid("url", addressRefusal("playlist address"));
     }
-    const holder = store.playlists.idOfUrl(url);
+    const holder = await store.playlists.idOfUrl(url);
     if (holder !== undefined && holder !== current.id) throw new AppError(ERRORS.playlistTaken, { field: "url" });
     return { url, host: new URL(url).host };
   }
 
   return {
-    list(): { items: PlaylistView[] } {
-      const counts = store.channels.countsByPlaylist();
-      return { items: store.playlists.list().map((playlist) => playlistView(store, playlist, counts)) };
+    list: async (): Promise<{ items: PlaylistView[] }> => {
+      const counts = await store.channels.countsByPlaylist();
+      return { items: await Promise.all((await store.playlists.list()).map((playlist) => playlistView(store, playlist, counts))) };
     },
 
-    get: (id: number): PlaylistView => playlistView(store, existing(id)),
+    get: async (id: number): Promise<PlaylistView> => playlistView(store, await existing(id)),
 
-    update(id: number, patch: PlaylistPatch, actor: Actor): PlaylistView {
-      const current = existing(id);
+    update: async (id: number, patch: PlaylistPatch, actor: Actor): Promise<PlaylistView> => {
+      const current = await existing(id);
       const name = patch.name ?? current.name;
-      const holder = store.playlists.idOfName(name);
+      const holder = await store.playlists.idOfName(name);
       if (holder !== undefined && holder !== id) throw new AppError(ERRORS.playlistTaken, { field: "name" });
-      const address = patch.url === undefined ? undefined : checkedUrl(current, patch.url);
+      const address = patch.url === undefined ? undefined : await checkedUrl(current, patch.url);
       const enabled = patch.enabled ?? current.enabled;
       try {
-        store.transaction(() => {
-          store.playlists.update({
+        await store.transaction(async () => {
+          await store.playlists.update({
             id, name, enabled,
             ...(current.kind === "url" && { url: address?.url ?? current.url ?? "", host: address?.host ?? current.host ?? "" }),
           });
-          if (enabled !== current.enabled) store.revisions.next();
+          if (enabled !== current.enabled) await store.revisions.next();
         });
       } catch (error) {
         if (isUniqueViolation(error)) throw new AppError(ERRORS.playlistTaken);
         throw error;
       }
-      audit.record(actor, {
+      await audit.record(actor, {
         action: "playlist.updated",
         subject: String(id),
         detail: { name, fields: Object.keys(patch), host: address?.host ?? current.host ?? current.fileName },
       });
       if (enabled !== current.enabled) onChange();
-      return playlistView(store, existing(id));
+      return playlistView(store, await existing(id));
     },
 
-    async remove(id: number, actor: Actor): Promise<PlaylistDeleted> {
-      const current = existing(id);
-      const job = store.jobs.findOfPlaylist(id);
+    remove: async (id: number, actor: Actor): Promise<PlaylistDeleted> => {
+      const current = await existing(id);
+      const job = await store.jobs.findOfPlaylist(id);
       if (job) await runner.stop(job.id);
-      const answer = store.transaction(() => {
-        const deletedChannels = store.channels.countsByPlaylist().get(id)?.channels ?? 0;
-        const deletedJobs = store.jobs.countOfPlaylist(id);
-        store.playlists.remove(id);
-        store.revisions.next();
-        audit.record(actor, {
+      const answer = await store.transaction(async () => {
+        const deletedChannels = (await store.channels.countsByPlaylist()).get(id)?.channels ?? 0;
+        const deletedJobs = await store.jobs.countOfPlaylist(id);
+        await store.playlists.remove(id);
+        await store.revisions.next();
+        await audit.record(actor, {
           action: "playlist.deleted",
           subject: String(id),
           detail: { channels: deletedChannels, jobs: deletedJobs, host: current.host ?? current.fileName },

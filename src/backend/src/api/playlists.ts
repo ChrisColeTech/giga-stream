@@ -51,40 +51,40 @@ export function registerPlaylists(app: FastifyInstance, services: Services): voi
     await upload.register(multipart, {
       limits: { files: 1, fields: 1, fileSize: maxBytes, headerPairs: PLAYLIST_UPLOAD_HEADER_PAIRS },
     });
-    upload.post("/api/playlists/import", { bodyLimit: maxBytes + PLAYLIST_UPLOAD_OVERHEAD_BYTES }, async (request, reply) => {
-      const principal = signedIn(services, request);
-      const answer = services.importer.importFile(await readUpload(request), actorOf(request, principal));
+    upload.post("/playlists/import", { bodyLimit: maxBytes + PLAYLIST_UPLOAD_OVERHEAD_BYTES }, async (request, reply) => {
+      const principal = await signedIn(services, request);
+      const answer = await services.importer.importFile(await readUpload(request), actorOf(request, principal));
       return ok(reply, answer, answer.created ? 201 : 200);
     });
   });
 
-  app.get("/api/playlists", async (request, reply) => {
-    signedIn(services, request);
-    return ok(reply, services.playlists.list());
+  app.get("/playlists", async (request, reply) => {
+    await signedIn(services, request);
+    return ok(reply, await services.playlists.list());
   });
 
-  app.post("/api/playlists", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.post("/playlists", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const input = parseInput(PlaylistInputSchema, request.body, ERRORS.playlistInvalid);
     const answer = await services.importer.importUrl(input, actorOf(request, principal));
     return ok(reply, answer, answer.created ? 201 : 200);
   });
 
-  app.get("/api/playlists/:playlistId", async (request, reply) => {
-    signedIn(services, request);
+  app.get("/playlists/:playlistId", async (request, reply) => {
+    await signedIn(services, request);
     const { playlistId } = parseInput(PlaylistParams, request.params);
-    return ok(reply, services.playlists.get(Number(playlistId)));
+    return ok(reply, await services.playlists.get(Number(playlistId)));
   });
 
-  app.patch("/api/playlists/:playlistId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.patch("/playlists/:playlistId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { playlistId } = parseInput(PlaylistParams, request.params);
     const patch = parseInput(PlaylistPatchSchema, request.body, ERRORS.playlistInvalid);
-    return ok(reply, services.playlists.update(Number(playlistId), patch, actorOf(request, principal)));
+    return ok(reply, await services.playlists.update(Number(playlistId), patch, actorOf(request, principal)));
   });
 
-  app.delete("/api/playlists/:playlistId", async (request, reply) => {
-    const principal = signedIn(services, request);
+  app.delete("/playlists/:playlistId", async (request, reply) => {
+    const principal = await signedIn(services, request);
     const { playlistId } = parseInput(PlaylistParams, request.params);
     return ok(reply, await services.playlists.remove(Number(playlistId), actorOf(request, principal)));
   });

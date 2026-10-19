@@ -1,7 +1,7 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import type { ChannelRecord, StreamRecord } from "../types/channel.js";
+import type { Database } from "./database.js";
 import { CHANNEL_FROM, CHANNEL_ORDER, CHANNEL_SELECT } from "./channel-columns.js";
 import { createChannelPage } from "./channel-page.js";
 import { createRowReader } from "./channel-rows.js";
@@ -17,34 +17,36 @@ const CountRow = z.object({ n: z.number() });
  * columns (`status`, `checkedAt`, `logoFile`, `logoCheckedAt`); it only resets the ones that depend on an address
  * it changes, in the same statement.
  */
-export function createChannelRepository(db: DatabaseSync) {
+export function createChannelRepository(db: Database) {
   const toRecord = createRowReader(db);
   const select = `SELECT ${CHANNEL_SELECT} FROM ${CHANNEL_FROM}`;
-  const all = db.prepare(`${select} ${CHANNEL_ORDER}`);
-  const one = db.prepare(`${select} WHERE c.id = ?`);
-  const ofPlaylist = db.prepare(`${select} WHERE c.playlist_id = ? ORDER BY c.id`);
-  const count = db.prepare("SELECT COUNT(*) AS n FROM channels");
-  const countLive = db.prepare("SELECT COUNT(*) AS n FROM channels WHERE kind = 'live'");
-  const liveByNumber = db.prepare("SELECT id FROM channels WHERE kind = 'live' AND number = ?");
-  const liveIds = db.prepare("SELECT id FROM channels WHERE kind = 'live' ORDER BY id");
-  const insert = db.prepare(`
-    INSERT INTO channels (id, name, category, number, logo_url, tvg_id, stream_url, revision, kind,
-      live_mode, live_captions, live_variants, live_folder, edited_fields, sync_name, playlist_id, enabled, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const update = db.prepare(`
-    UPDATE channels
-    SET name = ?, category = ?, number = ?, logo_url = ?, tvg_id = ?, stream_url = ?, revision = ?,
-      live_mode = ?, live_captions = ?, live_variants = ?, live_folder = ?, edited_fields = ?, sync_name = ?,
-      playlist_id = ?, enabled = ?,
-      status = CASE WHEN stream_url IS ? THEN status ELSE NULL END,
-      checked_at = CASE WHEN stream_url IS ? THEN checked_at ELSE NULL END,
-      logo_file = CASE WHEN logo_url IS ? THEN logo_file ELSE NULL END,
-      logo_checked_at = CASE WHEN logo_url IS ? THEN logo_checked_at ELSE NULL END
-    WHERE id = ?`);
-  const setVerdict = db.prepare("UPDATE channels SET status = ?, checked_at = ? WHERE id = ? AND kind = 'stream'");
-  const clearVideos = db.prepare("DELETE FROM channel_videos WHERE channel_id = ?");
-  const addVideo = db.prepare("INSERT INTO channel_videos (channel_id, position, path) VALUES (?, ?, ?)");
-  const remove = db.prepare("DELETE FROM channels WHERE id = ?");
+  const SQL = {
+    all: `${select} ${CHANNEL_ORDER}`,
+    one: `${select} WHERE c.id = ?`,
+    ofPlaylist: `${select} WHERE c.playlist_id = ? ORDER BY c.id`,
+    count: "SELECT COUNT(*) AS n FROM channels",
+    countLive: "SELECT COUNT(*) AS n FROM channels WHERE kind = 'live'",
+    liveByNumber: "SELECT id FROM channels WHERE kind = 'live' AND number = ?",
+    liveIds: "SELECT id FROM channels WHERE kind = 'live' ORDER BY id",
+    insert: `
+      INSERT INTO channels (id, name, category, number, logo_url, tvg_id, stream_url, revision, kind,
+        live_mode, live_captions, live_variants, live_folder, edited_fields, sync_name, playlist_id, enabled, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    update: `
+      UPDATE channels
+      SET name = ?, category = ?, number = ?, logo_url = ?, tvg_id = ?, stream_url = ?, revision = ?,
+        live_mode = ?, live_captions = ?, live_variants = ?, live_folder = ?, edited_fields = ?, sync_name = ?,
+        playlist_id = ?, enabled = ?,
+        status = CASE WHEN stream_url IS ? THEN status ELSE NULL END,
+        checked_at = CASE WHEN stream_url IS ? THEN checked_at ELSE NULL END,
+        logo_file = CASE WHEN logo_url IS ? THEN logo_file ELSE NULL END,
+        logo_checked_at = CASE WHEN logo_url IS ? THEN logo_checked_at ELSE NULL END
+      WHERE id = ?`,
+    setVerdict: "UPDATE channels SET status = ?, checked_at = ? WHERE id = ? AND kind = 'stream'",
+    clearVideos: "DELETE FROM channel_videos WHERE channel_id = ?",
+    addVideo: "INSERT INTO channel_videos (channel_id, position, path) VALUES (?, ?, ?)",
+    remove: "DELETE FROM channels WHERE id = ?",
+  };
   const stats = createChannelStats(db);
 
   /** The live columns of a record, as the statements bind them; a stream row binds nulls. */
@@ -59,57 +61,72 @@ export function createChannelRepository(db: DatabaseSync) {
     return [edited, c?.syncName ?? null, c?.playlistId ?? null];
   }
 
-  function writeVideos(c: ChannelRecord): void {
-    clearVideos.run(c.id);
-    if (c.kind === "live") c.live.videos.forEach((file, position) => addVideo.run(c.id, position, file));
+  async function writeVideos(c: ChannelRecord): Promise<void> {
+    await db.execute({ sql: SQL.clearVideos, args: [c.id] });
+    if (c.kind === "live") {
+      for (const [position, file] of c.live.videos.entries()) {
+        await db.execute({ sql: SQL.addVideo, args: [c.id, position, file] });
+      }
+    }
   }
 
   return {
-    list: (): ChannelRecord[] => all.all().map(toRecord),
+    list: async (): Promise<ChannelRecord[]> =>
+      Promise.all((await db.execute(SQL.all)).rows.map(toRecord)),
     /** One page in a total, stable order, and the count the filters keep (docs/41 section 3.1). */
     page: createChannelPage(db, toRecord),
     /** The ids of the live rows (a handful): the paged read asks the engine for their state. */
-    liveIds: (): string[] => liveIds.all().map((row) => IdRow.parse(row).id),
+    liveIds: async (): Promise<string[]> =>
+      (await db.execute(SQL.liveIds)).rows.map((row) => IdRow.parse(row).id),
     /** Every row of one playlist, in id order: the pool the import's planner matches against (docs/43 section 3.6). */
-    listOfPlaylist: (playlistId: number): StreamRecord[] =>
-      ofPlaylist.all(playlistId).map(toRecord).filter((c): c is StreamRecord => c.kind === "stream"),
-    find(id: string): ChannelRecord | undefined {
-      const row = one.get(id);
+    listOfPlaylist: async (playlistId: number): Promise<StreamRecord[]> => {
+      const records = await Promise.all(
+        (await db.execute({ sql: SQL.ofPlaylist, args: [playlistId] })).rows.map(toRecord),
+      );
+      return records.filter((c): c is StreamRecord => c.kind === "stream");
+    },
+    find: async (id: string): Promise<ChannelRecord | undefined> => {
+      const row = (await db.execute({ sql: SQL.one, args: [id] })).rows[0];
       return row === undefined ? undefined : toRecord(row);
     },
-    isEmpty: (): boolean => CountRow.parse(count.get()).n === 0,
-    countLive: (): number => CountRow.parse(countLive.get()).n,
+    isEmpty: async (): Promise<boolean> => CountRow.parse((await db.execute(SQL.count)).rows[0]).n === 0,
+    countLive: async (): Promise<number> => CountRow.parse((await db.execute(SQL.countLive)).rows[0]).n,
     /** Channels, enabled, online and offline per playlist, for the playlist views. */
     countsByPlaylist: stats.byPlaylist,
     /** The id of the live row with this number, if any (a live number is unique among live rows). */
-    liveNumberHolder(number: string): string | undefined {
-      const row = liveByNumber.get(number);
+    liveNumberHolder: async (number: string): Promise<string | undefined> => {
+      const row = (await db.execute({ sql: SQL.liveByNumber, args: [number] })).rows[0];
       return row === undefined ? undefined : IdRow.parse(row).id;
     },
-    insert(c: ChannelRecord, createdAt: number): void {
+    async insert(c: ChannelRecord, createdAt: number): Promise<void> {
       const stream = c.kind === "stream" ? c : undefined;
-      insert.run(
-        c.id, c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, stream?.streamUrl ?? null, c.revision,
-        c.kind, ...liveColumns(c), ...syncColumns(stream), c.enabled ? 1 : 0, createdAt,
-      );
-      writeVideos(c);
+      await db.execute({
+        sql: SQL.insert,
+        args: [
+          c.id, c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, stream?.streamUrl ?? null, c.revision,
+          c.kind, ...liveColumns(c), ...syncColumns(stream), c.enabled ? 1 : 0, createdAt,
+        ],
+      });
+      await writeVideos(c);
     },
-    update(c: ChannelRecord): void {
+    async update(c: ChannelRecord): Promise<void> {
       const stream = c.kind === "stream" ? c : undefined;
       const [edited, syncName, playlistId] = syncColumns(stream);
       const streamUrl = stream?.streamUrl ?? null;
-      update.run(
-        c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, streamUrl, c.revision, ...liveColumns(c),
-        edited, syncName, playlistId, c.enabled ? 1 : 0, streamUrl, streamUrl, c.logoUrl, c.logoUrl, c.id,
-      );
-      writeVideos(c);
+      await db.execute({
+        sql: SQL.update,
+        args: [
+          c.name, c.category, c.number, c.logoUrl, stream?.tvgId ?? null, streamUrl, c.revision, ...liveColumns(c),
+          edited, syncName, playlistId, c.enabled ? 1 : 0, streamUrl, streamUrl, c.logoUrl, c.logoUrl, c.id,
+        ],
+      });
+      await writeVideos(c);
     },
     /** A hand-set verdict on one stream row's own address: `status` and `checked_at` only, no revision (admin-only). */
-    setVerdict: (id: string, status: "online" | "offline", at: number): boolean =>
-      Number(setVerdict.run(status, at, id).changes) > 0,
-    remove(id: string): boolean {
-      return Number(remove.run(id).changes) > 0;
-    },
+    setVerdict: async (id: string, status: "online" | "offline", at: number): Promise<boolean> =>
+      (await db.execute({ sql: SQL.setVerdict, args: [status, at, id] })).rowsAffected > 0,
+    remove: async (id: string): Promise<boolean> =>
+      (await db.execute({ sql: SQL.remove, args: [id] })).rowsAffected > 0,
   };
 }
 

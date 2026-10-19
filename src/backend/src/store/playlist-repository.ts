@@ -1,5 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+
+import type { Database } from "./database.js";
 
 const Row = z.object({
   id: z.number().int(),
@@ -49,44 +50,50 @@ function toPlaylist(row: unknown): PlaylistRecord {
 
 const COLUMNS = "id, name, kind, url, file_name, host, enabled, created_at";
 
-/** The playlists (docs/43 section 3.1), in the order they were added. */
-export function createPlaylistRepository(db: DatabaseSync) {
-  const all = db.prepare(`SELECT ${COLUMNS} FROM playlists ORDER BY id`);
-  const one = db.prepare(`SELECT ${COLUMNS} FROM playlists WHERE id = ?`);
-  const insert = db.prepare(
-    "INSERT INTO playlists (name, kind, url, file_name, host, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
-  const update = db.prepare("UPDATE playlists SET name = ?, url = ?, host = ?, enabled = ? WHERE id = ?");
-  const remove = db.prepare("DELETE FROM playlists WHERE id = ?");
-  const byUrl = db.prepare("SELECT id FROM playlists WHERE url = ?");
-  const byFileName = db.prepare("SELECT id FROM playlists WHERE file_name = ?");
-  const byName = db.prepare("SELECT id FROM playlists WHERE name = ? COLLATE NOCASE");
+const SQL = {
+  all: `SELECT ${COLUMNS} FROM playlists ORDER BY id`,
+  one: `SELECT ${COLUMNS} FROM playlists WHERE id = ?`,
+  insert: "INSERT INTO playlists (name, kind, url, file_name, host, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  update: "UPDATE playlists SET name = ?, url = ?, host = ?, enabled = ? WHERE id = ?",
+  remove: "DELETE FROM playlists WHERE id = ?",
+  byUrl: "SELECT id FROM playlists WHERE url = ?",
+  byFileName: "SELECT id FROM playlists WHERE file_name = ?",
+  byName: "SELECT id FROM playlists WHERE name = ? COLLATE NOCASE",
+};
 
-  const idOf = (row: unknown): number | undefined => (row === undefined ? undefined : IdRow.parse(row).id);
+/** The playlists (docs/43 section 3.1), in the order they were added. */
+export function createPlaylistRepository(db: Database) {
+  const idOf = async (sql: string, arg: string): Promise<number | undefined> => {
+    const row = (await db.execute({ sql, args: [arg] })).rows[0];
+    return row === undefined ? undefined : IdRow.parse(row).id;
+  };
 
   return {
-    list: (): PlaylistRecord[] => all.all().map(toPlaylist),
-    find(id: number): PlaylistRecord | undefined {
-      const row = one.get(id);
+    list: async (): Promise<PlaylistRecord[]> => (await db.execute(SQL.all)).rows.map(toPlaylist),
+    find: async (id: number): Promise<PlaylistRecord | undefined> => {
+      const row = (await db.execute({ sql: SQL.one, args: [id] })).rows[0];
       return row === undefined ? undefined : toPlaylist(row);
     },
     /** The id of the playlist with exactly this web address, if any. */
-    idOfUrl: (url: string): number | undefined => idOf(byUrl.get(url)),
+    idOfUrl: (url: string): Promise<number | undefined> => idOf(SQL.byUrl, url),
     /** The id of the playlist made from a file of this (sanitised) name, if any. */
-    idOfFileName: (fileName: string): number | undefined => idOf(byFileName.get(fileName)),
+    idOfFileName: (fileName: string): Promise<number | undefined> => idOf(SQL.byFileName, fileName),
     /** The id of the playlist with this name, ignoring case, if any. */
-    idOfName: (name: string): number | undefined => idOf(byName.get(name)),
+    idOfName: (name: string): Promise<number | undefined> => idOf(SQL.byName, name),
     /** The `UNIQUE` columns decide a duplicate: a clash raises, and the service maps it to `409 playlist.taken`. */
-    insert(p: NewPlaylist, at: number): number {
+    insert: async (p: NewPlaylist, at: number): Promise<number> => {
       const [url, fileName, host] = p.kind === "url" ? [p.url, null, p.host] : [null, p.fileName, null];
-      return Number(insert.run(p.name, p.kind, url, fileName, host, p.enabled ? 1 : 0, at).lastInsertRowid);
+      const result = await db.execute({
+        sql: SQL.insert,
+        args: [p.name, p.kind, url, fileName, host, p.enabled ? 1 : 0, at],
+      });
+      return Number(result.lastInsertRowid);
     },
-    update(p: { id: number; name: string; url?: string; host?: string; enabled: boolean }): void {
-      update.run(p.name, p.url ?? null, p.host ?? null, p.enabled ? 1 : 0, p.id);
+    update: async (p: { id: number; name: string; url?: string; host?: string; enabled: boolean }): Promise<void> => {
+      await db.execute({ sql: SQL.update, args: [p.name, p.url ?? null, p.host ?? null, p.enabled ? 1 : 0, p.id] });
     },
-    remove(id: number): boolean {
-      return Number(remove.run(id).changes) > 0;
-    },
+    remove: async (id: number): Promise<boolean> =>
+      (await db.execute({ sql: SQL.remove, args: [id] })).rowsAffected > 0,
   };
 }
 

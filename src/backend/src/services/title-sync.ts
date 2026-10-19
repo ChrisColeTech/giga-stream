@@ -77,10 +77,10 @@ export function createTitleSync(deps: {
   let stopped = false;
 
   type AuditAction = "sync.started" | "sync.finished" | "sync.failed" | "sync.stopped";
-  function recordSyncAudit(action: AuditAction, actor: Actor, detail: Record<string, unknown>): void {
+  async function recordSyncAudit(action: AuditAction, actor: Actor, detail: Record<string, unknown>): Promise<void> {
     if (stopped) return; // shutting down: the store may already be closed
     try {
-      audit.record(actor, { action, subject: "titles", detail });
+      await audit.record(actor, { action, subject: "titles", detail });
     } catch {
       // a shutdown between the guard and the write; the entry is lost, not the process
     }
@@ -90,7 +90,7 @@ export function createTitleSync(deps: {
   async function syncOnce(request: SyncRequest, actor: Actor, triggered: "admin" | "system", options: RunOptions) {
     const detail = triggered === "system" ? { ...describeRequest(request), triggered } : describeRequest(request);
     const signal = options.signal ?? new AbortController().signal;
-    recordSyncAudit("sync.started", actor, detail);
+    await recordSyncAudit("sync.started", actor, detail);
     const seen: Seen = { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 };
     const notes: string[] = [];
     let result: SyncResult;
@@ -121,9 +121,9 @@ export function createTitleSync(deps: {
     const audited = {
       ...detail, titles: result.titles, detailed, seasons, enriched, airing, ...(notes.length > 0 && { notes }),
     };
-    if (result.result === "ok") recordSyncAudit("sync.finished", actor, audited);
-    else if (result.result === "stopped") recordSyncAudit("sync.stopped", actor, audited);
-    else recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });
+    if (result.result === "ok") await recordSyncAudit("sync.finished", actor, audited);
+    else if (result.result === "stopped") await recordSyncAudit("sync.stopped", actor, audited);
+    else await recordSyncAudit("sync.failed", actor, { ...audited, code: result.code });
     if (!stopped) lastRun = { finishedAt: now(), outcome: result.result === "failed" ? (result.code ?? "failed") : result.result };
     return result;
   }
@@ -141,8 +141,8 @@ export function createTitleSync(deps: {
       return syncOnce(request, actor, triggered, options);
     },
 
-    status() {
-      const { total, stale } = store.titles.counts(TITLE_FRESH_MS);
+    async status() {
+      const { total, stale } = await store.titles.counts(TITLE_FRESH_MS);
       return {
         running: running !== null,
         ...(running !== null && { startedAt: running.startedAt }),

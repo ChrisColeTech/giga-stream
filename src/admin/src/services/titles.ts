@@ -24,13 +24,13 @@ import type { RecordInput } from "./service-types";
  *  A save is a `PATCH` of the changed fields (`null` clears); `detail` reads the fields a list row lacks; `revert`
  *  drops an admin's edits and refetches from TMDB (`409 title.manual` for a title made by hand). With no TMDB token and
  *  no manual title a read is `503 tmdb.unavailable`, which arrives as that `ApiError`. Writes take the 256 KiB body
- *  limit (B3). A synced title that is deleted stays deleted: `listDeleted` reads them (`GET /api/titles/deleted`) and
- *  `restore` removes one's record (`DELETE /api/titles/deleted/:id`); it returns on the next browse or sync. */
+ *  limit (B3). A synced title that is deleted stays deleted: `listDeleted` reads them (`GET /api/admin/titles/deleted`)
+ *  and `restore` removes one's record (`DELETE /api/admin/titles/deleted/:id`); it returns on the next browse or sync. */
 export interface TitlesService {
   readonly list: (query?: BrowseQuery, signal?: AbortSignal) => Promise<TitleList>;
   readonly search: (query: SearchQuery, signal?: AbortSignal) => Promise<TitleList>;
   readonly detail: (id: string) => Promise<AdminTitleDetail>;
-  /** `POST /api/titles/from-tmdb { id }` (`docs/47` section 3.3): the explicit add of a Browse TMDB title; `201` with the
+  /** `POST /api/admin/titles/from-tmdb { id }` (`docs/47` section 3.3): the explicit add of a Browse TMDB title; `201` with the
    *  stored title, `409 title.taken` when it is already stored or was deleted, `404 title.not_found`, `422`. */
   readonly addFromTmdb: (id: string) => Promise<AdminTitleDetail>;
   readonly create: (input: RecordInput) => Promise<AdminTitleDetail>;
@@ -39,15 +39,19 @@ export interface TitlesService {
   readonly revert: (id: string) => Promise<AdminTitleDetail>;
   readonly listDeleted: () => Promise<readonly AdminDeletedTitle[]>;
   readonly restore: (id: string) => Promise<{ readonly id: string }>;
-  /** `GET /api/titles/stored` (`docs/41` section 3.2): rows `offset` to `offset + limit` of the stored titles that match
+  /** `GET /api/admin/titles/stored` (`docs/41` section 3.2): rows `offset` to `offset + limit` of the stored titles that match
    *  the query, never TMDB. Read row by row. A `signal` aborts the request (a newer query replaced it). */
   readonly listStored: (query: StoredQuery, offset: number, limit?: number, signal?: AbortSignal) => Promise<StoredPage>;
   /** The existing seasons read (`GET /api/titles/:id/seasons/:season`, `55` decision 8): the season's episodes, each with
-   *  the sources the backend's fill built for it. `includeDisabled`, as the detail read, so a disabled title previews. */
+   *  the sources the backend's fill built for it. `includeDisabled`, as the detail read, so a disabled title previews;
+   *  the public read keeps it only for an admin's token. */
   readonly episodes: (id: string, season: number) => Promise<SeasonEpisodes>;
 }
 
-const path = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
+/** The admin detail reads ride the public title routes (docs/03 sections 7.4 and 7.6b): the same answers a viewer gets,
+ *  with `includeDisabled=true` kept because the console's bearer token makes it an admin read. */
+const publicPath = (id: string): string => `/api/titles/${encodeURIComponent(id)}`;
+const path = (id: string): string => `/api/admin/titles/${encodeURIComponent(id)}`;
 const BROWSE_START: BrowseQuery = { kind: "all", sort: START_VIEW.sort, page: 1 };
 
 async function page(url: string, signal?: AbortSignal): Promise<TitleList> {
@@ -67,7 +71,7 @@ async function page(url: string, signal?: AbortSignal): Promise<TitleList> {
 }
 
 async function stored(query: StoredQuery, offset: number, limit?: number, signal?: AbortSignal): Promise<StoredPage> {
-  const url = `/api/titles/stored?${storedParams(query, offset, limit)}`;
+  const url = `/api/admin/titles/stored?${storedParams(query, offset, limit)}`;
   const answer = await request(url, StoredPageLenientSchema, { area: "Title", ...(signal !== undefined && { signal }) });
   const items: AdminTitleRow[] = [];
   for (const row of answer.items) {
@@ -80,19 +84,21 @@ async function stored(query: StoredQuery, offset: number, limit?: number, signal
 export const titles: TitlesService = {
   listStored: stored,
   episodes: (id, season) =>
-    request(`${path(id)}/seasons/${encodeURIComponent(String(season))}?includeDisabled=true`, SeasonEpisodesSchema, {
-      area: "Title",
-    }),
+    request(
+      `${publicPath(id)}/seasons/${encodeURIComponent(String(season))}?includeDisabled=true`,
+      SeasonEpisodesSchema,
+      { area: "Title" },
+    ),
   list: (query = BROWSE_START, signal) => page(`/api/admin/tmdb/titles?${queryString(query)}`, signal),
   search: (query, signal) => page(`/api/admin/tmdb/search?${queryString(query)}`, signal),
   addFromTmdb: (id) =>
-    request("/api/titles/from-tmdb", TitleDetailSchema, { method: "POST", body: { id }, area: "Title" }),
-  detail: (id) => request(`${path(id)}?includeDisabled=true`, TitleDetailSchema, { area: "Title" }),
-  create: (input) => request("/api/titles", TitleDetailSchema, { method: "POST", body: input, area: "Title" }),
+    request("/api/admin/titles/from-tmdb", TitleDetailSchema, { method: "POST", body: { id }, area: "Title" }),
+  detail: (id) => request(`${publicPath(id)}?includeDisabled=true`, TitleDetailSchema, { area: "Title" }),
+  create: (input) => request("/api/admin/titles", TitleDetailSchema, { method: "POST", body: input, area: "Title" }),
   update: (id, patch) => request(path(id), TitleDetailSchema, { method: "PATCH", body: patch, area: "Title" }),
   remove: (id) => request(path(id), TitleDeletedSchema, { method: "DELETE", area: "Title" }),
   revert: (id) => request(`${path(id)}/revert`, TitleDetailSchema, { method: "POST", area: "Title" }),
-  listDeleted: async () => (await request("/api/titles/deleted", DeletedTitleListSchema, { area: "Title" })).items,
+  listDeleted: async () => (await request("/api/admin/titles/deleted", DeletedTitleListSchema, { area: "Title" })).items,
   restore: (id) =>
-    request(`/api/titles/deleted/${encodeURIComponent(id)}`, TitleDeletedSchema, { method: "DELETE", area: "Title" }),
+    request(`/api/admin/titles/deleted/${encodeURIComponent(id)}`, TitleDeletedSchema, { method: "DELETE", area: "Title" }),
 };

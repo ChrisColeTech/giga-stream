@@ -1,9 +1,10 @@
 // The first-start seed of the Library fill (docs/26 section 3.11, docs/44 section 3.4): the job starts Enabled whatever
 // the environment says (the schedule is TMDB_SYNC_SCHEDULE or `off`), and an admin's later choice is never re-seeded.
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test from "node:test";
 
 import { itemsOf } from "./live-channel-kit.js";
@@ -13,7 +14,7 @@ const FILL = { scope: "discover" };
 
 async function jobsOf(t: Awaited<ReturnType<typeof makeApp>>): Promise<Array<Record<string, unknown>>> {
   const token = (await signIn(t.app)).access;
-  return itemsOf((await send(t.app, "GET", "/api/jobs", undefined, token)).body);
+  return itemsOf((await send(t.app, "GET", "/api/admin/jobs", undefined, token)).body);
 }
 
 test("a fresh database with no TMDB_SYNC_SCHEDULE seeds the Library fill enabled, with the schedule off", async () => {
@@ -36,7 +37,7 @@ test("an admin who disabled the Library fill finds it disabled after a restart, 
     const first = await makeApp({ dataDir });
     const token = (await signIn(first.app)).access;
     const id = (await jobsOf(first))[0]?.id;
-    const off = await send(first.app, "PATCH", `/api/jobs/${id}`, { enabled: false, schedule: "12h" }, token);
+    const off = await send(first.app, "PATCH", `/api/admin/jobs/${id}`, { enabled: false, schedule: "12h" }, token);
     assert.equal(off.status, 200);
     await first.dispose();
     const second = await makeApp({ dataDir, config: { TMDB_SYNC_SCHEDULE: "2h" } });
@@ -46,7 +47,7 @@ test("an admin who disabled the Library fill finds it disabled after a restart, 
     await second.dispose();
   } finally {
     try {
-      rmSync(dataDir, { recursive: true, force: true });
+      removeDir(dataDir);
     } catch {
       // Windows can hold the SQLite file open briefly after dispose; the temp dir is cleaned up on reboot.
     }

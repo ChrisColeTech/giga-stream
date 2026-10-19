@@ -47,9 +47,9 @@ export function createAiringPhase(deps: {
       const rows = listOf(answer.results).map(asRecord);
       run.seen.titles += rows.length;
       const ids = rows.flatMap((row) => num(row.id) ?? []);
-      for (const id of store.titles.update.storedAmong("tv", ids)) forced.push(titleIdOf("tv", id));
-      store.transaction(() => {
-        for (const row of rows) storeRow("tv", row);
+      for (const id of await store.titles.update.storedAmong("tv", ids)) forced.push(titleIdOf("tv", id));
+      await store.transaction(async () => {
+        for (const row of rows) await storeRow("tv", row);
       });
       run.report({ phase: PHASE, done: page, total });
       if (rows.length === 0) break;

@@ -25,7 +25,7 @@ const FileserverChannel = z.object({
 
 test("a new live channel answers preparing with its defaults, then plays its videos in order", async () => {
   const { t, token } = await signedInApp();
-  const created = await send(t.app, "POST", "/api/channels", liveBody(), token);
+  const created = await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
   assert.equal(created.status, 201);
   assert.deepEqual(
     ["kind", "state", "mode", "captions", "variants", "number"].map((field) => pick(created.body, `data.${field}`)),
@@ -33,7 +33,7 @@ test("a new live channel answers preparing with its defaults, then plays its vid
   );
   assert.equal(pick(created.body, "data.streamUrl"), "http://localhost:80/live/home/master.m3u8");
   await t.live.settled();
-  const admin = await send(t.app, "GET", "/api/admin-channels", undefined, token);
+  const admin = await send(t.app, "GET", "/api/admin/channels", undefined, token);
   const home = itemOf(admin.body, "home");
   assert.deepEqual([home.state, home.problem, home.nowPlaying], ["live", undefined, { index: 0, name: "a.mp4" }]);
   assert.deepEqual(home.playlist, [{ name: "a.mp4", durationMs: 6000 }, { name: "b.mp4", durationMs: 4000 }]);
@@ -42,7 +42,7 @@ test("a new live channel answers preparing with its defaults, then plays its vid
 
 test("a public read builds a live row's addresses from the caller's origin and shows no local path", async () => {
   const { t, token } = await signedInApp();
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
   const lan = await request(t.app, { method: "GET", url: "/api/channels", headers: { host: "stream.example:9000" } });
   assert.deepEqual(itemOf(lan.body, "home"), {
     id: "home",
@@ -60,8 +60,8 @@ test("a public read builds a live row's addresses from the caller's origin and s
 
 test("both kinds answer the shape the fileserver reads: number is text, streamUrl is not empty", async () => {
   const { t, token } = await signedInApp();
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
-  await send(t.app, "POST", "/api/channels", streamBody({ logoUrl: "https://live.example/news.png" }), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
+  await send(t.app, "POST", "/api/admin/channels", streamBody({ logoUrl: "https://live.example/news.png" }), token);
   const list = await send(t.app, "GET", "/api/channels");
   assert.deepEqual(itemsOf(list.body).map((item) => item.kind).sort(), ["live", "stream"]);
   for (const item of itemsOf(list.body)) assert.equal(FileserverChannel.safeParse(item).success, true, String(item.id));
@@ -70,12 +70,12 @@ test("both kinds answer the shape the fileserver reads: number is text, streamUr
 
 test("a body without a kind is a stream row; the kind discriminates, and a field of the other kind is refused", async () => {
   const { t, token } = await signedInApp();
-  const plain = await send(t.app, "POST", "/api/channels", streamBody(), token);
+  const plain = await send(t.app, "POST", "/api/admin/channels", streamBody(), token);
   assert.deepEqual([plain.status, pick(plain.body, "data.kind"), pick(plain.body, "data.streamUrl")], [201, "stream", "https://live.example/news.m3u8"]);
-  const named = await send(t.app, "POST", "/api/channels", streamBody({ kind: "stream", number: "9" }), token);
+  const named = await send(t.app, "POST", "/api/admin/channels", streamBody({ kind: "stream", number: "9" }), token);
   assert.equal(named.status, 201);
   const refusal = async (body: unknown) => {
-    const answer = await send(t.app, "POST", "/api/channels", body, token);
+    const answer = await send(t.app, "POST", "/api/admin/channels", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   assert.deepEqual(await refusal(streamBody({ kind: "radio" })), [422, "channel.invalid", "kind"]);
@@ -87,7 +87,7 @@ test("a body without a kind is a stream row; the kind discriminates, and a field
   assert.deepEqual(await refusal(streamBody({ streamUrl: "http://u:p@live.example/news.m3u8" })), [422, "channel.invalid", "streamUrl"]);
   assert.deepEqual(await refusal(streamBody({ logoUrl: "ftp://live.example/n.png" })), [422, "channel.invalid", "logoUrl"]);
   for (const streamUrl of ["http://live.example/news.m3u8", "http://192.168.1.4:8080/n.m3u8", "http://127.0.0.1:9/n.m3u8"]) {
-    const accepted = await send(t.app, "POST", "/api/channels", streamBody({ streamUrl, logoUrl: "http://10.0.0.2/n.png" }), token);
+    const accepted = await send(t.app, "POST", "/api/admin/channels", streamBody({ streamUrl, logoUrl: "http://10.0.0.2/n.png" }), token);
     assert.equal(accepted.status, 201, streamUrl);
   }
 });
@@ -95,7 +95,7 @@ test("a body without a kind is a stream row; the kind discriminates, and a field
 test("a bad live channel is refused naming the field; its paths must exist", async () => {
   const { t, token } = await signedInApp();
   const refusal = async (body: unknown) => {
-    const answer = await send(t.app, "POST", "/api/channels", body, token);
+    const answer = await send(t.app, "POST", "/api/admin/channels", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   const invalid = (field: string) => [422, "channel.invalid", field];
@@ -115,52 +115,52 @@ test("a bad live channel is refused naming the field; its paths must exist", asy
 
 test("a live number is text on the wire: digits or an integer are accepted and kept without leading zeros", async () => {
   const { t, token } = await signedInApp();
-  const answer = await send(t.app, "POST", "/api/channels", liveBody({ number: "0012" }), token);
+  const answer = await send(t.app, "POST", "/api/admin/channels", liveBody({ number: "0012" }), token);
   assert.deepEqual([answer.status, pick(answer.body, "data.number")], [201, "12"]);
 });
 
 test("a live number is optional: none sent is none stored, any number of such rows coexist, a patch keeps what is there", async () => {
   const { t, token } = await signedInApp();
-  const first = await send(t.app, "POST", "/api/channels", liveBody({ id: "one", number: undefined }), token);
-  const second = await send(t.app, "POST", "/api/channels", liveBody({ id: "two", number: undefined }), token);
+  const first = await send(t.app, "POST", "/api/admin/channels", liveBody({ id: "one", number: undefined }), token);
+  const second = await send(t.app, "POST", "/api/admin/channels", liveBody({ id: "two", number: undefined }), token);
   assert.deepEqual([first.status, second.status], [201, 201]);
   assert.equal("number" in (first.body as { data: object }).data, false);
-  const named = await send(t.app, "PATCH", "/api/channels/one", { name: "Renamed" }, token);
+  const named = await send(t.app, "PATCH", "/api/admin/channels/one", { name: "Renamed" }, token);
   assert.deepEqual([named.status, "number" in (named.body as { data: object }).data], [200, false]);
-  const numbered = await send(t.app, "POST", "/api/channels", liveBody({ id: "three", number: 5 }), token);
-  const kept = await send(t.app, "PATCH", "/api/channels/three", { name: "Three" }, token);
+  const numbered = await send(t.app, "POST", "/api/admin/channels", liveBody({ id: "three", number: 5 }), token);
+  const kept = await send(t.app, "PATCH", "/api/admin/channels/three", { name: "Three" }, token);
   assert.deepEqual([numbered.status, pick(kept.body, "data.number")], [201, "5"]);
 });
 
 test("a taken id or live number is channel.taken; stream rows share numbers freely", async () => {
   const { t, token } = await signedInApp();
-  assert.equal((await send(t.app, "POST", "/api/channels", liveBody(), token)).status, 201);
+  assert.equal((await send(t.app, "POST", "/api/admin/channels", liveBody(), token)).status, 201);
   const refusal = async (body: unknown) => {
-    const answer = await send(t.app, "POST", "/api/channels", body, token);
+    const answer = await send(t.app, "POST", "/api/admin/channels", body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   assert.deepEqual(await refusal(liveBody({ number: 99 })), [409, "channel.taken", "id"]);
   assert.deepEqual(await refusal(liveBody({ id: "other" })), [409, "channel.taken", "number"]);
-  assert.equal((await send(t.app, "POST", "/api/channels", streamBody({ number: "7" }), token)).status, 201);
-  assert.equal((await send(t.app, "POST", "/api/channels", streamBody({ number: "7" }), token)).status, 201);
-  assert.equal((await send(t.app, "POST", "/api/channels", liveBody({ id: "two", number: 8 }), token)).status, 201);
-  const clash = await send(t.app, "PATCH", "/api/channels/two", { number: "7" }, token);
+  assert.equal((await send(t.app, "POST", "/api/admin/channels", streamBody({ number: "7" }), token)).status, 201);
+  assert.equal((await send(t.app, "POST", "/api/admin/channels", streamBody({ number: "7" }), token)).status, 201);
+  assert.equal((await send(t.app, "POST", "/api/admin/channels", liveBody({ id: "two", number: 8 }), token)).status, 201);
+  const clash = await send(t.app, "PATCH", "/api/admin/channels/two", { number: "7" }, token);
   assert.deepEqual([clash.status, pick(clash.body, "error.code"), pick(clash.body, "error.details.field")], [409, "channel.taken", "number"]);
-  assert.equal((await send(t.app, "PATCH", "/api/channels/two", { number: "8" }, token)).status, 200);
+  assert.equal((await send(t.app, "PATCH", "/api/admin/channels/two", { number: "8" }, token)).status, 200);
 });
 
 test("an edit is live at once: renamed, reordered, then switched from a list to a folder and back", async () => {
   const { t, token } = await signedInApp();
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
   await t.live.settled();
-  const renamed = await send(t.app, "PATCH", "/api/channels/home", { kind: "live", name: "Family", number: 8 }, token);
+  const renamed = await send(t.app, "PATCH", "/api/admin/channels/home", { kind: "live", name: "Family", number: 8 }, token);
   assert.deepEqual(["name", "number", "state"].map((f) => pick(renamed.body, `data.${f}`)), ["Family", "8", "preparing"]);
-  const reordered = await send(t.app, "PATCH", "/api/channels/home", { videos: [VIDEOS.b, VIDEOS.a] }, token);
+  const reordered = await send(t.app, "PATCH", "/api/admin/channels/home", { videos: [VIDEOS.b, VIDEOS.a] }, token);
   assert.deepEqual(pick(reordered.body, "data.videos"), [VIDEOS.b, VIDEOS.a]);
   await t.live.settled();
-  const toFolder = await send(t.app, "PATCH", "/api/channels/home", { folder: VIDEOS.folder, captions: true, mode: "encode" }, token);
+  const toFolder = await send(t.app, "PATCH", "/api/admin/channels/home", { folder: VIDEOS.folder, captions: true, mode: "encode" }, token);
   assert.deepEqual(["folder", "videos", "captions", "mode"].map((f) => pick(toFolder.body, `data.${f}`)), [VIDEOS.folder, undefined, true, "encode"]);
-  const back = await send(t.app, "PATCH", "/api/channels/home", { videos: [VIDEOS.a] }, token);
+  const back = await send(t.app, "PATCH", "/api/admin/channels/home", { videos: [VIDEOS.a] }, token);
   assert.deepEqual([pick(back.body, "data.folder"), pick(back.body, "data.videos")], [undefined, [VIDEOS.a]]);
   await t.live.settled();
   assert.equal(pick((await send(t.app, "GET", "/api/channels/home")).body, "data.name"), "Family");
@@ -168,10 +168,10 @@ test("an edit is live at once: renamed, reordered, then switched from a list to 
 
 test("a change is refused when it does not fit the row: the kind, the other kind's fields, the id, the category", async () => {
   const { t, token } = await signedInApp();
-  await send(t.app, "POST", "/api/channels", liveBody(), token);
-  const stream = String(pick((await send(t.app, "POST", "/api/channels", streamBody(), token)).body, "data.id"));
+  await send(t.app, "POST", "/api/admin/channels", liveBody(), token);
+  const stream = String(pick((await send(t.app, "POST", "/api/admin/channels", streamBody(), token)).body, "data.id"));
   const refusal = async (id: string, body: unknown) => {
-    const answer = await send(t.app, "PATCH", `/api/channels/${id}`, body, token);
+    const answer = await send(t.app, "PATCH", `/api/admin/channels/${id}`, body, token);
     return [answer.status, pick(answer.body, "error.code"), pick(answer.body, "error.details.field")];
   };
   const invalid = (field: string) => [422, "channel.invalid", field];
@@ -186,6 +186,6 @@ test("a change is refused when it does not fit the row: the kind, the other kind
   assert.deepEqual(await refusal("home", { number: 0 }), invalid("number"));
   assert.deepEqual(await refusal("home", { folder: VIDEOS.folder, videos: [VIDEOS.a] }), invalid("folder"));
   assert.deepEqual(await refusal("home", { videos: [path.join(VIDEOS.dir, "nope.mp4")] }), invalid("videos.0"));
-  assert.equal((await send(t.app, "PATCH", `/api/channels/${stream}`, { category: "Weather", number: 5 }, token)).status, 200);
+  assert.equal((await send(t.app, "PATCH", `/api/admin/channels/${stream}`, { category: "Weather", number: 5 }, token)).status, 200);
   assert.deepEqual(await refusal("missing", { name: "x" }), [404, "channel.not_found", undefined]);
 });

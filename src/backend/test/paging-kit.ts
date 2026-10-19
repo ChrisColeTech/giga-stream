@@ -1,26 +1,27 @@
 /** Seeds for the paging tests (docs/41 section 3.4): rows written straight into a temporary store before the app opens. */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after } from "node:test";
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
-import { createStore } from "../src/store/store.js";
+import { createStore, type Store } from "../src/store/store.js";
 import { NOT_SYNCED, type StreamRecord } from "../src/types/channel.js";
+import { removeDir } from "./db-kit.js";
 import { pick } from "./test-app.js";
 
 const dirs: string[] = [];
 after(() => {
-  for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs) removeDir(dir);
 });
 
 /** A temporary data folder holding a migrated store that `seed` filled; the app is then opened on it. */
-export function seededDataDir(seed: (store: ReturnType<typeof createStore>) => void): string {
+export async function seededDataDir(seed: (store: Store) => Promise<void>): Promise<string> {
   const dir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-paging-"));
   dirs.push(dir);
-  const store = createStore(path.join(dir, DATABASE_FILE_NAME));
+  const store = await createStore(path.join(dir, DATABASE_FILE_NAME));
   try {
-    seed(store);
+    await seed(store);
   } finally {
     store.close();
   }
@@ -64,9 +65,11 @@ export function streamRows(): StreamRecord[] {
 }
 
 /** Writes the two playlists, then the stream rows that belong to them. */
-export function seedStreams(store: ReturnType<typeof createStore>): void {
-  for (const p of PLAYLISTS) store.playlists.insert({ kind: "url", name: p.name, url: `https://${p.host}/list.m3u`, host: p.host, enabled: true }, 1);
-  for (const row of streamRows()) store.channels.insert(row, 1);
+export async function seedStreams(store: Store): Promise<void> {
+  for (const p of PLAYLISTS) {
+    await store.playlists.insert({ kind: "url", name: p.name, url: `https://${p.host}/list.m3u`, host: p.host, enabled: true }, 1);
+  }
+  for (const row of streamRows()) await store.channels.insert(row, 1);
 }
 
 export interface SeedTitle {
@@ -102,15 +105,18 @@ export function seedTitles(): SeedTitle[] {
   });
 }
 
-export function writeTitles(store: ReturnType<typeof createStore>, titles: readonly SeedTitle[]): void {
+export async function writeTitles(store: Store, titles: readonly SeedTitle[]): Promise<void> {
   for (const t of titles) {
     const tmdbId = Number(t.id.split("-")[1]);
     const payload = { id: t.id, kind: t.kind, shape: "list", title: t.title, year: t.year, rating: t.rating, genres: ["Drama"] };
-    if (t.origin === "manual") store.titles.insertManual({ id: t.id, kind: t.kind, tmdbId: null, payload, at: t.fetchedAt });
-    else store.titles.put({ kind: t.kind, tmdbId, payload, popularityScore: null, popularityReadAt: null, fetchedAt: t.fetchedAt });
+    if (t.origin === "manual") {
+      await store.titles.insertManual({ id: t.id, kind: t.kind, tmdbId: null, payload, at: t.fetchedAt });
+    } else {
+      await store.titles.put({ kind: t.kind, tmdbId, payload, popularityScore: null, popularityReadAt: null, fetchedAt: t.fetchedAt });
+    }
     if (t.edited || !t.enabled) {
       const editedFields = t.edited ? ["title"] : [];
-      store.titles.updateRecord(t.id, { payload, editedFields, tmdbId: t.origin === "manual" ? null : tmdbId, enabled: t.enabled });
+      await store.titles.updateRecord(t.id, { payload, editedFields, tmdbId: t.origin === "manual" ? null : tmdbId, enabled: t.enabled });
     }
   }
 }

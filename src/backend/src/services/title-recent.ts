@@ -48,8 +48,8 @@ export function createRecentPhase(deps: {
         }
         const rows = listOf(answer.results);
         run.seen.titles += rows.length;
-        store.transaction(() => {
-          for (const row of rows) storeRow(kind, asRecord(row));
+        await store.transaction(async () => {
+          for (const row of rows) await storeRow(kind, asRecord(row));
         });
         run.report({ phase: PHASE, done: ++done, total });
         if (rows.length === 0) break;

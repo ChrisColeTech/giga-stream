@@ -1,3 +1,5 @@
+import { createServer, type Server } from "node:http";
+
 /** A scripted stand-in for the admin backend's public channels: an injected `fetch` that logs every call. */
 export interface FakeChannel {
   id: string;
@@ -77,3 +79,59 @@ export function fakeBackend(initial: FakeChannel[] = []) {
 }
 
 export type FakeBackend = ReturnType<typeof fakeBackend>;
+
+/** What one request left at the fake upstream: where it landed and the forwarded-for chain it carried. */
+export interface UpstreamHit {
+  path: string;
+  forwardedFor: string | string[] | undefined;
+}
+
+/** A real HTTP stand-in for the admin backend sibling the fileserver's proxy points at: every request
+ *  answers the standard envelope naming the path it landed on, and every hit is logged for assertions. */
+export interface FakeUpstream {
+  url: string;
+  seen: UpstreamHit[];
+  close(): Promise<void>;
+}
+
+/** Starts the fake upstream on an ephemeral loopback port (test/admin-proxy.test.ts closes it). */
+export async function startFakeUpstream(): Promise<FakeUpstream> {
+  const seen: UpstreamHit[] = [];
+  const server: Server = createServer((request, response) => {
+    const path = request.url ?? "/";
+    seen.push({
+      path,
+      forwardedFor: Array.isArray(request.headers["x-forwarded-for"])
+        ? request.headers["x-forwarded-for"].join(", ")
+        : request.headers["x-forwarded-for"],
+    });
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify({ ok: true, data: { path } }));
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      server.removeListener("error", reject);
+      resolve();
+    });
+  });
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    await closeServer(server);
+    throw new Error("the fake upstream got no ephemeral port");
+  }
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    seen,
+    close: () => closeServer(server),
+  };
+}
+
+/** Stops listening and drops the keep-alive sockets the proxy's undici pool leaves idle behind. */
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve) => {
+    server.closeIdleConnections();
+    server.closeAllConnections();
+    server.close(() => resolve());
+  });
+}

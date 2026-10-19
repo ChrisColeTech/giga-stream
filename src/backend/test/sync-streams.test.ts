@@ -1,9 +1,10 @@
 // Sync step 5 (docs/43 section 3.4; the words of docs/51): each channel's own exact stream address decides online or
 // offline; no host shortcut; one verdict per distinct address; compare-and-set writes; no revision; the probe budget.
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test from "node:test";
 
 import { PROBE_BUDGET_MS } from "../src/constants/limits.js";
@@ -60,7 +61,7 @@ test("a run takes no revision for its verdicts, and the public answer never carr
   net.set(STREAM("s.example", "a"), MANIFEST);
   const s = await setupSync(net, [m3uEntry("a", STREAM("s.example", "a")), m3uEntry("b", STREAM("s.example", "b"))]);
   const rows = await s.channels();
-  await s.api("PATCH", "/api/channels", { enabled: true, ids: rows.map((r) => String(r.id)) });
+  await s.api("PATCH", "/api/admin/channels", { enabled: true, ids: rows.map((r) => String(r.id)) });
   const before = await s.revision();
   await s.run();
   assert.equal(await s.revision(), before, "statuses, check times and cache files are admin-only");
@@ -81,7 +82,7 @@ test("a channel whose address changed mid-run keeps no verdict for the old addre
   const id = String((await s.channels()).find((c) => c.name === "a")?.id);
   const run = s.run();
   await gate.started;
-  const edited = await s.api("PATCH", `/api/channels/${id}`, { streamUrl: STREAM("elsewhere.example", "a2") });
+  const edited = await s.api("PATCH", `/api/admin/channels/${id}`, { streamUrl: STREAM("elsewhere.example", "a2") });
   assert.equal(edited.status, 200);
   gate.release();
   await run;
@@ -110,21 +111,21 @@ test("the probe budget ends the check: the rest stay unchecked and a second run 
   assert.ok(net.asked("https://s.example/").length > first);
 });
 
-test("the check order is total: never-checked first, then the longest unchecked, then the id", () => {
+test("the check order is total: never-checked first, then the longest unchecked, then the id", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "giga-health-order-"));
-  const store = createStore(path.join(dir, "admin.db"));
+  const store = await createStore(path.join(dir, "admin.db"));
   try {
-    const playlistId = store.playlists.insert({ kind: "file", name: "p", fileName: "p.m3u", enabled: true }, 1);
+    const playlistId = await store.playlists.insert({ kind: "file", name: "p", fileName: "p.m3u", enabled: true }, 1);
     const row = (id: string, url: string) => ({
       id, name: id, category: "", number: null, logoUrl: null, revision: 1, enabled: false, published: false, kind: "stream" as const,
       streamUrl: url, tvgId: null, source: null, playlistName: null, syncName: id, playlistId, status: null, checkedAt: null,
       logoFile: null, logoCheckedAt: null, editedFields: [],
     });
-    for (const id of ["d", "c", "b", "a"]) store.channels.insert(row(id, `https://x.example/${id}`), 1);
-    store.health.writeVerdicts(playlistId, [{ url: "https://x.example/a", status: "online", at: 500 }, { url: "https://x.example/c", status: "offline", at: 100 }]);
-    assert.deepEqual(store.health.streamUrls(playlistId).map((u) => u.slice(-1)), ["b", "d", "c", "a"]);
+    for (const id of ["d", "c", "b", "a"]) await store.channels.insert(row(id, `https://x.example/${id}`), 1);
+    await store.health.writeVerdicts(playlistId, [{ url: "https://x.example/a", status: "online", at: 500 }, { url: "https://x.example/c", status: "offline", at: 100 }]);
+    assert.deepEqual((await store.health.streamUrls(playlistId)).map((u) => u.slice(-1)), ["b", "d", "c", "a"]);
   } finally {
     store.close();
-    rmSync(dir, { recursive: true, force: true });
+    removeDir(dir);
   }
 });

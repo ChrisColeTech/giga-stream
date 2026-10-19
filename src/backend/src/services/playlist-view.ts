@@ -8,9 +8,13 @@ const NO_CHANNELS = { channels: 0, enabled: 0, online: 0, offline: 0 };
  * The playlist as a signed-in admin reads it: its columns (the web address in full, docs/03 section 7.2c), the counts of its channels, and the last
  * run joined in from its one sync job (docs/43 section 3.1).
  */
-export function playlistView(store: Store, playlist: PlaylistRecord, counts = store.channels.countsByPlaylist()): PlaylistView {
-  const stats = counts.get(playlist.id) ?? NO_CHANNELS;
-  const job = store.jobs.findOfPlaylist(playlist.id);
+export async function playlistView(
+  store: Store,
+  playlist: PlaylistRecord,
+  counts?: Awaited<ReturnType<Store["channels"]["countsByPlaylist"]>>,
+): Promise<PlaylistView> {
+  const stats = (counts ?? (await store.channels.countsByPlaylist())).get(playlist.id) ?? NO_CHANNELS;
+  const job = await store.jobs.findOfPlaylist(playlist.id);
   return {
     id: playlist.id,
     name: playlist.name,

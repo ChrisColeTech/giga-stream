@@ -45,7 +45,7 @@ const fields = {
   tmdbId: z.number().int().positive(),
 };
 
-/** `POST /api/titles`: a title made by hand (docs/26 decision D20). A TMDB id lets the providers produce sources. */
+/** `POST /api/admin/titles`: a title made by hand (docs/26 decision D20). A TMDB id lets the providers produce sources. */
 export const TitleInputSchema = z
   .object({
     kind: z.enum(["movie", "tv"]),
@@ -68,7 +68,7 @@ export type TitleInput = z.infer<typeof TitleInputSchema>;
 const nullable = <T extends z.ZodTypeAny>(schema: T) => schema.nullable().optional();
 
 /**
- * `PATCH /api/titles/:titleId`: any editable field; `null` clears an optional one. The kind and the id never change.
+ * `PATCH /api/admin/titles/:titleId`: any editable field; `null` clears an optional one. The kind and the id never change.
  * `tmdbId` belongs to a manual title only (the service refuses it on a synced one).
  */
 export const TitlePatchSchema = z

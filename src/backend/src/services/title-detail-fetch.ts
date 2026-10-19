@@ -37,7 +37,7 @@ const appended = (seasons: readonly number[]): string[] => seasons.map((n) => `s
 
 /**
  * The one place a title's TMDB detail is fetched and stored (docs/47 section 3.1): the Library fill's `details` phase,
- * an admin's add (`POST /api/titles/from-tmdb`) and a revert. A movie is one `/movie/{id}` call with the credits and
+ * an admin's add (`POST /api/admin/titles/from-tmdb`) and a revert. A movie is one `/movie/{id}` call with the credits and
 external ids, mapped by `detailOf`. A series is `/tv/{id}` with `append_to_response=credits,external_ids,season/1,...`
  * - TMDB allows 20 appended items, so the first call of any series (seen before or not) carries seasons 1 to 18, a known
  * series only the ones it still lacks; seasons above 18 get follow-up calls of up to 20 `season/N` appends; the season answers become `seasons[n].episodes` and everything is written in ONE short
@@ -52,7 +52,7 @@ export function createDetailFetch(deps: { store: Store; tmdb: TmdbClient; now: (
       const params = append.length > 0 ? { append_to_response: append.join(",") } : {};
       return asRecord(await tmdb.get(`/${kind}/${tmdbId}`, params, options.signal ? { signal: options.signal } : {}));
     };
-    const existing = store.titles.find(kind, tmdbId);
+    const existing = await store.titles.find(kind, tmdbId);
     const prior = asRecord(existing?.payload);
     const staleBefore = options.staleBefore ?? now() - TITLE_FRESH_MS;
     const wholeDetail = options.force === true || existing === undefined || prior.shape !== "detail" || existing.fetchedAt < staleBefore;
@@ -78,10 +78,10 @@ export function createDetailFetch(deps: { store: Store; tmdb: TmdbClient; now: (
       for (const n of more) asked.add(n);
       seasons += mergeSeasons(payload, await call(appended(more)), now());
     }
-    return store.transaction(() => {
-      const current = store.titles.find(kind, tmdbId);
+    return store.transaction(async () => {
+      const current = await store.titles.find(kind, tmdbId);
       if (options.mustExist === true && current === undefined) return undefined;
-      store.titles.put({
+      await store.titles.put({
         kind,
         tmdbId,
         payload,
@@ -89,7 +89,7 @@ export function createDetailFetch(deps: { store: Store; tmdb: TmdbClient; now: (
         popularityReadAt: wholeDetail ? now() : (existing?.popularityReadAt ?? null),
         fetchedAt: wholeDetail ? now() : (existing?.fetchedAt ?? now()),
       });
-      store.titles.queue.clearDetailFailure(titleIdOf(kind, tmdbId));
+      await store.titles.queue.clearDetailFailure(titleIdOf(kind, tmdbId));
       return { payload, seasons };
     });
   };

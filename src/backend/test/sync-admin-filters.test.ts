@@ -12,13 +12,13 @@ async function synced() {
   net.set(STREAM("s.example", "down"), { status: 503 });
   net.set(LOGO("up"), image(PNG));
   const s = await setupSync(net, [m3uEntry("Up", STREAM("s.example", "up"), LOGO("up")), m3uEntry("Down", STREAM("s.example", "down"))]);
-  await s.api("POST", "/api/channels", { name: "Hand", category: "x", streamUrl: "https://hand.example/h.m3u8" });
+  await s.api("POST", "/api/admin/channels", { name: "Hand", category: "x", streamUrl: "https://hand.example/h.m3u8" });
   await s.run();
   return s;
 }
 
 const names = async (s: Sync, query: string): Promise<string[]> => {
-  const answer = await s.api("GET", `/api/admin-channels?limit=50${query}`);
+  const answer = await s.api("GET", `/api/admin/channels?limit=50${query}`);
   assert.equal(answer.status, 200, query);
   return ((pick(answer.body, "data.items") as Array<Record<string, unknown>>).map((c) => String(c.name))).sort();
 };
@@ -46,19 +46,19 @@ test("a stream row carries its verdict, check time and relative cached logo addr
   assert.deepEqual([down.status, down.cachedLogoUrl], ["offline", undefined]);
   const hand = rows.find((r) => r.name === "Hand") ?? {};
   assert.deepEqual([hand.status, hand.checkedAt, hand.cachedLogoUrl], [undefined, undefined, undefined]);
-  const view = (await s.api("GET", "/api/playlists/1")).body;
+  const view = (await s.api("GET", "/api/admin/playlists/1")).body;
   assert.deepEqual(["channels", "online", "offline"].map((f) => pick(view, `data.${f}`)), [2, 1, 1]);
 });
 
 test("a channel edited to another address loses its verdict, and one edited to another logo loses its cached file", async () => {
   const s = await synced();
   const up = (await s.channels()).find((r) => r.name === "Up") ?? {};
-  const changed = await s.api("PATCH", `/api/channels/${String(up.id)}`, { streamUrl: STREAM("s.example", "elsewhere"), logoUrl: LOGO("new") });
+  const changed = await s.api("PATCH", `/api/admin/channels/${String(up.id)}`, { streamUrl: STREAM("s.example", "elsewhere"), logoUrl: LOGO("new") });
   assert.deepEqual(
     [pick(changed.body, "data.status"), pick(changed.body, "data.checkedAt"), pick(changed.body, "data.cachedLogoUrl")],
     [undefined, undefined, undefined],
   );
   const down = (await s.channels()).find((r) => r.name === "Down") ?? {};
-  const renamed = await s.api("PATCH", `/api/channels/${String(down.id)}`, { name: "Renamed" });
+  const renamed = await s.api("PATCH", `/api/admin/channels/${String(down.id)}`, { name: "Renamed" });
   assert.deepEqual([pick(renamed.body, "data.status"), pick(renamed.body, "data.checkedAt")], ["offline", s.t.clock.now()], "a rename keeps the verdict");
 });

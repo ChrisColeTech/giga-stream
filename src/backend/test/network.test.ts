@@ -1,6 +1,7 @@
+import { removeDir } from "./db-kit.js";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -34,13 +35,14 @@ test("a refused start creates no database file", async () => {
     await assert.rejects(buildApp({ ...base, NODE_ENV: "test", DATA_DIR: dataDir, HOST: "0.0.0.0" }), /plain http/);
     assert.deepEqual(readdirSync(dataDir), []);
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });
 
 test("sign-in, account and audit answers are never cached; channel reads may be", () => {
-  for (const url of ["/api/auth/login", "/api/auth/me", "/api/admin-accounts", "/api/admin-accounts/x", "/api/audit?limit=5", "/api/admin-channels",
-    "/api/admin-channels?limit=100", "/api/titles/stored", "/api/titles/stored?limit=100", "/api/titles/sync", "/api/titles/deleted"]) {
+  for (const url of ["/api/admin/auth/login", "/api/admin/auth/me", "/api/admin/accounts", "/api/admin/accounts/x", "/api/admin/audit?limit=5", "/api/admin/channels",
+    "/api/admin/channels?limit=100", "/api/admin/titles/stored", "/api/admin/titles/stored?limit=100", "/api/admin/titles/sync", "/api/admin/titles/deleted",
+    "/api/admin/providers", "/api/admin/jobs", "/api/admin/playlists", "/api/admin/live-faults/x/fault"]) {
     assert.equal(isPrivateRoute(url), true, url);
   }
   for (const url of ["/api/channels", "/api/titles?kind=movie", "/healthz", "/apix", "/live/home/master.m3u8", "/admin/"]) {

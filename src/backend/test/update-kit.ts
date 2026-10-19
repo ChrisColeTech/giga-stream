@@ -2,10 +2,10 @@
 // by itself. `run` starts it by hand and waits for it to end; `advance` moves the clock and signs in again; `read` is a
 // read-only look at the database (the cursor, the audit trail), which no route shows.
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
 import { until } from "./playlist-kit.js";
+import { openTestDatabase, queryRows } from "./db-kit.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 import { updateTmdb, type Dated, type UpdateTmdb } from "./update-tmdb.js";
 
@@ -19,19 +19,19 @@ export async function updateApp(data: { movie?: Dated[]; tv?: Dated[] }, config:
   const t: TestApp = await makeApp({ config: { TMDB_READ_TOKEN: "test-token", TMDB_BASE: tmdb.base, ...config } });
   let token = (await signIn(t.app)).access;
   const api = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: unknown) => send(t.app, method, url, body, token);
-  await api("PATCH", "/api/jobs/2", { schedule: "off" });
-  const job = async (): Promise<Record<string, unknown>> => pick((await api("GET", "/api/jobs/2")).body, "data") as Record<string, unknown>;
+  await api("PATCH", "/api/admin/jobs/2", { schedule: "off" });
+  const job = async (): Promise<Record<string, unknown>> => pick((await api("GET", "/api/admin/jobs/2")).body, "data") as Record<string, unknown>;
   const finished = (): Promise<void> => until(async () => (await job()).running === false, "the run to end");
   async function run(): Promise<Record<string, unknown>> {
-    const started = await api("POST", "/api/jobs/2/run");
+    const started = await api("POST", "/api/admin/jobs/2/run");
     if (started.status !== 202) throw new Error(`run refused: ${started.status} ${JSON.stringify(started.body)}`);
     await finished();
     return job();
   }
-  function read<T>(sql: string): T[] {
-    const db = new DatabaseSync(path.join(t.dataDir, DATABASE_FILE_NAME), { readOnly: true });
+  async function read<T>(sql: string): Promise<T[]> {
+    const db = await openTestDatabase(path.join(t.dataDir, DATABASE_FILE_NAME));
     try {
-      return db.prepare(sql).all().map((row) => ({ ...row }) as T);
+      return (await queryRows(db, sql)) as T[];
     } finally {
       db.close();
     }
@@ -42,10 +42,11 @@ export async function updateApp(data: { movie?: Dated[]; tv?: Dated[] }, config:
       t.clock.advance(ms);
       token = (await signIn(t.app)).access;
     },
-    cursor: (): number | null => read<{ cursor_at: number | null }>("SELECT cursor_at FROM sync_jobs WHERE id = 2")[0]?.cursor_at ?? null,
+    cursor: async (): Promise<number | null> =>
+      (await read<{ cursor_at: number | null }>("SELECT cursor_at FROM sync_jobs WHERE id = 2"))[0]?.cursor_at ?? null,
     /** The audit details of every sync entry, oldest first. */
-    audits: (): Array<Record<string, unknown>> =>
-      read<{ detail: string }>("SELECT detail FROM audit_log WHERE action LIKE 'sync.%' ORDER BY id")
+    audits: async (): Promise<Array<Record<string, unknown>>> =>
+      (await read<{ detail: string }>("SELECT detail FROM audit_log WHERE action LIKE 'sync.%' ORDER BY id"))
         .map((row) => JSON.parse(row.detail) as Record<string, unknown>),
     plotOf: async (id: string): Promise<unknown> => pick((await api("GET", `/api/titles/${id}`)).body, "data.plot"),
     shapeOf: async (id: string): Promise<unknown> => pick((await api("GET", `/api/titles/${id}`)).body, "data.shape"),

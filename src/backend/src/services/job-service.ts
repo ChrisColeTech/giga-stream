@@ -32,7 +32,7 @@ const configOf = (config: ConfigInput): CatalogJobConfig =>
 
 /**
  * The sync jobs (docs/26 section 3.11, docs/43 section 3.1). A playlist job is part of its playlist: made and
- * deleted with it, never by `POST /api/jobs`, never deleted here (`422 job.invalid`), and changed only in `enabled`
+ * deleted with it, never by `POST /api/admin/jobs`, never deleted here (`422 job.invalid`), and changed only in `enabled`
  * and `schedule` (at least 15 minutes). A catalog job names a scope, a kind and a page count. `onChange` re-arms the
  * backend's one scheduler when a job is made, changed or deleted.
  */
@@ -46,7 +46,7 @@ export function createJobService(deps: {
 }) {
   const { store, audit, now, runner, progress, onChange } = deps;
 
-  function view(job: JobRecord): JobView {
+  async function view(job: JobRecord): Promise<JobView> {
     const running = runner.isRunning(job.id);
     const live = running ? progress.get(job.id) : undefined;
     const common = {
@@ -61,71 +61,71 @@ export function createJobService(deps: {
       createdAt: job.createdAt,
     };
     if (job.type === "catalog") return { ...common, name: job.name, type: "catalog", config: job.config };
-    const playlistName = store.playlists.find(job.playlistId)?.name;
+    const playlistName = (await store.playlists.find(job.playlistId))?.name;
     return {
       ...common, name: `Sync ${playlistName ?? "playlist"}`, type: "playlist", config: { playlistId: job.playlistId },
       playlistId: job.playlistId, ...(playlistName !== undefined && { playlistName }),
     };
   }
 
-  function existing(id: number): JobRecord {
-    const found = store.jobs.find(id);
+  async function existing(id: number): Promise<JobRecord> {
+    const found = await store.jobs.find(id);
     if (!found) throw new AppError(ERRORS.jobNotFound, { id });
     return found;
   }
 
   return {
     view,
-    list: (): { items: JobView[] } => ({ items: store.jobs.list().map(view) }),
-    get: (id: number): JobView => view(existing(id)),
+    list: async (): Promise<{ items: JobView[] }> => ({ items: await Promise.all((await store.jobs.list()).map(view)) }),
+    get: async (id: number): Promise<JobView> => view(await existing(id)),
 
-    create(input: JobInput, actor: Actor): JobView {
+    create: async (input: JobInput, actor: Actor): Promise<JobView> => {
       const config = configOf(input.config);
-      const id = store.jobs.insertCatalog(
+      const id = await store.jobs.insertCatalog(
         { name: input.name, enabled: input.enabled ?? true, schedule: normaliseSchedule(input.schedule ?? "off"), config },
         now(),
       );
-      audit.record(actor, { action: "job.created", subject: String(id), detail: { name: input.name, type: input.type } });
+      await audit.record(actor, { action: "job.created", subject: String(id), detail: { name: input.name, type: input.type } });
       onChange();
-      return view(existing(id));
+      return view(await existing(id));
     },
 
-    update(id: number, patch: JobPatch, actor: Actor): JobView {
-      const current = existing(id);
+    update: async (id: number, patch: JobPatch, actor: Actor): Promise<JobView> => {
+      const current = await existing(id);
       const enabled = patch.enabled ?? current.enabled;
       if (current.type === "playlist") {
         if (patch.name !== undefined) throw invalid("name", "A playlist's job is named after its playlist.");
         if (patch.config !== undefined) throw invalid("config", "A playlist's job has no settings.");
         const schedule = patch.schedule === undefined ? current.schedule : normalisePlaylistSchedule(patch.schedule);
-        store.jobs.update({ ...current, enabled, schedule });
+        await store.jobs.update({ ...current, enabled, schedule });
       } else {
         const parsed = CatalogConfigSchema.safeParse({ ...current.config, ...patch.config });
         if (!parsed.success) throw invalid(configField(parsed.error.issues[0]), "That config is not valid.");
         const schedule = patch.schedule === undefined ? current.schedule : normaliseSchedule(patch.schedule);
         const config = configOf(parsed.data);
-        store.jobs.update({ ...current, name: patch.name ?? current.name, enabled, schedule, config });
+        await store.jobs.update({ ...current, name: patch.name ?? current.name, enabled, schedule, config });
       }
-      const name = current.type === "catalog" ? (patch.name ?? current.name) : view(current).name;
-      audit.record(actor, { action: "job.updated", subject: String(id), detail: { name, fields: Object.keys(patch) } });
+      const name = current.type === "catalog" ? (patch.name ?? current.name) : (await view(current)).name;
+      await audit.record(actor, { action: "job.updated", subject: String(id), detail: { name, fields: Object.keys(patch) } });
       onChange();
-      return view(existing(id));
+      return view(await existing(id));
     },
 
     /** An admin's run: STARTED and answered at once (`202`, `running`); the result is read on a refresh. */
-    run(id: number, actor: Actor): JobView {
-      runner.run(existing(id), actor);
-      return view(existing(id));
+    run: async (id: number, actor: Actor): Promise<JobView> => {
+      await runner.run(await existing(id), actor);
+      return view(await existing(id));
     },
 
     /**
-     * Starts the Library fill (the first catalog job with the discover scope) for `POST /api/titles/sync`, the same run
+     * Starts the Library fill (the first catalog job with the discover scope) for `POST /api/admin/titles/sync`, the same run
      * as `Run job`: stoppable, reporting progress, refused when the job is disabled. `409 job.no_library_fill` when none.
      */
-    startLibraryFill(actor: Actor): JobView {
-      const fill = store.jobs.list().find((job) => job.type === "catalog" && job.config.scope === "discover");
+    startLibraryFill: async (actor: Actor): Promise<JobView> => {
+      const fill = (await store.jobs.list()).find((job) => job.type === "catalog" && job.config.scope === "discover");
       if (fill === undefined) throw new AppError(ERRORS.jobNoLibraryFill);
-      runner.run(fill, actor);
-      return view(existing(fill.id));
+      await runner.run(fill, actor);
+      return view(await existing(fill.id));
     },
 
     /**
@@ -133,18 +133,18 @@ export function createJobService(deps: {
      * and keeps everything already written. The run ends within seconds (its requests abort); the job reads `running`
      * until then.
      */
-    stop(id: number, actor: Actor): JobView {
-      const current = existing(id);
+    stop: async (id: number, actor: Actor): Promise<JobView> => {
+      const current = await existing(id);
       if (!runner.abort(id)) throw new AppError(ERRORS.jobNotRunning, { id });
-      audit.record(actor, { action: "job.stopped", subject: String(id), detail: { name: view(current).name } });
-      return view(existing(id));
+      await audit.record(actor, { action: "job.stopped", subject: String(id), detail: { name: (await view(current)).name } });
+      return view(await existing(id));
     },
 
-    remove(id: number, actor: Actor): { id: number } {
-      const current = existing(id);
+    remove: async (id: number, actor: Actor): Promise<{ id: number }> => {
+      const current = await existing(id);
       if (current.type === "playlist") throw invalid("id", "A playlist's job goes with the playlist.");
-      store.jobs.remove(id);
-      audit.record(actor, { action: "job.deleted", subject: String(id), detail: { name: current.name, type: current.type } });
+      await store.jobs.remove(id);
+      await audit.record(actor, { action: "job.deleted", subject: String(id), detail: { name: current.name, type: current.type } });
       onChange();
       return { id };
     },

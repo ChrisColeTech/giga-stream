@@ -35,7 +35,7 @@ async function withPlayer(run: (session: Session) => Promise<void>, now?: () => 
     chrome,
     snapshot,
     async nowPlaying(id) {
-      return itemOf((await send(t.app, "GET", "/api/admin-channels", undefined, token)).body, id).nowPlaying;
+      return itemOf((await send(t.app, "GET", "/api/admin/channels", undefined, token)).body, id).nowPlaying;
     },
     async play(channel) {
       await chrome.navigate(`${url}/test/player.html?channel=${channel}`);
@@ -43,8 +43,8 @@ async function withPlayer(run: (session: Session) => Promise<void>, now?: () => 
     },
     fault: (channel, body) =>
       body === null
-        ? send(t.app, "DELETE", `/api/channels/${channel}/fault`, undefined, token)
-        : send(t.app, "PUT", `/api/channels/${channel}/fault`, body, token),
+        ? send(t.app, "DELETE", `/api/admin/live-faults/${channel}/fault`, undefined, token)
+        : send(t.app, "PUT", `/api/admin/live-faults/${channel}/fault`, body, token),
   };
   try {
     await run(session);

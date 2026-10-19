@@ -37,6 +37,10 @@ const EnvSchema = z.object({
   GIGA_APP_URL: z.string().trim().default(""),
   // Test lane only: `POST /api/fs/dialog` then takes `{ name }` directly under this root (03 section 3.8).
   TEST_FOLDER_ROOT: z.string().default(""),
+  // Render's one public port (docs/03 section 1): the admin backend this fileserver reverse-proxies at
+  // `/api/admin` (identity, its admin API), `/admin` (stripped, its console UI) and `/live`, `/logos`
+  // (pass-through streams). Empty means the proxy is off, the desktop shape with no sibling.
+  ADMIN_PROXY_TARGET: z.string().trim().default(""),
 });
 
 const env = EnvSchema.parse(process.env);
@@ -57,5 +61,7 @@ export const config = {
   // Empty stays empty (path.resolve("") would answer the process working directory, a root that
   // is never empty and so would leave the test lane always on); a set value becomes absolute.
   testFolderRoot: env.TEST_FOLDER_ROOT !== "" ? path.resolve(env.TEST_FOLDER_ROOT) : "",
+  /** The admin backend to reverse-proxy (`/api/admin`, `/admin`, `/live`, `/logos`); empty means the proxy is off. */
+  adminProxyTarget: env.ADMIN_PROXY_TARGET,
   version: "0.2.0",
 } as const;

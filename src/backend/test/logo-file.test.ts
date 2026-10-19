@@ -2,9 +2,10 @@
 // file, every write succeeds, no temp file is left, and an existing file is never rewritten.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test from "node:test";
 
 import { writeCacheFile } from "../src/services/logo-file.js";
@@ -14,7 +15,7 @@ const payload = (n: number): Buffer => Buffer.concat([Buffer.from([0x89, 0x50, 0
 
 function scratch(): { dir: string; done: () => void } {
   const root = mkdtempSync(path.join(os.tmpdir(), "logo-file-"));
-  return { dir: path.join(root, "logo-cache"), done: () => rmSync(root, { recursive: true, force: true }) };
+  return { dir: path.join(root, "logo-cache"), done: () => removeDir(root) };
 }
 
 test("two concurrent writes of identical bytes both succeed and leave one file and no temp file", async () => {

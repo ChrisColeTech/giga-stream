@@ -1,19 +1,20 @@
 // The public title reads are store-only (docs/47 section 3.2): the Library fill stores, the reads serve what is stored.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
+import { mkdtempSync } from "node:fs";
+
 import os from "node:os";
 import path from "node:path";
 
+import { removeDir, openTestDatabase, queryRows } from "./db-kit.js";
 import { makeApp, pick, send, signIn } from "./test-app.js";
 import { fillLibrary, forbiddenTmdb, stubTmdb, tmdbOn } from "./title-stubs.js";
 
 /** Every row of the titles table, as one string: equal before and after means nothing was written. */
-function snapshot(dataDir: string): string {
-  const db = new DatabaseSync(path.join(dataDir, "admin.db"), { readOnly: true });
+async function snapshot(dataDir: string): Promise<string> {
+  const db = await openTestDatabase(path.join(dataDir, "admin.db"));
   try {
-    return JSON.stringify(db.prepare("SELECT id, payload, fetched_at, popularity_score FROM titles ORDER BY id").all());
+    return JSON.stringify(await queryRows(db, "SELECT id, payload, fetched_at, popularity_score FROM titles ORDER BY id"));
   } finally {
     db.close();
   }
@@ -39,7 +40,7 @@ test("a title is stored by the Library fill and answered from the store, also af
   assert.deepEqual((await send(second.app, "GET", "/api/titles/movie-603")).body, detail.body);
   assert.equal(tmdb.calls.length, calls, "a restart answers from the store");
   await second.dispose();
-  rmSync(dataDir, { recursive: true, force: true });
+  removeDir(dataDir);
 });
 
 test("no public title route calls TMDB or writes the store: a TMDB that fails on any call is never called", async () => {
@@ -48,13 +49,13 @@ test("no public title route calls TMDB or writes the store: a TMDB that fails on
   const filled = await makeApp({ dataDir, config: tmdbOn(stub) });
   await fillLibrary(filled);
   await filled.dispose();
-  const before = snapshot(dataDir);
+  const before = await snapshot(dataDir);
 
   const forbidden = await forbiddenTmdb();
   const t = await makeApp({ dataDir, config: tmdbOn(forbidden) });
   const token = (await signIn(t.app)).access;
-  const manual = String(pick((await send(t.app, "POST", "/api/titles", { kind: "movie", title: "Mine" }, token)).body, "data.id"));
-  const after = snapshot(dataDir);
+  const manual = String(pick((await send(t.app, "POST", "/api/admin/titles", { kind: "movie", title: "Mine" }, token)).body, "data.id"));
+  const after = await snapshot(dataDir);
   for (const url of [
     "/api/titles/movie-603", "/api/titles/tv-1399", "/api/titles/tv-1399/seasons/1", "/api/titles/movie-603/recommendations",
     "/api/titles/tv-1399/recommendations", "/api/titles/genres?kind=movie", "/api/titles/genres?kind=tv", "/api/titles/catalog",
@@ -65,13 +66,13 @@ test("no public title route calls TMDB or writes the store: a TMDB that fails on
     await send(t.app, "GET", url, undefined, token);
   }
   assert.deepEqual(forbidden.calls, [], "no public title route made a TMDB call");
-  assert.equal(snapshot(dataDir).includes("Mine"), true, "(the manual title the test made is the only change)");
-  assert.notEqual(snapshot(dataDir), before);
-  await send(t.app, "DELETE", `/api/titles/${manual}`, undefined, token);
-  assert.equal(snapshot(dataDir), before, "the reads wrote nothing");
+  assert.equal((await snapshot(dataDir)).includes("Mine"), true, "(the manual title the test made is the only change)");
+  assert.notEqual(await snapshot(dataDir), before);
+  await send(t.app, "DELETE", `/api/admin/titles/${manual}`, undefined, token);
+  assert.equal(await snapshot(dataDir), before, "the reads wrote nothing");
   assert.ok(after.length > before.length);
   await t.dispose();
-  rmSync(dataDir, { recursive: true, force: true });
+  removeDir(dataDir);
 });
 
 test("a title that is not stored is 404 title.not_found, a series answers season counts and its stored episodes", async () => {
@@ -107,12 +108,13 @@ test("a list-only title answers its stored list shape", async () => {
   const tmdb = await stubTmdb();
   const t = await makeApp({ config: tmdbOn(tmdb) });
   const token = (await signIn(t.app)).access;
-  await send(t.app, "PATCH", "/api/jobs/1", { enabled: true, config: { pages: 1 } }, token);
+  await send(t.app, "PATCH", "/api/admin/jobs/1", { enabled: true, config: { pages: 1 } }, token);
   // A fill that stops after the walk is the same state as a title whose detail has not been fetched yet.
-  const db = new DatabaseSync(path.join(t.dataDir, "admin.db"));
-  db.prepare("INSERT INTO titles (id, kind, tmdb_id, origin, payload, popularity_score, fetched_at) VALUES (?, ?, ?, 'tmdb', ?, ?, ?)").run(
-    "movie-77", "movie", 77, JSON.stringify({ id: "movie-77", tmdbId: 77, kind: "movie", shape: "list", title: "Thin", genres: ["878"] }), 5, 1,
-  );
+  const db = await openTestDatabase(path.join(t.dataDir, "admin.db"));
+  await db.execute({
+    sql: "INSERT INTO titles (id, kind, tmdb_id, origin, payload, popularity_score, fetched_at) VALUES (?, ?, ?, 'tmdb', ?, ?, ?)",
+    args: ["movie-77", "movie", 77, JSON.stringify({ id: "movie-77", tmdbId: 77, kind: "movie", shape: "list", title: "Thin", genres: ["878"] }), 5, 1],
+  });
   db.close();
   const thin = await send(t.app, "GET", "/api/titles/movie-77");
   assert.deepEqual(["shape", "title", "state"].map((f) => pick(thin.body, `data.${f}`)), ["list", "Thin", "synced"]);
@@ -134,11 +136,11 @@ test("a manual series over the default 64 KiB body limit is accepted; one over 2
   const t = await makeApp();
   const token = (await signIn(t.app)).access;
   const series = (seasons: number) => ({ kind: "tv", title: "Long Series", seasons: longSeasons(seasons) });
-  const fits = await send(t.app, "POST", "/api/titles", series(3), token);
+  const fits = await send(t.app, "POST", "/api/admin/titles", series(3), token);
   assert.equal(fits.status, 201, "about 100 KB is accepted");
   const id = String(pick(fits.body, "data.id"));
-  const edited = await send(t.app, "PATCH", `/api/titles/${id}`, { seasons: longSeasons(3) }, token);
+  const edited = await send(t.app, "PATCH", `/api/admin/titles/${id}`, { seasons: longSeasons(3) }, token);
   assert.equal(edited.status, 200, "a PATCH takes the same limit");
-  const tooLarge = await send(t.app, "POST", "/api/titles", series(10), token);
+  const tooLarge = await send(t.app, "POST", "/api/admin/titles", series(10), token);
   assert.deepEqual([tooLarge.status, pick(tooLarge.body, "error.code")], [400, "request.invalid"]);
 });

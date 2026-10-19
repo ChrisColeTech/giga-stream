@@ -43,15 +43,14 @@ function sourceOf(provider: BackendProvider, template: string, values: FillValue
  * yields one source for the exact title or episode.
  */
 export function createTitleSources(store: Store) {
-  const embeds = (): BackendProvider[] =>
-    store.providers
-      .list()
+  const embeds = async (): Promise<BackendProvider[]> =>
+    (await store.providers.list())
       .filter((p) => p.is_active && p.family === "embed")
       .sort((a, b) => a.order - b.order || a.id - b.id);
 
-  function collect(values: FillValues, templateOf: (p: BackendProvider) => string | undefined): TitleSource[] {
+  async function collect(values: FillValues, templateOf: (p: BackendProvider) => string | undefined): Promise<TitleSource[]> {
     const sources: TitleSource[] = [];
-    for (const provider of embeds()) {
+    for (const provider of await embeds()) {
       const template = templateOf(provider);
       if (template === undefined) continue;
       const source = sourceOf(provider, template, values);
@@ -60,32 +59,32 @@ export function createTitleSources(store: Store) {
     return sources;
   }
 
-  const forMovie = (tmdbId: number): TitleSource[] =>
+  const forMovie = (tmdbId: number): Promise<TitleSource[]> =>
     collect({ tmdbId }, (p) => p.movieTemplate);
 
-  const forEpisode = (tmdbId: number, season: number, episode: number): TitleSource[] =>
+  const forEpisode = (tmdbId: number, season: number, episode: number): Promise<TitleSource[]> =>
     collect({ tmdbId, season, episode }, (p) => p.episodeTemplate);
 
   /**
    * A movie detail carries its sources; a series detail carries none — 7.5 names a movie and an
    * episode, and a series has no season and episode to fill an episode template with.
    */
-  const withDetail = (answer: Record<string, unknown>): Record<string, unknown> => {
+  const withDetail = async (answer: Record<string, unknown>): Promise<Record<string, unknown>> => {
     const tmdbId = answer.tmdbId;
     if (answer.kind !== "movie" || typeof tmdbId !== "number") return answer;
-    const sources = forMovie(tmdbId);
+    const sources = await forMovie(tmdbId);
     return sources.length > 0 ? { ...answer, sources } : answer;
   };
 
-  const withEpisodes = (answer: { episodes: unknown[] }, tmdbId: number): { episodes: unknown[] } => ({
-    episodes: answer.episodes.map((entry) => {
+  const withEpisodes = async (answer: { episodes: unknown[] }, tmdbId: number): Promise<{ episodes: unknown[] }> => ({
+    episodes: await Promise.all(answer.episodes.map(async (entry) => {
       const row = asRecord(entry);
       const season = row.season;
       const episode = row.episode;
       if (typeof season !== "number" || typeof episode !== "number") return entry;
-      const sources = forEpisode(tmdbId, season, episode);
+      const sources = await forEpisode(tmdbId, season, episode);
       return sources.length > 0 ? { ...row, sources } : entry;
-    }),
+    })),
   });
 
   return { forMovie, forEpisode, withDetail, withEpisodes };

@@ -12,8 +12,8 @@ export interface Actor {
 /** The audit log (docs/03 section 7.13). A password, token or hash is never written to it. */
 export function createAuditService(store: Store, now: () => number) {
   return {
-    record(actor: Actor, entry: Omit<AuditWrite, "actorId" | "actorUsername" | "address">): void {
-      store.audit.append(
+    async record(actor: Actor, entry: Omit<AuditWrite, "actorId" | "actorUsername" | "address">): Promise<void> {
+      await store.audit.append(
         {
           ...entry,
           ...(actor.principal && {
@@ -25,9 +25,9 @@ export function createAuditService(store: Store, now: () => number) {
         now(),
       );
     },
-    page(limit = AUDIT_PAGE_DEFAULT, before?: number): { items: AuditEntry[]; nextBefore?: number } {
+    async page(limit = AUDIT_PAGE_DEFAULT, before?: number): Promise<{ items: AuditEntry[]; nextBefore?: number }> {
       const size = Math.min(Math.max(limit, 1), AUDIT_PAGE_MAX);
-      const items = store.audit.page(before ?? Number.MAX_SAFE_INTEGER, size + 1);
+      const items = await store.audit.page(before ?? Number.MAX_SAFE_INTEGER, size + 1);
       const more = items.length > size;
       const shown = items.slice(0, size);
       const last = shown.at(-1);

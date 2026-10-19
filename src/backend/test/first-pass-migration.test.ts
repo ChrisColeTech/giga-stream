@@ -2,29 +2,29 @@
 // logos, then every stream's verdict - runs at the first start after the logo cache and the stream check ship. Catalog
 // jobs, their results and every other row are untouched.
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 import { createStore } from "../src/store/store.js";
+import { removeDir, openTestDatabase, queryRow, queryRows, runSql } from "./db-kit.js";
 
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "store", "migrations");
 
 /** A database as migrations 001 to 023 left it, with two playlists that ran and a catalog job that ran. */
-function database023(dir: string): string {
+async function database023(dir: string): Promise<string> {
   const file = path.join(dir, "admin.db");
-  const db = new DatabaseSync(file);
+  const db = await openTestDatabase(file);
   try {
     for (const name of readdirSync(MIGRATIONS).sort()) {
       const version = Number(name.slice(0, 3));
       if (version > 23) continue;
-      db.exec(readFileSync(path.join(MIGRATIONS, name), "utf-8"));
-      db.exec(`PRAGMA user_version = ${version}`);
+      await runSql(db, readFileSync(path.join(MIGRATIONS, name), "utf-8"));
+      await runSql(db, `PRAGMA user_version = ${version}`);
     }
-    db.exec(`
+    await runSql(db, `
       INSERT INTO playlists (id, name, kind, file_name, enabled, created_at) VALUES (1, 'one', 'file', 'one.m3u', 1, 1);
       INSERT INTO playlists (id, name, kind, url, host, enabled, created_at) VALUES (2, 'two', 'url', 'https://h.example/x.m3u', 'h.example', 1, 1);
       INSERT INTO sync_jobs (id, type, enabled, schedule, config, playlist_id, last_run_at, last_result, last_counts, created_at)
@@ -39,48 +39,48 @@ function database023(dir: string): string {
   return file;
 }
 
-test("024 clears the playlist jobs' last run and leaves the catalog job and everything else as it was", () => {
+test("024 clears the playlist jobs' last run and leaves the catalog job and everything else as it was", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-first-pass-"));
   try {
-    const file = database023(dataDir);
-    createStore(file).close();
-    const db = new DatabaseSync(file, { readOnly: true });
+    const file = await database023(dataDir);
+    (await createStore(file)).close();
+    const db = await openTestDatabase(file);
     try {
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 30 });
-      const jobs = db.prepare("SELECT id, type, enabled, schedule, last_run_at, last_result, last_counts FROM sync_jobs ORDER BY id").all();
-      assert.deepEqual(jobs.map((j) => ({ ...j })), [
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      const jobs = await queryRows(db, "SELECT id, type, enabled, schedule, last_run_at, last_result, last_counts FROM sync_jobs ORDER BY id");
+      assert.deepEqual(jobs, [
         { id: 1, type: "playlist", enabled: 1, schedule: "24h", last_run_at: null, last_result: "ok", last_counts: '{"created":0}' },
         { id: 2, type: "playlist", enabled: 0, schedule: "15m", last_run_at: null, last_result: "stopped", last_counts: null },
         { id: 3, type: "catalog", enabled: 1, schedule: "12h", last_run_at: 3000, last_result: "ok", last_counts: '{"titles":4,"stale":0}' },
       ]);
-      assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+      assert.deepEqual(await queryRows(db, "PRAGMA foreign_key_check"), []);
     } finally {
       db.close();
     }
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });
 
-test("a database at 024 opens again and nothing runs twice", () => {
+test("a database at 024 opens again and nothing runs twice", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-first-pass-twice-"));
   try {
-    const file = database023(dataDir);
-    createStore(file).close();
-    const store = createStore(file);
+    const file = await database023(dataDir);
+    (await createStore(file)).close();
+    const store = await createStore(file);
     try {
-      store.jobs.recordRun(1, 5000, "ok", { code: "internal.failure" });
+      await store.jobs.recordRun(1, 5000, "ok", { code: "internal.failure" });
     } finally {
       store.close();
     }
-    createStore(file).close();
-    const db = new DatabaseSync(file, { readOnly: true });
+    (await createStore(file)).close();
+    const db = await openTestDatabase(file);
     try {
-      assert.equal(db.prepare("SELECT last_run_at AS at FROM sync_jobs WHERE id = 1").get()?.at, 5000, "024 does not run again");
+      assert.equal((await queryRow(db, "SELECT last_run_at AS at FROM sync_jobs WHERE id = 1"))?.at, 5000, "024 does not run again");
     } finally {
       db.close();
     }
   } finally {
-    rmSync(dataDir, { recursive: true, force: true });
+    removeDir(dataDir);
   }
 });

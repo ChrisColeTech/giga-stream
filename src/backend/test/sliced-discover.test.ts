@@ -2,10 +2,13 @@
 // every title of the ground truth is written exactly once, no page 501 is asked, a slice over the limit is split and a
 // single day over it stops at page 500, progress counts slices, and a Stop or a re-run leaves a consistent store.
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "./db-kit.js";
 import test, { after } from "node:test";
+
+import type { Transaction } from "@libsql/client";
 
 import { fractionOf } from "../src/services/job-progress.js";
 import { describeRequest } from "../src/services/title-sync-request.js";
@@ -21,7 +24,7 @@ const NOW = Date.UTC(2026, 9, 18, 12); // next calendar year is 2027: 130 slices
 const SLICES = 130;
 const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
 const temp: string[] = [];
-after(() => temp.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+after(() => temp.forEach((dir) => removeDir(dir)));
 
 type Truth = { movie: FakeTitle[]; tv: FakeTitle[] };
 
@@ -33,9 +36,9 @@ function drive(truth: Truth) {
   const notes: string[] = [];
   const controller = new AbortController();
   const walk = createTitleWalk({
-    store: { transaction: (work) => work() },
+    store: { transaction: async (work) => work({} as Transaction) },
     tmdb: tmdb.client,
-    storeRow: (kind, record) => written.push(`${kind}-${String(record.id)}`) > 0,
+    storeRow: async (kind, record) => written.push(`${kind}-${String(record.id)}`) > 0,
     now: () => NOW,
   });
   const run = () => walk({ scope: "discover", pages: 1 }, {
@@ -160,28 +163,28 @@ test("the slice list follows the clock, and the parameters follow the kind", () 
 test("a re-run keeps the id set, a stale detail keeps its shape and an edited field survives", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "giga-slices-"));
   temp.push(dir);
-  const store = createStore(path.join(dir, "db.sqlite"));
+  const store = await createStore(path.join(dir, "db.sqlite"));
   after(() => store.close());
   let now = NOW;
   const truth: Truth = { movie: titlesOf(1, 45, (i) => dayOfYear(2000, i)), tv: titlesOf(500, 3, () => "1990-01-01") };
   const walk = createTitleWalk({
     store, tmdb: fakeDiscover(truth).client, now: () => now,
-    storeRow: createStoreRow({ store, deleted: { isDeleted: () => false }, now: () => now }),
+    storeRow: createStoreRow({ store, deleted: { isDeleted: async () => false }, now: () => now }),
   });
   const pass = () => walk({ scope: "discover" }, {
     signal: new AbortController().signal, report: () => undefined, seen: { titles: 0, detailed: 0, seasons: 0, enriched: 0, airing: 0 },
     shuttingDown: () => false,
   });
   await pass();
-  assert.equal(store.titles.counts(FOUR_DAYS_MS).total, 48);
+  assert.equal((await store.titles.counts(FOUR_DAYS_MS)).total, 48);
 
   const detail = detailOf("movie", 5, { id: 5, title: "movie 5", overview: "Plot", release_date: "2000-01-05" });
-  store.titles.put({ kind: "movie", tmdbId: 5, payload: detail, popularityScore: 1, popularityReadAt: now, fetchedAt: now });
-  store.titles.updateRecord("movie-5", { payload: { ...detail, title: "Mine" }, editedFields: ["title"], tmdbId: 5, enabled: true });
+  await store.titles.put({ kind: "movie", tmdbId: 5, payload: detail, popularityScore: 1, popularityReadAt: now, fetchedAt: now });
+  await store.titles.updateRecord("movie-5", { payload: { ...detail, title: "Mine" }, editedFields: ["title"], tmdbId: 5, enabled: true });
 
   now += FOUR_DAYS_MS;
   await pass();
-  assert.equal(store.titles.counts(FOUR_DAYS_MS).total, 48, "the same id set");
-  const after5 = store.titles.find("movie", 5)?.payload as Record<string, unknown>;
+  assert.equal((await store.titles.counts(FOUR_DAYS_MS)).total, 48, "the same id set");
+  const after5 = (await store.titles.find("movie", 5))?.payload as Record<string, unknown>;
   assert.deepEqual([after5.shape, after5.plot, after5.title], ["detail", "Plot", "Mine"]);
 });

@@ -1,11 +1,12 @@
 /** For the opt-in live engine tests (`LIVE_ENGINE_TESTS=1`): real fixture videos, ffprobe and ffmpeg. */
-import { mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 
 import { locateTool } from "../../shared/media/dist/ffmpeg/locate-tool.js";
 import { runTool } from "../../shared/media/dist/ffmpeg/run-tool.js";
+import { removeDir } from "./db-kit.js";
 import { type MakeAppOptions, makeApp, pick } from "./test-app.js";
 
 export const ENGINE_TESTS = process.env.LIVE_ENGINE_TESTS === "1";
@@ -51,7 +52,7 @@ export async function probeVideo(bytes: Buffer): Promise<unknown> {
     const streams = pick(JSON.parse(stdout), "streams");
     return Array.isArray(streams) ? streams.find((stream) => pick(stream, "codec_type") === "video") : undefined;
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    removeDir(dir);
   }
 }
 

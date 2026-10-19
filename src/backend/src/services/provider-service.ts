@@ -49,20 +49,18 @@ export function createProviderService(deps: {
 }) {
   const { store, audit, now } = deps;
 
-  function existing(id: number): BackendProvider {
-    const found = store.providers.find(id);
+  async function existing(id: number): Promise<BackendProvider> {
+    const found = await store.providers.find(id);
     if (!found) throw new AppError(ERRORS.providerNotFound);
     return found;
   }
 
   return {
-    list(): ProviderList {
-      return { items: store.providers.list() };
-    },
+    list: async (): Promise<ProviderList> => ({ items: await store.providers.list() }),
 
-    get: (id: number): BackendProvider => existing(id),
+    get: async (id: number): Promise<BackendProvider> => existing(id),
 
-    create(input: ProviderInput, actor: Actor): BackendProvider {
+    create: async (input: ProviderInput, actor: Actor): Promise<BackendProvider> => {
       const createdAt = new Date(now()).toISOString();
       const record: Omit<ProviderRecord, "id"> = {
         name: input.name,
@@ -71,17 +69,17 @@ export function createProviderService(deps: {
         created_at: createdAt,
         ...fieldsOf(input),
       };
-      const id = store.transaction(() => {
-        const newId = store.providers.insert(record);
-        store.revisions.next();
+      const id = await store.transaction(async () => {
+        const newId = await store.providers.insert(record);
+        await store.revisions.next();
         return newId;
       });
-      audit.record(actor, { action: "provider.created", subject: String(id), detail: { name: input.name, source: input.source } });
+      await audit.record(actor, { action: "provider.created", subject: String(id), detail: { name: input.name, source: input.source } });
       return existing(id);
     },
 
-    update(id: number, patch: ProviderPatch, actor: Actor): BackendProvider {
-      const current = existing(id);
+    update: async (id: number, patch: ProviderPatch, actor: Actor): Promise<BackendProvider> => {
+      const current = await existing(id);
       const record: ProviderRecord = {
         id,
         name: patch.name ?? current.name,
@@ -100,11 +98,11 @@ export function createProviderService(deps: {
           messageShape: kept(patch.messageShape, current.messageShape),
         }),
       };
-      store.transaction(() => {
-        store.providers.update(record);
-        store.revisions.next();
+      await store.transaction(async () => {
+        await store.providers.update(record);
+        await store.revisions.next();
       });
-      audit.record(actor, {
+      await audit.record(actor, {
         action: "provider.updated",
         subject: String(id),
         detail: { name: record.name, fields: Object.keys(patch) },
@@ -112,17 +110,17 @@ export function createProviderService(deps: {
       return existing(id);
     },
 
-    remove(id: number, actor: Actor): { id: number } {
-      const current = existing(id);
-      store.transaction(() => {
-        store.providers.remove(id);
-        store.revisions.next();
+    remove: async (id: number, actor: Actor): Promise<{ id: number }> => {
+      const current = await existing(id);
+      await store.transaction(async () => {
+        await store.providers.remove(id);
+        await store.revisions.next();
       });
-      audit.record(actor, { action: "provider.deleted", subject: String(id), detail: { name: current.name } });
+      await audit.record(actor, { action: "provider.deleted", subject: String(id), detail: { name: current.name } });
       return { id };
     },
 
-    isEmpty: (): boolean => store.providers.isEmpty(),
+    isEmpty: (): Promise<boolean> => store.providers.isEmpty(),
   };
 }
 

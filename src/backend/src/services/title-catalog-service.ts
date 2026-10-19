@@ -31,8 +31,8 @@ function itemOf(row: StoredTitle): CatalogTitle | undefined {
  */
 export function createTitleCatalog(store: Store) {
   return {
-    page(query: CatalogQuery): CatalogPage {
-      const rows = store.titles.catalog(query.after, query.limit + 1);
+    async page(query: CatalogQuery): Promise<CatalogPage> {
+      const rows = await store.titles.catalog(query.after, query.limit + 1);
       const more = rows.length > query.limit;
       const kept = more ? rows.slice(0, query.limit) : rows;
       const items = kept.flatMap((row) => itemOf(row) ?? []);

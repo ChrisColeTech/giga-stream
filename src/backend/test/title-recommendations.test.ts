@@ -12,7 +12,7 @@ const idsOf = (body: unknown): unknown[] => (pick(body, "data.items") as Array<R
 test("recommendations: same kind, shared genre, popularity DESC then id, the title and disabled titles left out", async () => {
   const tmdb = await walkTmdb({ movie: 3, tv: 2 });
   const f = await fillApp(tmdb, 3);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   const related = await f.api("GET", "/api/titles/movie-1010/recommendations");
   assert.deepEqual(idsOf(related.body), ["movie-1021", "movie-1020", "movie-1011", "movie-1031", "movie-1030"], "no series, not itself");
@@ -21,7 +21,7 @@ test("recommendations: same kind, shared genre, popularity DESC then id, the tit
   assert.equal(pick(related.body, "data.items.0.state"), "synced");
   assert.deepEqual(idsOf((await f.api("GET", "/api/titles/tv-2010/recommendations")).body), ["tv-2021", "tv-2020", "tv-2011"]);
 
-  await f.api("PATCH", "/api/titles/movie-1021", { enabled: false });
+  await f.api("PATCH", "/api/admin/titles/movie-1021", { enabled: false });
   assert.deepEqual(idsOf((await f.api("GET", "/api/titles/movie-1010/recommendations")).body).slice(0, 2), ["movie-1020", "movie-1011"]);
   assert.equal((await f.api("GET", "/api/titles/movie-999/recommendations")).status, 404);
   assert.equal(tmdb.pages().length, 5, "the reads made no walk call");
@@ -30,10 +30,10 @@ test("recommendations: same kind, shared genre, popularity DESC then id, the tit
 test("a title with no genre in common with the others has no recommendations, and the list is capped", async () => {
   const tmdb = await walkTmdb({ movie: 8, tv: 1 });
   const f = await fillApp(tmdb, 8);
-  await f.api("POST", "/api/jobs/1/run");
+  await f.api("POST", "/api/admin/jobs/1/run");
   await f.finished();
   const many = await f.api("GET", "/api/titles/movie-1010/recommendations");
   assert.equal((pick(many.body, "data.items") as unknown[]).length, RECOMMENDATIONS_MAX);
-  await f.api("PATCH", "/api/titles/movie-1010", { genres: ["Western"] });
+  await f.api("PATCH", "/api/admin/titles/movie-1010", { genres: ["Western"] });
   assert.deepEqual(idsOf((await f.api("GET", "/api/titles/movie-1010/recommendations")).body), []);
 });

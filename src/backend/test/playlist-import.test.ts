@@ -33,7 +33,7 @@ test("one request creates the playlist, all its channels disabled, and its sync 
     ["ABC", false, false, NAME, NAME], ["ESPN", false, false, NAME, NAME],
   ]);
   assert.ok(rows.every((r) => r.playlistId === 1 && r.status === undefined && r.cachedLogoUrl === undefined));
-  const jobs = pick((await api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
+  const jobs = pick((await api("GET", "/api/admin/jobs")).body, "data.items") as Array<Record<string, unknown>>;
   const job = jobs.find((j) => j.type === "playlist");
   assert.deepEqual([job?.name, job?.schedule, job?.enabled, job?.playlistId, job?.lastRunAt], [`Sync ${NAME}`, "24h", true, 1, undefined]);
   const imported = (await audit()).find((e) => e.action === "playlist.imported");
@@ -58,7 +58,7 @@ test("a re-import with nothing new is 200, writes nothing, bumps nothing, and ke
   await uploadFile(t, token, NAME, M3U);
   const rows = await adminChannels();
   const abc = String(rows.find((r) => r.name === "ABC")?.id);
-  await api("PATCH", `/api/channels/${abc}`, { enabled: true });
+  await api("PATCH", `/api/admin/channels/${abc}`, { enabled: true });
   const settled = await revision();
   const again = await uploadFile(t, token, NAME, M3U);
   assert.equal(again.status, 200);
@@ -66,7 +66,7 @@ test("a re-import with nothing new is 200, writes nothing, bumps nothing, and ke
   assert.equal(await revision(), settled, "no revision bump");
   assert.deepEqual((await adminChannels()).map((r) => [r.id, r.enabled]), rows.map((r) => [r.id, r.id === abc]), "same ids, the enable survives");
   assert.deepEqual((await channels()).map((c) => c.name), ["ABC"]);
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 1);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 1);
 });
 
 test("a re-import with changes updates in place and creates what is new, with one bump", async () => {
@@ -89,15 +89,15 @@ test("two uploads of one file at once leave one playlist: the second is a re-imp
   const { t, token, api } = await setupPlaylists();
   const [a, b] = await Promise.all([uploadFile(t, token, NAME, M3U), uploadFile(t, token, NAME, M3U)]);
   assert.deepEqual([a.status, b.status].sort(), [200, 201]);
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 1);
-  assert.equal(pick((await api("GET", "/api/admin-channels")).body, "data.items.length"), 2);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 1);
+  assert.equal(pick((await api("GET", "/api/admin/channels")).body, "data.items.length"), 2);
 });
 
 test("the name is the sanitised file name; a derived clash is suffixed, a new file is its own playlist", async () => {
   const { t, token, api, importUrl } = await setupPlaylists();
   assert.equal(pick(await uploadFile(t, token, "C:\\lists\\Café Liste.M3U", M3U), "body.data.fileName"), "caf-liste.m3u");
   assert.equal(pick(await uploadFile(t, token, "a b  c.m3u", M3U), "body.data.name"), "a-b-c.m3u");
-  await api("PATCH", "/api/playlists/1", { name: "us.m3u" });
+  await api("PATCH", "/api/admin/playlists/1", { name: "us.m3u" });
   await importUrl("https://cdn.example/lists/us.m3u8?token=x", { name: "web" });
   const clash = await uploadFile(t, token, "us.m3u", M3U);
   assert.deepEqual([clash.status, pick(clash.body, "data.name"), pick(clash.body, "data.fileName")], [201, "us.m3u (2)", "us.m3u"]);
@@ -123,8 +123,8 @@ test("exactly one file and at most one name: unknown or repeated fields and file
     const answer = await uploadParts(t, token, parts);
     assert.deepEqual([answer.status, pick(answer.body, "error.code")], [400, "request.invalid"], JSON.stringify(parts.map((p) => p.name)));
   }
-  assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 0, "nothing was created");
-  const plain = await send(t.app, "POST", "/api/playlists/import", { file: M3U }, token);
+  assert.equal(pick((await api("GET", "/api/admin/playlists")).body, "data.items.length"), 0, "nothing was created");
+  const plain = await send(t.app, "POST", "/api/admin/playlists/import", { file: M3U }, token);
   assert.equal(plain.status, 400, "a JSON body is not an upload");
 });
 

@@ -1,11 +1,11 @@
 // The per-account settings and shell layout (docs/29 section 12.2, B1): each account's own row, whole documents,
 // refusals that name the field, and no audit entry for a preference.
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import test from "node:test";
 
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
+import { openTestDatabase, queryRow } from "./db-kit.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 
 const DEFAULT_SETTINGS = { theme: "dark", themeAccent: "amber", reducedMotion: "off", uiZoom: 1 };
@@ -18,11 +18,11 @@ const SHELL = {
   windows: { settings: { x: 10, y: 20, width: 640, height: 480 }, preview: { x: 0, y: 0, width: 1, height: 20_000 } },
 };
 const ED = { username: "ed@example.test", password: "ed-password-12345" };
-const STATE = "/api/auth/me/state";
+const STATE = "/api/admin/account-state";
 
 /** A second account, signed in, with its id. */
 async function edAccount(t: TestApp, adminToken: string) {
-  const made = await send(t.app, "POST", "/api/admin-accounts", ED, adminToken);
+  const made = await send(t.app, "POST", "/api/admin/accounts", ED, adminToken);
   assert.equal(made.status, 201);
   const session = await signIn(t.app, ED.username,ED.password);
   return { id: String(pick(made.body, "data.id")), token: session.access };
@@ -54,7 +54,7 @@ test("a disabled account's token is refused at once", async () => {
   const admin = (await signIn(t.app)).access;
   const ed = await edAccount(t, admin);
   assert.equal((await send(t.app, "GET", STATE, undefined, ed.token)).status, 200);
-  const disabled = await send(t.app, "PATCH", `/api/admin-accounts/${ed.id}`, { disabled: true }, admin);
+  const disabled = await send(t.app, "PATCH", `/api/admin/accounts/${ed.id}`, { disabled: true }, admin);
   assert.equal(disabled.status, 200);
   const refused = await send(t.app, "GET", STATE, undefined, ed.token);
   assert.equal(pick(refused.body, "error.code"), "auth.unauthorized");
@@ -141,13 +141,13 @@ test("deleting an account deletes its row", async () => {
   const admin = (await signIn(t.app)).access;
   const ed = await edAccount(t, admin);
   await send(t.app, "PUT", STATE, { settings: SETTINGS }, ed.token);
-  const db = new DatabaseSync(path.join(t.dataDir, DATABASE_FILE_NAME));
-  const count = (): unknown =>
-    pick(db.prepare("SELECT COUNT(*) AS n FROM admin_ui_state WHERE account_id = ?").get(ed.id), "n");
+  const db = await openTestDatabase(path.join(t.dataDir, DATABASE_FILE_NAME));
+  const count = async (): Promise<unknown> =>
+    pick(await queryRow(db, "SELECT COUNT(*) AS n FROM admin_ui_state WHERE account_id = ?", [ed.id]), "n");
   try {
-    assert.equal(count(), 1);
-    assert.equal((await send(t.app, "DELETE", `/api/admin-accounts/${ed.id}`, undefined, admin)).status, 200);
-    assert.equal(count(), 0);
+    assert.equal(await count(), 1);
+    assert.equal((await send(t.app, "DELETE", `/api/admin/accounts/${ed.id}`, undefined, admin)).status, 200);
+    assert.equal(await count(), 0);
   } finally {
     db.close();
   }
@@ -166,10 +166,10 @@ test("a stored document that no longer parses is answered as the defaults, never
   const t = await makeApp();
   const { access } = await signIn(t.app);
   await send(t.app, "PUT", STATE, { shell: SHELL }, access);
-  const db = new DatabaseSync(path.join(t.dataDir, DATABASE_FILE_NAME));
+  const db = await openTestDatabase(path.join(t.dataDir, DATABASE_FILE_NAME));
   try {
     for (const broken of ['{"theme":"neon"}', "not json"]) {
-      db.prepare("UPDATE admin_ui_state SET settings = ?").run(broken);
+      await db.execute({ sql: "UPDATE admin_ui_state SET settings = ?", args: [broken] });
       const got = await send(t.app, "GET", STATE, undefined, access);
       assert.equal(got.status, 200);
       assert.deepEqual([pick(got.body, "data.settings"), pick(got.body, "data.shell")], [DEFAULT_SETTINGS, SHELL]);
@@ -183,7 +183,7 @@ test("a state write writes no audit entry", async () => {
   const t = await makeApp();
   const { access } = await signIn(t.app);
   const entries = async (): Promise<unknown> => {
-    const answer = await send(t.app, "GET", "/api/audit?limit=200", undefined, access);
+    const answer = await send(t.app, "GET", "/api/admin/audit?limit=200", undefined, access);
     return pick(answer.body, "data.items");
   };
   const before = pick(await entries(), "length");

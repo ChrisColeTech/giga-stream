@@ -57,7 +57,7 @@ export async function registerLiveStreams(app: FastifyInstance, services: Servic
       });
       logos.get("/:file", async (request, reply) => {
         const { file } = parseInput(LogoParams, request.params, ERRORS.pathInvalid);
-        return sendMedia(request, reply, services.live.stream.logo(file.slice(0, -PNG_SUFFIX.length)));
+        return sendMedia(request, reply, await services.live.stream.logo(file.slice(0, -PNG_SUFFIX.length)));
       });
     },
     { prefix: "/logos" },

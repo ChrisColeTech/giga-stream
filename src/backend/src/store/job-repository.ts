@@ -1,7 +1,7 @@
-import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
 import { PLAYLIST_JOB_DEFAULT_SCHEDULE } from "../constants/limits.js";
+import type { Database } from "./database.js";
 import { RUN_RESULTS, RunCountsSchema, type RunCounts, type RunResult } from "../types/job-counts.js";
 
 const Row = z.object({
@@ -90,69 +90,79 @@ function toJob(row: unknown): JobRecord {
 
 const COLUMNS = "id, name, type, enabled, schedule, config, playlist_id, last_run_at, last_result, last_counts, created_at, cursor_at";
 
+const SQL = {
+  all: `SELECT ${COLUMNS} FROM sync_jobs ORDER BY id`,
+  one: `SELECT ${COLUMNS} FROM sync_jobs WHERE id = ?`,
+  ofPlaylist: `SELECT ${COLUMNS} FROM sync_jobs WHERE playlist_id = ?`,
+  insertCatalog: "INSERT INTO sync_jobs (name, type, enabled, schedule, config, created_at) VALUES (?, 'catalog', ?, ?, ?, ?)",
+  insertPlaylist: "INSERT INTO sync_jobs (type, enabled, schedule, config, playlist_id, created_at) VALUES ('playlist', 1, ?, '{}', ?, ?)",
+  update: "UPDATE sync_jobs SET name = ?, enabled = ?, schedule = ?, config = ? WHERE id = ?",
+  record: "UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ? WHERE id = ?",
+  recordWithCursor: "UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ?, cursor_at = ? WHERE id = ?",
+  remove: "DELETE FROM sync_jobs WHERE id = ?",
+  countOfPlaylist: "SELECT COUNT(*) AS n FROM sync_jobs WHERE playlist_id = ?",
+  count: "SELECT COUNT(*) AS n FROM sync_jobs",
+  seeded: "SELECT seeded_at FROM sync_seed WHERE id = 1",
+  markSeeded: "INSERT OR IGNORE INTO sync_seed (id, seeded_at) VALUES (?, ?)",
+};
+
 /** The sync jobs (docs/43 section 3.1), in the order they were made. */
-export function createJobRepository(db: DatabaseSync) {
-  const all = db.prepare(`SELECT ${COLUMNS} FROM sync_jobs ORDER BY id`);
-  const one = db.prepare(`SELECT ${COLUMNS} FROM sync_jobs WHERE id = ?`);
-  const ofPlaylist = db.prepare(`SELECT ${COLUMNS} FROM sync_jobs WHERE playlist_id = ?`);
-  const insertCatalog = db.prepare(
-    "INSERT INTO sync_jobs (name, type, enabled, schedule, config, created_at) VALUES (?, 'catalog', ?, ?, ?, ?)",
-  );
-  const insertPlaylist = db.prepare(
-    "INSERT INTO sync_jobs (type, enabled, schedule, config, playlist_id, created_at) VALUES ('playlist', 1, ?, '{}', ?, ?)",
-  );
-  const update = db.prepare("UPDATE sync_jobs SET name = ?, enabled = ?, schedule = ?, config = ? WHERE id = ?");
-  const record = db.prepare("UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ? WHERE id = ?");
-  const recordWithCursor = db.prepare(
-    "UPDATE sync_jobs SET last_run_at = ?, last_result = ?, last_counts = ?, cursor_at = ? WHERE id = ?");
-  const remove = db.prepare("DELETE FROM sync_jobs WHERE id = ?");
-  const countOfPlaylist = db.prepare("SELECT COUNT(*) AS n FROM sync_jobs WHERE playlist_id = ?");
-  const count = db.prepare("SELECT COUNT(*) AS n FROM sync_jobs");
-  const seeded = db.prepare("SELECT seeded_at FROM sync_seed WHERE id = 1");
-  const markSeeded = db.prepare("INSERT OR IGNORE INTO sync_seed (id, seeded_at) VALUES (?, ?)");
-  const total = (statement: ReturnType<DatabaseSync["prepare"]>, ...args: number[]): number =>
-    z.object({ n: z.number() }).parse(statement.get(...args)).n;
+export function createJobRepository(db: Database) {
+  const countOf = async (sql: string, ...args: number[]): Promise<number> =>
+    z.object({ n: z.number() }).parse((await db.execute({ sql, args })).rows[0]).n;
 
   return {
-    list: (): JobRecord[] => all.all().map(toJob),
-    find(id: number): JobRecord | undefined {
-      const row = one.get(id);
+    list: async (): Promise<JobRecord[]> => (await db.execute(SQL.all)).rows.map(toJob),
+    find: async (id: number): Promise<JobRecord | undefined> => {
+      const row = (await db.execute({ sql: SQL.one, args: [id] })).rows[0];
       return row === undefined ? undefined : toJob(row);
     },
     /** The one job of a playlist (the table's partial `UNIQUE` guarantees at most one). */
-    findOfPlaylist(playlistId: number): PlaylistJob | undefined {
-      const row = ofPlaylist.get(playlistId);
+    findOfPlaylist: async (playlistId: number): Promise<PlaylistJob | undefined> => {
+      const row = (await db.execute({ sql: SQL.ofPlaylist, args: [playlistId] })).rows[0];
       const job = row === undefined ? undefined : toJob(row);
       return job?.type === "playlist" ? job : undefined;
     },
-    count: (): number => total(count),
-    countOfPlaylist: (playlistId: number): number => total(countOfPlaylist, playlistId),
-    insertCatalog(job: { name: string; enabled: boolean; schedule: string; config: CatalogJobConfig }, at: number): number {
-      return Number(insertCatalog.run(job.name, job.enabled ? 1 : 0, job.schedule, JSON.stringify(job.config), at).lastInsertRowid);
+    count: (): Promise<number> => countOf(SQL.count),
+    countOfPlaylist: (playlistId: number): Promise<number> => countOf(SQL.countOfPlaylist, playlistId),
+    async insertCatalog(
+      job: { name: string; enabled: boolean; schedule: string; config: CatalogJobConfig },
+      at: number,
+    ): Promise<number> {
+      const result = await db.execute({
+        sql: SQL.insertCatalog,
+        args: [job.name, job.enabled ? 1 : 0, job.schedule, JSON.stringify(job.config), at],
+      });
+      return Number(result.lastInsertRowid);
     },
     /** A playlist's job, made with the playlist: enabled, `24h`, never run (due once the start grace has passed). */
-    insertPlaylist: (playlistId: number, at: number): number =>
-      Number(insertPlaylist.run(PLAYLIST_JOB_DEFAULT_SCHEDULE, playlistId, at).lastInsertRowid),
-    update(job: JobRecord): void {
+    insertPlaylist: async (playlistId: number, at: number): Promise<number> => {
+      const result = await db.execute({
+        sql: SQL.insertPlaylist,
+        args: [PLAYLIST_JOB_DEFAULT_SCHEDULE, playlistId, at],
+      });
+      return Number(result.lastInsertRowid);
+    },
+    update: async (job: JobRecord): Promise<void> => {
       const [name, config] = job.type === "catalog" ? [job.name, JSON.stringify(job.config)] : [null, "{}"];
-      update.run(name, job.enabled ? 1 : 0, job.schedule, config, job.id);
+      await db.execute({ sql: SQL.update, args: [name, job.enabled ? 1 : 0, job.schedule, config, job.id] });
     },
     /**
      * Keeps a run: when it ended, how it went, and its typed counts (validated here, so no sentence is ever stored).
      * `cursorAt` is written only when given (a Library update that ended `ok`, `49` section 2.4); otherwise it stays.
      */
-    recordRun(id: number, at: number, result: RunResult, counts: RunCounts, cursorAt?: number): void {
+    recordRun(id: number, at: number, result: RunResult, counts: RunCounts, cursorAt?: number): Promise<void> {
       const text = JSON.stringify(RunCountsSchema.parse(counts));
-      if (cursorAt === undefined) record.run(at, result, text, id);
-      else recordWithCursor.run(at, result, text, cursorAt, id);
+      return cursorAt === undefined
+        ? db.execute({ sql: SQL.record, args: [at, result, text, id] }).then(() => undefined)
+        : db.execute({ sql: SQL.recordWithCursor, args: [at, result, text, cursorAt, id] }).then(() => undefined);
     },
-    remove(id: number): boolean {
-      return Number(remove.run(id).changes) > 0;
-    },
+    remove: async (id: number): Promise<boolean> =>
+      (await db.execute({ sql: SQL.remove, args: [id] })).rowsAffected > 0,
     /** Whether the environment has already seeded the catalog job. */
-    isSeeded: (): boolean => seeded.get() !== undefined,
-    markSeeded(at: number): void {
-      markSeeded.run(1, at);
+    isSeeded: async (): Promise<boolean> => (await db.execute(SQL.seeded)).rows[0] !== undefined,
+    markSeeded: async (at: number): Promise<void> => {
+      await db.execute({ sql: SQL.markSeeded, args: [1, at] });
     },
   };
 }

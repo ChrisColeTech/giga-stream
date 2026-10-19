@@ -32,7 +32,7 @@ if (!existsSync(source)) {
 }
 
 const target = path.join(path.resolve(valueOf("--data-dir") ?? config.DATA_DIR), DATABASE_FILE_NAME);
-const summary = runLiveServerImport({ source: path.resolve(source), target, dryRun, now: Date.now });
+const summary = await runLiveServerImport({ source: path.resolve(source), target, dryRun, now: Date.now });
 const verb = summary.dryRun ? "would import" : "imported";
 for (const id of summary.inserted) console.log(`${verb}  ${id}`);
 for (const skip of summary.skipped) console.log(`skipped   ${skip.id}  (${skip.reason})`);

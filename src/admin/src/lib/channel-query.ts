@@ -3,7 +3,7 @@ import { PAGE_SIZE } from "@giga/ui/lib/window-constants";
 
 /* The Channels list's query (`41` sections 3.1 and 6), pure: what the person asked for (search, filters, sort), the
  * stable key a result is checked against, and the request path of one page. The list is the backend's, so every part of
- * it is a parameter of `GET /api/admin-channels`; nothing is filtered in the browser. */
+ * it is a parameter of `GET /api/admin/channels`; nothing is filtered in the browser. */
 
 export type ChannelSortKey = "name" | "category" | "kind" | "playlist";
 export type KindFilter = "all" | "live" | "stream";
@@ -98,7 +98,7 @@ export function pressHeading(query: ChannelQuery, key: string): ChannelQuery {
   return { ...query, sort: key, dir: next.dir };
 }
 
-/** `/api/admin-channels?limit=100&offset=0&...`: only the parameters that are set. `limit` turns paging on. */
+/** `/api/admin/channels?limit=100&offset=0&...`: only the parameters that are set. `limit` turns paging on. */
 export function pagePath(query: ChannelQuery, pageIndex: number, limit: number = PAGE_SIZE): string {
   const params = new URLSearchParams({ limit: String(limit), offset: String(Math.max(0, pageIndex) * limit) });
   if (query.q !== "") params.set("q", query.q);
@@ -111,8 +111,8 @@ export function pagePath(query: ChannelQuery, pageIndex: number, limit: number =
   if (query.playlist !== "") params.set("playlist", query.playlist);
   params.set("sort", query.sort);
   params.set("dir", query.dir);
-  return `/api/admin-channels?${params.toString()}`;
+  return `/api/admin/channels?${params.toString()}`;
 }
 
 /** Every live channel, at the backend's largest page: the few rows the statusbar's `N preparing` is counted over. */
-export const LIVE_ROWS_PATH = "/api/admin-channels?limit=200&offset=0&kind=live&sort=name&dir=asc";
+export const LIVE_ROWS_PATH = "/api/admin/channels?limit=200&offset=0&kind=live&sort=name&dir=asc";

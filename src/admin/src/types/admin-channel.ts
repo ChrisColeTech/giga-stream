@@ -1,5 +1,5 @@
 /* The backend's own channel response shapes (`29` section 5, copied from `src/backend/src/types`), so the wiring wave
- * replaces only the source of the data and never the shape. `GET /api/admin-channels` answers `{ items, revision }`. */
+ * replaces only the source of the data and never the shape. `GET /api/admin/channels` answers `{ items, revision }`. */
 
 export type ChannelState = "preparing" | "starting" | "live" | "restarting" | "stopped" | "failed";
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after } from "node:test";
@@ -9,6 +9,7 @@ import type { Config } from "../src/config.js";
 import type { LiveEngine, LiveSeams } from "../src/live/engine/live-engine.js";
 import { SafeFetchError, type SafeFetch } from "../src/services/safe-fetch.js";
 import { fakeBuild, type FakeTally } from "./live-fake-source.js";
+import { removeDir } from "./db-kit.js";
 
 export const ADMIN_USERNAME ="admin@example.test";
 export const ADMIN_PASSWORD = "admin-password-123";
@@ -109,7 +110,7 @@ export async function makeApp(options: MakeAppOptions = {}): Promise<TestApp> {
       if (disposed) return;
       disposed = true;
       await app.close();
-      if (!options.dataDir) rmSync(dataDir, { recursive: true, force: true });
+      if (!options.dataDir) removeDir(dataDir);
     },
   };
   created.push(testApp);
@@ -183,7 +184,7 @@ export function pick(value: unknown, dotted: string): unknown {
 
 /** Signs in and answers the session's two tokens. */
 export async function signIn(app: FastifyInstance, username = ADMIN_USERNAME, password = ADMIN_PASSWORD) {
-  const answer = await send(app, "POST", "/api/auth/login", { username, password });
+  const answer = await send(app, "POST", "/api/admin/auth/login", { username, password });
   if (answer.status !== 200) throw new Error(`sign-in failed: ${JSON.stringify(answer.body)}`);
   return { access: String(pick(answer.body, "data.accessToken")), refresh: String(pick(answer.body, "data.refreshToken")) };
 }

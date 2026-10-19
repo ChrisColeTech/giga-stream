@@ -12,11 +12,11 @@ import { normaliseSchedule } from "./job-schedule.js";
  * retired. After this the records are the truth and the environment is not read for them again, even if an admin
  * deletes them all.
  */
-export function seedSyncRecords(store: Store, env: { titleSchedule: string }, now: number): void {
-  if (store.jobs.isSeeded()) return;
+export async function seedSyncRecords(store: Store, env: { titleSchedule: string }, now: number): Promise<void> {
+  if (await store.jobs.isSeeded()) return;
   const titleSchedule = normaliseSchedule(env.titleSchedule, "TMDB_SYNC_SCHEDULE");
-  store.transaction(() => {
-    store.jobs.insertCatalog(
+  await store.transaction(async () => {
+    await store.jobs.insertCatalog(
       {
         name: "Library fill",
         enabled: true,
@@ -25,7 +25,7 @@ export function seedSyncRecords(store: Store, env: { titleSchedule: string }, no
       },
       now,
     );
-    store.jobs.insertCatalog(
+    await store.jobs.insertCatalog(
       {
         name: LIBRARY_UPDATE_NAME,
         enabled: true,
@@ -34,6 +34,6 @@ export function seedSyncRecords(store: Store, env: { titleSchedule: string }, no
       },
       now,
     );
-    store.jobs.markSeeded(now);
+    await store.jobs.markSeeded(now);
   });
 }

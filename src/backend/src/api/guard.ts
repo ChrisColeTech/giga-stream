@@ -14,7 +14,7 @@ export const actorOf = (request: FastifyRequest, principal?: Principal): Actor =
  * A signed-in admin (docs/03 sections 7.11-7.12); every admin account is equal (docs/26 D22). No or a bad
  * token is `401 auth.unauthorized`.
  */
-export function signedIn(services: Services, request: FastifyRequest): Principal {
+export async function signedIn(services: Services, request: FastifyRequest): Promise<Principal> {
   return services.auth.authenticate(request.headers.authorization);
 }
 
@@ -22,9 +22,9 @@ export function signedIn(services: Services, request: FastifyRequest): Principal
  * Whether the request carries a valid admin token. It never refuses: a public read that asks for more
  * (`includeDisabled`) simply gets the public answer without one.
  */
-export function isAdmin(services: Services, request: FastifyRequest): boolean {
+export async function isAdmin(services: Services, request: FastifyRequest): Promise<boolean> {
   try {
-    signedIn(services, request);
+    await signedIn(services, request);
     return true;
   } catch {
     return false;
