@@ -42,6 +42,7 @@ function rig(script: Partial<TitlesService> = {}) {
     listDeleted: async () => (calls.push("listDeleted"), []),
     restore: async (id) => ({ id }),
     listStored: EMPTY_STORED,
+    episodes: async () => ({ episodes: [] }),
     ...script,
   };
   const audit = { reload: async () => undefined };

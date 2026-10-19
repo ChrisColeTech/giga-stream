@@ -1,9 +1,18 @@
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
-import { MANUAL_NO_TMDB, NOTHING_EDITED, SAVING_REASON, UNREACHABLE_REASON } from "@/constants/title-copy";
+import { PREVIEW_ARROW_LABEL } from "@/constants/preview-copy";
+import {
+  MANUAL_NO_TMDB,
+  NOTHING_EDITED,
+  PREVIEW_TITLE_TOOLTIP,
+  SAVE_TITLE_FIRST,
+  SAVING_REASON,
+  UNREACHABLE_REASON,
+} from "@/constants/title-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { useTitleActions } from "@/hooks/useTitleActions";
-import { changeReason, type SaveVerb, type ToolbarAction } from "@/lib/workspace-verbs";
+import { useTitlePreviewOpen } from "@/hooks/useTitlePreviewOpen";
+import { changeReason, type SaveVerb, type ToolbarVerb } from "@/lib/workspace-verbs";
 import { formKeyOf, saveRequiredReason } from "@/lib/title-checks";
 import { draftOfTitle, sameTitleDraft } from "@/lib/title-draft";
 import { isManualTitle } from "@/lib/title-rows";
@@ -18,8 +27,6 @@ import { TitleSeasonsGroup } from "./TitleSeasonsGroup";
 export interface TitleEditorProps {
   readonly detail: AdminTitleDetail;
   readonly active: boolean;
-  /** The page toolbar's `Jobs →`. */
-  readonly jobs: ToolbarAction;
 }
 
 /** Why `Revert to TMDB` is disabled (`37` section 4.3): a title made by hand, nothing edited, a call running. */
@@ -31,11 +38,14 @@ function revertReason(detail: AdminTitleDetail, saving: boolean, unreachable: bo
 
 /** A title's workspace once its detail has answered: the form over the detail, ONE Save (the toolbar's) sending only
  *  the changed fields (`lib/title-body.ts`; an emptied optional field is `null`), whose answer replaces the row and
- *  the baseline. `Revert to TMDB` is the icon on Details' State row. */
-export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
+ *  the baseline. `Revert to TMDB` is the icon on Details' State row. The promote (`55` decision 2) is `Preview →`,
+ *  the `PromoteButton`'s shape, opening the title preview of the SAVED title - `Save the title first` while the draft
+ *  differs - and it is ABSENT for a title with no TMDB id (its row's eye is): every provider source is built from one. */
+export function TitleEditor({ detail, active }: TitleEditorProps) {
   const form = useRecordForm({ initial: draftOfTitle(detail), same: sameTitleDraft });
   const { flows, saving, track } = useTitleActions();
   const unreachable = useAppStore((state) => state.titles.unreachable);
+  const openPreview = useTitlePreviewOpen();
   const manual = isManualTitle(detail);
   const series = detail.kind === "tv";
 
@@ -57,12 +67,21 @@ export function TitleEditor({ detail, active, jobs }: TitleEditorProps) {
   };
   const reason = saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : saveRequiredReason(form.draft);
   const saveVerb: SaveVerb = { onPress: () => void save(), reason: changeReason(form.dirty, reason) };
+  const promote: ToolbarVerb | undefined =
+    detail.tmdbId === undefined
+      ? undefined
+      : {
+          label: PREVIEW_ARROW_LABEL,
+          tip: PREVIEW_TITLE_TOOLTIP,
+          reason: form.dirty ? SAVE_TITLE_FIRST : undefined,
+          onPress: () => openPreview(detail.id),
+        };
 
   return (
     <TitleFrame
       series={series}
       active={active}
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={saveVerb} forward={jobs} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={saveVerb} promote={promote} />}
     >
       {(spy) => (
         <>

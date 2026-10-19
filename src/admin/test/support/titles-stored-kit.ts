@@ -43,6 +43,7 @@ export const serviceOf = (script: Partial<TitlesService>): TitlesService => ({
   listDeleted: async () => [],
   restore: UNUSED,
   listStored: EMPTY_STORED,
+  episodes: UNUSED,
   ...script,
 });
 

@@ -36,3 +36,19 @@ export const HLS_TYPE = "application/vnd.apple.mpegurl";
 export const PREVIEW_VIDEO_LABEL = "Channel preview";
 export const RETRY_LABEL = "Retry";
 export const RETRY_READING = "Reading the channels.";
+
+/* The provider and title preview windows (`55` decisions 7 and 8): the channels preview's own size and words, and the
+ *  words their status bars add. No `Retry` in either window: an iframe reports no error a re-press could fix, and the
+ *  honest way back is choosing again or reopening. */
+
+/** The workspace promote's word and arrow (`55` decision 2): the forward verb's look, the `PromoteButton`'s shape. */
+export const PREVIEW_ARROW_LABEL = "Preview →";
+
+export const PROVIDER_WINDOW_TITLE = "Provider preview";
+export const TITLE_WINDOW_TITLE = "Title preview";
+
+/** The status bar's state words, `loading` and `missing` above being the channels preview's own. */
+export const READY_WORD = "ready";
+export const FAILED_WORD = "failed";
+export const NO_TITLE_WORD = "no title";
+export const NO_SOURCE_WORD = "no source";

@@ -33,9 +33,27 @@ export interface ProviderRowView {
   readonly id: number;
   readonly order: string;
   readonly name: string;
-  readonly source: string;
+  readonly host: string;
   readonly family: string;
   readonly state: RowState;
+}
+
+/** The `host` column (`55` decision 3): the embed template's host (`https://vidsrc.sh/embed/movie/{tmdbId}` ->
+ *  `vidsrc.sh`) for an embed provider with a template; the source slug for a stream-family provider, which produces no
+ *  source until one is proven playable - and for a template that does not parse, the honest fallback. */
+export function providerHost(provider: Pick<AdminProvider, "family" | "movieTemplate" | "source">): string {
+  if (provider.family !== "embed" || provider.movieTemplate === undefined) return provider.source;
+  try {
+    return new URL(provider.movieTemplate).host;
+  } catch {
+    return provider.source;
+  }
+}
+
+/** Whether the provider preview window has anything to play (`55` decision 7): an embed-family provider with a movie
+ *  template. A stream-family provider or a template-less one has no embed, so its row draws no eye. */
+export function canPreviewProvider(provider: Pick<AdminProvider, "family" | "movieTemplate">): boolean {
+  return provider.family === "embed" && provider.movieTemplate !== undefined;
 }
 
 export function providerRow(provider: AdminProvider): ProviderRowView {
@@ -43,7 +61,7 @@ export function providerRow(provider: AdminProvider): ProviderRowView {
     id: provider.id,
     order: String(provider.order),
     name: provider.name,
-    source: provider.source,
+    host: providerHost(provider),
     family: provider.family === "embed" ? "Embed" : "Stream",
     state: enabledState(provider.is_active),
   };

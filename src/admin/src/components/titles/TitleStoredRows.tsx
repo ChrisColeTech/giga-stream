@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { isTicked } from "@giga/ui/lib/list-selection";
-import { WINDOW_MIN_ROWS } from "@giga/ui/lib/window-constants";
+import { END_ACTIONS_PX, WINDOW_MIN_ROWS } from "@giga/ui/lib/window-constants";
 import { RecordTable } from "@giga/ui/lists/RecordTable";
 import { useTitleActions } from "@/hooks/useTitleActions";
 import { useTitleRowView } from "@/hooks/useTitleRowView";
@@ -37,6 +37,7 @@ export function TitleStoredRows() {
       paging={{ total, rowAt: rowAtIndex, resetKey: storedKey(query), onNeedRange: flows.needRange }}
       idOf={idOf}
       rowView={(title) => rowView(title, isTicked(selection, title.id), (on) => tick(title, on))}
+      endPx={END_ACTIONS_PX}
     />
   );
 }

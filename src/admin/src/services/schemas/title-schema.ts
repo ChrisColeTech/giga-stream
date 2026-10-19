@@ -43,7 +43,14 @@ export const SourceSchema = z.object({
   url: z.string(),
   origin: z.string().optional(),
   order: z.number().optional(),
+  /** The nested-frame origins the provider's player really uses; present when the provider names them (`55` decision 8:
+   *  the preview's policy carries them). */
+  frameOrigins: z.array(z.string()).optional(),
 });
+
+/** The existing seasons read (`GET /api/titles/:titleId/seasons/:season`, `55` decision 8): the season's episodes, each
+ *  left `unknown` until the preview narrows the first episode's `sources`. */
+export const SeasonEpisodesSchema = z.object({ episodes: z.array(z.unknown()) });
 
 export const TitleDetailSchema = TitleRowSchema.extend({
   plot: z.string().optional(),
@@ -86,6 +93,7 @@ export type AdminTitleRow = z.infer<typeof TitleRowSchema>;
 export type AdminTitleDetail = z.infer<typeof TitleDetailSchema>;
 export type TitleEpisode = z.infer<typeof EpisodeSchema>;
 export type TitleSource = z.infer<typeof SourceSchema>;
+export type SeasonEpisodes = z.infer<typeof SeasonEpisodesSchema>;
 
 /** One page of titles as the service answers it, with how many rows could not be read. */
 export interface TitleList {

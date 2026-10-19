@@ -87,6 +87,24 @@ describe("the titles service reads", () => {
       },
     );
   });
+
+  it("reads a season's episodes on the existing seasons route, includeDisabled, with the bearer (`55` decision 8)", async () => {
+    await withBackend(
+      () =>
+        success({
+          episodes: [{ episode: 1, sources: [{ name: "S", url: "https://s.test" }] }, { episode: 2 }],
+        }),
+      async (calls) => {
+        const answer = await titles.episodes("tv-1399", 1);
+        assert.deepEqual([calls[0]?.method, calls[0]?.url], ["GET", "/api/titles/tv-1399/seasons/1?includeDisabled=true"]);
+        assert.equal(calls[0]?.headers["authorization"], "Bearer a");
+        assert.deepEqual(
+          answer.episodes.map((one) => (typeof one === "object" && one !== null && "episode" in one ? one.episode : null)),
+          [1, 2],
+        );
+      },
+    );
+  });
 });
 
 describe("the titles service writes", () => {

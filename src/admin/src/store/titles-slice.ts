@@ -13,6 +13,15 @@ import type { SliceGet, SliceSet } from "./slices/slice-host";
 
 export type TitlesStatus = "idle" | "loading" | "ready" | "failed";
 
+/** The title preview window's request value (`55` decision 8), the channels preview's own shape: the title the opener
+ *  held, a serial raised at every open and the open this window is, the remount key that keeps its body through its exit
+ *  fade. */
+export interface TitlePreview {
+  readonly titleId: string;
+  readonly serial: number;
+  readonly opened: number;
+}
+
 export interface TitleDetailState {
   readonly id: string;
   readonly status: "loading" | "ready" | "failed";
@@ -39,6 +48,7 @@ export interface TitlesState {
   readonly totalPages: number;
   readonly detail: TitleDetailState | null;
   readonly session: number;
+  readonly preview: TitlePreview | null;
 }
 
 export const NO_TITLES: TitlesState = {
@@ -52,6 +62,7 @@ export const NO_TITLES: TitlesState = {
   totalPages: 1,
   detail: null,
   session: 0,
+  preview: null,
 };
 
 export interface TitlesSlice {
@@ -87,6 +98,10 @@ export interface TitlesSlice {
   titlesDeletedSetTicked: (ids: readonly string[]) => void;
   /** A restored title leaves the list (and its tick). */
   titleDeletedRemove: (id: string) => void;
+  /** `Preview` (the row's eye, the workspace's `Preview →`): the window's request value, its serial raised. The caller
+   *  opens the overlay. */
+  titlesOpenPreview: (titleId: string) => void;
+  titlesClosePreview: () => void;
 }
 
 export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<TitlesSlice>): TitlesSlice {
@@ -152,5 +167,10 @@ export function createTitlesSlice(set: SliceSet<TitlesSlice>, get: SliceGet<Titl
       const items = withoutDeleted(now().deleted.items, [id]);
       patchDeleted({ items, ticked: pruneDeletedTicks(now().deleted.ticked, items) });
     },
+    titlesOpenPreview: (titleId) => {
+      const serial = (now().preview?.serial ?? 0) + 1;
+      patch({ preview: { titleId, serial, opened: serial } });
+    },
+    titlesClosePreview: () => patch({ preview: null }),
   };
 }

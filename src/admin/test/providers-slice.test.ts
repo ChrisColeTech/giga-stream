@@ -57,6 +57,22 @@ describe("the providers slice", () => {
   it("resets for a new session", () => {
     state().providersLoaded([provider(1)]);
     state().providersReset(4);
-    assert.deepEqual(state().providers, { status: "idle", items: [], unreachable: false, ticked: [], session: 4 });
+    assert.deepEqual(state().providers, {
+      status: "idle",
+      items: [],
+      unreachable: false,
+      ticked: [],
+      session: 4,
+      preview: null,
+    });
+  });
+
+  it("takes the preview window's request value, raising the serial at every open, and clears it on close", () => {
+    state().providersOpenPreview(7);
+    assert.deepEqual(state().providers.preview, { providerId: 7, serial: 1, opened: 1 });
+    state().providersOpenPreview(9);
+    assert.deepEqual(state().providers.preview, { providerId: 9, serial: 2, opened: 2 });
+    state().providersClosePreview();
+    assert.equal(state().providers.preview, null);
   });
 });

@@ -129,4 +129,22 @@ describe("the Stored grid", () => {
     const html = list(renderLive(createElement(TitlesPage, { active: true })));
     assert.ok(count(html, "pointer-events-none grid h-9") > 0 && !html.includes("No titles"));
   });
+
+  it("draws the preview eye beside Delete for a stored row with a TMDB id, and none without (`55` decision 4)", () => {
+    const rows = [
+      titleRowOf("movie-1", { tmdbId: 603 }),
+      titleRowOf("movie-2", { tmdbId: undefined }),
+    ];
+    state().storedPageLoaded(storedKey(START_STORED), 0, {
+      rows,
+      total: 2,
+      version: "1:1",
+      inventory: { ...INVENTORY, movie: 5532, tv: 5389 },
+    });
+    const html = list(renderLive(createElement(TitlesPage, { active: true })));
+    assert.equal(count(html, 'aria-label="Preview title"'), 1);
+    assert.equal(count(html, "lucide-eye"), 1);
+    const first = html.slice(html.indexOf('aria-label="Select T movie-1"'), html.indexOf('aria-label="Select T movie-2"'));
+    assert.ok(first.indexOf('aria-label="Preview title"') < first.indexOf(">Delete</button>"), "the eye, before the armed Delete");
+  });
 });

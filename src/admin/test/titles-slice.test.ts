@@ -68,5 +68,15 @@ describe("the titles slice", () => {
     state().titlesLoaded(START_VIEW, page([row("a")]));
     state().titlesReset(3);
     assert.deepEqual([state().titles.items, state().titles.session, state().titles.view], [[], 3, START_VIEW]);
+    assert.equal(state().titles.preview, null);
+  });
+
+  it("takes the preview window's request value, raising the serial at every open, and clears it on close", () => {
+    state().titlesOpenPreview("movie-1");
+    assert.deepEqual(state().titles.preview, { titleId: "movie-1", serial: 1, opened: 1 });
+    state().titlesOpenPreview("tv-2");
+    assert.deepEqual(state().titles.preview, { titleId: "tv-2", serial: 2, opened: 2 });
+    state().titlesClosePreview();
+    assert.equal(state().titles.preview, null);
   });
 });

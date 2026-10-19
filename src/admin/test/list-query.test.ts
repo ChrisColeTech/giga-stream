@@ -28,7 +28,7 @@ const provider = (id: number, name: string, family = "Stream", enabled = true): 
   id,
   order: String(id),
   name,
-  source: `${name.toLowerCase()}.example`,
+  host: `${name.toLowerCase()}.example`,
   family,
   state: enabledState(enabled),
 });
