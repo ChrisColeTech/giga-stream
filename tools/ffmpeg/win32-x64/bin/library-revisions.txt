@@ -1,0 +1,6 @@
+mingw-w64-x86_64-x264 0.164.r3161.a354f11-3
+mingw-w64-x86_64-x265 4.1-2
+mingw-w64-x86_64-dav1d 1.5.1-1
+mingw-w64-x86_64-libvpx 1.15.1-4
+mingw-w64-x86_64-rubberband 3.3.0-1
+mingw-w64-x86_64-vid.stab 1.1.1-1

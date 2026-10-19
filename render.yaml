@@ -30,7 +30,7 @@ services:
     # GitHub Actions deploys main only after every program passes verification.
     branch: main
     numInstances: 1
-    autoDeploy: false # GitHub Actions deploys the pair after every check passes.
+    autoDeployTrigger: off # GitHub Actions deploys the pair after every check passes.
     healthCheckPath: /healthz
     buildCommand: bash ./scripts/build.sh
     startCommand: bash ./scripts/start.sh

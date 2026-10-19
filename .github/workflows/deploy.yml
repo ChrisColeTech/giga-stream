@@ -98,6 +98,8 @@ jobs:
         working-directory: src/backend
       - run: npm run typecheck
         working-directory: src/backend
+      - name: Verify the committed Linux FFmpeg payload
+        run: bash scripts/ffmpeg/verify-ffmpeg-linux.sh
       - run: npm test
         working-directory: src/backend
 
@@ -162,6 +164,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Pin the Render service to main
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          : "${RENDER_API_KEY:?RENDER_API_KEY repo secret is not set}"
+          : "${RENDER_SERVICE_ID:?RENDER_SERVICE_ID repo secret is not set}"
+          code=$(curl -sS -o "$RUNNER_TEMP/service.json" -w '%{http_code}' \
+            -X PATCH "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"branch":"main","autoDeployTrigger":"off"}')
+          echo "PATCH /v1/services/$RENDER_SERVICE_ID -> HTTP $code"
+          [ "$code" = "200" ] || { cat "$RUNNER_TEMP/service.json"; exit 1; }
       - name: Trigger the Render deploy
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -174,7 +191,10 @@ jobs:
             -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{"clearCache": "clear"}')
+            -d "{\"clearCache\":\"clear\",\"commitId\":\"$GITHUB_SHA\"}")
           echo "POST /v1/services/$RENDER_SERVICE_ID/deploys -> HTTP $code"
           cat "$RUNNER_TEMP/deploy.json"
-          [ "$code" = "201" ] || { echo "::error::Render refused the deploy trigger (HTTP $code)"; exit 1; }
+          [[ "$code" = "201" || "$code" = "202" ]] || {
+            echo "::error::Render refused the deploy trigger (HTTP $code)"
+            exit 1
+          }

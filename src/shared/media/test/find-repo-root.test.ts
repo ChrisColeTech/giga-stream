@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
 
+import { TOOLS_BIN_DIR } from "../src/constants/media.ts";
 import { findRepoRoot, locateTool } from "../src/ffmpeg/locate-tool.ts";
 
 const sandbox = mkdtempSync(path.join(tmpdir(), "giga-locator-"));
@@ -32,15 +33,15 @@ test("a git worktree resolves to its own root, and the tools of the main checkou
   const main = makeRepo("checkout");
   const tree = makeRepo("worktree");
   writeFileSync(path.join(tree, ".git"), `gitdir: ${path.join(main, ".git", "worktrees", "tree")}\n`);
-  mkdirSync(path.join(main, "tools", "ffmpeg", "bin"), { recursive: true });
-  const wanted = path.join(main, "tools", "ffmpeg", "bin", process.platform === "win32" ? "ffprobe.exe" : "ffprobe");
+  mkdirSync(path.join(main, ...TOOLS_BIN_DIR), { recursive: true });
+  const wanted = path.join(main, ...TOOLS_BIN_DIR, process.platform === "win32" ? "ffprobe.exe" : "ffprobe");
   assert.equal(findRepoRoot(path.join(tree, "src", "shared", "media", "dist")), tree);
   assert.equal(locateTool("ffprobe", { env: {}, root: tree, exists: (file) => file === wanted }), wanted);
 });
 
-test("a folder holding tools/ffmpeg/bin counts as a root when no package.json names the repository", () => {
+test("a folder holding the platform tools counts as a root when no package.json names the repository", () => {
   const root = path.join(sandbox, "bare");
-  mkdirSync(path.join(root, "tools", "ffmpeg", "bin"), { recursive: true });
+  mkdirSync(path.join(root, ...TOOLS_BIN_DIR), { recursive: true });
   mkdirSync(path.join(root, "deep", "er"), { recursive: true });
   assert.equal(findRepoRoot(path.join(root, "deep", "er")), root);
 });

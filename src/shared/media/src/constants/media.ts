@@ -9,8 +9,11 @@ export const SCAN_CONCURRENCY = 2;
 /** How much of a tool's stderr is kept for an error message. */
 export const STDERR_TAIL_CHARS = 4000;
 
+/** The checked-in tool payload for this operating system and CPU architecture. */
+export const TOOLS_PLATFORM = `${process.platform}-${process.arch}`;
+
 /** Where the bundled tools live, under the repository root (docs/09). */
-export const TOOLS_BIN_DIR: readonly string[] = ["tools", "ffmpeg", "bin"];
+export const TOOLS_BIN_DIR: readonly string[] = ["tools", "ffmpeg", TOOLS_PLATFORM, "bin"];
 
 /** Overrides the tools folder, for a build kept somewhere else. */
 export const TOOLS_DIR_ENV = "GIGA_STREAM_FFMPEG_DIR";

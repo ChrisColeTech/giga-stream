@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -9,6 +9,7 @@ import { after } from "node:test";
 
 import { buildApp } from "../src/build-app.js";
 import type { FolderScanner } from "../src/services/scan-service.js";
+import { makeSeedMediaPaths } from "./backend-media-paths.js";
 import { fakeScan } from "./fake-scan.js";
 
 const PROGRAM_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -97,12 +98,7 @@ export interface RealBackend {
 export async function startBackend(): Promise<RealBackend> {
   const port = await freePort();
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-fixture-"));
-  const fixtureDir = path.join(dataDir, "fixtures");
-  const liveDir = path.join(fixtureDir, "live");
-  mkdirSync(liveDir, { recursive: true });
-  for (const kind of ["news", "sports", "music", "kids"]) {
-    for (let part = 1; part <= 3; part += 1) writeFileSync(path.join(liveDir, `${kind}-${part}.mp4`), "");
-  }
+  const fixtureDir = makeSeedMediaPaths(dataDir);
   const child = spawn(
     process.execPath,
     [path.join(BACKEND_ROOT, "node_modules", "tsx", "dist", "cli.mjs"), "src/server.ts"],

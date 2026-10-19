@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import { ensureFixtures } from "../../../../scripts/fixtures/make-fixtures.mjs";
+import { TOOLS_BIN_DIR } from "../src/constants/media.ts";
 import { locateTool, REPO_ROOT } from "../src/ffmpeg/locate-tool.ts";
 import { runTool, ToolError } from "../src/ffmpeg/run-tool.ts";
 import { factsFromProbe } from "../src/probe/facts-from-probe.ts";
@@ -15,7 +16,7 @@ before(async () => {
 
 test("the bundled tools are found in the repository; the override folder wins; a missing one names where it looked", () => {
   for (const tool of ["ffmpeg", "ffprobe"] as const) {
-    assert.ok(locateTool(tool).startsWith(path.join(REPO_ROOT, "tools", "ffmpeg", "bin")), tool);
+    assert.ok(locateTool(tool).startsWith(path.join(REPO_ROOT, ...TOOLS_BIN_DIR)), tool);
   }
   const elsewhere = path.resolve("X:/ff");
   assert.equal(

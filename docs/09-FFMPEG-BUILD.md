@@ -1,13 +1,13 @@
 # 09 - The FFmpeg build
 
-**Status: verified 2026-10-16** (the verify script's offline checks all pass; the binary's own build
-configuration matches section 2). Giga Stream builds its own `ffmpeg.exe` and `ffprobe.exe` (FFmpeg
-9.0.1) into `tools/ffmpeg/bin` (gitignored). It is not a downloaded general-purpose build: it starts
-from GigaCut Rust's component set and adds exactly what streaming needs, following the method of
+**Status: verified 2026-10-19.** Giga Stream versions its app-specific FFmpeg 9.0.1 runtime payloads in
+`tools/ffmpeg/win32-x64/bin` and `tools/ffmpeg/linux-x64/bin`. They are not downloaded general-purpose
+builds. Windows starts from GigaCut Rust's component set and adds exactly what streaming needs, following the method of
 `D:\Projects\giga-extension\docs\05-FFMPEG-BUILD.md` (enable only what the product uses; the configure
-log beside the binaries is the record).
+log beside each payload is the record). Linux is built inside Debian 12, Render's native runtime.
 
-Build script: `scripts/ffmpeg/build-ffmpeg.sh`. Verify script: `scripts/ffmpeg/verify-ffmpeg.ps1`.
+Windows uses `scripts/ffmpeg/build-ffmpeg.sh` and `verify-ffmpeg.ps1`. Linux uses
+`build-linux-wsl.sh`, `build-ffmpeg-linux.sh` and `verify-ffmpeg-linux.sh`.
 
 ## 1. What uses it
 
@@ -39,7 +39,8 @@ Everything else stays off: no other protocols, devices or external libraries.
 
 ### 2.1 Licensing
 
-`--enable-gpl` with x264 and x265: the binaries are **GPL version 2 or later**, as GigaCut's are.
+The Windows build uses `--enable-gpl` with x264 and x265 and is **GPL version 2 or later**, as GigaCut's is.
+The Linux build uses x264 and OpenSSL with `--enable-version3` and is **GPL version 3 or later**.
 They are separate executables the fileserver spawns. Shipping them in the packaged app needs the GPL
 notice and a source offer (the FFmpeg 9.0.1 tarball and this script). An LGPL build would drop x264
 and x265, and with them H.264 and HEVC encoding; only the test server encodes, so the shipped product
@@ -53,7 +54,7 @@ could use an LGPL decode-only variant if the owner prefers.
 - Static dependencies under `D:\ffbuild\deps` (`lib-static/` with `libx264.a`, `libx265.a`,
   `libdav1d.a`, `libvpx.a`, `librubberband.a`, `libfftw3.a`, `libsamplerate.a`, `libz.a`,
   `libwinpthread.a`; `lib/pkgconfig/` with `x265.pc`, `vidstab.pc`, `ffnvcodec.pc`; the NVENC
-  headers). Their package revisions are written to `tools/ffmpeg/bin/library-revisions.txt`.
+  headers). Their package revisions are written to `tools/ffmpeg/win32-x64/bin/library-revisions.txt`.
 - The FFmpeg 9.0.1 source, unpacked (default `D:\ffbuild-staging\src\ffmpeg-9.0.1`; the tarball is
   `D:\ffbuild\ffmpeg-9.0.1.tar.xz`).
 
@@ -65,14 +66,31 @@ C:\msys64\usr\bin\bash.exe -lc "bash /d/Projects/giga-stream/scripts/ffmpeg/buil
 ```
 
 Environment overrides: `SRC`, `DEPS`, `STAGE` (scratch, default `D:\ffbuild-stream`), `OUT` (default
-`tools/ffmpeg/bin`), `JOBS`. The script writes `configure.log`, `make.log` and `install.log` to
+`tools/ffmpeg/win32-x64/bin`), `JOBS`. The script writes `configure.log`, `make.log` and `install.log` to
 `STAGE`, and copies the programs, their DLLs, `configure.log` and `library-revisions.txt` to `OUT`.
+
+### 3.3 Linux x64 from WSL
+
+WSL creates a clean Debian 12 chroot, installs its recorded compiler and static dependency packages,
+and builds there. x264, OpenSSL and zlib are linked statically; glibc and libm remain dynamic so DNS and
+NSS continue to follow the host. The accepted binaries require no symbol newer than `GLIBC_2.35`.
+
+```bash
+cd /mnt/d/Projects/giga-stream
+bash scripts/ffmpeg/build-linux-wsl.sh
+bash scripts/ffmpeg/verify-ffmpeg-linux.sh
+```
+
+The source archive defaults to `/mnt/d/ffbuild/ffmpeg-9.0.1.tar.xz`. `ROOT`, `SOURCE_TAR`, `SRC`,
+`STAGE`, `OUT` and `JOBS` are the supported overrides. The payload records source and binary checksums,
+the configure output and exact Debian package revisions.
 
 ## 4. Verifying a build
 
 ```powershell
 pwsh scripts/ffmpeg/verify-ffmpeg.ps1                     # no network
 pwsh scripts/ffmpeg/verify-ffmpeg.ps1 -HttpsUrl <url>     # adds a real HTTPS/HLS probe
+bash scripts/ffmpeg/verify-ffmpeg-linux.sh                # Debian-compatible payload
 ```
 
 One line per check: the version; the required protocols and components; a test MP4 (H.264 + AAC); an
@@ -86,7 +104,7 @@ optional HTTPS probe. The exit code is 0 only when all pass.
 These are the encodes the verify script runs, and the shape the test server uses.
 
 ```powershell
-$ff = 'tools\ffmpeg\bin\ffmpeg.exe'
+$ff = 'tools\ffmpeg\win32-x64\bin\ffmpeg.exe'
 # A Range-servable MP4
 & $ff -f lavfi -i testsrc2=size=1280x720:rate=30 -f lavfi -i sine=frequency=440:sample_rate=48000 `
   -t 20 -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart video.mp4
@@ -116,4 +134,5 @@ Two facts about ffmpeg's HLS master output that a reader of it must handle:
 | Date | Change |
 |---|---|
 | 2026-10-15 | First Giga Stream build: GigaCut's 9.0.1 set plus network (Schannel), the HLS, MPEG-TS, WebVTT and `pcm_f32le` muxers, the `pcm_f32le`, `webvtt` and `subrip` encoders and the `thumbnail` filter. The first attempt named the muxer `f32le` (configure ignores unknown names) and listed a nonexistent `hls` protocol; both corrected. Verified offline, and against the public Mux test stream (`https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`): ffprobe read every variant (H.264 + AAC) and a 2 s remote `f32le` decode gave 766,680 bytes (768,000 less AAC priming). |
-| 2026-10-16 | Re-verified after the restart: every offline check passes and `ffmpeg -version`'s configuration matches section 2. The binaries are kept in the archive's `tools/` and restored to `tools/ffmpeg/bin` in phase 0 of `08`. |
+| 2026-10-16 | Re-verified after the restart: every offline check passes and `ffmpeg -version`'s configuration matches section 2. |
+| 2026-10-19 | Versioned platform payloads. Windows moved to `win32-x64`; Linux built in Debian 12 with static x264/OpenSSL/zlib, only glibc and libm dynamic, maximum `GLIBC_2.35`. Both verifiers pass. |

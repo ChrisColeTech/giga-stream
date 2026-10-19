@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { TOOLS_BIN_DIR } from "../../shared/media/dist/constants/media.js";
 import { locateTool, REPO_ROOT } from "../../shared/media/dist/ffmpeg/locate-tool.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -17,7 +18,7 @@ test("the built locate-tool resolves the repository root", () => {
 
 test("the built locate-tool finds ffprobe in the tools folder without requiring a local binary", () => {
   const executable = process.platform === "win32" ? "ffprobe.exe" : "ffprobe";
-  const expected = path.join(REPO_ROOT, "tools", "ffmpeg", "bin", executable);
+  const expected = path.join(REPO_ROOT, ...TOOLS_BIN_DIR, executable);
   const found = locateTool("ffprobe", { env: {}, exists: (candidate) => fold(candidate) === fold(expected) });
   assert.equal(fold(found), fold(expected));
 });

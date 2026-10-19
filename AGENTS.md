@@ -43,8 +43,8 @@ person's changes.
 - `src/shared/<domain>` libraries any program or tool may import (`docs/01` section 4.2); not programs.
   `src/shared/media` finds and runs the bundled FFmpeg and scans folders for video files.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
-- `scripts/ffmpeg` the FFmpeg build and verifier (`docs/09`); the binaries are in `tools/ffmpeg/bin`
-  (gitignored).
+- `scripts/ffmpeg` the FFmpeg builds and verifiers (`docs/09`); app-specific Windows and Linux x64 payloads are versioned
+  under `tools/ffmpeg/<platform>/bin`.
 - The programs never import each other's source; they talk over HTTP. The interface has no application socket.
 
 ## Commands

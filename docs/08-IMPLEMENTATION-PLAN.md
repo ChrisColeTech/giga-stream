@@ -40,7 +40,7 @@ TMDB-shaped answers, never recorded ones (`11` section 6).
 | Feature | Delivers | Checked by |
 |---|---|---|
 | Repository | `git init`, `.gitignore`, `.gitattributes`, `.nvmrc` (24.11.1), root `package.json`, `AGENTS.md` | the base commit |
-| FFmpeg | `tools/ffmpeg/bin` restored (`09`) | `scripts/ffmpeg/verify-ffmpeg.ps1` passes |
+| FFmpeg | Both platform payloads versioned under `tools/ffmpeg` (`09`) | Both platform verifiers pass |
 | Shared media library | `src/shared/media` (`01` section 4.2): find and run the bundled FFmpeg and ffprobe, read a file's facts, find the video files in a folder | its tests pass; the live server and the fixture script use it |
 | Fixture files | `scripts/fixtures/make-fixtures.mjs` (`10` section 2.1): three programmes per test channel and the news captions, cached per machine | a fresh cache is made and each file probes as H.264 + AAC at its listed length |
 | Live engine | `src/backend/src/live` (`10`, `26`; formerly the program `src/live-server`, merged and deleted 2026-10-17): channels as playlists of real videos, live HLS in loop and encode mode, in the backend's `node:sqlite` store, channel CRUD live without a restart, faults, the four seeded test channels | built 2026-10-16 as a program and merged into the backend 2026-10-17: the engine's tests pass in `src/backend/test` (`live-*.test.ts`) |

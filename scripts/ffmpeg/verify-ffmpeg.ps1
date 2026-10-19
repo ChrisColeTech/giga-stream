@@ -8,7 +8,7 @@
   No network unless -HttpsUrl names an HLS or media URL to probe over https.
 #>
 param(
-  [string]$Bin = (Join-Path $PSScriptRoot '..\..\tools\ffmpeg\bin'),
+  [string]$Bin = (Join-Path $PSScriptRoot '..\..\tools\ffmpeg\win32-x64\bin'),
   [string]$HttpsUrl = ''
 )
 $ErrorActionPreference = 'Stop'

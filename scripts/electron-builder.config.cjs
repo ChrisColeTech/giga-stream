@@ -10,7 +10,7 @@
  *   app root, which packaged is resources/app.asar.
  * - The shared media library goes to resources/shared/media: the fileserver imports
  *   `../../../shared/media/dist` from app.asar/dist/<folder>. Its package.json goes too, for `type: module`.
- * - FFmpeg goes beside the exe in tools/ffmpeg/bin: locate-tool.ts resolves the repository root five
+ * - FFmpeg goes beside the exe in tools/ffmpeg/win32-x64/bin: locate-tool.ts resolves the repository root five
  *   folders above itself, which packaged is the install folder.
  *
  * The packaged app runs as production (src/app/production-env.ts), on its own ports (docs/03 section 1).
@@ -33,7 +33,10 @@ module.exports = {
     { from: "src/shared/media/dist", to: "shared/media/dist" },
     { from: "src/shared/media/package.json", to: "shared/media/package.json" },
   ],
-  extraFiles: [{ from: "tools/ffmpeg/bin", to: "tools/ffmpeg/bin", filter: ["*.exe", "*.dll"] }],
+  extraFiles: [
+    { from: "tools/ffmpeg/win32-x64/bin", to: "tools/ffmpeg/win32-x64/bin", filter: ["*.exe", "*.dll"] },
+    { from: "tools/ffmpeg", to: "licenses/ffmpeg", filter: ["COPYING.*", "SOURCE.md"] },
+  ],
   // No native modules (node:sqlite is built into Electron's Node), so nothing to rebuild.
   npmRebuild: false,
   win: {

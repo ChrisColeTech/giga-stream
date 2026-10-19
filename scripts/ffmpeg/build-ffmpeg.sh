@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Giga Stream's ffmpeg 9.0.1 into tools/ffmpeg/bin (docs/09-FFMPEG-BUILD.md).
+# Build Giga Stream's Windows ffmpeg 9.0.1 into tools/ffmpeg/win32-x64/bin (docs/09-FFMPEG-BUILD.md).
 #
 # Start from GigaCut's component set (D:\Projects\giga-cut-rust\tools\ffmpeg\bin\configure.log)
 # and add exactly what streaming and its fixtures need:
@@ -20,7 +20,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="${SRC:-/d/ffbuild-staging/src/ffmpeg-9.0.1}"
 DEPS="${DEPS:-/d/ffbuild/deps}"
 STAGE="${STAGE:-/d/ffbuild-stream}"
-OUT="${OUT:-$REPO/tools/ffmpeg/bin}"
+OUT="${OUT:-$REPO/tools/ffmpeg/win32-x64/bin}"
 JOBS="${JOBS:-16}"
 
 [[ -x "$SRC/configure" ]] || { echo "ffmpeg source not found at $SRC" >&2; exit 1; }

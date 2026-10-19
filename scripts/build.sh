@@ -12,6 +12,13 @@ cd "$(dirname "$0")/.."
 # servers, so the download is skipped — several hundred MB saved per deploy.
 export ELECTRON_SKIP_BINARY_DOWNLOAD=1
 
+for tool in ffmpeg ffprobe; do
+  test -x "tools/ffmpeg/linux-x64/bin/$tool" || {
+    echo "missing executable tools/ffmpeg/linux-x64/bin/$tool" >&2
+    exit 1
+  }
+done
+
 # Each program owns its package.json and lockfile (no root workspaces, docs/01).
 install_and_build() {
   local program="$1" script="$2"

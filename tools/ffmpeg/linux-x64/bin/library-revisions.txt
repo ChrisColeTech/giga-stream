@@ -1,0 +1,8 @@
+gcc=4:12.2.0-3
+libc6-dev=2.36-9+deb12u14
+libssl-dev=3.0.20-1~deb12u2
+libx264-dev=2:0.164.3095+gitbaee400-3
+make=4.3-4.1
+nasm=2.16.01-1
+pkg-config=1.8.1-1
+zlib1g-dev=1:1.2.13.dfsg-1

@@ -22,7 +22,7 @@ function isRepoRoot(folder: string): boolean {
 
 /**
  * The repository root, found by walking up from `start` to the first folder that is one: its `package.json` is
- * named `giga-stream`, or it holds `tools/ffmpeg/bin`. Independent of how deep the calling module sits, so the
+ * named `giga-stream`, or it holds this platform's FFmpeg payload. Independent of how deep the calling module sits, so the
  * source file, a built `dist/ffmpeg/` file and a bundler-hoisted chunk at the root of `dist` all agree.
  * Falls back to five folders above `start` (this file's depth in source) when nothing marks a root.
  */
@@ -56,7 +56,7 @@ function mainCheckoutOf(root: string): string | null {
 }
 
 /**
- * The one path to a bundled tool (docs/09): the override folder, else `<repo>/tools/ffmpeg/bin`, else the main
+ * The one path to a bundled tool (docs/09): the override folder, else the repository's platform payload, else the main
  * checkout's from a worktree. Never the PATH: another FFmpeg would have other capabilities. Throws, naming
  * every place tried, when it is nowhere.
  */

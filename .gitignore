@@ -26,8 +26,8 @@ src/backend/data/
 # The owner's own reference captures, kept local
 docs/reference/
 
-# Bundled helpers built locally (docs/09: scripts/ffmpeg/build-ffmpeg.sh -> tools/ffmpeg/bin)
-tools/
+# FFmpeg build scratch belongs outside the repository; the app-specific runtime binaries are versioned.
+tools/ffmpeg/**/build/
 
 
 # Provider proof-of-concept run results and screenshots (docs/14)
@@ -35,6 +35,7 @@ src/mockup/results/
 
 # Logs, editor, OS
 *.log
+!tools/ffmpeg/**/configure.log
 .vscode/
 .DS_Store
 Thumbs.db

@@ -5,3 +5,6 @@
 
 # Shell scripts stay LF even on Windows checkouts (the FFmpeg build runs under MSYS2).
 *.sh    text eol=lf
+
+# App-specific FFmpeg runtime payloads are binary release inputs, not text.
+tools/ffmpeg/** -text
