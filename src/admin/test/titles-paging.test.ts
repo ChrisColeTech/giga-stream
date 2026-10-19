@@ -30,6 +30,7 @@ function rig(totalPages: number) {
     listDeleted: async () => [],
     restore: NEVER,
     listStored: EMPTY_STORED,
+    episodes: NEVER,
   };
   const audit = { reload: async () => undefined };
   return { flows: createTitleFlows({ service, store: () => useAppStore.getState(), audit }), pages };

@@ -124,16 +124,18 @@ describe("a title's workspace", () => {
   };
 
   it("wears shimmer lines in its groups until the detail answers, with Discard waiting", () => {
-    const html = open(row("tv-1", { kind: "tv" }));
+    const html = open(row("tv-1", { kind: "tv", tmdbId: 1399 }));
     assert.ok(html.includes("animate-skel-shimmer") && html.includes(">Seasons<"));
     assert.ok(html.includes('aria-label="Discard changes. Loading."') && !html.includes('aria-label="Title"'));
-    assert.ok(at(html, "Discard changes") < at(html, "Jobs →"), "the page toolbar is drawn while the detail loads");
+    assert.ok(at(html, "Discard changes") < at(html, "overflow-y-auto"), "the page toolbar is drawn while the detail loads");
+    assert.ok(!html.includes("Jobs →"), "the tab hop is gone (`55` decision 2)");
+    assert.ok(!html.includes("Preview →"), "no promote over a skeleton: the detail is not known yet");
     assert.ok(!html.includes("Save details") && !html.includes(">Save<"), "no commit over a skeleton");
   });
 
   it("a movie: Details, Plot, Images, no Seasons and no Sources; every editable field in order", () => {
     const sources = [{ name: "VidSrc", url: "https://v.test/603" }];
-    const html = open(row("movie-1"), { plot: "P", runtimeMs: 7_200_000, sources });
+    const html = open(row("movie-1", { tmdbId: 603 }), { plot: "P", runtimeMs: 7_200_000, sources });
     assert.ok(html.includes('aria-label="Title sections"') && !html.includes(">Seasons<"));
     assert.ok(!html.includes(">Sources<") && !html.includes("tw-sources") && !html.includes("v.test/603"));
     assert.ok(at(html, ">Details<") < at(html, ">Plot<") && at(html, ">Plot<") < at(html, ">Images<"));
@@ -142,17 +144,25 @@ describe("a title's workspace", () => {
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
-    assert.ok(html.includes('value="120"') && at(html, "Jobs →") < at(html, 'id="tw-details"'));
+    assert.ok(html.includes('value="120"') && at(html, "Preview →") < at(html, 'id="tw-details"'));
     assert.ok(html.includes('aria-label="Save. Nothing has changed."'), "the commit is the toolbar's Save");
     assert.ok(!html.includes("Save details"), "no trailing save after Images");
+    assert.ok(!html.includes("Jobs →"), "the promote replaced the tab hop (`55` decision 2)");
     const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="tw-details"'));
     assert.ok(
       at(bar, "Discard changes") < at(bar, "min-w-0 flex-1") &&
         at(bar, "min-w-0 flex-1") < at(bar, ">Save<") &&
-        at(bar, ">Save<") < at(bar, "Jobs →"),
-      "Discard left; Save, then the forward verb rightmost",
+        at(bar, ">Save<") < at(bar, "Preview →"),
+      "Discard left; Save, then the promote rightmost (`55` decision 2)",
     );
+    const promote = html.match(/<button[^>]*title="Preview title"[^>]*>Preview →<\/button>/)?.[0] ?? "";
+    assert.ok(promote.length > 0 && !promote.includes('disabled=""'), "the promote is the PromoteButton's shape");
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
+  });
+
+  it("draws no promote for a title without a TMDB id (`55` decision 4)", () => {
+    const html = open(row("movie-none"), { plot: "P" });
+    assert.ok(!html.includes("Preview →"), "no eye and no promote: no provider source without a TMDB id");
   });
 
   it("draws the Plot and the Cast as text areas, 4 rows and 3, with their own aria-labels", () => {

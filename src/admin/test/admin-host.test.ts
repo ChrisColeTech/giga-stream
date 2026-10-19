@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { chooseFolder, hostAvailable, setOverlay } from "@/services/admin-host";
+import { chooseFolder, clearPlayerPolicy, hostAvailable, setOverlay, setPlayerPolicy } from "@/services/admin-host";
 
 const OVERLAY = { color: "#111", symbolColor: "#999", height: 39 };
+const POLICY = { origin: "https://vidsrc.sh", frameOrigins: ["https://vidsrc.sh", "https://cdn.v.test"] };
 
 /** Puts a fake `window` in place for one test; `afterEach` takes it away. */
 function install(host: unknown): void {
@@ -24,6 +25,11 @@ describe("in a plain browser or a test, where there is no adminHost", () => {
     install(undefined);
     assert.equal(hostAvailable(), false);
     assert.equal(await chooseFolder(), null);
+  });
+
+  it("sets and clears no player policy", () => {
+    assert.equal(setPlayerPolicy(POLICY), false);
+    clearPlayerPolicy();
   });
 });
 
@@ -57,5 +63,35 @@ describe("in the backend's own window", () => {
     install({});
     assert.equal(hostAvailable(), false);
     assert.equal(await setOverlay(OVERLAY), false);
+  });
+});
+
+describe("in the backend's own window, the preview's player policy", () => {
+  it("hands the policy's exact origins to the preload's setPlayerPolicy, and clears it the same way", async () => {
+    const seen: unknown[] = [];
+    const cleared: boolean[] = [];
+    install({
+      chooseFolder: async () => null,
+      setOverlay: async () => true,
+      setPlayerPolicy: async (policy: unknown) => {
+        seen.push(policy);
+      },
+      clearPlayerPolicy: async () => {
+        cleared.push(true);
+      },
+    });
+    assert.equal(setPlayerPolicy(POLICY), true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(seen, [{ origin: "https://vidsrc.sh", frameOrigins: ["https://vidsrc.sh", "https://cdn.v.test"] }]);
+    clearPlayerPolicy();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(cleared, [true]);
+  });
+
+  it("says false and clears nothing when the preload lacks the policy calls", async () => {
+    const seen: unknown[] = [];
+    install({ chooseFolder: async () => null, setOverlay: async () => true, setPlayerPolicy: seen.push });
+    assert.equal(setPlayerPolicy(POLICY), false);
+    clearPlayerPolicy();
   });
 });

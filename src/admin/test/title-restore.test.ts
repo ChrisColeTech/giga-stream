@@ -45,6 +45,7 @@ function rig(script: Partial<TitlesService> = {}) {
     listDeleted: async () => (calls.push("listDeleted"), [gone("movie-603", "The Matrix")]),
     restore: async (id) => (calls.push(`restore:${id}`), { id }),
     listStored: EMPTY_STORED,
+    episodes: async () => ({ episodes: [] }),
     ...script,
   };
   const audit = { reload: async () => undefined };
