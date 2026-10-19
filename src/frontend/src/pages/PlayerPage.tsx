@@ -6,9 +6,11 @@ import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
 import { changeFavourite, changeMembership, removeWatchEntry } from "@/components/library/library-service";
 import { usePlayerData } from "@/hooks/usePlayerData";
+import { useEpisodeAdjacency } from "@/hooks/useEpisodeAdjacency";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { usePlayerResume } from "@/hooks/usePlayerResume";
 import { usePlayerSources } from "@/hooks/usePlayerSources";
+import { useSettledEpisodeSwitch } from "@/hooks/useSettledEpisodeSwitch";
 import { collectionRow } from "@/lib/collections-model";
 import { itemKey } from "@/lib/library-marks";
 import type { PlayerCommands } from "@/lib/player-commands";
@@ -25,7 +27,6 @@ import { resumeOf, viewOf } from "@/lib/player-view";
 import { withWatchMark } from "@/lib/watch-marks";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem } from "@/types/library";
-
 export function PlayerPage({ active }: { active: boolean }) {
   const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
   const [retry, setRetry] = useState(0); const [dataRetry, setDataRetry] = useState(0);
@@ -59,10 +60,16 @@ export function PlayerPage({ active }: { active: boolean }) {
     stage: media.stage,
   });
   const playing = playingEpisodeOf(session);
+  const adjacency = useEpisodeAdjacency(view, data, playing);
   const sources = usePlayerSources(session, data);
   const activeSource = selectedPlayerSource(sources, defaultSource);
   const stageView = activeSource?.id === media.activeSourceId ? view : { ...view, stage: { kind: "loading" } as const };
   const playbackKey = playerPlaybackKey(session);
+  const episodeSwitch = useSettledEpisodeSwitch(navigation.current, progress, playbackKey, (target) => {
+    dispatch({ type: "episode", season: target.season, episode: target.episode });
+    setPaused(true);
+    setUserInitiated(true);
+  });
   const liveResume = resumeOf(view);
   const resume = usePlayerResume(playbackKey, liveResume);
   const hostedSource = resume.waiting ? undefined : activeSource;
@@ -75,7 +82,6 @@ export function PlayerPage({ active }: { active: boolean }) {
   const noSourceReason = sourceFailureReason(session.current?.kind === "local",
     data.localInfo?.error?.message ?? (data.detail?.fromCache === true ? BACKEND_UNREACHABLE_REASON : undefined));
   const runtimeMs = session.current?.kind === "tv" ? data.playingEpisode?.runtimeMs : data.detail?.runtimeMs;
-
   const openItem = async (item: LibraryItem) => {
     const generation = navigation.current.next();
     if (isOpen(session, item.ref)) return;
@@ -89,7 +95,6 @@ export function PlayerPage({ active }: { active: boolean }) {
     setPaused(true);
     setUserInitiated(true);
   };
-
   const playRequest = useAppStore((state) => state.playRequest);
   useEffect(() => {
     if (playRequest === null || playRequest.serial === handled.current) return;
@@ -97,7 +102,6 @@ export function PlayerPage({ active }: { active: boolean }) {
     const item = libraryItems.find((row) => row.ref.kind === playRequest.ref.kind && row.ref.id === playRequest.ref.id);
     void openItem(item ?? fallbackPlayerItem(playRequest.ref));
   }, [playRequest, libraryItems]);
-
   useEffect(() => {
     if (session.current?.kind === "tv" && session.season === undefined && data.detail?.seasons?.[0] !== undefined) {
       dispatch({ type: "season", season: data.detail.seasons[0].season });
@@ -133,10 +137,7 @@ export function PlayerPage({ active }: { active: boolean }) {
       setSources([], null);
     });
   };
-  const chooseEpisode = (season: number, number: number) => {
-    dispatch({ type: "episode", season, episode: number });
-    setUserInitiated(true);
-  };
+  const chooseEpisode = (season: number, episode: number) => episodeSwitch.switchEpisode({ season, episode });
   const commands: PlayerCommands = {
     retry: () => {
       void progress.checkpoint();
@@ -181,7 +182,8 @@ export function PlayerPage({ active }: { active: boolean }) {
       }} onPlaying={progress.playing} onBoundary={() => void progress.checkpoint()}
       onPausedChange={setPaused} />}
     right={<PlayerInspector view={view} commands={commands} paused={paused}
-      sources={sources} activeId={activeSource?.id ?? ""} onSelect={(id) => {
+      sources={sources} activeId={activeSource?.id ?? ""} activeSource={activeSource}
+      adjacency={adjacency} switchingEpisode={episodeSwitch.switching} onEpisode={chooseEpisode} onSelect={(id) => {
         void progress.flush();
         resume.hold();
         setSource(id);
