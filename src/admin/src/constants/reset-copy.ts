@@ -24,7 +24,7 @@ export const RESET_WAITING_REASON = "Waiting for the answer.";
  *  usernames are accounts). The backend shows a stand-in question to an account that has none. */
 export const NO_QUESTION_REASON =
   "If no security question was ever set for this account, it cannot be reset here: a signed-in admin must set one " +
-  "first, under Settings > Account.";
+  "first, in the Accounts workspace.";
 
 export const ANSWER_TIP = "Answers are not case sensitive; extra spaces do not count.";
 

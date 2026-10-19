@@ -33,11 +33,12 @@ describe("the service modules", () => {
     }
   });
 
-  it("carry each tab's own extras beside them: channels rebuild and revert; jobs run", () => {
+  it("carry each tab's own extras beside them: channels rebuild and revert; jobs run; accounts save a question", () => {
     for (const method of ["rebuild", "revert"] as const) {
       assert.equal(typeof channels[method], "function", method);
     }
     assert.equal(typeof jobs.run, "function");
+    assert.equal(typeof accounts.saveQuestion, "function");
   });
 
   it("refuse, in every method of a service not wired yet (account state, health), with the typed not-connected ApiError", async () => {

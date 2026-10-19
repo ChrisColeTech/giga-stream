@@ -14,6 +14,10 @@ export const AccountSchema = z.object({
 
 export const AccountListSchema = z.object({ items: z.array(AccountSchema) });
 
+/** `PUT /api/admin-accounts/:id/security-question` answers `{ set: true }` (docs/54 section 2): never the account, and
+ *  never the question or its answer. */
+export const QuestionSavedSchema = z.object({ set: z.literal(true) });
+
 /** The list as the service reads it: rows stay `unknown` so one unreadable row costs that row, not the list
  *  (`01` section 8). `services/accounts.ts` parses each with `AccountSchema`. */
 export const AccountListLenientSchema = z.object({ items: z.array(z.unknown()) });

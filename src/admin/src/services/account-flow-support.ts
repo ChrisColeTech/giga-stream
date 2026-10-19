@@ -28,14 +28,15 @@ export type AccountStore = Pick<
 >;
 
 export interface AccountFlowDeps {
-  readonly service: Pick<AccountsService, "list" | "create" | "update" | "remove">;
+  readonly service: Pick<AccountsService, "list" | "create" | "update" | "remove" | "saveQuestion">;
   readonly store: () => AccountStore;
   /** Reads the audit tail again (`limit` entries); never rejects. */
   readonly audit: { readonly reload: (limit?: number) => Promise<void> };
 }
 
-/** The rows a refusal can sit under. `enabled` is the Enabled switch (the backend calls the field `disabled`). */
-export type AccountField = "username" | "password" | "enabled";
+/** The rows a refusal can sit under. `enabled` is the Enabled switch (the backend calls the field `disabled`); the
+ *  Security question group adds its own two rows. */
+export type AccountField = "username" | "password" | "enabled" | "question" | "answer";
 
 export interface FlowOk<T> {
   readonly ok: true;

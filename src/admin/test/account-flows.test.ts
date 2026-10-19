@@ -25,6 +25,7 @@ function rig(script: Script = {}) {
     /* The real backend never echoes a password; neither does this fake. */
     update: async (id, patch) => (calls.push(`update:${String(id)}`), { ...account(String(id)), disabled: patch["disabled"] === true }),
     remove: async (id) => (calls.push(`remove:${String(id)}`), { id }),
+    saveQuestion: async (id) => (calls.push(`saveQuestion:${String(id)}`), { set: true }),
     ...script,
   };
   const flows: AccountFlows = createAccountFlows({

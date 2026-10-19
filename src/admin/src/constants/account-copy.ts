@@ -9,12 +9,14 @@ export const WORKSPACE_LABELS: readonly string[] = [
   "Enabled",
   "Last sign-in",
   "Security question",
+  "Answer",
   "New password",
 ];
 
 export const ACCOUNT_SECTIONS = [
   { id: "ac-details", label: "Details" },
   { id: "ac-password", label: "Password" },
+  { id: "ac-question", label: "Security question" },
 ] as const;
 export const ACCOUNT_SECTION_KEYS: readonly string[] = ACCOUNT_SECTIONS.map((section) => section.id);
 
@@ -23,9 +25,22 @@ export const PASSWORD_TIP = "Up to 256 characters. A space counts. It is never s
 export const NEW_PASSWORD_TIP = "Up to 256 characters. Setting it signs the account out everywhere.";
 export const ENABLED_TIP = "A disabled account cannot sign in.";
 export const LAST_SIGN_IN_TIP = "When this account last signed in.";
-export const SECURITY_QUESTION_TIP = "Each account sets its own, under Settings > Account.";
 export const DELETE_TITLE = "Deletes the account and ends its sessions.";
 export const SET_PASSWORD_TIP = "Signs this account out everywhere";
+
+/* The Security question group (docs/54 section 2): the words. A question is set on the selected account by the
+ * signed-in admin; the group's badge carries the account's flag. */
+
+export const QUESTION_STATUS_SET = "Set";
+export const QUESTION_STATUS_NOT_SET = "Not set";
+export const QUESTION_TIP = "Asked on the sign-in page when this account resets its password.";
+export const ANSWER_TIP = "Used only to reset this account's password from the sign-in page.";
+export const SAVE_QUESTION = "Save question";
+export const SAVING_QUESTION = "Saving";
+export const CHOOSE_QUESTION_REASON = "Choose a question.";
+export const ENTER_ANSWER_REASON = "Enter your answer.";
+export const ANSWER_TOO_LONG = "Answer must be at most 200 characters.";
+export const ANSWER_NOT_VALID = "The answer is not valid.";
 
 /** Disabled reasons. The unreachable sentence is the request layer's own. */
 export const LAST_DISABLE = "The last enabled account cannot be disabled.";

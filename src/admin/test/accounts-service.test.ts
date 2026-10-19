@@ -60,6 +60,27 @@ describe("the accounts service", () => {
     );
   });
 
+  it("puts the question save to the account's own route, reading its `{ set: true }` answer", async () => {
+    await withBackend(
+      () => success({ set: true }),
+      async (calls) => {
+        const saved = await accounts.saveQuestion("a b", { question: 3, answer: " Rex " });
+        assert.deepEqual([saved, calls[0]?.method, calls[0]?.url, calls[0]?.body], [
+          { set: true },
+          "PUT",
+          "/api/admin-accounts/a%20b/security-question",
+          { question: 3, answer: " Rex " },
+        ]);
+      },
+    );
+    await withBackend(
+      () => success({ nope: 1 }),
+      async () => {
+        await assert.rejects(accounts.saveQuestion("a", { question: 1, answer: "x" }), { code: "backend.bad_response" });
+      },
+    );
+  });
+
   it("carries the field of a 409 and a 422 refusal", async () => {
     await withBackend(
       (call) => (call.method === "POST" ? refusal(409, "account.username_taken", "username") : refusal(422, "account.invalid", "password")),

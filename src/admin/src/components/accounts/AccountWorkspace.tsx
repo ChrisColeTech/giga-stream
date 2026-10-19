@@ -23,6 +23,7 @@ import { useAppStore } from "@/store/app-store";
 import type { AdminAccount } from "@/types/admin-account";
 import { AccountDetailsGroup } from "./AccountDetailsGroup";
 import { AccountPasswordGroup } from "./AccountPasswordGroup";
+import { AccountQuestionGroup } from "./AccountQuestionGroup";
 
 function Editor({ account, active }: { readonly account: AdminAccount; readonly active: boolean }) {
   const form = useRecordForm({ initial: draftOf(account), same: sameAccountDraft });
@@ -78,6 +79,14 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
               onSet={(password) => track("password", () => flows.setPassword(account.id, password))}
             />
           </div>
+          <div ref={spy.bind("ac-question")}>
+            <AccountQuestionGroup
+              account={account}
+              saving={saving}
+              unreachable={unreachable}
+              onSave={(question, answer) => track("question", () => flows.saveQuestion(account.id, question, answer))}
+            />
+          </div>
         </div>
       </div>
     </WorkspaceFrame>
@@ -85,8 +94,8 @@ function Editor({ account, active }: { readonly account: AdminAccount; readonly 
 }
 
 /** One account's workspace, opened from the list already held (no request to open it, `29` section 8): the rail
- *  (`‹ Accounts`, Details, Password), the page toolbar (`Discard changes`, no forward verb) and one scrolling page whose Details
- *  group ends with `Save details`. If the
+ *  (`‹ Accounts`, Details, Password, Security question), the page toolbar (`Discard changes`, no forward verb) and one
+ *  scrolling page whose Details group ends with `Save details`; the Security question group is last (docs/54). If the
  *  account is no longer in a read list, the workspace closes with a notice. */
 export function AccountWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const account = useAppStore((state) => state.accounts.items.find((item) => String(item.id) === id));
