@@ -327,12 +327,12 @@ A template feature in `ChildWindow`, so EVERY child window (Preview, Settings, C
 with `maximizable: false` (default true).
 
 - **The control.** A second ghost `IconButton` in the header, left of the close X, using the same titlebar style as the
-  main window's pane toggles (`01` Buttons and surfaces, amended by `60`): `Square` while normal (aria-label and
-  tooltip `Maximize <name>`), overlapping-windows `Copy` while maximized (`Restore <name>`). Close is `X`, ghost.
+  main window's pane toggles (`01` Buttons and surfaces, amended by `60`): `VscChromeMaximize` while normal (aria-label
+  and tooltip `Maximize <name>`), `VscChromeRestore` while maximized (`Restore <name>`). Close is `VscChromeClose`, ghost.
   Maximize/Restore is a
   toggle: ghost while normal, outlined/accent (`on`) while maximized; never bordered/raised. New rows in the icon
-  caption vocabulary (`01`): `Maximize, Restore, Close` -> `Square`, `Copy`, `X`. Diagonal expand/collapse arrows are
-  content/canvas controls, never window chrome.
+  caption vocabulary (`01`): `Maximize, Restore, Close` -> the `react-icons/vsc` chrome glyphs. Generic Lucide content
+  icons are never window chrome.
 - **Also:** a double-click on the header (not on a button) toggles it, the desktop convention.
 - **Maximized.** The window fills the main window's available area: the main window minus its titlebar and its statusbar (the chrome stays
   visible and the scrim behaves as for a normal modal window); the box is derived from the container, so resizing the main window keeps it
