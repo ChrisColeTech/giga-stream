@@ -41,8 +41,8 @@ export const RETRY_READING = "Reading the channels.";
  *  words their status bars add. No `Retry` in either window: an iframe reports no error a re-press could fix, and the
  *  honest way back is choosing again or reopening. */
 
-/** The workspace promote's word and arrow (`55` decision 2): the forward verb's look, the `PromoteButton`'s shape. */
-export const PREVIEW_ARROW_LABEL = "Preview →";
+export const PREVIEW_LABEL = "Preview";
+export const PREVIEW_CHANNEL_TOOLTIP = "Preview channel";
 
 export const PROVIDER_WINDOW_TITLE = "Provider preview";
 export const TITLE_WINDOW_TITLE = "Title preview";

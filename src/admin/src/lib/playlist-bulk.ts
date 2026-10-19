@@ -2,7 +2,6 @@ import { WORKING_REASON } from "@/constants/job-copy";
 import {
   EVERY_PLAYLIST_DISABLED,
   EVERY_PLAYLIST_ENABLED,
-  SYNC_JOB_DISABLED,
   SYNC_JOB_RUNNING,
   SYNC_NO_JOB,
   SYNC_PLAYLIST_DISABLED,
@@ -21,7 +20,7 @@ import { tickedOf } from "./playlist-rows";
 
 export type PlaylistBulkVerb = "sync" | "enable" | "disable" | "delete";
 
-export const PLAYLIST_BULK_ORDER: readonly PlaylistBulkVerb[] = ["sync", "enable", "disable", "delete"];
+export const PLAYLIST_BULK_ORDER: readonly PlaylistBulkVerb[] = ["enable", "disable", "delete"];
 
 const words = (past: string): BulkWords => ({ past, noun: "playlist", nouns: "playlists" });
 
@@ -66,7 +65,6 @@ export function jobForPlaylists(jobs: readonly AdminJob[]): Record<number, Playl
 export function syncSkip(playlist: AdminPlaylist, link: PlaylistJobLink | undefined): string | null {
   if (!playlist.enabled) return SYNC_PLAYLIST_DISABLED;
   if (link === undefined) return SYNC_NO_JOB;
-  if (!link.enabled) return SYNC_JOB_DISABLED;
   return link.running ? SYNC_JOB_RUNNING : null;
 }
 

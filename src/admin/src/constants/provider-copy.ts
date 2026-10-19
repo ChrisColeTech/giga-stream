@@ -82,5 +82,6 @@ export const ALREADY_DISABLED = "Already disabled.";
 /** The provider preview (`55` decisions 2, 4 and 7). */
 export const PREVIEW_PROVIDER_TOOLTIP = "Preview provider";
 export const SAVE_PROVIDER_FIRST = "Save the provider first";
+export const PROVIDER_NOT_PREVIEWABLE = "That provider cannot be previewed.";
 /** The `Title` select's reason while no held stored movie can fill a template. */
 export const NO_PREVIEW_TITLE = "No stored movie has a TMDB id.";

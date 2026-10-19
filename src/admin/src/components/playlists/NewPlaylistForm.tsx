@@ -7,7 +7,8 @@ import { FileRow } from "@/components/records/FileRow";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { UNREACHABLE_REASON } from "@/constants/account-copy";
 import {
-  CHOOSE_FILE_TITLE, FILE_TIP, IMPORTING_REASON, IMPORT_FILE_ACCEPT, NEW_ADDRESS_TIP, SOURCE_FILE, SOURCE_TIP, SOURCE_URL,
+  CHOOSE_FILE_TITLE, FILE_TIP, IMPORTING_REASON, IMPORT_FILE_ACCEPT, NAME_TIP, NEW_ADDRESS_TIP, SOURCE_FILE, SOURCE_TIP,
+  SOURCE_URL,
 } from "@/constants/playlist-copy";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import { useRecordForm } from "@/hooks/useRecordForm";
@@ -19,11 +20,8 @@ const SOURCES = [
   { value: "url", label: SOURCE_URL },
 ] as const satisfies ReadonlyArray<{ value: ImportSource; label: string }>;
 
-/** `New playlist` (`43` section 4.1): `Source` (File | Web address), then the chosen source's own row: `File`, a read-only
- *  field with the chosen file's name and a ghost `Choose file`, or `Address`, a password field that is never filled back,
- *  autocomplete and spellcheck off. There is no Name: the playlist is named after its file or its host, and renamed in
- *  its workspace. The one primary `Import` is disabled with `Choose a file first.`, `Address is required.`, `Importing.`
- *  while a call runs, or the unreachable sentence. A refusal shows under its row. On success the form empties. */
+/** New playlist: required Name first, then File/Web address and that source's input. Import sends the name with either
+ *  request and empties only after success. */
 export function NewPlaylistForm() {
   const form = useRecordForm({ initial: EMPTY_NEW_PLAYLIST, same: sameNewPlaylist });
   const { flows, saving, track } = usePlaylistActions();
@@ -45,6 +43,21 @@ export function NewPlaylistForm() {
       title="New playlist"
       create={{ onPress: () => void run(), reason, label: "Import" }}
     >
+      <Row label="Name" tip={NAME_TIP} error={form.errors["name"]}>
+        <Input
+          type="text"
+          value={form.draft.name}
+          className={FIELD_CONTROL}
+          aria-label="Name"
+          aria-invalid={form.errors["name"] !== undefined}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => form.set({ name: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void run();
+          }}
+        />
+      </Row>
       <Row label="Source" tip={SOURCE_TIP}>
         <Segmented
           options={SOURCES}

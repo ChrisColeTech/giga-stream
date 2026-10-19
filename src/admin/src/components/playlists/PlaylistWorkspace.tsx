@@ -13,8 +13,8 @@ import {
 } from "@/constants/playlist-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
+import { usePlaylistBulk } from "@/hooks/usePlaylistBulk";
 import { useWorkspaceGone } from "@/hooks/useWorkspaceGone";
-import { usePlaylistChannelsVerb } from "@/hooks/usePlaylistChannelsVerb";
 import { useRecordForm } from "@/hooks/useRecordForm";
 import { draftOf, samePlaylistDraft } from "@/lib/playlist-draft";
 import { idOf } from "@/lib/playlist-rows";
@@ -30,7 +30,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
   const unreachable = useAppStore((state) => state.playlists.unreachable);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
   const spy = useScrollSpy(PLAYLIST_SECTION_KEYS, PLAYLIST_SECTION_KEYS[0] ?? "pw-details");
-  const forward = usePlaylistChannelsVerb(playlist);
+  const sync = usePlaylistBulk([playlist.id], saving);
 
   useFollowRecord(form, playlist, draftOf, samePlaylistDraft);
 
@@ -63,7 +63,7 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
             onPress: () => void save(),
             reason: changeReason(form.dirty, saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined),
           }}
-          forward={forward}
+          promote={sync.promote}
         />
       }
     >

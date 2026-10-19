@@ -1,4 +1,6 @@
 import { editedTip } from "@/constants/title-copy";
+import { TICK_FIRST, TICK_ONE } from "@/constants/record-copy";
+import { TITLE_NOT_PREVIEWABLE, UNREACHABLE_REASON } from "@/constants/title-copy";
 import type { AdminTitleRow } from "@/services/schemas/title-schema";
 import { titleState, type RowState } from "./row-state";
 
@@ -8,6 +10,17 @@ import { titleState, type RowState } from "./row-state";
 export const isManualTitle = (title: Pick<AdminTitleRow, "state">): boolean => title.state === "manual";
 
 export const isEnabledTitle = (title: Pick<AdminTitleRow, "enabled">): boolean => title.enabled !== false;
+
+export function titlePreviewReason(
+  count: number,
+  title: AdminTitleRow | undefined,
+  unreachable: boolean,
+): string | undefined {
+  if (count === 0) return TICK_FIRST;
+  if (count > 1) return TICK_ONE;
+  if (title?.tmdbId === undefined || title.deleted === true || title.stored === false) return TITLE_NOT_PREVIEWABLE;
+  return unreachable ? UNREACHABLE_REASON : undefined;
+}
 
 export const titleStateOf = (title: AdminTitleRow): RowState =>
   titleState({ enabled: isEnabledTitle(title), manual: isManualTitle(title), edited: title.state === "edited" });

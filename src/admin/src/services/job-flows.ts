@@ -4,7 +4,7 @@ import type { BulkItem } from "@/lib/bulk-plan";
 import type { JobBulkVerb } from "@/lib/job-bulk";
 import { changedFields, createBody, isEmptyPatch } from "@/lib/job-body";
 import { JOB_FIELDS, firstCreateRefusal, firstSaveRefusal, type JobField } from "@/lib/job-checks";
-import type { JobDraft, NewJobDraft } from "@/lib/job-draft";
+import type { JobDraft } from "@/lib/job-draft";
 import { catalogConfigOf, runningCount } from "@/lib/job-rows";
 import {
   BAD_ANSWER, DROPPED, codeOf, done, fieldOf, isUnreachable, sentenceOf, type FlowRefused, type FlowResult,
@@ -38,7 +38,7 @@ export interface JobFlows {
   load: () => Promise<JobResult>;
   refresh: () => Promise<JobResult>;
   /** A catalog job: a playlist's job is made with the playlist. */
-  create: (draft: NewJobDraft) => Promise<JobResult>;
+  create: (draft: JobDraft) => Promise<JobResult>;
   save: (id: number, draft: JobDraft) => Promise<JobResult<AdminJob | null>>;
   remove: (id: number) => Promise<JobResult>;
   /** `Run job` on one job: STARTED, not awaited. The result is read on Refresh. A refusal sits under `run`. */
@@ -94,7 +94,7 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
     return done(undefined);
   }
 
-  async function create(draft: NewJobDraft): Promise<JobResult> {
+  async function create(draft: JobDraft): Promise<JobResult> {
     const bad = firstCreateRefusal(draft);
     if (bad !== null) return refuse(bad.sentence, bad.field);
     const serial = store().serial;

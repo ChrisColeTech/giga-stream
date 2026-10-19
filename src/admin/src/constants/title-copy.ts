@@ -118,5 +118,6 @@ export const RESTORE_RETURN_MANY = "they return on the next browse or sync";
 /** The title preview (`55` decisions 2, 4 and 8). */
 export const PREVIEW_TITLE_TOOLTIP = "Preview title";
 export const SAVE_TITLE_FIRST = "Save the title first";
+export const TITLE_NOT_PREVIEWABLE = "That title cannot be previewed.";
 /** The `Provider` select's reason while no active provider gives this title a source. */
 export const NO_PREVIEW_SOURCE = "No provider gives this title a source.";

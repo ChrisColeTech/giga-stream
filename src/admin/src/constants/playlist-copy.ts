@@ -2,7 +2,7 @@
  * here, never in a component. No sentence here ever takes the address as a value. */
 
 /** The rows' labels, so each page fixes its label column once. */
-export const NEW_PLAYLIST_LABELS: readonly string[] = ["Source", "File", "Address"];
+export const NEW_PLAYLIST_LABELS: readonly string[] = ["Name", "Source", "File", "Address"];
 export const PLAYLIST_WORKSPACE_LABELS: readonly string[] = [
   "Name",
   "Address",
@@ -45,6 +45,7 @@ export const IMPORT_FILE_ACCEPT = ".m3u,.m3u8,audio/x-mpegurl";
 /** Disabled reasons and refusals. */
 export const FILE_REQUIRED = "Choose a file first.";
 export const ADDRESS_REQUIRED = "Address is required.";
+export const NAME_REQUIRED = "Name is required.";
 export const IMPORTING_REASON = "Importing.";
 export const NO_CHANNELS_REASON = "This playlist has no channels.";
 export const NAME_LONG = "Name must be at most 120 characters.";
@@ -52,9 +53,9 @@ export const NAME_MAX = 120;
 
 /** The bulk verbs (`38` section 3.2). */
 export const SYNC_NOW = "Sync now";
+export const SYNC_ONE_TIP = "Sync this playlist now";
 export const SYNC_PLAYLIST_DISABLED = "A disabled playlist cannot sync.";
 export const SYNC_NO_JOB = "This playlist has no job to run.";
-export const SYNC_JOB_DISABLED = "The job for this playlist is disabled.";
 export const SYNC_JOB_RUNNING = "That job is already running.";
 export const EVERY_PLAYLIST_ENABLED = "Every ticked playlist is already enabled.";
 export const EVERY_PLAYLIST_DISABLED = "Every ticked playlist is already disabled.";

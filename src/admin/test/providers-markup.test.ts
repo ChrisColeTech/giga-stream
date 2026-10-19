@@ -118,14 +118,20 @@ describe("the providers list", () => {
 });
 
 describe("the table strip", () => {
-  it("leaves the enabled Titles → to the page toolbar; Refresh is first and the bulk verbs are drawn, waiting", () => {
+  it("puts Preview in the page toolbar; Refresh is first and the bulk verbs are drawn, waiting", () => {
     const html = page();
     const table = html.slice(html.indexOf('aria-label="Providers table"'));
     const top = html.slice(0, html.indexOf("overflow-y-auto"));
-    const forward = top.match(/<button[^>]*title="Go to Titles"[^>]*>Titles →<\/button>/)?.[0] ?? "";
-    assert.ok(forward.length > 0 && !forward.includes('disabled=""'));
-    assert.ok(table.includes('title="Refresh providers"') && !table.includes("Titles →"));
+    assert.ok(top.includes('aria-label="Preview. Tick a row first"'));
+    assert.ok(table.includes('title="Refresh providers"') && !table.includes(">Preview<"));
     for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
+  });
+
+  it("enables index Preview for exactly one previewable provider", () => {
+    loaded([provider(1)]);
+    state().providerTick(1, true);
+    const top = page().slice(0, page().indexOf("overflow-y-auto"));
+    assert.ok(/<button[^>]*title="Preview provider"[^>]*>Preview<\/button>/.test(top));
   });
 
   it("names every ticked provider already enabled, with a Delete that is the armed two-step and no Clear selection", () => {
@@ -138,7 +144,7 @@ describe("the table strip", () => {
 });
 
 describe("a provider's workspace", () => {
-  it("opens from the held list: the rail, the page toolbar (Discard; Save, Preview →), Details, Templates, Player, no trailing save", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard; Save, Preview), and its groups", () => {
     loaded([provider(1)]);
     state().openWorkspace("providers", "1");
     const html = page();
@@ -150,27 +156,27 @@ describe("a provider's workspace", () => {
     assert.ok(
       at(html, "Discard changes") < at(html, 'aria-label="Save. Nothing has changed.') &&
         at(html, 'aria-label="Save. Nothing has changed.') < at(html, ">Save<") &&
-        at(html, ">Save<") < at(html, "Preview →"),
+        at(html, ">Save<") < at(html, ">Preview<"),
       "Discard left; Save, then the promote rightmost (`55` decision 2)",
     );
-    const promote = html.match(/<button[^>]*title="Preview provider"[^>]*>Preview →<\/button>/)?.[0] ?? "";
+    const promote = html.match(/<button[^>]*title="Preview provider"[^>]*>Preview<\/button>/)?.[0] ?? "";
     assert.ok(promote.length > 0 && !promote.includes('disabled=""'), "the promote is the PromoteButton's shape");
-    assert.ok(at(html, "Preview →") < at(html, 'id="pv-details"'));
-    assert.ok(!html.includes("Titles →"), "the tab hop is gone: the promote is the preview");
+    assert.ok(at(html, ">Preview<") < at(html, 'id="pv-details"'));
+    assert.ok(!html.includes("→"));
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
     assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
   });
 
-  it("draws no promote for a stream-family provider: there is no embed to preview (`55` decision 7)", () => {
+  it("keeps Preview disabled for a stream-family provider with its reason", () => {
     loaded([provider(1, { family: "stream", movieTemplate: undefined })]);
     state().openWorkspace("providers", "1");
     const html = page();
-    assert.ok(!html.includes("Preview →") && !html.includes("Titles →"), "no promote at all for a stream provider");
+    assert.ok(html.includes('aria-label="Preview. That provider cannot be previewed."') && !html.includes("→"));
     loaded([provider(1)]);
     const embed = page();
-    assert.ok(embed.includes("Preview →"), "an embed provider with a template previews");
+    assert.ok(embed.includes(">Preview<"), "an embed provider with a template previews");
   });
 
   it("draws the frame origins as chips in a field-height box, and the message shape as a select", () => {

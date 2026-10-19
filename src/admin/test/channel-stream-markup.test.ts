@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 describe("a stream channel's workspace", () => {
-  it("opens with the rail Details, Stream, Status, the page toolbar (Discard; Save, Preview →) and no trailing save", () => {
+  it("opens with the rail Details, Stream, Status, the page toolbar (Discard; Save, Preview) and no trailing save", () => {
     holdChannels([stream("s")], 1);
     state().openWorkspace("channels", "s");
     const html = page();
@@ -47,7 +47,7 @@ describe("a stream channel's workspace", () => {
     assert.ok(!html.includes("Save details"), "the trailing save is gone (`55` decision 1)");
     const start = html.indexOf('role="toolbar"');
     const bar = html.slice(start, html.indexOf("overflow-y-auto", start));
-    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "Preview → is the page toolbar's");
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview<\/button>/.test(bar), "Preview is the page toolbar's");
     assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") && bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<"), "Save sits right of the spacer");
     assert.ok(!statusGroup(stream("s")).includes("Preview"));
     assert.ok(html.includes(">Added by hand<") && html.includes('value="Stream"'));

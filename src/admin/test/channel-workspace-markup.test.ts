@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe("a live channel's workspace", () => {
-  it("opens from the held list: the rail, the page toolbar (Discard; Save, Preview →), the groups and no trailing save", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard; Save, Preview), the groups and no trailing save", () => {
     holdChannels([live("a")], 1);
     state().openWorkspace("channels", "a");
     const html = page();
@@ -67,10 +67,10 @@ describe("a live channel's workspace", () => {
     assert.ok(
       bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") &&
         bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<") &&
-        bar.indexOf(">Save<") < bar.indexOf("Preview →"),
+        bar.indexOf(">Save<") < bar.indexOf(">Preview<"),
       "Discard left; Save, then the forward verb rightmost",
     );
-    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(bar), "a saved channel previews");
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview<\/button>/.test(bar), "a saved channel previews");
     assert.ok(!status(live("a")).includes("Preview"), "the Status group no longer carries Preview");
   });
 
@@ -104,7 +104,7 @@ describe("a live channel's workspace", () => {
     assert.ok(!details(live("a")).includes("Rebuild"));
   });
 
-  it("keeps two qualities: the last two lit chips are locked with the reason", () => {
+  it("keeps two qualities: the last two checked rows are locked with the reason", () => {
     const html = renderLive(
       createElement(PlaybackGroup, { draft: liveDraft(live("a")), onChange: () => undefined }),
     );
@@ -122,7 +122,9 @@ describe("a live channel's workspace", () => {
       "each reason wrapper is described and keyboard focusable",
     );
     assert.ok(!html.includes(`title="${reason}"`), "the reason is not title-only");
-    assert.ok(/aria-pressed="false"[^>]*>1080p/.test(html), "an unlit quality can be added");
+    assert.ok(/type="checkbox"[^>]*aria-label="1080p quality"/.test(html), "an unchecked quality can be added");
+    assert.equal((html.match(/type="checkbox"/g) ?? []).length, 3, "one real checkbox per supplied quality");
+    assert.ok(!html.includes("aria-pressed"), "qualities are not offered-choice pills");
   });
 
   it("draws Status facts as shimmer while the channel is being built, keeping the rows", () => {

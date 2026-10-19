@@ -1,9 +1,9 @@
 import type { AdminJob, CatalogJobConfig } from "@/services/schemas/job-schema";
-import { type JobDraft, type NewJobDraft, hasPages, walksBothKinds } from "./job-draft";
+import { type JobDraft, hasPages, walksBothKinds } from "./job-draft";
 import { catalogConfigOf } from "./job-rows";
 
 /* The request bodies of the Jobs routes (`03` section 7.2c, `43` section 3.1), pure. A create is a catalog job (a
- * playlist's job is made with the playlist) and leaves `pages` to the backend's default. A PATCH carries only what
+ * playlist's job is made with the playlist) and sends the shared form's values. A PATCH carries only what
  * changed; a playlist job takes `enabled` and `schedule` only, and a catalog job's `config` only the changed keys: the
  * backend merges it over the job's own. */
 
@@ -11,14 +11,24 @@ import { catalogConfigOf } from "./job-rows";
 export type JobCreateBody = {
   readonly type: "catalog";
   readonly name: string;
-  readonly config: { readonly scope: CatalogJobConfig["scope"]; readonly kind?: JobKindWord };
+  readonly enabled: boolean;
+  readonly schedule: string;
+  readonly config: { readonly scope: CatalogJobConfig["scope"]; readonly kind?: JobKindWord; readonly pages?: number };
 };
 type JobKindWord = NonNullable<CatalogJobConfig["kind"]>;
 
 /** `POST /api/jobs`: the trimmed name and the scope; a discover or recent job covers both kinds, so it sends none. */
-export function createBody(draft: NewJobDraft): JobCreateBody {
-  const config = walksBothKinds(draft.scope) ? { scope: draft.scope } : { scope: draft.scope, kind: draft.kind };
-  return { type: "catalog", name: draft.name.trim(), config };
+export function createBody(draft: JobDraft): JobCreateBody {
+  const config = walksBothKinds(draft.scope)
+    ? { scope: draft.scope }
+    : { scope: draft.scope, kind: draft.kind, pages: Number(draft.pages.trim()) };
+  return {
+    type: "catalog",
+    name: draft.name.trim(),
+    enabled: draft.enabled,
+    schedule: draft.schedule.trim().toLowerCase(),
+    config,
+  };
 }
 
 export type JobConfigPatch = {

@@ -36,6 +36,8 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
     const order = ['aria-label="Search channels"', 'aria-label="Sort by"', 'aria-label="Kind"', 'aria-label="State"', 'aria-label="Origin"', 'aria-label="Playlist"', 'aria-label="Stream status"', 'aria-label="Enabled"', 'title="Refresh channels"'];
     assert.ok(order.every((needle, i) => at(needle) > (i === 0 ? -1 : at(order[i - 1] ?? ""))), order.map(at).join());
     assert.equal(count(html, "<select"), 7);
+    assert.ok(html.includes("@container") && html.includes("@[900px]:flex-nowrap"));
+    assert.ok(html.includes("basis-full") && html.includes("@[900px]:basis-0"));
   });
 
   it("has the Stream status select beside Playlist: Any status, Online, Offline, Not checked", () => {
@@ -51,7 +53,7 @@ describe("the list's first row (LoRA Studio's LibraryToolbar)", () => {
     assert.ok(/<input[^>]*type="search"[^>]*data-search=""/.test(html) && html.includes("lucide-search"));
     const sort = html.slice(html.indexOf('aria-label="Sort by"'), html.indexOf("</select>", html.indexOf('aria-label="Sort by"')));
     assert.deepEqual([...sort.matchAll(/>([A-Za-z]+)<\/option>/g)].map((m) => m[1]), ["Name", "Category", "Kind", "Playlist"]);
-    assert.ok(html.includes('aria-label="Ascending. Sort direction"'));
+    assert.ok(html.includes('aria-label="Sort by direction, ascending"'));
   });
 
   it("offers each filter as a select whose first option lets everything through", () => {

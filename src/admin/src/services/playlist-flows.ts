@@ -11,7 +11,7 @@ import type { BulkItem } from "@/lib/bulk-plan";
 import { jobForPlaylists, type PlaylistBulkVerb } from "@/lib/playlist-bulk";
 import { changedFields, isEmptyPatch, urlBody } from "@/lib/playlist-body";
 import {
-  firstRefusal, newAddressOf, type NewPlaylistDraft, type PlaylistDraft, type PlaylistField,
+  firstImportRefusal, firstRefusal, newAddressOf, type NewPlaylistDraft, type PlaylistDraft, type PlaylistField,
 } from "@/lib/playlist-draft";
 import {
   BAD_ANSWER, DROPPED, codeOf, done, isUnreachable, sentenceOf, type FlowRefused, type FlowResult,
@@ -99,12 +99,12 @@ export function createPlaylistFlows(deps: PlaylistFlowDeps): PlaylistFlows {
   async function importPlaylist(draft: NewPlaylistDraft): Promise<PlaylistResult> {
     const { file } = draft;
     if (draft.source === "file" && file === null) return refuse(FILE_REQUIRED, "file");
-    const bad = draft.source === "url" ? firstRefusal("", draft.address.trim()) : null;
+    const bad = firstImportRefusal(draft);
     if (bad !== null) return refuse(bad.sentence, bad.field);
     const serial = store().serial;
     try {
       const answer = await (file !== null && draft.source === "file"
-        ? service.importFile(file)
+        ? service.importFile(draft.name.trim(), file)
         : service.create(urlBody(draft)));
       if (!alive(serial)) return DROPPED;
       store().playlistUpsert(answer.playlist);

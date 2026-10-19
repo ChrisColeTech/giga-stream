@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import { IconButton } from "@giga/ui/controls/IconButton";
+import { QueryBar } from "@giga/ui/lists/QueryBar";
 import { QuerySearch } from "@giga/ui/lists/QuerySearch";
 import { QuerySelect } from "@giga/ui/lists/QuerySelect";
+import { SortControl } from "@giga/ui/lists/SortControl";
 import {
   ENABLED_LABEL,
   ENABLED_OPTIONS,
@@ -49,34 +49,30 @@ export function ChannelQueryRow({ query, onQuery, playlists, reason }: ChannelQu
     <K extends "kind" | "origin" | "enabled" | "state" | "status">(field: K) =>
     (value: ChannelQuery[K]): void =>
       onQuery(withFilter(query, field, value));
-  const Direction = query.dir === "asc" ? ArrowUp : ArrowDown;
-  const directionLabel = query.dir === "asc" ? "Ascending" : "Descending";
   return (
-    <>
-      <QuerySearch
-        label={SEARCH_LABEL}
-        tip={SEARCH_TIP}
-        value={typed}
-        reason={reason}
-        onChange={setTyped}
-        onEnter={() => onQuery(withSearch(query, typed))}
-      />
-      <QuerySelect
+    <QueryBar
+      search={
+        <QuerySearch
+          label={SEARCH_LABEL}
+          tip={SEARCH_TIP}
+          value={typed}
+          reason={reason}
+          onChange={setTyped}
+          onEnter={() => onQuery(withSearch(query, typed))}
+        />
+      }
+    >
+      <SortControl
         label={SORT_LABEL}
         value={query.sort}
         options={SORT_OPTIONS}
-        width="w-[190px]"
         reason={reason}
         onChange={(sort) => onQuery(withSortKey(query, sort))}
+        direction={{
+          value: query.dir,
+          onToggle: () => onQuery(withDirection(query, query.dir === "asc" ? "desc" : "asc")),
+        }}
       />
-      <IconButton
-        aria-label={`${directionLabel}. Sort direction`}
-        title={`${directionLabel}. Press to reverse`}
-        reason={reason}
-        onClick={() => onQuery(withDirection(query, query.dir === "asc" ? "desc" : "asc"))}
-      >
-        <Direction aria-hidden className="size-3.5" />
-      </IconButton>
       <QuerySelect label={KIND_LABEL} value={query.kind} options={KIND_OPTIONS} reason={reason} onChange={pick("kind")} />
       <QuerySelect label={STATE_LABEL} value={query.state} options={STATE_OPTIONS} reason={reason} onChange={pick("state")} />
       <QuerySelect label={ORIGIN_LABEL} value={query.origin} options={ORIGIN_OPTIONS} reason={reason} onChange={pick("origin")} />
@@ -89,6 +85,6 @@ export function ChannelQueryRow({ query, onQuery, playlists, reason }: ChannelQu
       />
       <QuerySelect label={STATUS_LABEL} value={query.status} options={STATUS_OPTIONS} reason={reason} onChange={pick("status")} />
       <QuerySelect label={ENABLED_LABEL} value={query.enabled} options={ENABLED_OPTIONS} reason={reason} onChange={pick("enabled")} />
-    </>
+    </QueryBar>
   );
 }

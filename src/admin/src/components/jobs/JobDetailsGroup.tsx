@@ -4,8 +4,8 @@ import { Toggle } from "@giga/ui/controls/Toggle";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { ENABLED_TIP, NAME_TIP, PAGES_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
-import { type JobDraft, hasPages } from "@/lib/job-draft";
+import { ENABLED_TIP, NAME_TIP, PLAYLIST_TIP, TYPE_FIXED_TIP } from "@/constants/job-copy";
+import type { JobDraft } from "@/lib/job-draft";
 import { targetOf, typeWord } from "@/lib/job-rows";
 import type { FormErrors } from "@/lib/record-form";
 import type { AdminJob } from "@/services/schemas/job-schema";
@@ -42,7 +42,13 @@ export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGrou
         <Input type="text" value={typeWord(job)} readOnly className={`${FIELD_CONTROL} text-faint`} aria-label="Type" />
       </Row>
       {catalog ? (
-        <CatalogRows scope={draft.scope} kind={draft.kind} onChange={onChange} />
+        <CatalogRows
+          scope={draft.scope}
+          kind={draft.kind}
+          pages={draft.pages}
+          errors={errors}
+          onChange={onChange}
+        />
       ) : (
         <Row label="Playlist" tip={PLAYLIST_TIP}>
           <Input type="text" value={targetOf(job)} readOnly className={`${FIELD_CONTROL} text-faint`} aria-label="Playlist" />
@@ -51,20 +57,6 @@ export function JobDetailsGroup({ job, draft, errors, onChange }: JobDetailsGrou
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
         <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
       </Row>
-      {catalog && hasPages(draft.scope) && (
-        <Row label="Pages" tip={PAGES_TIP} error={errors["pages"]}>
-          <Input
-            type="text"
-            inputMode="numeric"
-            value={draft.pages}
-            className={`${FIELD_CONTROL} font-mono`}
-            aria-label="Pages"
-            aria-invalid={errors["pages"] !== undefined}
-            autoComplete="off"
-            onChange={(event) => onChange({ pages: event.target.value })}
-          />
-        </Row>
-      )}
     </Group>
   );
 }

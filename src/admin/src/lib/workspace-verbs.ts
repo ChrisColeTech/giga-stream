@@ -1,15 +1,6 @@
 import { NOTHING_CHANGED } from "@/constants/record-copy";
-import type { ForwardDestination } from "@/constants/toolbar-icons";
 
-/** One verb of a workspace: where it goes, what it does, and why it cannot be used now. */
-export interface ToolbarAction {
-  readonly label: ForwardDestination;
-  readonly onPress: () => void;
-  readonly reason?: string;
-}
-
-/** A page's promote whose label is not a forward destination (`Run job`, `55` decisions 1, 2 and 6): the word the
- *  small primary draws, its tooltip at rest, and why it cannot be used now. */
+/** A page's promote: the operation word, its tooltip at rest, and why it cannot be used now. */
 export interface ToolbarVerb {
   readonly label: string;
   readonly tip?: string;

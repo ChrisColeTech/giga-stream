@@ -26,9 +26,6 @@ export function useCaptionOverlay(): void {
       });
     };
     push();
-    /* A "system" theme also has to follow the desktop changing its mind mid-session, as the theme stamp does. */
-    const watched = theme === "system" ? window.matchMedia("(prefers-color-scheme: light)") : null;
-    watched?.addEventListener("change", push);
-    return () => watched?.removeEventListener("change", push);
+    return undefined;
   }, [theme, accent, uiZoom, signedIn]);
 }

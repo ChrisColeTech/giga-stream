@@ -35,7 +35,11 @@ export const stateOfJob = (job: AdminJob): RowState =>
     ...(job.progress !== undefined && { percent: percentOf(job.progress) }),
   });
 
-const KIND_WORD: Readonly<Record<NonNullable<CatalogJobConfig["kind"]>, string>> = { movie: "movies", tv: "series" };
+const KIND_WORD: Readonly<Record<NonNullable<CatalogJobConfig["kind"]>, string>> = {
+  all: "all",
+  movie: "movies",
+  tv: "series",
+};
 
 /** What the job syncs: the playlist's name, or the scope and kind (`trending movies`; a discover walk covers both). */
 export function targetOf(job: AdminJob): string {

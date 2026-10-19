@@ -1,7 +1,8 @@
 import { checkChannel, writeReason } from "@/lib/channel-check";
 import { draftOf, sameDraft, type ChannelDraft } from "@/lib/channel-draft";
 import { previewWorkspaceReason } from "@/lib/channel-guard";
-import { changeReason, type SaveVerb, type ToolbarAction } from "@/lib/workspace-verbs";
+import { PREVIEW_CHANNEL_TOOLTIP } from "@/constants/preview-copy";
+import { changeReason, type SaveVerb, type ToolbarVerb } from "@/lib/workspace-verbs";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
 import { useChannelActions, type ChannelActions } from "./useChannelActions";
@@ -15,8 +16,8 @@ export interface ChannelEditor {
   readonly unreachable: boolean;
   /** The toolbar's ONE Save (`55` decision 1): the press and its reason. */
   readonly save: SaveVerb;
-  /** The toolbar's forward arrow, `Preview`. */
-  readonly forward: ToolbarAction;
+  /** The toolbar's `Preview` operation. */
+  readonly promote: ToolbarVerb;
 }
 
 /** One channel's workspace form (`36` sections 6 and 7), live or stream: the draft against the saved channel, ONE `Save`
@@ -43,10 +44,11 @@ export function useChannelEditor(channel: AdminChannel): ChannelEditor {
     onPress: () => void save(),
     reason: changeReason(form.dirty, checkChannel(form.draft).reason ?? writeReason({ saving: actions.saving, unreachable })),
   };
-  const forward: ToolbarAction = {
+  const promote: ToolbarVerb = {
     label: "Preview",
+    tip: PREVIEW_CHANNEL_TOOLTIP,
     onPress: () => openPreview(channel.id),
     reason: previewWorkspaceReason(form.dirty),
   };
-  return { form, actions, unreachable, save: saveVerb, forward };
+  return { form, actions, unreachable, save: saveVerb, promote };
 }

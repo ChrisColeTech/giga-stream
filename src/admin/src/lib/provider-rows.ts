@@ -1,4 +1,6 @@
 import type { AdminProvider } from "@/services/schemas/provider-schema";
+import { PROVIDER_NOT_PREVIEWABLE, UNREACHABLE_REASON } from "@/constants/provider-copy";
+import { TICK_FIRST, TICK_ONE } from "@/constants/record-copy";
 import { enabledState, type RowState } from "./row-state";
 
 /* The providers list as pure data: the order the list shows (by `order`, then name), the row a list draws, the ticks
@@ -54,6 +56,18 @@ export function providerHost(provider: Pick<AdminProvider, "family" | "movieTemp
  *  template. A stream-family provider or a template-less one has no embed, so its row draws no eye. */
 export function canPreviewProvider(provider: Pick<AdminProvider, "family" | "movieTemplate">): boolean {
   return provider.family === "embed" && provider.movieTemplate !== undefined;
+}
+
+export function providerPreviewReason(
+  ticked: readonly number[],
+  items: readonly AdminProvider[],
+  unreachable: boolean,
+): string | undefined {
+  if (ticked.length === 0) return TICK_FIRST;
+  if (ticked.length > 1) return TICK_ONE;
+  const provider = items.find((item) => item.id === ticked[0]);
+  if (provider === undefined || !canPreviewProvider(provider)) return PROVIDER_NOT_PREVIEWABLE;
+  return unreachable ? UNREACHABLE_REASON : undefined;
 }
 
 export function providerRow(provider: AdminProvider): ProviderRowView {

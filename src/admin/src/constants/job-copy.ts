@@ -2,7 +2,9 @@
  * component, so a refusal reads the same on the toolbar and in the workspace. */
 
 /** The rows' labels, so each page fixes its label column once. The New form makes catalog jobs: Name, Scope, Kind. */
-export const NEW_JOB_LABELS: readonly string[] = ["Name", "Scope", "Kind"];
+export const NEW_JOB_LABELS: readonly string[] = [
+  "Name", "Type", "Scope", "Kind", "Pages", "Enabled", "Interval", "Custom interval",
+];
 export const JOB_WORKSPACE_LABELS: readonly string[] = [
   "Name",
   "Type",
@@ -44,6 +46,19 @@ export const PAGES_TIP =
 export const CUSTOM_TIP = "A number and s, m or h, like 90m or 3h.";
 export const STATUS_TIP = "Scheduled runs by itself; Not scheduled has the interval off; Disabled never runs.";
 export const NAME_TIP = "What the job is called in the list. 1 to 120 characters.";
+export const CATALOG_TYPE = "Catalog";
+
+export const JOB_SCOPE_OPTIONS = [
+  { value: "trending", label: "Trending" },
+  { value: "popular", label: "Popular" },
+  { value: "discover", label: "Discover" },
+  { value: "recent", label: "Recent" },
+] as const;
+export const JOB_KIND_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "movie", label: "Movies" },
+  { value: "tv", label: "Series" },
+] as const;
 export const RUN_STATE_TIP = "Whether the job is running now, or how its last run ended. Refresh to read the result.";
 export const WHEN_TIP = "When the job last ran.";
 export const OUTCOME_TIP = "What the last run did, in words.";

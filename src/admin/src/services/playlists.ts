@@ -13,7 +13,7 @@ import {
 import type { RecordInput } from "./service-types";
 
 /** The Playlists routes (`43` section 3.2, `03` section 7.2c), REAL: `GET /api/playlists`, the two imports, `PATCH` and
- *  `DELETE /api/playlists/:id`. `importFile` posts the chosen file as one multipart `file` part; `create` is the
+ *  `DELETE /api/playlists/:id`. `importFile` posts `name` and the chosen multipart `file`; `create` is the
  *  web-address import and takes `{ url, name?, enabled? }`. Both answer the playlist, whether it is new, and what the
  *  import did. A web playlist's answer carries its address in full (`url`) and its `host`. `422 playlist.invalid` names its field (`url` or `file`), `409 playlist.taken` a name or address already
  *  held. A patch takes `name`, `enabled`, and for a web playlist a replacement `url`. `remove` answers
@@ -22,7 +22,7 @@ import type { RecordInput } from "./service-types";
 export interface PlaylistsService {
   list: () => Promise<PlaylistList>;
   create: (input: RecordInput) => Promise<PlaylistImport>;
-  importFile: (file: File) => Promise<PlaylistImport>;
+  importFile: (name: string, file: File) => Promise<PlaylistImport>;
   update: (id: number, patch: RecordInput) => Promise<AdminPlaylist>;
   remove: (id: number) => Promise<PlaylistDeleted>;
 }
@@ -46,8 +46,9 @@ const imported = (answer: z.infer<typeof PlaylistImportSchema>): PlaylistImport 
   imported: answer.imported,
 });
 
-async function importFile(file: File): Promise<PlaylistImport> {
+async function importFile(name: string, file: File): Promise<PlaylistImport> {
   const form = new FormData();
+  form.append("name", name);
   form.append("file", file, file.name);
   return imported(await request("/api/playlists/import", PlaylistImportSchema, { method: "POST", form, area: "Playlist" }));
 }

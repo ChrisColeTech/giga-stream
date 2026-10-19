@@ -29,13 +29,20 @@ beforeEach(() => {
 });
 
 describe("the New job form", () => {
-  it("makes catalog jobs only: Name, then Scope and Kind, with no Type and no Playlist", () => {
+  it("makes catalog jobs with the same fields as edit: Name, Type, Scope, Kind, Pages, Enabled and Schedule", () => {
     const html = renderLive(createElement(NewJobForm));
-    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Scope"'));
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Type"'));
+    assert.ok(at(html, 'aria-label="Type"') < at(html, 'aria-label="Scope"'));
     assert.ok(at(html, 'aria-label="Scope"') < at(html, 'aria-label="Kind"'));
-    for (const gone of ['aria-label="Type"', 'aria-label="Playlist"', ">Catalog</button>", "<select", 'placeholder="']) {
+    assert.ok(at(html, 'aria-label="Kind"') < at(html, 'aria-label="Pages"'));
+    assert.ok(at(html, 'aria-label="Pages"') < at(html, 'aria-label="Enabled"'));
+    assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Interval"'));
+    for (const gone of ['aria-label="Playlist"', ">Catalog</button>", 'placeholder="']) {
       assert.ok(!html.includes(gone), gone);
     }
+    assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Type"[^>]*value="Catalog"/);
+    assert.ok(html.includes('<option value="all" selected="">All</option>'));
+    assert.ok(html.includes('aria-checked="true"') && html.includes('<option value="off" selected="">Off</option>'));
     assert.ok(html.includes('aria-label="Create. Name is required."'));
   });
 
@@ -45,19 +52,23 @@ describe("the New job form", () => {
     assert.equal(createReason({ ...EMPTY_NEW_JOB, name: "N" }, undefined), undefined);
   });
 
-  it("offers Trending, Popular and Discover and Movies and Series; a discover walk has no Kind", () => {
-    const props = { scope: "trending", kind: "movie", onChange: () => undefined } as const;
+  it("offers every scope and All, Movies and Series from selects; Discover has no Kind or Pages", () => {
+    const props = { scope: "trending", kind: "all", pages: "5", errors: {}, onChange: () => undefined } as const;
     const rows = renderLive(createElement(CatalogRows, props));
     assert.ok(at(rows, 'aria-label="Scope"') < at(rows, 'aria-label="Kind"'));
-    for (const label of [">Trending<", ">Popular<", ">Discover<", ">Movies<", ">Series<"]) assert.ok(rows.includes(label), label);
-    assert.ok(!renderLive(createElement(CatalogRows, { ...props, scope: "discover" })).includes('aria-label="Kind"'));
+    for (const label of [">Trending<", ">Popular<", ">Discover<", ">All<", ">Movies<", ">Series<"]) {
+      assert.ok(rows.includes(label), label);
+    }
+    const discover = renderLive(createElement(CatalogRows, { ...props, scope: "discover" }));
+    assert.ok(!discover.includes('aria-label="Kind"') && !discover.includes('aria-label="Pages"'));
   });
 
   it("offers Recent, the Library update's scope, and hides its Kind", () => {
-    const props = { scope: "trending", kind: "movie", onChange: () => undefined } as const;
+    const props = { scope: "trending", kind: "all", pages: "5", errors: {}, onChange: () => undefined } as const;
     assert.ok(renderLive(createElement(CatalogRows, props)).includes(">Recent<"));
     const recent = renderLive(createElement(CatalogRows, { ...props, scope: "recent" }));
     assert.ok(recent.includes('aria-label="Scope"') && !recent.includes('aria-label="Kind"'));
+    assert.ok(!recent.includes('aria-label="Pages"'));
   });
 });
 
@@ -88,7 +99,7 @@ describe("the jobs list", () => {
     assert.ok(html.includes('title="Deletes the job; what it synced stays."'), "a catalog job's Delete works");
   });
 
-  it("draws Refresh, then Stop, Enable, Disable and the armed Delete last, waiting for a tick; Run job is the page toolbar's", () => {
+  it("draws Refresh, then Enable, Disable and the armed Delete last; Run job is the page toolbar's", () => {
     state().jobsLoaded([job(1)]);
     let html = page();
     const table = (): string => html.slice(html.indexOf('aria-label="Jobs table"'));
@@ -97,8 +108,8 @@ describe("the jobs list", () => {
     assert.ok(top().includes('aria-label="Run job. Tick a job first"'), "the promote waits in the page toolbar");
     state().jobTick(1, true);
     html = page();
-    for (const verb of ["Stop", "Enable"]) assert.ok(table().includes(`${verb}</button>`), verb);
-    assert.ok(at(table(), "Stop") < at(table(), "Enable") && at(table(), "Disable") < at(table(), ">Delete</button>"));
+    assert.ok(table().includes("Enable</button>") && !table().includes("Stop</button>"));
+    assert.ok(at(table(), "Enable") < at(table(), "Disable") && at(table(), "Disable") < at(table(), ">Delete</button>"));
     assert.ok(/<button[^>]*title="Run the ticked rows now"[^>]*>Run job<\/button>/.test(top()), "ticked, the promote runs");
     assert.ok(table().includes('aria-label="Delete. A playlist&#x27;s job goes with the playlist."'), "bulk Delete of a playlist job");
   });

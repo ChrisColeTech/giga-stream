@@ -1,6 +1,6 @@
 import { NAME_LENGTH, NAME_MAX, PAGES_MAX, PAGES_MIN } from "@/constants/job-copy";
 import { required, schedule, wholeNumber, type Refusal } from "./field-checks";
-import { type JobDraft, type NewJobDraft, hasPages } from "./job-draft";
+import { type JobDraft, hasPages } from "./job-draft";
 
 /* The Jobs rules (`38` sections 4.2 and 4.3), mirroring the backend's so a form refuses before it sends. They use the
  * frozen primitives of `field-checks.ts`. */
@@ -26,13 +26,12 @@ export const pagesRefusal = (value: string): Refusal =>
   required("Pages", value) ?? wholeNumber("Pages", value, PAGES_MIN, PAGES_MAX);
 
 /** Why `Create` is disabled, in the form's order, or undefined: the Name, then the busy or unreachable reason. */
-export function createReason(draft: NewJobDraft, busy: string | undefined): string | undefined {
+export function createReason(draft: JobDraft, busy: string | undefined): string | undefined {
   return required("Name", draft.name) ?? busy;
 }
 
-export function firstCreateRefusal(draft: NewJobDraft): JobRefusal | null {
-  const name = nameRefusal(draft.name);
-  return name === null ? null : { field: "name", sentence: name };
+export function firstCreateRefusal(draft: JobDraft): JobRefusal | null {
+  return firstSaveRefusal(draft, true);
 }
 
 /** The first value a workspace save refuses, in the page's order, or null. Pages is checked for a catalog job only, and

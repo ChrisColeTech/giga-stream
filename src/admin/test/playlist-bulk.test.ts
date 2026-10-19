@@ -27,10 +27,9 @@ describe("the Playlists bulk verbs", () => {
 
   it("Sync now runs a playlist's own job and skips each other row with its reason", () => {
     const plan = planPlaylistBulk("sync", items, [1, 2, 3, 4, 5], jobFor);
-    assert.deepEqual(plan.runnable.map((item) => item.id), [1]);
+    assert.deepEqual(plan.runnable.map((item) => item.id), [1, 3], "a disabled generated job can still run manually");
     assert.deepEqual(reasons(plan), [
       [2, "A disabled playlist cannot sync."],
-      [3, "The job for this playlist is disabled."],
       [4, "That job is already running."],
       [5, "This playlist has no job to run."],
     ]);

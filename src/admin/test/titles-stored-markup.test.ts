@@ -147,4 +147,15 @@ describe("the Stored grid", () => {
     const first = html.slice(html.indexOf('aria-label="Select T movie-1"'), html.indexOf('aria-label="Select T movie-2"'));
     assert.ok(first.indexOf('aria-label="Preview title"') < first.indexOf(">Delete</button>"), "the eye, before the armed Delete");
   });
+
+  it("enables the index Preview promote for exactly one ticked title with a TMDB id", () => {
+    const title = titleRowOf("movie-1", { tmdbId: 603 });
+    state().storedPageLoaded(storedKey(START_STORED), 0, {
+      rows: [title], total: 1, version: "1:1", inventory: INVENTORY,
+    });
+    state().storedTick(title, true);
+    const html = renderLive(createElement(TitlesPage, { active: true }));
+    const top = html.slice(0, html.indexOf("overflow-y-auto"));
+    assert.ok(/<button[^>]*title="Preview title"[^>]*>Preview<\/button>/.test(top));
+  });
 });

@@ -47,7 +47,7 @@ describe("every page has its page toolbar (LoRA Trainer Toolbar.tsx, DatasetsInd
   it("opens every index with IndexToolbar and every workspace frame with a toolbar, both on the family Toolbar", () => {
     const indexes = COMPONENTS.filter((source) => /[\\/]\w+Index\.tsx$/.test(source.path) && !/IndexSkeleton/.test(source.path));
     assert.equal(indexes.length, 6);
-    assert.deepEqual(indexes.filter((source) => !/<IndexToolbar tab=/.test(source.text)).map((source) => rel(source.path)), []);
+    assert.deepEqual(indexes.filter((source) => !/<IndexToolbar\b/.test(source.text)).map((source) => rel(source.path)), []);
     const frame = read(join(SRC, "components", "chrome", "WorkspaceFrame.tsx")).text;
     assert.ok(/\{toolbar\}\s*\{children\}/.test(frame), "the toolbar comes first in the centre");
     for (const name of ["IndexToolbar.tsx", "WorkspaceToolbar.tsx"]) {
@@ -68,6 +68,44 @@ describe("every page has its page toolbar (LoRA Trainer Toolbar.tsx, DatasetsInd
 
   it("holds no Segmented in a table strip (a choice is for a labelled row)", () => {
     assert.ok(!/Segmented/.test(read(join(SHARED, "lists", "TableStrip.tsx")).text));
+  });
+});
+
+describe("choice-control inventory", () => {
+  const segmented = [
+    ["channels/NewChannelRows.tsx", "channels/NewChannelRows.tsx", "KINDS", "channels.new", "channels.index"],
+    ["channels/LiveDetailsGroup.tsx", "channels/LiveDetailsGroup.tsx", "PLAYS", "live.details", "channels.live"],
+    ["channels/PlaybackGroup.tsx", "channels/PlaybackGroup.tsx", "MODES", "live.playback", "channels.live"],
+    ["providers/NewProviderForm.tsx", "../constants/provider-copy.ts", "FAMILY_OPTIONS", "providers.new", "providers.index"],
+    ["providers/ProviderDetailsGroup.tsx", "../constants/provider-copy.ts", "FAMILY_OPTIONS", "provider.details", "provider.edit"],
+    ["titles/NewTitleForm.tsx", "../constants/title-copy.ts", "KIND_OPTIONS", "titles.new", "titles.index"],
+    ["titles/TitleListGroup.tsx", "../constants/title-stored-copy.ts", "VIEW_OPTIONS", "titles.list", "titles.index"],
+    ["playlists/NewPlaylistForm.tsx", "playlists/NewPlaylistForm.tsx", "SOURCES", "playlists.new", "playlists.index"],
+    ["settings/AppearanceSection.tsx", "settings/AppearanceSection.tsx", "THEMES", "appearance.theme", "appearance"],
+    ["settings/AppearanceSection.tsx", "settings/AppearanceSection.tsx", "MOTIONS", "appearance.motion", "appearance"],
+  ] as const;
+
+  it("inventories every admin Segmented and pins every option source to exactly two", () => {
+    const found = COMPONENTS.reduce((total, source) => total + (source.text.match(/<Segmented\b/g) ?? []).length, 0);
+    assert.equal(found, segmented.length);
+    for (const [component, optionsFile, name] of segmented) {
+      const text = read(join(SRC, "components", component)).text;
+      assert.ok(new RegExp(`options=\\{${name}\\}`).test(text), `${component}: ${name}`);
+      const options = read(join(SRC, optionsFile)).text.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\][^;]*;`))?.[1] ?? "";
+      assert.equal((options.match(/\{\s*value:/g) ?? []).length, 2, `${name} must be exactly two`);
+    }
+  });
+
+  it("keeps at most one pair per group and two per page", () => {
+    const groups = segmented.map((entry) => entry[3]);
+    const pages = segmented.map((entry) => entry[4]);
+    for (const group of new Set(groups)) assert.equal(groups.filter((one) => one === group).length, 1, group);
+    for (const page of new Set(pages)) assert.ok(pages.filter((one) => one === page).length <= 2, page);
+  });
+
+  it("has no supplied-choice ChipGroup or ad-hoc aria-pressed pill cloud", () => {
+    assert.deepEqual(offenders(COMPONENTS, /\bChipGroup\b/), []);
+    assert.deepEqual(offenders(COMPONENTS, /aria-pressed=/), []);
   });
 });
 
