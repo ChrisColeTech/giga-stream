@@ -144,6 +144,7 @@ A stored value that no longer validates reads as its default; an unknown stored 
 | `watchedPercent` | `90`, `95`, `100` | `90` |
 | `liveOnOpen` | `last`, `none` | `last` |
 | `libraryView` | `grid`, `list`, `rows` | `grid` |
+| `libraryScope` | canonical non-empty array of `movie`, `tv`, `local` | `["movie", "tv", "local"]` |
 | `librarySort` | `newest`, `oldest`, `az`, `year` | `newest` |
 | `showContinue` | boolean | `true` |
 | `pauseHistory` | boolean | `false` |
@@ -211,7 +212,7 @@ through the backend, section 7.4) with the user's own files and data.
 |---|---|---|
 | `view` | `all`, `history`, `favorites`, `collection` | `all` |
 | `collectionId` | a collection id; required with `view=collection` | |
-| `type` | `all`, `movie`, `tv`, `local` | `all` |
+| `type` | repeatable `movie`, `tv`, `local`; absent or legacy scalar `all` means all three | all three |
 | `q` | text, case-insensitive over title and file name | |
 | `sort` | `newest`, `oldest`, `az`, `year`, `trending` | `newest` |
 | `genre` | repeatable; an item matches any | |
@@ -245,11 +246,12 @@ interface LibraryPage {
 }
 ```
 
-- **`all`.** Titles are browsed from TMDB through the backend (section 7.4): with `q`, TMDB's search;
-  otherwise TMDB's lists in the chosen sort, narrowed by genre and year. `type=movie` or `tv` browses one
-  kind; `type=local` lists only the user's files; `type=all` lists the user's matching files first, then
-  the titles *(default)*. Pages are the backend's pages (20 titles), and `nextCursor` carries the position
-  in both.
+- **Media kinds.** Repeated `type` values select any canonical non-empty combination of Movies, TV and Local
+  (`?type=movie&type=tv`). No `type` and legacy scalar `type=all` mean all three; scalar concrete values mean a
+  singleton; duplicates canonicalize; `all` mixed with specifics means all; an empty/unknown value is
+  `422 library.invalid`. Selected title kinds are browsed through the backend (section 7.4); selected local rows are
+  merged first in `view=all`. Pages hold 20 mixed rows, and `nextCursor` carries the positions in local and title
+  sources independently.
 - **`history`, `favorites`, `collection`.** These hold items the user chose, so they are listed from the
   fileserver's own tables: `history` is the watch entries, newest first, one row per entry; `favorites` the
   favorited items; `collection` a collection's manual members and the files of its folders. A title's

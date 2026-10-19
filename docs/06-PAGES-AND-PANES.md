@@ -397,21 +397,21 @@ strip stays `All · Movies · TV · Local` on every view.
 
 ### 4.3 Filters (right)
 
-LoRA Studio's gallery filter pane, amended by `57`: one scrolling stack of field-shaped pickers and **Clear filters**
-pinned under it. The page toolbar carries `Filters · N`, `Sort: <value>`, `View: <value>`, Refresh and Search; applied
-non-default filters appear under it as removable STATE tokens (never offered-choice chips). The wide right pane and the
-narrow Filters popup render the same `LibraryFilters` and share one query/options source.
+LoRA Studio's gallery filter pane, amended by `58`: one scrolling stack of field-shaped pickers and **Clear filters**
+pinned under it. The page toolbar carries quick `Media: <summary>` (multi), `View: <value>`, Refresh and Search - no
+full Filters popup, no toolbar Sort and no applied-token strip. Media in the toolbar and pane share one canonical query
+array/options source.
 
 | Filter | Control |
 |---|---|
 | Filter | a field with a search icon and a clear control (`Clear the filter`), labelled `Filter`, `data-search` for `Ctrl+F`; narrows the loaded list by title and combines with the type strip and every filter. Its text is saved like the other filters (the `libraryFilter` setting, at most 200 characters, default empty; owner, 2026-10-18, reversing the earlier "the search is never saved") and restored before the first Library read |
-| Media | field-shaped picker; checkmark rows All, Movies, TV, Local |
+| Media | shared multi ChoicePopover; Movies, TV, Local checkbox rows; All is the derived complete set; every pair combination is valid |
 | Genre | field-shaped searchable multi-select checklist; search appears at 12; never a chip cloud |
 | Year | field-shaped searchable/scrollable single-choice list, `Any year` first |
 | Watched | field-shaped single-choice list: All, Unwatched, Watching, Watched |
-| Sort (toolbar) | menu button + checkmark rows: Newest, Oldest, A to Z, Year; Trending only with a real signal |
+| Sort | field ChoicePopover: Newest, Oldest, A to Z, Year; Trending only with a real signal |
 | View (toolbar) | menu button + icon rows: Grid, List, Rows; follows the Default view setting |
-| **Clear filters** | ghost, full width, disabled at defaults; resets title, Media, Genre, Year and Watched; Sort keeps its own default |
+| **Clear filters** | ghost, full width, disabled at defaults; resets Title, Media, Genre, Year and Watched; Sort stays |
 
 - Genre and Year are populated choices and never free text, with no counts. A selected value stays
   listed until it is removed, so no choice disappears.
