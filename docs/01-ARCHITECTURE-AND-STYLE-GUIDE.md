@@ -414,6 +414,39 @@ Exception: a folder's Remove in the Collections folders table is an icon in a ro
 arms by swapping the row for the consequence in words beside a check icon (`components/collections/FolderControls.tsx`);
 the same timeout, blur and close disarm it. An icon cannot turn into a question in place.
 
+### Choice controls: pills, selects and entered values (owner 2026-10-19; `57`)
+
+The distinction is the interaction model, not whether every option can be seen (a dropdown shows all of them when
+opened):
+
+- **`Segmented`:** exactly **two** mutually exclusive, fixed, short peer modes whose direct side-by-side comparison and
+  one-click switching are the point (`File | Web address`, `Movie | Series`). Neither option is a boolean on/off state,
+  a catch-all (`All`, `None`, `Any`, `System`) or navigation. Never a verb, server record, dynamic facet, sort or long
+  technical value.
+- **`ChipGroup`:** not used for supplied form choices. Multiple supplied choices use a field-shaped checklist (searchable
+  when dynamic/large); independent boolean state uses separate Toggles. A chip cloud is never a picker.
+- **Native `Select`:** **three or more choices**; any set mixing a catch-all with specific values; any dynamic,
+  populated, record-backed or potentially unbounded set; long labels; secondary configuration, sorting, filtering or
+  technical metadata; or a narrow pane where the pair cannot remain on one line. `QuerySelect` is the compact
+  list-toolbar form of the same rule.
+- **`ChipsInput`:** freeform user-entered multi-value tokens only (origins, extensions). Its chips are values already
+  entered, not offered choices, so they do not count against the offered-choice limits. A supplied vocabulary never
+  uses `ChipsInput`.
+
+Hard limits: one `Segmented` is ONE pair (2 pills); one group contains at most one pair; one form/page shows at most
+TWO pairs (4 pills) at once. Conditional controls count together when they can render together. A third pair becomes
+`Select`, lowest-priority first. Do not count `TabPill` navigation, read-only name chips/badges, swatches or entered
+`ChipsInput` tokens.
+
+A segmented pair stays on ONE line everywhere; it never wraps, scrolls, clips or truncates. If the two labels do not
+fit, use `Select`. Three or more single-choice options always use `Select`; supplied multi-choice options use a
+checklist.
+
+Binary application state stays `Toggle`, never two pills and never a select. Tabs and surface navigation stay
+`TabPill`/`nav`; buttons and verbs never become chips. The pills are real buttons with `aria-pressed`; selects remain
+native for their platform menu, keyboard and large-list behavior. A disabled pill's reason follows the family's
+focusable-tooltip rule, never title-only copy.
+
 ### Buttons and surfaces
 
 The family rule, from Giga Cut (`D:\Projects\giga-cut\docs\01-ARCHITECTURE-AND-STYLE-GUIDE.md` §Buttons and
@@ -430,8 +463,8 @@ chrome; at most one filled accent per surface, as a form's commit.** The titleba
 | Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
 | Icon-only (`IconButton`) | Navigation, dismissal and a row's small inner actions only: `‹ ›` paging, the close `X`, move up and down, remove one entry, a narrow pane's toolbar, a form row's trailing glyph, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape. Never a verb that changes records (LoRA Trainer: `ViewerToolbar.tsx` 80-88, `PromptBank.tsx` 56-64, `UnfreezeGroup.tsx` 43, `Titlebar.tsx` 48) |
 | Icon and word (`Button size="sm" variant="ghost"`, the icon first) | Every verb in a list's first row (the table strip) and every `Refresh`; a verb with no family icon (vocabulary below) is the word alone (LoRA Trainer `GalleryToolbar.tsx` 28-36, `CheckpointsView.tsx` 73-91, `DatasetRows.tsx` 44-46) |
-| Forward verb (`Button size="sm" variant="primary"`, the destination's word and `→`, no icon, a `title`) | The rightmost control of the PAGE toolbar, moving the work on to another tab or window (`Titles →`, `Preview →`); disabled with its reason (`Tick a row first`) when it needs a ticked row. Never in a list's first row (LoRA Trainer `DatasetsIndex.tsx` 64-70, `DatasetWorkspace.tsx` 67-69, `GalleryToolbar.tsx` 47-49) |
-| Choice (`Segmented` pills) | One-of choices in a labelled row, never verbs |
+| Promote verb (`Button size="sm" variant="primary"`, the operation's words, no arrow unless it opens a child window, a `title`) | The rightmost control of the PAGE toolbar, acting on the current record or ticked set (`Preview`, `Sync now`, `Run job`). Never navigation to another tab: the nav pill owns page navigation. Disabled with its reason (`Tick a row first`) when it needs a ticked row. Never in a list's first row |
+| Choice (`Segmented` pair) | Exactly two fixed peer modes under Choice controls above (one pair per group, two per page), never verbs |
 
 *(Corrected 2026-10-17: this table said a primary is never in a toolbar and drew the forward verb as a ghost word in the
 table strip, so the admin lost its page toolbar. The reference draws the forward verb as the small primary at the right
@@ -449,20 +482,16 @@ where `STRIP` is `flex flex-none flex-wrap items-center gap-2 border-b border-ha
 - **Placement.** The toolbar is the first child of the centre pane, above the scrolling column, and never scrolls away
   (`DatasetsIndex.tsx` 63-72: the `Toolbar`, then `<div className="min-h-0 flex-1 overflow-y-auto">` holding the New form
   and the rows; `DatasetWorkspace.tsx` 60-73).
-- **An index** holds only the page's forward verb, on the RIGHT (`DatasetsIndex.tsx` 64-70). An index with no forward
-  verb still draws the toolbar, empty, so the page keeps its place from tab to tab - except the Jobs index, whose promote
-  `Run job` acts on the ticked set (`55` decision 6).
+- **An index** holds only the page's promote, on the RIGHT. An index with no promote still draws the toolbar, empty, so
+  the page keeps its place from tab to tab. A promote acts on the current/ticked records; it NEVER changes tabs (`56`).
 - **A workspace** holds `Discard changes` on the LEFT, and on the RIGHT `Save` (the one commit, `55`) then the promote
   rightmost (`DatasetWorkspace.tsx` 61-72). No save ever ends a form's body (Forms, amended).
-- **The forward verb** is `Button size="sm" variant="primary"`: the destination's word and `→`, a `title` saying what it
-  does, disabled with its reason when it cannot act (`DatasetsIndex.tsx` 66: `Tick a dataset first`). Per page (`28`
-  section 7.2; `55`): Channels index `Preview →` (exactly one ticked row: `Tick a row first`, `Tick only one row`); Providers
-  `Titles →`; Titles and Playlists `Jobs →`; the Jobs index `Run job` (the ticked set, the gate's reasons); the Accounts
-  index none. A channel workspace `Preview →` (`Save the channel first` while the draft differs); a provider workspace
-  `Preview →` (the provider preview, `55`; `Save the provider first`); a title workspace `Preview →` (the title preview,
-  `55`; `Save the title first`); a job workspace `Run job` (`Resume` after a stopped run, the run gate's reason; `Stop`
-  never - the statusbar owns it); a playlist workspace `Channels →` (the channels of that playlist; disabled `This
-  playlist has no channels.`; plan `43`); an account workspace none.
+- **The promote** is `Button size="sm" variant="primary"`: the operation's words and a `title` saying what it does,
+  disabled with its reason when it cannot act. Per page (`56`): Channels, Providers and Titles indexes `Preview`
+  (exactly one ticked previewable row); Playlists `Sync now` (the ticked set); Jobs `Run job` (the ticked set); Accounts
+  none. Channels, Providers and Titles workspaces `Preview` (`Save the record first` while dirty); Playlist `Sync now`;
+  Jobs `Run job` (`Resume` after a stopped run); Accounts none. Cross-tab actions (`Titles →`, `Jobs →`, `Channels →`)
+  do not exist in page toolbars - the titlebar nav pill is the one navigation control.
 - Every button in it has a tooltip (`title`), as LoRA's do.
 
 ### Selection toolbar
