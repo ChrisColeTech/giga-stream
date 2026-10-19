@@ -83,7 +83,7 @@ test("Unwatched leaves out every title with a watch entry, and the total follows
 test("local files come first, then the cached titles; the cursor and the total are exact across 3 pages", async () => {
   const { t } = await synced(manyMovies(45));
   const locals = [1, 2, 3].map((n) => localFile(t, `File ${n}.mkv`, { addedAt: n }));
-  const pages = await allPages(t, "sort=az");
+  const pages = await allPages(t, "type=movie&type=local&sort=az");
   assert.deepEqual(pages.map((page) => (pick(page.body, "data.items") as unknown[]).length), [20, 20, 8]);
   for (const page of pages) assert.equal(pick(page.body, "data.total"), 48, "locals plus every cached match, on every page");
   const all = pages.flatMap((page) => idsOf(page.body));

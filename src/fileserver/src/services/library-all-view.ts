@@ -41,7 +41,7 @@ export function createLibraryAllView(deps: {
 
   /** The flags every `all` answer carries; a trending sort the cache cannot serve is refused. */
   function flagsOf(query: LibraryQuery) {
-    const kinds = titleKindsOf(query.type);
+    const kinds = titleKindsOf(query.types);
     const trending = cached.canTrend(kinds);
     if (query.sort === "trending" && !trending) throw invalid();
     return {

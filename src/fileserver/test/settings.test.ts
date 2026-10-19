@@ -44,7 +44,7 @@ test("a fresh fileserver answers every setting at its default, with the admin ad
       rescanOnStartup: true,
       adminUrl: "http://127.0.0.1:8091",
       defaultSource: null,
-      libraryScope: "all",
+      libraryScope: ["movie", "tv", "local"],
       librarySource: "all",
       libraryGenres: [],
       libraryYear: "",

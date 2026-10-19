@@ -122,19 +122,19 @@ function assertSameAsOld(db: DatabaseSync, count: number): void {
 test("every sort and filter answers exactly as the pre-007 query did, at the start, the middle and the end", () => {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
-  assert.equal(migrate(db), 8);
+  assert.equal(migrate(db), 9);
   seed(db, 700);
   assertSameAsOld(db, 700);
   db.close();
 });
 
-test("a version 6 cache keeps its titles and answers the same after upgrading through 8", () => {
+test("a version 6 cache keeps its titles and answers the same after upgrading through 9", () => {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   migrationsUpTo(db, 6);
   seed(db, 400);
   const before = createCachedTitleQuery(db).page({ ...FILTERS[3]!, sort: "newest", offset: 100, limit: 50 });
-  assert.equal(migrate(db), 8);
+  assert.equal(migrate(db), 9);
   const after = createCachedTitleQuery(db).page({ ...FILTERS[3]!, sort: "newest", offset: 100, limit: 50 });
   assert.deepEqual(after, before);
   assert.deepEqual({ ...(db.prepare("SELECT COUNT(*) AS n FROM cached_titles").get() as object) }, { n: 400 });
@@ -145,7 +145,7 @@ test("a version 6 cache keeps its titles and answers the same after upgrading th
 
 test("a sort page walks its covering index: no sort step for any of the five orders", () => {
   const db = new DatabaseSync(":memory:");
-  assert.equal(migrate(db), 8);
+  assert.equal(migrate(db), 9);
   seed(db, 300);
   db.exec("ANALYZE");
   for (const sort of SORTS) {

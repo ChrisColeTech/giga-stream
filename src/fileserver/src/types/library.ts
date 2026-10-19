@@ -1,6 +1,17 @@
 /** The library query and the titles pass-through (docs/03 sections 3.5 and 3.6). */
 import type { CollectionSource, ItemRef } from "./collection.js";
 
+export type LibraryMediaType = "movie" | "tv" | "local";
+export type LibraryMediaTypes =
+  | readonly ["movie"]
+  | readonly ["tv"]
+  | readonly ["local"]
+  | readonly ["movie", "tv"]
+  | readonly ["movie", "local"]
+  | readonly ["tv", "local"]
+  | readonly ["movie", "tv", "local"];
+export const ALL_LIBRARY_MEDIA = Object.freeze(["movie", "tv", "local"] as const);
+
 /** One playable provider source, filled by the backend (docs/03 sections 3.6 and 7.5). */
 export interface TitleSource {
   providerId: number;
