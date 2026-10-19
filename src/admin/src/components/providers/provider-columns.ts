@@ -7,7 +7,7 @@ import type { ProviderRowView } from "@/lib/provider-rows";
 const column = createColumnHelper<typeof recordFeatures, ProviderRowView>();
 
 /** The Providers list's columns (`45` section 2.3). `size` is the minimum width in px. Hidden in a narrow pane in this
- *  order: order, source, family; the name and the state word always stay. */
+ *  order: order, host, family; the name and the state word always stay. */
 export const providerColumns = column.columns([
   column.accessor((row) => Number(row.order), {
     id: "order",
@@ -25,9 +25,9 @@ export const providerColumns = column.columns([
     meta: { kind: "name", grow: 1.4, priority: 0 },
     cell: (info) => info.getValue(),
   }),
-  column.accessor((row) => row.source, {
-    id: "source",
-    header: "source",
+  column.accessor((row) => row.host, {
+    id: "host",
+    header: "host",
     size: 112,
     sortFn: "alphanumeric",
     meta: { kind: "mono", grow: 1, priority: 2 },

@@ -14,12 +14,12 @@ import type { DeletedRowView } from "./title-restore";
 const since = (when: string, other: string): string => (when === "never" ? "never" : other);
 
 export const providerSpec: ListSpec<ProviderRowView> = {
-  fields: (row) => [row.name, row.source, row.family],
+  fields: (row) => [row.name, row.host, row.family],
   filters: { state: (row) => row.state.word, family: (row) => row.family },
   sorts: {
     order: (a, b) => Number(a.order) - Number(b.order),
     name: (a, b) => byText(a.name, b.name),
-    source: (a, b) => byText(a.source, b.source),
+    host: (a, b) => byText(a.host, b.host),
     family: (a, b) => byText(a.family, b.family),
     state: (a, b) => byText(a.state.word, b.state.word),
   },
