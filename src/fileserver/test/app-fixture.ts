@@ -123,6 +123,7 @@ export async function startBackend(): Promise<RealBackend> {
         TMDB_SYNC_SCHEDULE: "",
       },
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
       windowsHide: true,
     },
   );
