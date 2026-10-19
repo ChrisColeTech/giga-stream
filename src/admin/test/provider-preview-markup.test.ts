@@ -101,8 +101,8 @@ describe("the provider preview window", () => {
     const html = open(1);
     assert.ok(
       html.includes('allow="autoplay; fullscreen; encrypted-media; picture-in-picture"') &&
-        html.includes('allowfullscreen=""') &&
-        html.includes('referrerpolicy="origin"'),
+        html.includes('allowFullScreen=""') &&
+        html.includes('referrerPolicy="origin"'),
       "the embed host's frame rules",
     );
     assert.ok(!html.includes("sandbox"), "a provider iframe has NO sandbox attribute (owner, 2026-10-17)");

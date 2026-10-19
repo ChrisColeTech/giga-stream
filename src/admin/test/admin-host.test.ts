@@ -88,10 +88,40 @@ describe("in the backend's own window, the preview's player policy", () => {
     assert.deepEqual(cleared, [true]);
   });
 
-  it("says false and clears nothing when the preload lacks the policy calls", async () => {
-    const seen: unknown[] = [];
-    install({ chooseFolder: async () => null, setOverlay: async () => true, setPlayerPolicy: seen.push });
+  it("says false and clears nothing when the preload lacks the policy calls", () => {
+    install({ chooseFolder: async () => null, setOverlay: async () => true });
     assert.equal(setPlayerPolicy(POLICY), false);
     clearPlayerPolicy();
+  });
+
+  it("takes a bridge that answers synchronously without a promise, and swallows a rejecting one", async () => {
+    const seen: unknown[] = [];
+    install({
+      chooseFolder: async () => null,
+      setOverlay: async () => true,
+      setPlayerPolicy: (policy: unknown) => {
+        seen.push(policy);
+        return true;
+      },
+      clearPlayerPolicy: () => true,
+    });
+    assert.equal(setPlayerPolicy(POLICY), true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(seen, [POLICY]);
+    clearPlayerPolicy();
+    install({
+      chooseFolder: async () => null,
+      setOverlay: async () => true,
+      setPlayerPolicy: async () => {
+        throw new Error("the IPC channel is down");
+      },
+      clearPlayerPolicy: async () => {
+        throw new Error("the IPC channel is down");
+      },
+    });
+    assert.equal(setPlayerPolicy(POLICY), true);
+    clearPlayerPolicy();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setImmediate(resolve));
   });
 });

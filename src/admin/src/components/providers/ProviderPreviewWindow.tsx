@@ -60,13 +60,18 @@ function ProviderPreviewBody({ providerId }: { readonly providerId: number }) {
     useAppStore.getState().closeOverlay();
   };
 
-  const selectReason = titles.reading
-    ? LOADING_REASON
-    : titles.failed
-      ? UNREACHABLE_REASON
-      : title === undefined
-        ? NO_PREVIEW_TITLE
-        : undefined;
+  /* The `Title` select, like the switch beside it, waits while the backend cannot be reached: the titles it offers are
+     the backend's own rows. Otherwise it waits while the stored titles are read, says a failed read, and says when no
+     held stored movie can fill the template. */
+  const selectReason = unreachable
+    ? UNREACHABLE_REASON
+    : titles.reading
+      ? LOADING_REASON
+      : titles.failed
+        ? UNREACHABLE_REASON
+        : title === undefined
+          ? NO_PREVIEW_TITLE
+          : undefined;
 
   return (
     <ChildWindow

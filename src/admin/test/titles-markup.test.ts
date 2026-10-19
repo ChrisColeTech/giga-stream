@@ -127,7 +127,7 @@ describe("a title's workspace", () => {
     const html = open(row("tv-1", { kind: "tv", tmdbId: 1399 }));
     assert.ok(html.includes("animate-skel-shimmer") && html.includes(">Seasons<"));
     assert.ok(html.includes('aria-label="Discard changes. Loading."') && !html.includes('aria-label="Title"'));
-    assert.ok(at(html, "Discard changes") < at(html, "overflow-y-auto"), "the page toolbar is drawn while the detail loads");
+    assert.ok(at(html, "Discard changes") < at(html, 'id="tw-details"'), "the page toolbar is drawn while the detail loads");
     assert.ok(!html.includes("Jobs →"), "the tab hop is gone (`55` decision 2)");
     assert.ok(!html.includes("Preview →"), "no promote over a skeleton: the detail is not known yet");
     assert.ok(!html.includes("Save details") && !html.includes(">Save<"), "no commit over a skeleton");
