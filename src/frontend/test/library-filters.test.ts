@@ -14,6 +14,7 @@ import { DEFAULT_QUERY, type LibraryQuery } from "@/lib/library-query";
 const noop = (): void => undefined;
 const render = (element: ReturnType<typeof createElement>): string => renderToStaticMarkup(element);
 const query = (change: Partial<LibraryQuery> = {}): LibraryQuery => ({ ...DEFAULT_QUERY, ...change });
+const choiceCalls = (source: string): string[] => source.match(/<ChoicePopover\b[\s\S]*?\/>/g) ?? [];
 
 describe("Library media choices", () => {
   it("uses derived All transitions and every exact summary", () => {
@@ -71,10 +72,15 @@ describe("Library composition", () => {
     assert.equal(choicePopoverSearches(12), true);
     const toolbar = readFileSync("src/components/library/LibraryToolbar.tsx", "utf8");
     const filters = readFileSync("src/components/library/LibraryFilters.tsx", "utf8");
+    const calls = [...choiceCalls(toolbar), ...choiceCalls(filters)];
     assert.match(toolbar, /LayoutGrid.*List.*Rows3/s);
-    assert.match(toolbar, /ChoicePopover.*mediaChoice/s);
-    assert.match(filters, /ChoicePopover mode="multi" label="Genre"/);
-    assert.doesNotMatch(filters, /searchThreshold|className=.*w-/);
+    assert.equal(choiceCalls(toolbar).length, 2);
+    assert.equal(choiceCalls(filters).length, 5);
+    assert.ok(calls.some((call) => call.includes("mediaChoice")));
+    assert.ok(calls.some((call) => call.includes('mode="multi" label="Genre"')));
+    for (const call of calls) {
+      assert.doesNotMatch(call, /\b(?:searchThreshold|className|width|minWidth)\s*=/);
+    }
   });
 
   it("deletes every rejected frontend choice implementation", () => {
