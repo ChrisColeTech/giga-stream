@@ -110,7 +110,18 @@ describe("a live channel's workspace", () => {
     );
     assert.ok(!html.includes("Save details"), "the group ends without a commit; the toolbar holds the Save");
     assert.ok(html.includes('aria-label="Mode"') && html.includes(">Encode</button>") && html.includes('aria-label="Captions"'));
-    assert.equal((html.match(/title="A channel keeps at least two qualities\."/g) ?? []).length, 2);
+    const reason = "A channel keeps at least two qualities.";
+    const lockedReasons = (html.match(/<span[^>]*>/g) ?? []).filter((tag) => tag.includes(`. ${reason}"`));
+    assert.equal(lockedReasons.length, 2, "both locked qualities expose their reason on focusable tooltip wrappers");
+    assert.ok(lockedReasons.some((tag) => tag.includes(`aria-label="360p. ${reason}"`)));
+    assert.ok(lockedReasons.some((tag) => tag.includes(`aria-label="720p. ${reason}"`)));
+    assert.ok(
+      lockedReasons.every(
+        (tag) => tag.includes("aria-describedby=") && tag.includes('role="group"') && tag.includes('tabindex="0"'),
+      ),
+      "each reason wrapper is described and keyboard focusable",
+    );
+    assert.ok(!html.includes(`title="${reason}"`), "the reason is not title-only");
     assert.ok(/aria-pressed="false"[^>]*>1080p/.test(html), "an unlit quality can be added");
   });
 
