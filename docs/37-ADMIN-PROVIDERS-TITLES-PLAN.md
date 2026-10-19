@@ -57,7 +57,13 @@ the template needs `https` and `{tmdbId}` (client-side by `lib/provider-checks.t
 until a row is ticked (`lib/provider-bulk.ts`, pure): `Enable` / `Disable` are `PUT { enabled }`, skipping a provider already in that state (`Already enabled.` / `Already disabled.`; all skipped: `Every ticked provider is already enabled.` / `...disabled.`);
 `Delete` is `DELETE`, two-step (`Delete N providers?`), nothing skipped. A disabled provider stays in its list, dimmed.
 
-### 3.3 Workspace (rail `‹ Providers`, `Details`, `Templates`, `Player`; toolbar `Discard changes`, `Save`, `Titles →`)
+### 3.3 Workspace (rail `‹ Providers`, `Details`, `Templates`, `Player`; toolbar `Discard changes`, `Save`, `Preview →`)
+
+*(Amended 2026-10-18, `55` decisions 1-2: the toolbar is `Discard changes` LEFT, then `Save` and `Preview →` (the provider
+preview, `36` 8.5) RIGHT - the trailing save left the form's body (`01` Forms, amended); the promote is the preview, not
+`Titles →`. The Providers index's `source` column becomes `host` - the embed template's host, the source slug for a
+stream-family provider - and the row gains the `Preview provider` eye beside the armed `Delete`, absent for a
+stream-family or template-less provider.)*
 
 - **Details** (`file-text`): Name, Family (`Segmented`; changing it is allowed and re-renders the template rows), Source, Movie template (embed),
   **Enabled** (`Toggle` over `is_active`), Order (`NumericInput`), Created (read-only, `YYYY-MM-DD HH:mm` local).
@@ -116,7 +122,11 @@ one stays on), the **Sort** pills (`Segmented`: Newest, Oldest, A-Z, Year, Trend
 
   The single-row `Delete` of a synced title in the grid keeps its place. Search, paging and a kind or sort change keep the ticks of rows still on the page and drop the others.
 
-### 4.3 Workspace (rail `‹ Titles`, `Details`, `Plot`, `Images`, `Seasons` (series only); toolbar `Discard changes`, `Save`, `Jobs →`)
+### 4.3 Workspace (rail `‹ Titles`, `Details`, `Plot`, `Images`, `Seasons` (series only); toolbar `Discard changes`, `Save`, `Preview →`)
+
+*(Amended 2026-10-18, `55` decisions 1-2: the toolbar is `Discard changes` LEFT, then `Save` and `Preview →` (the title
+preview, `36` 8.5) RIGHT - the trailing save left the form's body (`01` Forms, amended); the promote is the preview, not
+`Jobs →`. The Titles index gains the `Preview title` eye beside the armed `Delete`, absent for a TMDB-less title.)*
 
 The workspace opens from the held row, then reads `GET /api/titles/:id?includeDisabled=true` for the fields a list row lacks (plot, cast, runtime, seasons, sources);
 its groups wear shimmer lines in their shape until it answers.

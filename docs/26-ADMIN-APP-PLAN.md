@@ -378,7 +378,12 @@ is now the family's record pattern and nothing else:
    The New group holds only the required fields and one primary `Create`. Nothing else is on an index: no sync panel, no
    status panel, no schedule panel.
 2. **A click on a row opens that record's workspace** (the rail with `‹ <Tab>`, its sections, one scrolling page,
-   `Discard changes · Save · <forward verb>`). Everything that configures or acts on a record is in its workspace.
+   `Discard changes · Save · <the promote>`). Everything that configures or acts on a record is in its workspace.
+   *(Amended 2026-10-18, `55`: `Save` sits on the toolbar's RIGHT - the one commit for the entire record - and the
+   promote follows it rightmost; no save ever ends a form's group. The promote per page: Channels `Preview →`, the
+   Providers and Titles workspaces `Preview →` (the previews, `36` 8.5), the Jobs workspace `Run job`, the Playlists
+   workspace `Channels →`; the Jobs INDEX's promote is `Run job` acting on the ticked set, and `run` is not on the
+   bulk strip.)*
 3. **`Enabled` is a switch on the record** (the family's `Toggle`, the boolean control of the family screenshots such as
    "Snap to buckets"; owner, 2026-10-17: a checkbox does not make sense for an enabled/disabled control), never a
    section, chip, tab or category. The tick boxes in an index list's first column are row selection for the toolbar
@@ -536,11 +541,14 @@ anything on this screen."* So there is no Audit tab, index or workspace.
 ### 4.9a Providers index and workspace (proposed; `03` section 7.2b)
 
 - **Index:** New provider (Name, Source, Family Segmented Embed or Stream, Movie template for an embed provider, `Create`);
-  the list (order, name, source, family, state); row end `Delete` as an `ArmedButton`. Toolbar: `Titles →`.
+  the list (order, name, `host` (the template's host, `55`; the slug for a stream-family provider), family, state); row end
+  `Preview provider` (the eye, `55`; absent for a stream-family or template-less provider), then `Delete` as an `ArmedButton`.
+  Toolbar: `Titles →`.
 - **Workspace:** rail `‹ Providers`, then **details · templates · player**. Details: Name, Source, Family, `Enabled`
   (the stored `is_active`), Order. Templates: Movie template, Episode template (the `{tmdbId}` / `{season}` /
   `{episode}` placeholders are in the info tip), Start parameter, Subtitle parameter. Player: Origin, Frame origins (a
-  chips input), Message shape. Toolbar: `Discard changes`, `Save`, `Titles →`. `PUT` is the save.
+  chips input), Message shape. Toolbar: `Discard changes`, `Save`, `Preview →` (the provider preview, `55`; `Save the
+  provider first` while the draft differs). `PUT` is the save.
 - **There is no API key.** Providers are embed or stream templates; nothing in the product reads a provider's key. The
   stored `api_key` field (`03` 7.2b) is dead and is removed (D24).
 
@@ -554,7 +562,9 @@ A title is a record, like a channel. There is no sync panel on this tab; syncing
 - **Workspace:** rail `‹ Titles`, then **details · people and plot · seasons · sources**. Details: Title, Kind (fixed after
   create), Year, `Enabled`, then TMDB id, Rating, Genres, Runtime, Poster address, Backdrop address, Stream address.
   People and plot: Plot, Cast. Seasons (a series): an editable ordered list. Sources: the stream sources the providers
-  produce, read-only because they are derived. Toolbar: `Discard changes`, `Save`, `Jobs →`.
+  produce, read-only because they are derived. Toolbar: `Discard changes`, `Save`, `Preview →` (the title preview, `55`;
+  `Save the title first` while the draft differs). The Titles index's row end gains the `Preview title` eye beside the
+  armed `Delete` (`55`; absent for a TMDB-less title).
 - **An edited synced title** is marked `edited`; the sync never overwrites its edited fields (3.10). `Revert to TMDB` in
   Details' action slot drops the edits and refetches; it is disabled, with its reason, for a manual title. `Delete` on a
   synced title says in its tooltip that the next sync adds it again and points to `Enabled`.

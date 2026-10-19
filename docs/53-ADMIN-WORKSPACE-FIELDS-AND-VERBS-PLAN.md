@@ -31,12 +31,12 @@ its files do not overlap `52`'s, so either order lands.
    unchanged (text). `commaItems` splits on commas AND newlines (trimmed, empties dropped, one of each - the genres'
    single-line field cannot hold a newline, so its behaviour is unchanged). `CAST_TIP` says one name per line or
    comma-separated. The Plot group's comment and the skeleton page keep their shapes.
-3. **Run moves to the toolbar; the Run section dies.** The Jobs workspace's toolbar gains the verbs on the left:
-   `Run job` (the primary; `Resume` after a stopped run) with the run gate's reason as its tooltip, and `Stop` (ghost)
-   with its reason; `Discard changes` keeps its place after them; the forward verb stays rightmost. `JobRunGroup` is
-   deleted; the rail and the scroll spy lose `jw-run` (`JOB_SECTIONS`); the run gate functions
-   (`workspaceRunReason`/`workspaceStopReason`) move to the toolbar's call site unchanged. `workspace-verbs.ts` gains
-   a verb shape for a toolbar verb whose label is not a forward destination.
+3. **Run moves to the toolbar; the Run section dies.** *(Amended 2026-10-18, superseded by `55` decision 6: `Run job` is the
+   Jobs workspace's PROMOTE - `Save` then `Run job` on the toolbar's RIGHT, nothing on the left but `Discard changes` - and `Stop`
+   never sits on the toolbar; the statusbar's Stop owns stopping. `Save` itself moved from the form's end to the toolbar by `55`
+   decision 1, on every workspace.)* As built here: `JobRunGroup` deleted; the rail and the scroll spy lose `jw-run`
+   (`JOB_SECTIONS`); the run gate functions (`workspaceRunReason`/`workspaceStopReason`) move to the toolbar's call site
+   unchanged; `workspace-verbs.ts` gains a verb shape for a toolbar verb whose label is not a forward destination.
 4. Out of scope: the statusbar's Stop (`50`), the Jobs index, the tables of `52`, the security question of `54`.
 
 ## 3. Changes from what is merged

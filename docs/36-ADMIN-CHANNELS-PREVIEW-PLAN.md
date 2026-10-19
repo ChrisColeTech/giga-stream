@@ -343,6 +343,34 @@ with `maximizable: false` (default true).
   returns the previous box exactly; the normal box is not overwritten by maximizing; the flag survives close and reopen for the run; no grips
   and no drag while maximized; `maximizable: false` draws no button; an existing window's markup gains only the one button.
 
+### 8.5 The provider preview and the title preview (owner, 2026-10-18; `55` decisions 2-4, 7-8)
+
+Two more preview child windows on the channels preview's template (8.1-8.3), opened by a row's eye (`Preview provider` /
+`Preview title`, before the armed `Delete`) and by the workspace promote (`Preview →`; `Save the provider first` /
+`Save the title first` while the draft differs). Absent, not disabled, where nothing can be previewed: a stream-family or
+template-less provider; a title with no TMDB id.
+
+- **The stage is an IFRAME, not a `<video>`** (the interface's embed rules, `EmbedHost.tsx`): `src="about:blank"` at
+  rest, `allow="autoplay; fullscreen; encrypted-media; picture-in-picture"`, `allowFullScreen`,
+  `referrerPolicy="origin"`, NO `sandbox` attribute, `bg-stage`. The backend's Electron window follows the policy
+  (`admin:set-player-policy` / `admin:clear-player-policy`, the fileserver's player-policy port): set before
+  `frame.src`, cleared on close.
+- **The provider preview's toolbar**: the `Enabled` labelled toggle (8.1's pattern) and a `Title` `Select` - the stored
+  movies with a TMDB id the app holds, default the first; choosing one builds the URL from the provider's
+  `movieTemplate` filled with the title's `tmdbId` (the backend's `fill` rule: `{tmdbId}/{season}/{episode}` only, a
+  missing value stays literal) and reloads the frame; the policy follows the URL's origin.
+- **The title preview's toolbar**: the title's `Enabled` labelled toggle and a `Provider` `Select` - a movie: the
+  detail's `sources`; a series: the first episode's sources (`GET /api/titles/:id/seasons/:season`); choosing one loads
+  that source's `url` and follows its `origin`/`frameOrigins`.
+- **The providers index's `source` column becomes `host`** (mono): the embed template's host
+  (`new URL(movieTemplate).host`), the source slug for a stream-family provider. The template itself stays a workspace
+  field.
+- **The child status bar** (8.3): left the state words (loading, ready, failed), right the chosen title's or source's
+  name. No walk, no `Retry` (an iframe exposes no error to re-press).
+- Tests: the frame rules (`allow`, no `sandbox`, `about:blank` at rest), the URL builders (`{tmdbId}` fill, a missing id
+  literal, the `https://` requirement, the series' episode sources), the dropdowns' data and defaults, the eyes beside
+  Delete, the policy set/change/clear, the Host column, the promotes.
+
 ## 9. Tests (`node:test`, written AND run by the worker; no server, no browser, no sleeping)
 
 | File | Cases |

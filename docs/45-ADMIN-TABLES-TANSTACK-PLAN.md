@@ -4,7 +4,8 @@
 above the list; (2) rows stay 36px; (3) Deleted titles stays its own bounded group under Stored; (4) low-priority columns hide at
 narrow widths and the table never scrolls sideways; (5) the two stack rows are authorized (recorded in `01` section 2).** Written by a
 read-only planning pass (references: `giga-extension` downloads/history/settings tables, `giga-cut-poc` `DataTable`). Docs before
-code (`07`). Scope: the admin app (`src/admin`) and `src/shared/ui`.
+code (`07`). Scope: the admin app (`src/admin`) and `src/shared/ui`. *(This plan's scope was the INDEX lists; `52` carries the
+same standard into the workspace lists - the live channel's Playlist and Videos.)*
 
 ## 0. Verdict
 

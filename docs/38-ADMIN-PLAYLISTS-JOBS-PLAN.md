@@ -10,6 +10,10 @@
 > **Amended 2026-10-18 (`53`, owner).** The Jobs workspace's Run section is gone: `Run job` (the primary, `Resume` after a
 > stopped run) and the ghost `Stop` sit in the page toolbar before `Discard changes`, with the run gate's reasons as their
 > tooltips; the rail lists `Details`, `Schedule`, `Last run`. Section 4.3 is amended accordingly.
+> *(Amended again 2026-10-18, `55` decision 6, superseding `53`'s toolbar shape: the workspace toolbar is `Discard changes` on the
+> LEFT, then `Save` and `Run job` (the promote, `Resume` after a stopped run) on the RIGHT - no `Stop`, ever; the statusbar's Stop
+> owns stopping (`50`). The Jobs INDEX's promote is `Run job`, acting on the ticked set with the gate's reasons, and `run` leaves
+> the bulk strip (which keeps `stop`, `enable`, `disable`, `delete`).*
 
 **Status: plan, written before the code (branch `admin/playlists-jobs`, cut from `family-port` after Wave 3a, `35`, has landed; it runs in
 parallel with `36` and `37`, and is accepted after `36` for the one cross-tab read of section 3.4).** Owner, 2026-10-17: no fixture waves; every tab

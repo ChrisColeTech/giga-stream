@@ -387,8 +387,9 @@ Events and Settings). Surfaces stay mounted so selection, scroll and playback su
 
 Forms are one column at the workspace's full width (the family `Form`'s `Workspace`), of groups and rows: a
 group has a heading and a folding body; a row is a label and a control. A window sizes one label column for all its pages (Settings reads
-`SETTINGS_LABELS`), so the column does not move as its rail changes page. One primary commit sits at the
-end of the final group. `alert`, `confirm`, `prompt`, ad hoc modals and feature-built focus traps are
+`SETTINGS_LABELS`), so the column does not move as its rail changes page. **A group never ends with a commit (owner, 2026-10-18; `55`): the ONE
+primary `Save` sits on the workspace toolbar's right, beside the promote, and commits the entire record** - a group may end with an action
+(`Set new password`, `Rebuild`, `Refresh`), never a save. `alert`, `confirm`, `prompt`, ad hoc modals and feature-built focus traps are
 forbidden.
 
 Exception: a window that holds exactly one group (Title information) does not fold it, since folding it
@@ -449,16 +450,19 @@ where `STRIP` is `flex flex-none flex-wrap items-center gap-2 border-b border-ha
   (`DatasetsIndex.tsx` 63-72: the `Toolbar`, then `<div className="min-h-0 flex-1 overflow-y-auto">` holding the New form
   and the rows; `DatasetWorkspace.tsx` 60-73).
 - **An index** holds only the page's forward verb, on the RIGHT (`DatasetsIndex.tsx` 64-70). An index with no forward
-  verb still draws the toolbar, empty, so the page keeps its place from tab to tab.
-- **A workspace** holds its own verbs on the left (the admin's `Discard changes`) and the forward verb rightmost
-  (`DatasetWorkspace.tsx` 61-72). A form's commit still ends the form's body (Forms).
+  verb still draws the toolbar, empty, so the page keeps its place from tab to tab - except the Jobs index, whose promote
+  `Run job` acts on the ticked set (`55` decision 6).
+- **A workspace** holds `Discard changes` on the LEFT, and on the RIGHT `Save` (the one commit, `55`) then the promote
+  rightmost (`DatasetWorkspace.tsx` 61-72). No save ever ends a form's body (Forms, amended).
 - **The forward verb** is `Button size="sm" variant="primary"`: the destination's word and `→`, a `title` saying what it
   does, disabled with its reason when it cannot act (`DatasetsIndex.tsx` 66: `Tick a dataset first`). Per page (`28`
-  section 7.2): Channels index `Preview →` (exactly one ticked row: `Tick a row first`, `Tick only one row`); Providers
-  `Titles →`; Titles and Playlists `Jobs →`; the Jobs and Accounts indexes none; a channel workspace `Preview →` (`Save
-  the channel first` while the draft differs); a job workspace `Channels →` (a playlist job) or `Titles →` (a catalog
-  job); a playlist workspace `Channels →` (the channels of that playlist; disabled `This playlist has no channels.`; plan `43`);
-  an account workspace none.
+  section 7.2; `55`): Channels index `Preview →` (exactly one ticked row: `Tick a row first`, `Tick only one row`); Providers
+  `Titles →`; Titles and Playlists `Jobs →`; the Jobs index `Run job` (the ticked set, the gate's reasons); the Accounts
+  index none. A channel workspace `Preview →` (`Save the channel first` while the draft differs); a provider workspace
+  `Preview →` (the provider preview, `55`; `Save the provider first`); a title workspace `Preview →` (the title preview,
+  `55`; `Save the title first`); a job workspace `Run job` (`Resume` after a stopped run, the run gate's reason; `Stop`
+  never - the statusbar owns it); a playlist workspace `Channels →` (the channels of that playlist; disabled `This
+  playlist has no channels.`; plan `43`); an account workspace none.
 - Every button in it has a tooltip (`title`), as LoRA's do.
 
 ### Selection toolbar
