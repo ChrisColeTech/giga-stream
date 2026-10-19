@@ -326,9 +326,11 @@ give them a proper status bar". A window's STATE (words, counts) belongs in a st
 A template feature in `ChildWindow`, so EVERY child window (Preview, Settings, Collections, Title information, ...) gets it; a spec may opt out
 with `maximizable: false` (default true).
 
-- **The control.** A second bordered `IconButton` in the header, left of the close X (the header is the one place edged icon buttons are
-  allowed, `01` Buttons and surfaces): `Maximize2` while normal (aria-label and tooltip `Maximize <name>`), `Minimize2` while maximized
-  (`Restore <name>`). New rows in the icon vocabulary (`01`): `Maximize, Restore` -> `Maximize2`, `Minimize2` (LoRA Trainer's viewer uses
+- **The control.** A second ghost `IconButton` in the header, left of the close X, using the same titlebar style as the
+  main window's pane toggles (`01` Buttons and surfaces, amended by `60`): `Maximize2` while normal (aria-label and
+  tooltip `Maximize <name>`), `Minimize2` while maximized (`Restore <name>`). Close is ghost. Maximize/Restore is a
+  toggle: ghost while normal, outlined/accent (`on`) while maximized; never bordered/raised. New rows in the icon
+  vocabulary (`01`): `Maximize, Restore` -> `Maximize2`, `Minimize2` (LoRA Trainer's viewer uses
   `Maximize2` for its enlarge verb; here it is the window verb).
 - **Also:** a double-click on the header (not on a button) toggles it, the desktop convention.
 - **Maximized.** The window fills the main window's available area: the main window minus its titlebar and its statusbar (the chrome stays

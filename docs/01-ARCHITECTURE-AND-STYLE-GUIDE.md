@@ -482,7 +482,7 @@ chrome; at most one filled accent per surface, as a form's commit.** The titleba
 | Variant (`components/ui`) | Allowed only here |
 |---|---|
 | Ghost (`Button variant="ghost"`, `IconButton` plain); the default | Everywhere in the body: pane content, rails, `Group`/`Row`/`Wide`/`Actions` verbs, row and card verbs, popovers, panel footers, notes over a stage |
-| Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | Window and popup headers (the close `X`). Nothing in a body, and nothing in the titlebar |
+| Edged (`Button` `default`, `IconButton bordered`; raised in this kit, outlined in Giga Cut's) | Popup headers and standalone body actions only. Nothing in a main OR child-window titlebar |
 | Primary (`Button variant="primary"`, the accent fill) | Never in the chrome. The ONE commit at the end of a form's body (`Create`, `Save details`), the one forward verb a panel exists for (`Resume`; Title information's `Play` / `Open in Player`), and the page's forward verb in the page toolbar (`Button size="sm" variant="primary"`, below; LoRA Trainer `pages/datasets/DatasetsIndex.tsx` 66-68, `pages/datasets/DatasetWorkspace.tsx` 67-69, `pages/gallery/GalleryToolbar.tsx` 47-49) |
 | Danger (`Button variant="danger"`) | Only the armed state of `ArmedButton`; never resting |
 | Icon-only (`IconButton`) | Navigation, dismissal and a row's small inner actions only: `‹ ›` paging, the close `X`, move up and down, remove one entry, a narrow pane's toolbar, a form row's trailing glyph, the titlebar's pane toggles; an `aria-label` and a tooltip always. `bordered` never in the titlebar, only where a standalone icon action needs the edged shape. Never a verb that changes records (LoRA Trainer: `ViewerToolbar.tsx` 80-88, `PromptBank.tsx` 56-64, `UnfreezeGroup.tsx` 43, `Titlebar.tsx` 48) |
@@ -494,6 +494,13 @@ chrome; at most one filled accent per surface, as a form's commit.** The titleba
 table strip, so the admin lost its page toolbar. The reference draws the forward verb as the small primary at the right
 of the page toolbar, over every index and workspace: LoRA Trainer `DatasetsIndex.tsx` 64-70 and `DatasetWorkspace.tsx`
 61-72.)*
+
+**Titlebar icon rule (owner 2026-10-19; `60`).** Main-window and authored child-window titlebars use the SAME default
+ghost `IconButton`: transparent edge/background at rest, hover fill; a toggle gains the outlined/accent `data-on`
+state while active. `size-ctl-md`, icons `size-3.75`. Close is always ghost; Maximize/Restore is the window-state
+toggle - Maximize ghost while normal, Restore outlined/accent while maximized. They never pass `bordered` or wear the
+control gradient/drop shadow. The rule lives in the shared `ChildWindow`, so every
+Settings, Preview, Collections and Title information window inherits it without app overrides.
 
 ### Page toolbar
 
