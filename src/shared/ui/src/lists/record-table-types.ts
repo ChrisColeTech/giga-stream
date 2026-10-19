@@ -21,8 +21,10 @@ export interface RecordRowView {
   readonly ticked?: boolean;
   /** The row's tick, `Select Fixture News`; the table draws one when (and only when) it has a tick column. */
   readonly tick?: { readonly label: string; readonly onToggle: (ticked: boolean) => void };
-  /** A press on the data cells opens the record. The tick and the end action sit outside this button. */
-  readonly onOpen: () => void;
+  /** A press on the data cells opens the record. The tick and the end action sit outside this button. Absent, the row
+   *  draws no spanning button and its cells sit directly on the `--cols` tracks (a workspace list with no record to
+   *  open; `52` decision 6: a control that does nothing is banned). */
+  readonly onOpen?: () => void;
   /** The end of the row: the `Delete` `ArmedButton`. */
   readonly end: ReactNode;
 }

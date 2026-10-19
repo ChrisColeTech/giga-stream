@@ -182,13 +182,13 @@ describe("the add through the real service", () => {
     await withBackend(
       () => failure(404, "title.not_found", "no"),
       async (calls) => {
-        view()(row("movie-1")).onOpen();
+        view()(row("movie-1")).onOpen?.();
         assert.equal(state().workspaces.titles, null);
         assert.equal(state().events.at(-1)?.sentence, "T movie-1: Not stored yet. Add it to open it.");
-        view()(row("movie-3", { deleted: true })).onOpen();
+        view()(row("movie-3", { deleted: true })).onOpen?.();
         assert.equal(state().workspaces.titles, null);
         assert.equal(calls.length, 0, "no GET /api/titles/:id for an unstored row");
-        view()(row("movie-2", { stored: true })).onOpen();
+        view()(row("movie-2", { stored: true })).onOpen?.();
         assert.equal(state().workspaces.titles, "movie-2");
       },
     );

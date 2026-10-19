@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { LiveDetailsGroup } from "@/components/channels/LiveDetailsGroup";
 import { LiveStatusGroup } from "@/components/channels/LiveStatusGroup";
 import { PlaybackGroup } from "@/components/channels/PlaybackGroup";
+import { PlaylistRows } from "@/components/channels/PlaylistRows";
 import { liveDraft } from "@/lib/channel-draft";
 import { ChannelsPage } from "@/pages/ChannelsPage";
 import { useAppStore } from "@/store/app-store";
@@ -84,10 +85,15 @@ describe("a live channel's workspace", () => {
     assert.ok(html.includes('role="switch"') && html.includes("Choose"));
   });
 
-  it("switches Plays to the ordered Videos list in place of the Folder row", () => {
+  it("switches Plays to the ordered Videos table in place of the Folder row: #, path, the end actions", () => {
     const html = details(live("a"), { plays: "videos", videos: ["D:\\x.mp4", "D:\\y.mp4"] });
     assert.ok(html.includes('aria-label="Videos"') && html.includes('aria-label="Move D:\\x.mp4 up. Already first"'));
     assert.ok(!html.includes('aria-label="Folder"'));
+    const table = html.slice(html.indexOf(">Videos<"), html.indexOf('aria-label="Video to add"'));
+    assert.ok(table.indexOf(">#<") < table.indexOf(">path<"), "the number column first, then the path");
+    assert.ok(!table.includes('type="checkbox"') && !table.includes("aria-sort=") && !table.includes("Sort by"));
+    assert.ok(!table.includes("data-primary"), "no record to open, no spanning button (`52` decision 6)");
+    assert.ok(table.indexOf('data-col="path"') < table.indexOf('aria-label="Remove'), "the verbs live in the end cell, after the path");
   });
 
   it("gives Rebuild its reason as the Status group's ghost verb, and Refresh status its icon; none is in a heading", () => {
@@ -112,14 +118,45 @@ describe("a live channel's workspace", () => {
     for (const building of ["preparing", "starting", "restarting"] as const) {
       const html = status(live("a", { state: building }));
       assert.ok(html.includes(">State<") && html.includes(">Playlist<") && html.includes("animate-skel-shimmer"), building);
+      assert.equal(
+        (html.match(/aria-hidden="true" class="pointer-events-none/g) ?? []).length,
+        6,
+        `the standard skeleton rows in the table's own columns while ${building}`,
+      );
       assert.ok(!html.includes(`data-st="${building}"`) && !html.includes(">a.mp4<"), building);
     }
+  });
+
+  it("draws the playlist as the standard table: #, name, duration under their words, no ticks, nothing sortable", () => {
+    const html = status(live("a"));
+    const table = html.slice(at(html, ">Playlist<"), at(html, ">Stream address<"));
+    assert.ok(table.indexOf(">#<") < table.indexOf(">name<") && table.indexOf(">name<") < table.indexOf(">duration<"));
+    assert.ok(!table.includes('type="checkbox"') && !table.includes('aria-label="Select'), "no selection anywhere (`52` decision 5)");
+    assert.ok(!table.includes("aria-sort=") && !table.includes("Sort by"), "nothing sorts: play order is the order");
+    assert.ok(!table.includes("data-primary"), "a read-only list opens nothing");
+    assert.ok(table.includes(">1</span>") && table.includes(">2</span>"));
+    assert.ok(table.includes(">a.mp4<") && table.includes(">b.mp4<") && table.includes(">00:42<") && table.includes(">01:01<"));
+  });
+
+  it("windows the playlist above 100 entries, and maps every entry at or under 100 (`52` decision 4)", () => {
+    const many = Array.from({ length: 200 }, (_, index) => ({ name: `v${index}.mp4`, durationMs: 42_000 }));
+    const long = renderLive(createElement(PlaylistRows, { playlist: many, playing: null }));
+    const mounted = long.split("data-index=").length - 1;
+    assert.ok(long.includes('aria-rowcount="200"'));
+    assert.ok(mounted > 0 && mounted <= 30, String(mounted));
+    const short = renderLive(createElement(PlaylistRows, { playlist: many.slice(0, 10), playing: 2 }));
+    assert.equal(short.split("data-index=").length - 1, 10);
+    assert.ok(short.includes(">v9.mp4<"));
   });
 
   it("shows a failed channel's problem, the playlist with the video on air lit, and the address with copy", () => {
     const html = status(live("a", { state: "failed", problem: "The folder holds no video." }));
     assert.ok(at(html, 'data-st="failed"') < at(html, "The folder holds no video."));
-    assert.ok(/aria-current="true"[^>]*text-accent-text[^>]*>.*?b\.mp4/.test(html), "the playing row is lit");
+    assert.ok(
+      at(html, 'data-st="playing"') < at(html, "text-accent-text") && at(html, "text-accent-text") < at(html, ">b.mp4<"),
+      "the on-air row's state is the marker and its name draws in the accent",
+    );
+    assert.ok(!html.includes("aria-current"), "the kit's row has no such slot (`52` decision 2)");
     assert.ok(html.includes(">00:42<") && html.includes(">01:01<"));
     assert.ok(html.includes('aria-label="Copy the address"') && html.includes('value="http://127.0.0.1:5172/live/a/master.m3u8"'));
   });

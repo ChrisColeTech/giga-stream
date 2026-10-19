@@ -51,6 +51,12 @@ export const STREAM_SECTIONS = [
 export const LIVE_SECTION_IDS: readonly string[] = LIVE_SECTIONS.map((section) => section.id);
 export const STREAM_SECTION_IDS: readonly string[] = STREAM_SECTIONS.map((section) => section.id);
 
+/** The workspace tables' column words (`52` decisions 2 and 3): the live channel's playlist entries and its videos. */
+export const HEADING_NUMBER = "#";
+export const HEADING_NAME = "name";
+export const HEADING_DURATION = "duration";
+export const HEADING_PATH = "path";
+
 /** Tooltips at rest and disabled reasons (shown as the control's tooltip). */
 export const DELETE_TIP = "Delete this channel permanently";
 export const DELETE_SYNCED_TIP ="The playlist adds it again the next time it is imported or synced. Disable it to keep it off.";
