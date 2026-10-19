@@ -107,12 +107,23 @@ export function NativePlayer(props: NativePlayerProps) {
       onLoadedData={() => props.onState({ kind: "ready" })}
       onTimeUpdate={(event) => props.onProgress(...positionOf(event.currentTarget))}
       onSeeked={(event) => props.onProgress(...positionOf(event.currentTarget))}
-      onPlay={() => props.onPlaying(true)}
-      onPause={() => props.onPlaying(false)}
+      onPlay={() => {
+        // The element is the truth of the playing gate (`50` section 2.4): any play arms it, whatever asked for it.
+        useAppStore.getState().setPlayerPaused(false);
+        props.onPlaying(true);
+      }}
+      onPause={() => {
+        // Any pause — the user's, the stop's — disarms the gate from the element's own event, not from a flag that
+        // could be stale by the time the statusbar reads it.
+        useAppStore.getState().setPlayerPaused(true);
+        props.onPlaying(false);
+      }}
       onEnded={(event) => {
-        // The end is the media's own length, not the last tick before it.
+        // The end is the media's own length, not the last tick before it. An ended stream is a paused one: the gate
+        // disarms with it.
         const [, duration] = positionOf(event.currentTarget);
         if (duration !== undefined) props.onProgress(duration, duration);
+        useAppStore.getState().setPlayerPaused(true);
         props.onEnded();
       }}
       onError={() => props.onState({ kind: "failed", reason: props.errorReason })}

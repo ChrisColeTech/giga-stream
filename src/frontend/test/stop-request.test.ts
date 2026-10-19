@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { blankForStop } from "@/components/player/EmbedHost";
 import { nativeAttachmentKey, pauseForStop } from "@/components/player/NativePlayer";
 import { videoPlayingOf } from "@/components/chrome/RunningWork";
-import { detachForStop, liveOwnsStream } from "@/hooks/useStreamPlayer";
+import { detachForStop, liveStopApplies } from "@/hooks/useStreamPlayer";
 import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";
 import { useAppStore } from "@/store/app-store";
@@ -92,32 +92,55 @@ describe("stop's live store action", () => {
 });
 
 describe("the live stop's ownership gate", () => {
-  it("owns the stream exactly while the live slice holds a playing channel, until stopLive clears it", () => {
+  it("detaches only when the controller holds the live slice's stream, and a second press detaches nothing", () => {
     const state = () => useAppStore.getState();
-    assert.equal(liveOwnsStream(state().playingStreamUrl), false,
-      "no channel played: this hook serves no live stream and the stop detach must not run");
+    // The live slice plays a channel; the hook attached the same manifest.
     state().playChannel("news", "https://media.test/news.m3u8", true);
-    assert.equal(liveOwnsStream(state().playingStreamUrl), true, "the live controller may be detached on stop");
+    assert.equal(liveStopApplies("https://media.test/news.m3u8", state().playingStreamUrl), true,
+      "the attached manifest is the slice's stream: the live controller detaches on stop");
+    // After the stop the slice owns nothing, so a second press detaches nothing.
     state().stopLive();
-    assert.equal(liveOwnsStream(state().playingStreamUrl), false, "a second stop press detaches nothing");
+    assert.equal(state().playingStreamUrl, null);
+    assert.equal(liveStopApplies("https://media.test/news.m3u8", state().playingStreamUrl), false,
+      "the stale manifest no longer matches: no detach on a repeat stop");
   });
 
   it("a stop of a player-surface stream runs no live detach: the player video keeps its src and currentTime", () => {
     let detaches = 0;
+    let stops = 0;
     const liveController = { detach: (): void => { detaches += 1; } };
     const playerVideo = {
-      pause: (): void => undefined, currentTime: 11.2, src: "https://media.test/movie.m3u8",
+      pause: (): void => { stops += 1; }, currentTime: 11.2, src: "https://media.test/movie.m3u8",
     };
-    // The stop effect's decision, exactly as the hook runs it: the gate reads the live slice's fact first.
     const state = useAppStore.getState();
-    if (liveOwnsStream(state.playingStreamUrl)) {
+    // The live slice owns a background channel (fx-music), but the controller holds the PLAYER's movie manifest.
+    state.playChannel("fx-music", "https://media.test/fx.m3u8", true);
+    if (liveStopApplies("https://media.test/movie.m3u8", state.playingStreamUrl)) {
       state.stopLive();
       detachForStop(liveController);
     }
+    // The player's own stop is the native pause — not the live detach.
     pauseForStop(playerVideo);
     assert.equal(detaches, 0, "the player's stream is not the live slice's; no engine of its is destroyed");
     assert.equal(playerVideo.src, "https://media.test/movie.m3u8", "the player's source survives the stop");
     assert.equal(playerVideo.currentTime, 11.2, "the player's position survives the stop");
+    assert.equal(stops, 1, "the player's element paused exactly once");
+  });
+
+  it("the pause event flips playerPaused in the store and disarms the playing gate; a play re-arms it", () => {
+    const state = () => useAppStore.getState();
+    state().setPlayerSources(
+      [{ id: "app", kind: "stream", name: "App player", url: "https://media.test/movie.mp4" }], "app",
+    );
+    state().setPlayerStage({ kind: "ready" });
+    // The element's own pause event lands in the store: the gate disarms.
+    state().setPlayerPaused(true);
+    assert.equal(state().playerPaused, true);
+    assert.equal(videoPlayingOf(state().playerMedia, state().playerPaused), false, "paused: the gate is disarmed");
+    // A play event re-arms it.
+    state().setPlayerPaused(false);
+    assert.equal(state().playerPaused, false);
+    assert.equal(videoPlayingOf(state().playerMedia, state().playerPaused), true, "playing: the gate is armed");
   });
 });
 
