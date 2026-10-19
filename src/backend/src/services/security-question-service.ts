@@ -43,24 +43,22 @@ export function createSecurityQuestionService(deps: {
   return {
     questionFor,
 
-    /** Sets or changes the signed-in account's own question; the current password is required (section 2.3). */
-    async set(principal: Principal, currentPassword: string, question: number, answer: string, actor: Actor) {
+    /**
+     * Sets or changes any account's question (docs/54 section 2): the actor is a signed-in admin, so no current
+     * password is asked. Changing a question ends no session; the answer is stored only as its hash.
+     */
+    async setFor(accountId: string, question: number, answer: string, actor: Actor) {
       const normalised = normaliseAnswer(answer);
       if (normalised === "") throw new AppError(ERRORS.accountInvalid, { field: "answer" }, "The answer is not valid.");
-      const stored = store.accounts.find(principal.accountId);
-      if (!stored || !(await verifyPassword(currentPassword, stored.passwordHash))) {
-        throw new AppError(ERRORS.authInvalidCredentials, { field: "currentPassword" });
-      }
+      const stored = store.accounts.find(accountId);
+      if (!stored) throw new AppError(ERRORS.accountNotFound);
       const answerHash = await hashPassword(normalised);
       store.accounts.setSecurityQuestion(stored.account.id, question, answerHash, now());
-      audit.record(
-        { ...actor, principal },
-        {
-          action: "auth.security_question_set",
-          subject: stored.account.id,
-          detail: { username: stored.account.username },
-        },
-      );
+      audit.record(actor, {
+        action: "account.security_question_set",
+        subject: stored.account.id,
+        detail: { username: stored.account.username },
+      });
       return { set: true as const };
     },
 

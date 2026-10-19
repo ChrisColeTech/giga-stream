@@ -12,14 +12,15 @@ export const NEW_PASSWORD = "brand-new-password-456";
 
 export const code = (answer: { body: unknown }): unknown => pick(answer.body, "error.code");
 
-export function setQuestion(
-  app: FastifyInstance,
-  token: string,
-  answer: string,
-  question = 1,
-  currentPassword = ADMIN_PASSWORD,
-): Promise<Answer> {
-  return send(app, "PUT", "/api/auth/me/security-question", { currentPassword, question, answer }, token);
+/**
+ * Sets the token's account question through the admin route (docs/54 section 2): the signed-in account is the
+ * actor and no current password is asked. The account's id is read from the session, so the same call serves any
+ * signed-in account.
+ */
+export async function setQuestion(app: FastifyInstance, token: string, answer: string, question = 1): Promise<Answer> {
+  const me = await send(app, "GET", "/api/auth/me", undefined, token);
+  const id = String(pick(me.body, "data.id"));
+  return send(app, "PUT", `/api/admin-accounts/${id}/security-question`, { question, answer }, token);
 }
 
 export const resetStart = (app: FastifyInstance, username: string): Promise<Answer> =>

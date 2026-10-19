@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ERRORS } from "../constants/errors.js";
 import type { Services } from "../services/service-registry.js";
 import { AccountCreateSchema, AccountPatchSchema } from "../types/account.js";
+import { AccountSecurityQuestionSchema } from "../types/security-question.js";
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
@@ -46,5 +47,15 @@ export function registerAccounts(app: FastifyInstance, services: Services): void
     const principal = signedIn(services, request);
     const { accountId } = parseInput(AccountParams, request.params);
     return ok(reply, services.accounts.remove(accountId, actorOf(request, principal)));
+  });
+
+  // Setting a question is an admin acting on a selected account (docs/54 section 2): no current password, and
+  // changing it ends no session, so the refresh cookie stays.
+  app.put("/api/admin-accounts/:accountId/security-question", async (request, reply) => {
+    const principal = signedIn(services, request);
+    const { accountId } = parseInput(AccountParams, request.params);
+    const body = parseInput(AccountSecurityQuestionSchema, request.body, ERRORS.accountInvalid);
+    const done = await services.securityQuestions.setFor(accountId, body.question, body.answer, actorOf(request, principal));
+    return ok(reply, done);
   });
 }
