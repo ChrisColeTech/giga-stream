@@ -8,17 +8,17 @@ import { fillApp, walkTmdb } from "./walk-kit.js";
 
 const created = { type: "catalog", name: "Mine" };
 
-test("a recent job's config round-trips: pages is stored as 1 and ignored, kind is dropped, the list still loads", async () => {
+test("a recent job's config drops meaningless pages and kind, and the list still loads", async () => {
   const f = await updateApp({});
   const made = await f.api("POST", "/api/jobs", { ...created, config: { scope: "recent", kind: "movie", pages: 40 } });
-  assert.deepEqual([made.status, pick(made.body, "data.config")], [201, { scope: "recent", pages: 1 }]);
+  assert.deepEqual([made.status, pick(made.body, "data.config")], [201, { scope: "recent" }]);
   const list = pick((await f.api("GET", "/api/jobs")).body, "data.items") as Array<Record<string, unknown>>;
   assert.deepEqual(list.map((j) => pick(j, "config.scope")), ["discover", "recent", "recent"]);
   const id = pick(made.body, "data.id");
   const popular = await f.api("PATCH", `/api/jobs/${id}`, { config: { scope: "popular", kind: "tv", pages: 7 } });
   assert.deepEqual(pick(popular.body, "data.config"), { scope: "popular", kind: "tv", pages: 7 });
   const back = await f.api("PATCH", `/api/jobs/${id}`, { config: { scope: "recent" } });
-  assert.deepEqual(pick(back.body, "data.config"), { scope: "recent", pages: 1 });
+  assert.deepEqual(pick(back.body, "data.config"), { scope: "recent" });
   const refused = await f.api("POST", "/api/jobs", { ...created, config: { scope: "recent", pages: 501 } });
   assert.deepEqual([refused.status, pick(refused.body, "error.details.field")], [422, "config.pages"]);
   assert.equal((await f.run()).lastResult, "ok");

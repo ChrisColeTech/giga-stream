@@ -59,11 +59,11 @@ function migrated(options: { seeded: boolean; extra?: string }) {
   }
 }
 
-const FILL = { name: "Library fill", type: "catalog", enabled: 1, schedule: "off", config: '{"scope":"discover","pages":500}', playlist_id: null, last_result: null };
+const FILL = { name: "Library fill", type: "catalog", enabled: 1, schedule: "off", config: '{"scope":"discover"}', playlist_id: null, last_result: null };
 
 test("a version-24 database with the four per-slice jobs and a playlist job ends with the playlist job and one Library fill", () => {
   const { version, jobs, check } = migrated({ seeded: true });
-  assert.equal(version, 29);
+  assert.equal(version, 30);
   assert.deepEqual(jobs.map((j) => [j.name, j.type]), [[null, "playlist"], ["Library fill", "catalog"], ["Library update", "catalog"]]);
   assert.deepEqual({ ...jobs[1], created_at: undefined }, { ...FILL, created_at: undefined });
   assert.ok(Number(jobs[1]?.created_at) > 1_700_000_000_000, "created now, in milliseconds");
@@ -75,7 +75,7 @@ test("a database that already has a discover job keeps it and gains none; the fo
     VALUES ('My fill', 'catalog', 1, '12h', '{"scope":"discover","pages":40}', 4)`;
   const { jobs } = migrated({ seeded: true, extra: mine });
   assert.deepEqual(jobs.map((j) => j.name), [null, "My fill", "Library update"]);
-  assert.deepEqual([jobs[1]?.schedule, jobs[1]?.config], ["12h", '{"scope":"discover","pages":40}']);
+  assert.deepEqual([jobs[1]?.schedule, jobs[1]?.config], ["12h", '{"scope":"discover"}']);
 });
 
 test("a database whose seed has not run gets no Library fill from the migration (the seed makes it)", () => {
@@ -96,7 +96,7 @@ test("a fresh database ends with exactly one Library fill, made by the seed with
   const token = (await signIn(t.app)).access;
   const jobs = pick((await send(t.app, "GET", "/api/jobs", undefined, token)).body, "data.items") as Array<Record<string, unknown>>;
   assert.deepEqual(jobs.map((j) => [j.name, j.schedule, j.config]), [
-    ["Library fill", "12h", { scope: "discover", pages: 500 }],
-    ["Library update", "24h", { scope: "recent", pages: 1 }],
+    ["Library fill", "12h", { scope: "discover" }],
+    ["Library update", "24h", { scope: "recent" }],
   ]);
 });

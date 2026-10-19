@@ -8,7 +8,7 @@ import type { Actor, AuditService } from "./audit-service.js";
 import type { JobProgressRegistry } from "./job-progress.js";
 import type { JobRunner } from "./job-runner.js";
 import { normalisePlaylistSchedule, normaliseSchedule } from "./job-schedule.js";
-import { DEFAULT_DISCOVER_PAGES, DEFAULT_SYNC_PAGES } from "./title-shapes.js";
+import { DEFAULT_SYNC_PAGES } from "./title-shapes.js";
 
 const invalid = (field: string, message: string): AppError => new AppError(ERRORS.jobInvalid, { field }, message);
 
@@ -18,21 +18,17 @@ const configField = (issue: z.ZodIssue | undefined): string => {
   return `config.${issue?.path.join(".") ?? ""}`;
 };
 
-/** A recent job's `pages` is the constant `1`: it is required in every stored config and ignored by the run (docs/49 2.1). */
-const RECENT_PAGES = 1;
-
-const pagesOf = (scope: string, pages: number | undefined): number => {
-  if (scope === "recent") return RECENT_PAGES;
-  return pages ?? (scope === "discover" ? DEFAULT_DISCOVER_PAGES : DEFAULT_SYNC_PAGES);
+type ConfigInput = {
+  scope: CatalogJobConfig["scope"];
+  kind?: "all" | "movie" | "tv";
+  pages?: number;
 };
 
-/** The config a catalog job stores: a Library update has no kind; the others keep what they were given. */
-type ConfigInput = { scope: CatalogJobConfig["scope"]; kind?: "movie" | "tv"; pages?: number };
-const configOf = (config: ConfigInput): CatalogJobConfig => ({
-  scope: config.scope,
-  ...(config.scope !== "recent" && config.kind !== undefined && { kind: config.kind }),
-  pages: pagesOf(config.scope, config.pages),
-});
+/** Both-kind scopes store only their scope; omitted legacy list Kind retains its historical Movies meaning. */
+const configOf = (config: ConfigInput): CatalogJobConfig =>
+  config.scope === "discover" || config.scope === "recent"
+    ? { scope: config.scope }
+    : { scope: config.scope, kind: config.kind ?? "movie", pages: config.pages ?? DEFAULT_SYNC_PAGES };
 
 /**
  * The sync jobs (docs/26 section 3.11, docs/43 section 3.1). A playlist job is part of its playlist: made and

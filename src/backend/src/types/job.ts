@@ -13,8 +13,8 @@ const CatalogConfigSchema = z
   .object({
     scope: z.enum(["trending", "popular", "discover", "recent"]),
     /** Not asked for a discover or recent job: both walk both kinds (`03` section 7.6b, `49`). */
-    kind: z.enum(["movie", "tv"]).optional(),
-    /** Ignored by a recent job, which stores `1` (`49` section 2.1). */
+    kind: z.enum(["all", "movie", "tv"]).optional(),
+    /** Kept only by Trending and Popular; Discover and Recent ignore and drop it. */
     pages: z.number().int().min(1).max(500).optional(),
   })
   .strict();

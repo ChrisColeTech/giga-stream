@@ -16,9 +16,9 @@ const coordinate = (min: number) => z.number().int().min(min).max(WINDOW_COORDIN
 
 export const AdminSettingsSchema = z
   .object({
-    theme: z.enum(["dark", "light", "system"]),
+    theme: z.enum(["dark", "light"]),
     themeAccent: z.enum(["amber", "blue", "green", "violet", "rose"]),
-    reducedMotion: z.enum(["system", "off", "on"]),
+    reducedMotion: z.enum(["off", "on"]),
     uiZoom: z.number().min(UI_ZOOM_MIN).max(UI_ZOOM_MAX).refine(isTenth, "is not a step of 0.1"),
   })
   .strict();

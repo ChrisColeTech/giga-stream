@@ -40,6 +40,19 @@ test("one request creates the playlist, all its channels disabled, and its sync 
   assert.deepEqual(pick(imported, "detail"), { created: 2, updated: 0, skipped: 0, refused: 0, kind: "file", source: NAME });
 });
 
+test("an optional multipart name wins over the filename, while an unnamed external upload keeps the fallback", async () => {
+  const { t, token } = await setupPlaylists();
+  const named = await uploadParts(t, token, [
+    { name: "name", content: "My Cable" },
+    { name: "file", filename: "provider.m3u", content: M3U },
+  ]);
+  assert.deepEqual([named.status, pick(named.body, "data.name"), pick(named.body, "data.fileName")], [
+    201, "My Cable", "provider.m3u",
+  ]);
+  const fallback = await uploadFile(t, token, "external.m3u", M3U);
+  assert.deepEqual([fallback.status, pick(fallback.body, "data.name")], [201, "external.m3u"]);
+});
+
 test("a re-import with nothing new is 200, writes nothing, bumps nothing, and keeps a manual enable", async () => {
   const { t, token, api, channels, adminChannels, revision } = await setupPlaylists();
   await uploadFile(t, token, NAME, M3U);
@@ -97,11 +110,13 @@ test("the name is the sanitised file name; a derived clash is suffixed, a new fi
   }
 });
 
-test("exactly one file part: another part, a field, another name, or none is 400; so is a file past the size limit", async () => {
+test("exactly one file and at most one name: unknown or repeated fields and files are 400; so is an oversized file", async () => {
   const { t, token, api } = await setupPlaylists({ config: { PLAYLIST_SYNC_MAX_BYTES: 2048 } });
   const file = { name: "file", filename: NAME, content: M3U };
   const refusals = [
-    [file, { ...file, filename: "two.m3u" }], [file, { name: "note", content: "hi" }], [{ ...file, name: "upload" }], [],
+    [file, { ...file, filename: "two.m3u" }], [file, { name: "note", content: "hi" }],
+    [file, { name: "name", content: "one" }, { name: "name", content: "two" }],
+    [{ ...file, name: "upload" }], [],
     [{ ...file, content: `${M3U}\n${"#".repeat(3000)}` }],
   ];
   for (const parts of refusals) {
@@ -111,4 +126,21 @@ test("exactly one file part: another part, a field, another name, or none is 400
   assert.equal(pick((await api("GET", "/api/playlists")).body, "data.items.length"), 0, "nothing was created");
   const plain = await send(t.app, "POST", "/api/playlists/import", { file: M3U }, token);
   assert.equal(plain.status, 400, "a JSON body is not an upload");
+});
+
+test("a multipart typed-name clash is 409 and an invalid typed name is 422", async () => {
+  const { t, token } = await setupPlaylists();
+  await uploadParts(t, token, [
+    { name: "file", filename: "one.m3u", content: M3U }, { name: "name", content: "Cable" },
+  ]);
+  const clash = await uploadParts(t, token, [
+    { name: "name", content: "cable" }, { name: "file", filename: "two.m3u", content: M3U },
+  ]);
+  assert.deepEqual([clash.status, pick(clash.body, "error.code"), pick(clash.body, "error.details.field")], [
+    409, "playlist.taken", "name",
+  ]);
+  const invalid = await uploadParts(t, token, [
+    { name: "name", content: "   " }, { name: "file", filename: "three.m3u", content: M3U },
+  ]);
+  assert.deepEqual([invalid.status, pick(invalid.body, "error.code")], [422, "playlist.invalid"]);
 });

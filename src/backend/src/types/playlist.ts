@@ -3,15 +3,19 @@ import { z } from "zod";
 import { ADDRESS_MAX, PLAYLIST_NAME_MAX } from "../constants/limits.js";
 import type { RunCounts, RunResult } from "./job-counts.js";
 
-const name = z.string().trim().min(1).max(PLAYLIST_NAME_MAX);
+export const PlaylistNameSchema = z.string().trim().min(1).max(PLAYLIST_NAME_MAX);
 const url = z.string().trim().min(1).max(ADDRESS_MAX);
 
 /** `POST /api/playlists`, the web-address import: a typed name is kept as typed (`409 playlist.taken` when held). */
-export const PlaylistInputSchema = z.object({ url, name: name.optional(), enabled: z.boolean().optional() }).strict();
+export const PlaylistInputSchema = z
+  .object({ url, name: PlaylistNameSchema.optional(), enabled: z.boolean().optional() })
+  .strict();
 export type PlaylistInput = z.infer<typeof PlaylistInputSchema>;
 
 /** `PATCH /api/playlists/:id`: rename, enable, or - for a web playlist only - rotate its address. */
-export const PlaylistPatchSchema = z.object({ name: name.optional(), url: url.optional(), enabled: z.boolean().optional() }).strict();
+export const PlaylistPatchSchema = z
+  .object({ name: PlaylistNameSchema.optional(), url: url.optional(), enabled: z.boolean().optional() })
+  .strict();
 export type PlaylistPatch = z.infer<typeof PlaylistPatchSchema>;
 
 /**

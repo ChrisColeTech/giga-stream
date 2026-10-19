@@ -102,9 +102,11 @@ export function createJobRunner(deps: {
     const startedAt = now();
     const recent = job.config.scope === "recent";
     try {
-      const request: SyncRequest = recent
-        ? { scope: "recent", ...(job.cursorAt !== undefined && { since: job.cursorAt }) }
-        : { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages };
+      const request: SyncRequest = "kind" in job.config
+        ? { scope: job.config.scope, kind: job.config.kind, pages: job.config.pages }
+        : job.config.scope === "recent"
+          ? { scope: "recent", ...(job.cursorAt !== undefined && { since: job.cursorAt }) }
+          : { scope: "discover" };
       const done = await titles.runNow(request, actor, triggered, { signal, report });
       const { titles: seen, detailed, seasons, enriched, airing } = done;
       const counts = { titles: seen, detailed, seasons, enriched, airing, stale: titles.status().stale };

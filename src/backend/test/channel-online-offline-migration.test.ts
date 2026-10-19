@@ -75,7 +75,7 @@ test("029 maps the stored verdicts and the run-count keys, and leaves history an
     const db = new DatabaseSync(file);
     db.exec("PRAGMA foreign_keys = ON");
     try {
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 29 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 30 });
       assert.deepEqual(rows(db, "PRAGMA foreign_key_check"), []);
       assert.deepEqual(rows(db, "SELECT id, status, checked_at FROM channels WHERE kind = 'stream' ORDER BY id"), [
         { id: "off", status: "offline", checked_at: 20 },

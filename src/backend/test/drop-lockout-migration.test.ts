@@ -61,7 +61,7 @@ test("023 drops the lockout columns and the attempt table and keeps every accoun
     try {
       const columns = db.prepare("PRAGMA table_info(admin_accounts)").all().map((r) => String(r.name));
       assert.equal(columns.includes("failed_sign_ins") || columns.includes("locked_until"), false);
-      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 29 });
+      assert.deepEqual({ ...db.prepare("PRAGMA user_version").get() }, { user_version: 30 });
       assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
       const table = "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reset_attempts'";
       assert.equal(db.prepare(table).get(), undefined);

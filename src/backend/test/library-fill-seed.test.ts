@@ -9,7 +9,7 @@ import test from "node:test";
 import { itemsOf } from "./live-channel-kit.js";
 import { makeApp, send, signIn } from "./test-app.js";
 
-const FILL = { scope: "discover", pages: 500 };
+const FILL = { scope: "discover" };
 
 async function jobsOf(t: Awaited<ReturnType<typeof makeApp>>): Promise<Array<Record<string, unknown>>> {
   const token = (await signIn(t.app)).access;
@@ -21,7 +21,7 @@ test("a fresh database with no TMDB_SYNC_SCHEDULE seeds the Library fill enabled
   const jobs = await jobsOf(t);
   assert.deepEqual(jobs.map((j) => [j.name, j.type, j.enabled, j.schedule, j.config]), [
     ["Library fill", "catalog", true, "off", FILL],
-    ["Library update", "catalog", true, "24h", { scope: "recent", pages: 1 }],
+    ["Library update", "catalog", true, "24h", { scope: "recent" }],
   ]);
 });
 

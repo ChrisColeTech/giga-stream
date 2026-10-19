@@ -33,8 +33,8 @@ test("the environment seeds the catalog job on the first start only; a playlist 
     const token = (await signIn(first.app)).access;
     const jobs = itemsOf((await send(first.app, "GET", "/api/jobs", undefined, token)).body);
     assert.deepEqual(jobs.map((j) => [j.type, j.name, j.enabled, j.schedule, j.config]), [
-      ["catalog", "Library fill", true, "12h", { scope: "discover", pages: 500 }],
-      ["catalog", "Library update", true, "24h", { scope: "recent", pages: 1 }],
+      ["catalog", "Library fill", true, "12h", { scope: "discover" }],
+      ["catalog", "Library update", true, "24h", { scope: "recent" }],
     ]);
     assert.equal(itemsOf((await send(first.app, "GET", "/api/playlists", undefined, token)).body).length, 0);
     for (const job of jobs) await send(first.app, "DELETE", `/api/jobs/${job.id}`, undefined, token);
@@ -50,6 +50,24 @@ test("the environment seeds the catalog job on the first start only; a playlist 
       // Windows can hold the SQLite file open briefly after dispose; the temp dir is cleaned up on reboot.
     }
   }
+});
+
+test("All round-trips explicitly, omitted legacy Kind stays Movies, and both-kind scopes drop stale fields", async () => {
+  const { api } = await setupPlaylists();
+  const all = await api("POST", "/api/jobs", catalogBody({
+    config: { scope: "trending", kind: "all", pages: 2 },
+  }));
+  assert.deepEqual(pick(all.body, "data.config"), { scope: "trending", kind: "all", pages: 2 });
+  const legacy = await api("POST", "/api/jobs", catalogBody({ config: { scope: "popular" } }));
+  assert.deepEqual(pick(legacy.body, "data.config"), { scope: "popular", kind: "movie", pages: 5 });
+  const discover = await api("PATCH", `/api/jobs/${pick(all.body, "data.id")}`, {
+    config: { scope: "discover", kind: "tv", pages: 9 },
+  });
+  assert.deepEqual(pick(discover.body, "data.config"), { scope: "discover" });
+  const recent = await api("PATCH", `/api/jobs/${pick(legacy.body, "data.id")}`, {
+    config: { scope: "recent", kind: "all", pages: 3 },
+  });
+  assert.deepEqual(pick(recent.body, "data.config"), { scope: "recent" });
 });
 
 test("a catalog job is created, read, changed and deleted; every refusal names its field", async () => {

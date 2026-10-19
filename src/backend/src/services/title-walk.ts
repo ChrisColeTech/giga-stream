@@ -53,9 +53,10 @@ export function createTitleWalk(deps: {
   /** Walks one kind's pages; `total_pages` from the first answer lowers the cap, and the progress total with it. */
   async function walkKind(
     kind: Kind, phase: string, cap: number, fetchPage: (page: number) => Promise<unknown>, run: WalkRun,
+    combined?: { offset: number; total: number },
   ): Promise<void> {
     let last = cap;
-    run.report({ phase, done: 0, total: last });
+    run.report({ phase, done: combined?.offset ?? 0, total: combined?.total ?? last });
     for (let page = 1; page <= last; page++) {
       if (run.signal.aborted || run.shuttingDown()) return;
       const answer = asRecord(await fetchPage(page));
@@ -63,7 +64,14 @@ export function createTitleWalk(deps: {
       const available = num(answer.total_pages);
       if (available !== undefined) last = Math.min(last, Math.max(available, page));
       writePage(kind, answer, run);
-      run.report({ phase, done: page, total: last });
+      run.report({
+        phase,
+        done: (combined?.offset ?? 0) + page,
+        total: combined?.total ?? last,
+      });
+    }
+    if (combined !== undefined && last < cap) {
+      run.report({ phase, done: combined.offset + cap, total: combined.total });
     }
   }
 
@@ -112,9 +120,13 @@ export function createTitleWalk(deps: {
       for (const kind of KINDS) await walkSlices(kind, kind === "movie" ? "movies" : "tv", run);
       return;
     }
-    const kind = request.kind ?? "movie";
     const pages = Math.min(request.pages ?? DEFAULT_SYNC_PAGES, MAX_SYNC_PAGES);
-    const path = request.scope === "trending" ? `/trending/${kind}/week` : `/${kind}/popular`;
-    await walkKind(kind, "list", pages, (page) => tmdb.get(path, { page }, { signal }), run);
+    const kinds = request.kind === "all" ? KINDS : [request.kind ?? "movie"];
+    const total = pages * kinds.length;
+    for (const [index, kind] of kinds.entries()) {
+      const path = request.scope === "trending" ? `/trending/${kind}/week` : `/${kind}/popular`;
+      const combined = kinds.length > 1 ? { offset: index * pages, total } : undefined;
+      await walkKind(kind, "list", pages, (page) => tmdb.get(path, { page }, { signal }), run, combined);
+    }
   };
 }
