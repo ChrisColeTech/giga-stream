@@ -302,17 +302,57 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 
 ## 9. Interface grammar
 
-### Tables (the admin's index lists; plan `45`, owner 2026-10-18)
+### Tables and lists (the admin's record lists; plans `45` and `52`, owner 2026-10-18)
 
-One table system for every index list, built on TanStack Table (and TanStack Virtual for the long lists): one column-definition
-API (`shared/ui/src/lib/record-columns.ts`); **columns always fit the pane** (fluid `minmax`/`fr` columns, truncation, and
-priority-based hiding of the least important columns at narrow widths) - **no horizontal scrollbar** at 900px or wider;
-**one scroll strategy** - the table fills the remaining pane height and scrolls inside itself under a sticky header, and
-never grows the page (the page scrolls once only when the form above plus an 8-row table exceed the pane); **one row height**
-(36px, header 29px) and one left edge for every table; the tri-state `All` in the header above the row ticks; skeleton rows in
-the same columns while loading; sort from the header and from the query bar's sort control. TanStack is used for column
-definitions, sorting, visibility and sizing metadata only: selection stays by id (`ListSelection`) and paging stays
-index-addressed (`41`). `helper.columns()` types each column's value, so no `any` is needed.
+One table system for every list of records the admin shows, index or workspace, built on TanStack Table (and TanStack
+Virtual for the long lists): one column-definition API (`shared/ui/src/lib/record-columns.ts`); **columns always fit the
+pane** (fluid `minmax`/`fr` columns, truncation, and priority-based hiding of the least important columns at narrow
+widths) - **no horizontal scrollbar** at 900px or wider; **one scroll strategy** - the table fills the remaining pane
+height and scrolls inside itself under a sticky header, and never grows the page (the page scrolls once only when the
+form above plus an 8-row table exceed the pane; a `bounded` table is as tall as its rows up to ten, then scrolls inside
+itself); **one row height** (36px, header 29px) and one left edge for every table; the tri-state `All` in the header
+above the row ticks; skeleton rows in the same columns while loading; sort from the header and from the query bar's
+sort control. TanStack is used for column definitions, sorting, visibility and sizing metadata only: selection stays
+by id (`ListSelection`) and paging stays index-addressed (`41`). `helper.columns()` types each column's value, so no
+`any` is needed.
+
+**The rule.** A set of records shown as parallel rows - an index list or a workspace's list, wherever the admin lists
+what a person can open, select, act on per row or read in columns - is the kit's record table
+(`lists/RecordTable.tsx`), never hand-rolled rows of divs. `DataTable.tsx` is another table (the interface's
+Collections window) and is not the record table. A plain list remains only for non-tabular display (a handful of
+names under one label); a label and its control are a form `Row`, never a table.
+
+**The consumer supplies:** the columns (`createColumnHelper<typeof recordFeatures, RowView>()` and
+`column.columns([...])`, one `*-columns.ts` file per list; a column's `size` is its minimum width in px, its
+`meta` `{ kind, grow?, priority }` names its cell style and its narrow-pane behaviour - `kind` is `name`, `text`,
+`mono`, `number`, `state` or `custom`, `priority` 0 never hides and higher hides first, `grow` takes the leftover room
+in `fr`); a stable `idOf` string per row; the rows (an in-memory list passes `rows`, a paged one passes `paging`:
+`total`, `rowAt`, `resetKey`, `onNeedRange`, `pageSize`); and the `rowView` per row - its state word, its dimming, its
+tick, what opens it and its end. A workspace list with no record to open omits the open; the kit then draws no spanning
+button, only the cells.
+
+**The kit supplies:** the markup, the header, the selection column, the window, the skeleton and the keyboard. The row
+(`RecordTableRow`) is one 36px line on the one `--cols` template the header, every row and every skeleton share: the
+tick, one spanning button over the visible cells (Enter and Space open the record), the end cell - a fixed end column
+(`END_COLUMN_PX`; wider for two actions) whose armed `Delete` question grows leftwards over its neighbours. The header
+(`RecordTableHead`) is 29px, sticky, mono; its first cell is the three-state `All` of a `SelectAllScope` (absent in a
+list without ticks); a sortable heading is a button with `aria-sort` and a direction arrow, and a server-sorted list
+takes the same press through its `RecordSort`. A state is a `StateWord` tone cell in a `state` column, never a dot; a
+disabled record stays in its list dimmed to 45%. The per-row verbs live at the row's end (the `Delete` `ArmedButton`,
+`Restore`, icon-only small inner actions); the list's verbs live in the `TableStrip`, the list's first row, never in a
+heading and never in the page toolbar. Ticks are ids (`ListSelection`): the header `All` ticks the loaded rows, and
+`Select all M matching` is a separate strip verb. Above `WINDOW_MIN_ROWS` (100) a paged table mounts only the rows near
+the viewport (`RecordTableVirtualBody` over `useRowWindow`; a skeleton row stands in for each mounted row whose page is
+not loaded); at or under it every row is mapped; an in-memory list windows the same way through a synthetic `paging`
+over its own array. Nothing read, and nothing to list, draws `RecordTableSkeletonRow`s in the same columns - never a
+sentence, never an invented placeholder. The keyboard: the arrows, Home, End, PageUp and PageDown move focus by index in
+a windowed body (so they reach rows not mounted yet) and the focused row stays mounted while focus is in it.
+
+**The class vocabulary** (`record-grid-classes.ts`): a name cell is 14px medium on the row's line (`CELL_NAME`), other
+text muted (`CELL_TEXT`), a mono cell mono 12px (`CELL_MONO`), a number mono 12px tabular and right-aligned so the
+figures compare down the column (`CELL_NUMBER`); a state or custom cell styles itself. The header is
+`bg-surface px-3 font-mono text-xs text-dim` on a hairline; the row is `h-9 rounded-ctl px-3 hover:bg-hov`, ticked
+`bg-ctl`, dimmed `opacity-45`. No list invents a second vocabulary.
 
 ### Shell
 
