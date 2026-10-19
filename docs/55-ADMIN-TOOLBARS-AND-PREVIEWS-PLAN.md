@@ -1,5 +1,9 @@
 # 55 - The admin's toolbars, saves and previews (plan v1)
 
+> **Amended 2026-10-19 (`56`, owner).** A promote is never tab navigation and carries no navigation arrow. Providers
+> and Titles indexes promote Preview; Playlists promotes Sync now; Jobs promotes Run job. Playlist workspace promotes
+> Sync now; Jobs table has no Stop; obsolete Titles/Jobs/Channels page-hop verbs and forward vocabulary are deleted.
+
 **Status: v1 (2026-10-18).** Owner: "on the workspaces, the toolbar has a discard button, but the save button is missing
 on the right"; "on providers index, we need preview buttons like we have for channels index. it should launch the preview
 with a the titles we have in our db or something to make sure the video loads. the providers preview child window should

@@ -1,5 +1,8 @@
 # 49 - The Library update: an incremental sync of the latest titles, newly aired series and gaps (plan v3)
 
+> **Amended 2026-10-19 (`56`, owner).** Recent runs both kinds and exposes neither Kind nor Pages; normalized config
+> stores no meaningful stale Kind/Pages. The UI's shared New/Edit job fields follow this rule.
+
 **Status: v3 (2026-10-18). Supersedes v2's `/changes` refresh.** Owner: "it doesnt need to delete, but there needs to be an incremental
 type that only syncs the latest titles and gaps once the data is at rest. trending and popular is not the same as 'all recent'; is there a
 filter for that?" and, on v2: "im not sure if calling for 59000 description changes are worth the api hits. if the description is not

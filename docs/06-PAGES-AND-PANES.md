@@ -397,18 +397,21 @@ strip stays `All · Movies · TV · Local` on every view.
 
 ### 4.3 Filters (right)
 
-LoRA Studio's gallery filter pane: one scrolling stack of settings, each a 14px label over a 36px control, and
-**Clear filters** pinned under the stack, as the left rail pins Manage collections.
+LoRA Studio's gallery filter pane, amended by `57`: one scrolling stack of field-shaped pickers and **Clear filters**
+pinned under it. The page toolbar carries `Filters · N`, `Sort: <value>`, `View: <value>`, Refresh and Search; applied
+non-default filters appear under it as removable STATE tokens (never offered-choice chips). The wide right pane and the
+narrow Filters popup render the same `LibraryFilters` and share one query/options source.
 
 | Filter | Control |
 |---|---|
 | Filter | a field with a search icon and a clear control (`Clear the filter`), labelled `Filter`, `data-search` for `Ctrl+F`; narrows the loaded list by title and combines with the type strip and every filter. Its text is saved like the other filters (the `libraryFilter` setting, at most 200 characters, default empty; owner, 2026-10-18, reversing the earlier "the search is never saved") and restored before the first Library read |
-| View | Grid / List / Rows, segmented. It opens on the **Default view** setting, and follows that setting when it changes |
-| Sort | a select: Newest, Oldest, A to Z, Year. It opens on the **Default sort** setting and follows it when it changes. Trending is offered only when the backend supplies a real current popularity signal |
-| Genre | a field (the same box and chevron as the selects beside it, not a button) that opens a popover of chips, multi-choice, with a search box when there are 12 or more; Escape or focus leaving closes it |
-| Year | a populated select, `Any year` first |
-| Watched | a select: All, Unwatched, Watching, Watched |
-| **Clear filters** | ghost, full width, always enabled. Returns Genre, Year and Watched to their defaults and the sort to the Default sort setting; keeps the Filter text, the type strip and the rail's view |
+| Media | field-shaped picker; checkmark rows All, Movies, TV, Local |
+| Genre | field-shaped searchable multi-select checklist; search appears at 12; never a chip cloud |
+| Year | field-shaped searchable/scrollable single-choice list, `Any year` first |
+| Watched | field-shaped single-choice list: All, Unwatched, Watching, Watched |
+| Sort (toolbar) | menu button + checkmark rows: Newest, Oldest, A to Z, Year; Trending only with a real signal |
+| View (toolbar) | menu button + icon rows: Grid, List, Rows; follows the Default view setting |
+| **Clear filters** | ghost, full width, disabled at defaults; resets title, Media, Genre, Year and Watched; Sort keeps its own default |
 
 - Genre and Year are populated choices and never free text, with no counts. A selected value stays
   listed until it is removed, so no choice disappears.

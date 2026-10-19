@@ -1,5 +1,11 @@
 # 26 - Admin App and the Single Backend
 
+> **Amended 2026-10-19 (`56`, `57`, owner).** Page toolbars never navigate tabs: the nav pill owns navigation. Index
+> promotes are Channels/Providers/Titles Preview, Playlists Sync now, Jobs Run job, Accounts none; workspace promotes
+> are the same record operations. Playlist import asks Name first; New/Edit catalog jobs share Name, Type, Scope, Kind,
+> Pages per kind, Enabled and Schedule; Kind adds All. Choice pills are binary pairs only; 3+ choices use Select and
+> live Qualities use a checklist. Theme is Light/Dark; Reduce motion Off/On; no live System value.
+
 **Status: revised 2026-10-17. The merged backend (sections 3.x, Waves 1b and 2) is built and landed: the live server is
 gone, its engine runs in `src/backend/src/live`, migrations 008 to 016 are applied, titles, playlists and jobs are
 records, and roles and the provider key were removed. The admin app (section 4, `src/admin`), the backend's Electron

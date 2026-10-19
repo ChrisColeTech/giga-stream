@@ -1,5 +1,9 @@
 # 48 - The Library fill discovers everything TMDB offers above a vote floor: a sliced discover walk (plan v2)
 
+> **Amended 2026-10-19 (`56`, owner).** Discover runs both kinds and exposes neither Kind nor Pages in New/Edit job
+> forms; normalized config stores no meaningful stale Kind/Pages. Trending/Popular alone use Pages per kind and gain
+> explicit Kind All/Movies/Series.
+
 **Status: v2 after the independent plan review (2026-10-18); awaiting delegation.** Owner: "the discover should continue until we
 have them all, not just 20 x 500". Extends `47` 3.1 (the walk) and `44` 3.1 (phases and weights). Docs first (`07`). Scope: the
 admin backend (the walk, constants, the job's request) and one admin copy line.

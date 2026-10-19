@@ -1,5 +1,10 @@
 # 43 - Playlist import, sync, logo cache and stream status (plan)
 
+> **Amended 2026-10-19 (`56`, owner).** New Playlist asks required Name first for File and Web imports (the backend
+> keeps derived-name fallback for external clients). `Sync now` is the Playlists index/workspace promote, not a table
+> verb; a disabled generated job does not block manual sync while the playlist is enabled. Toolbars do not navigate to
+> Jobs/Channels.
+
 **Status: REVISED 2026-10-18 after two hostile reviews (v3); not yet re-approved.** Owner-approved scope and decisions stand
 (2026-10-18); round one found six blockers and about two dozen should-fix items, round two five more blockers (the
 migration order, name uniqueness, `safe-fetch` on `node:https`, the wave split, revisions); all are folded in below. No code

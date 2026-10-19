@@ -1,5 +1,10 @@
 # 38 - Admin Playlists and Jobs plan (Wave 3d)
 
+> **Amended 2026-10-19 (`56`, owner).** Jobs table verbs are Enable, Disable, Delete - no Stop (the statusbar owns it).
+> New/Edit catalog jobs share the same fields/options; Scope and Kind are Selects, Kind is All/Movies/Series, Pages per
+> kind appears only for Trending/Popular, and new jobs default All, Enabled, Schedule Off. The Jobs promote is Run job;
+> toolbars never navigate tabs.
+
 > **SUPERSEDED in part by `43` (owner, 2026-10-18).** The playlist create form (a name and an address), the `Dry run` and
 > `Prune` toggles, the per-channel link list in the playlist workspace, the playlist-sync read and the "a delete keeps the
 > channels" rule are replaced: playlists are now **imported** (a file or a web address, channels land disabled), a delete
