@@ -1,11 +1,17 @@
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@giga/ui/controls/Button";
 import { IconButton } from "@giga/ui/controls/IconButton";
 import { Input } from "@giga/ui/controls/Input";
 import { cn } from "@giga/ui/lib/cn";
+import { END_ACTIONS_PX } from "@giga/ui/lib/window-constants";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
+import { RecordTable } from "@giga/ui/lists/RecordTable";
+import type { RecordRowView } from "@giga/ui/lists/record-table-types";
 import { addReason, addVideo, downReason, moveVideo, removeVideo, upReason } from "@/lib/video-order";
+import { videoEntryColumns, type VideoEntryRow } from "./video-entry-columns";
+
+const idOf = (row: VideoEntryRow): string => String(row.position);
 
 export interface VideoListProps {
   readonly videos: readonly string[];
@@ -14,9 +20,12 @@ export interface VideoListProps {
   readonly invalid?: boolean;
 }
 
-/** A live channel's videos in play order (`28` Appendix A row 76, `36` section 6): numbered rows, each the path in mono with
- *  up, down and remove; the end buttons are disabled with `Already first` / `Already last`. Under them an add row: a path
- *  field and `Add` (no `Choose`: the backend window's dialog picks folders only). Edits change the draft; Save sends them. */
+/** A live channel's videos in play order (`28` Appendix A row 76, `36` section 6; `52` decision 3): the standard table
+ *  - `#`, the path in mono - bounded, no ticks, nothing sortable, no record to open; each row's end cell holds the up,
+ *  down and remove icon buttons with their reasons (`Already first`, `Already last`) in a wider end column. Above 100
+ *  entries the table windows through a synthetic paging over its own array (`52` decision 4). Under it the add row
+ *  stays: a path field and `Add` (no `Choose`: the backend window's dialog picks folders only). Edits change the draft;
+ *  Save sends them. */
 export function VideoList({ videos, onChange, invalid = false }: VideoListProps) {
   const [path, setPath] = useState("");
   const reason = addReason(videos, path);
@@ -26,31 +35,47 @@ export function VideoList({ videos, onChange, invalid = false }: VideoListProps)
     setPath("");
   };
 
+  const rows = useMemo<VideoEntryRow[]>(
+    () => videos.map((video, position) => ({ position, path: video })),
+    [videos],
+  );
+  const rowAt = useCallback((index: number): VideoEntryRow | undefined => rows[index], [rows]);
+  const rowView = (row: VideoEntryRow): RecordRowView => ({
+    end: (
+      <span className="flex items-center gap-1">
+        <IconButton
+          aria-label={`Move ${row.path} up`}
+          reason={upReason(row.position)}
+          onClick={() => onChange(moveVideo(videos, row.position, -1))}
+        >
+          <ArrowUp className="size-3.5" aria-hidden />
+        </IconButton>
+        <IconButton
+          aria-label={`Move ${row.path} down`}
+          reason={downReason(row.position, videos.length)}
+          onClick={() => onChange(moveVideo(videos, row.position, 1))}
+        >
+          <ArrowDown className="size-3.5" aria-hidden />
+        </IconButton>
+        <IconButton aria-label={`Remove ${row.path}`} title="Remove" onClick={() => onChange(removeVideo(videos, row.position))}>
+          <X className="size-3.5" aria-hidden />
+        </IconButton>
+      </span>
+    ),
+  });
+
   return (
     <div className="flex w-full min-w-0 flex-col gap-1" aria-invalid={invalid || undefined}>
-      <ol className="m-0 flex list-none flex-col p-0" aria-label="Videos">
-        {videos.map((video, index) => (
-          <li key={`${index}:${video}`} className="flex h-9 min-w-0 items-center gap-2 rounded-ctl px-2 hover:bg-hov">
-            <span className="w-6 flex-none text-right font-mono text-xs text-faint">{index + 1}</span>
-            <span className="min-w-0 flex-1 truncate font-mono text-sm text-text" title={video}>
-              {video}
-            </span>
-            <IconButton aria-label={`Move ${video} up`} reason={upReason(index)} onClick={() => onChange(moveVideo(videos, index, -1))}>
-              <ArrowUp className="size-3.5" aria-hidden />
-            </IconButton>
-            <IconButton
-              aria-label={`Move ${video} down`}
-              reason={downReason(index, videos.length)}
-              onClick={() => onChange(moveVideo(videos, index, 1))}
-            >
-              <ArrowDown className="size-3.5" aria-hidden />
-            </IconButton>
-            <IconButton aria-label={`Remove ${video}`} title="Remove" onClick={() => onChange(removeVideo(videos, index))}>
-              <X className="size-3.5" aria-hidden />
-            </IconButton>
-          </li>
-        ))}
-      </ol>
+      <RecordTable<VideoEntryRow>
+        ariaLabel="Videos"
+        columns={videoEntryColumns}
+        paging={{ total: rows.length, rowAt, resetKey: "" }}
+        idOf={idOf}
+        rowView={rowView}
+        ticks={false}
+        size="bounded"
+        endPx={END_ACTIONS_PX}
+      />
       <div className="flex min-w-0 items-center gap-2">
         <Input
           value={path}

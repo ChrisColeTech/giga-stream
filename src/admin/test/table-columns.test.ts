@@ -4,11 +4,13 @@ import { fitColumns, type RecordColumns } from "@giga/ui/lib/record-columns";
 import { END_ACTIONS_PX, END_COLUMN_PX } from "@giga/ui/lib/window-constants";
 import { accountColumns } from "@/components/accounts/account-columns";
 import { channelColumns } from "@/components/channels/channel-columns";
+import { playlistEntryColumns } from "@/components/channels/playlist-entry-columns";
 import { jobColumns } from "@/components/jobs/job-columns";
 import { deletedTitleColumns } from "@/components/titles/deleted-title-columns";
 import { titleColumns } from "@/components/titles/title-columns";
 import { playlistColumns } from "@/components/playlists/playlist-columns";
 import { providerColumns } from "@/components/providers/provider-columns";
+import { videoEntryColumns } from "@/components/records/video-entry-columns";
 import { formatWhen } from "@/lib/format-when";
 
 /* The index lists' column sets as arithmetic (`45` sections 2.3 and 5): unique ids, a growing column that is never hidden,
@@ -113,5 +115,40 @@ describe("the index tables' column sets", () => {
     assert.ok(size(playlistColumns, "last-run") >= width);
     assert.ok(size(jobColumns, "last-run") >= width);
     assert.ok(size(deletedTitleColumns, "deleted") >= width);
+  });
+});
+
+describe("the workspace tables' column sets (`52` decisions 2 and 3)", () => {
+  const words = (columns: ReadonlyArray<{ readonly header?: unknown }>): string[] =>
+    columns.map((one) => (typeof one.header === "string" ? one.header : ""));
+
+  it("every column has an id, unique within its table, a minimum size and a priority", () => {
+    for (const table of [facts(playlistEntryColumns), facts(videoEntryColumns)]) {
+      assert.ok(table.every((one) => one.id !== "" && one.size !== undefined && one.priority !== undefined));
+      assert.equal(new Set(table.map((one) => one.id)).size, table.length);
+    }
+  });
+
+  it("the words in order: #, name, duration and #, path; nothing sorts, so the headings are not buttons", () => {
+    assert.deepEqual(words(playlistEntryColumns), ["#", "name", "duration"]);
+    assert.deepEqual(words(videoEntryColumns), ["#", "path"]);
+    const sets: ReadonlyArray<ReadonlyArray<{ readonly id?: string; readonly enableSorting?: boolean }>> = [
+      playlistEntryColumns,
+      videoEntryColumns,
+    ];
+    for (const columns of sets) {
+      assert.deepEqual(columns.filter((one) => one.enableSorting !== false).map((one) => one.id), []);
+    }
+  });
+
+  it("each has one growing column of priority 0 that never hides", () => {
+    for (const table of [facts(playlistEntryColumns), facts(videoEntryColumns)]) {
+      assert.equal(table.filter((one) => one.grow !== undefined && one.priority === 0).length, 1);
+    }
+  });
+
+  it("the playlist's duration hides first in a narrow pane; the videos' columns never hide", () => {
+    assert.deepEqual(hideOrder(playlistEntryColumns, { tick: false, endPx: END_COLUMN_PX }), ["duration"]);
+    assert.deepEqual(hideOrder(videoEntryColumns, { tick: false, endPx: END_ACTIONS_PX }), []);
   });
 });

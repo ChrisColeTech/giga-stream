@@ -108,6 +108,17 @@ test("a row draws its state, its tick fill, a dimmed disabled row, and the end c
   assert.ok(row.includes("z-10") && row.includes("justify-end"));
 });
 
+test("a row with no record to open draws no spanning button; its cells sit directly on the --cols tracks", () => {
+  const noOpen = (row: Row): RecordRowView => ({ state: row.state, end: null });
+  const html = table({ rowView: noOpen });
+  assert.equal(count(html, "data-primary"), 0);
+  assert.equal(count(html, "data-col="), ROWS.length * COLUMNS.length);
+  const row = html.slice(html.indexOf("<li "), html.indexOf("</li>"));
+  assert.ok(!row.includes("<button"), "no open button in the row (the header's sort buttons are not the row's)");
+  assert.ok(row.indexOf('data-col="name"') < row.indexOf('data-col="size"'));
+  assert.ok(row.includes("z-10") && row.includes("justify-end"), "the end cell keeps its place");
+});
+
 test("a list with no tick column draws no tick and no header tick cell", () => {
   const html = table({ ticks: false });
   assert.ok(!html.includes('type="checkbox"') && !html.includes('role="checkbox"'));
