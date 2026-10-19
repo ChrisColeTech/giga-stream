@@ -95,7 +95,7 @@ describe("documented Player composition", () => {
     } finally { useAppStore.setState({ playback: previous.playback }); }
   });
 
-  it("keeps loading, idle and movie actions in one non-wrapping row aligned right", () => {
+  it("centres loading, idle and movie actions in one compact equal two-column grid", () => {
     const movie = {
       ...view,
       tab: { id: "movie-1", ref: { kind: "title" as const, id: "movie-1" }, kind: "movie" as const, title: "Film" },
@@ -105,10 +105,11 @@ describe("documented Player composition", () => {
         view: candidate, commands, paused: true, loading, sources: [], activeId: "", onSelect: noop,
         ...inspectorActions,
       }));
-      assert.doesNotMatch(html, /grid-cols-2|aria-label="Previous episode|aria-label="Next episode/);
-      assert.match(html, /aria-label="Player actions"[^>]*flex-nowrap/);
-      assert.match(html, /aria-label="Playback position actions"[^>]*ml-auto[^>]*flex-nowrap/);
-      assert.doesNotMatch(html, /aria-label="Episode navigation"/);
+      assert.match(html, /aria-label="Player actions"[^>]*mx-auto[^>]*max-w-\[320px\][^>]*grid-cols-2/);
+      assert.doesNotMatch(html, /aria-label="Previous episode|aria-label="Next episode/);
+      assert.doesNotMatch(html, /aria-label="Player actions"[^>]*(?:flex|justify-between|flex-wrap)/);
+      assert.doesNotMatch(html, /aria-label="Episode navigation"|aria-label="Playback position actions"/);
+      assert.equal((html.match(/<button[^>]*class="[^"]*w-full min-w-0[^"]*"/g) ?? []).length, 2);
       assert.match(html, /h-ctl-sm/);
       assert.match(html, /Resume\./);
       assert.match(html, /Start over\./);
@@ -151,7 +152,8 @@ describe("documented Player composition", () => {
       }));
       assert.match(html, /aria-label="Previous episode/);
       assert.match(html, /aria-label="Next episode/);
-      assert.doesNotMatch(html, /grid-cols-2|Rewind|Forward|Loop|Play\/pause|Volume|Captions|Speed|Auto-next/);
+      assert.match(html, /aria-label="Player actions"[^>]*grid-cols-4/);
+      assert.doesNotMatch(html, /Rewind|Forward|Loop|Play\/pause|Volume|Captions|Speed|Auto-next/);
     }
     const first = renderToStaticMarkup(createElement(PlayerInspector, {
       view: series, commands, paused: true, loading: false, sources: [], activeId: "", onSelect: noop,
@@ -165,7 +167,7 @@ describe("documented Player composition", () => {
     assert.match(last, /Next episode\. This is the last episode\./);
   });
 
-  it("orders Source, saved point and one left/right series action row without staggering", () => {
+  it("orders Source, saved point and one equal four-column series action grid", () => {
     const sources = [
       { id: "a", kind: "stream" as const, name: "A", url: "https://a.example/video.mp4" },
       { id: "b", kind: "stream" as const, name: "B", url: "https://b.example/video.mp4" },
@@ -187,12 +189,12 @@ describe("documented Player composition", () => {
       onSelect: noop, adjacency, ...inspectorActions,
     }));
     const ordered = ['aria-label="Source"', "resume at", 'aria-label="Player actions"',
-      'aria-label="Episode navigation"', 'aria-label="Playback position actions"'];
+      ">Previous</button>", ">Next</button>", ">Resume</button>", ">Start over</button>"];
     assert.deepEqual([...ordered].sort((left, right) => html.indexOf(left) - html.indexOf(right)), ordered);
-    assert.match(html, new RegExp('aria-label="Player actions"[^>]*flex-nowrap[^>]*>[\\s\\S]*' +
-      'aria-label="Episode navigation"[\\s\\S]*aria-label="Playback position actions"'));
-    assert.match(html, /aria-label="Episode navigation"[^>]*flex-none flex-nowrap/);
-    assert.match(html, /aria-label="Playback position actions"[^>]*ml-auto[^>]*flex-none flex-nowrap/);
+    assert.match(html, /aria-label="Player actions"[^>]*grid-cols-4[^>]*gap-1\.5/);
+    assert.doesNotMatch(html, /aria-label="Player actions"[^>]*(?:flex|justify-between|flex-wrap)/);
+    assert.doesNotMatch(html, /aria-label="Episode navigation"|aria-label="Playback position actions"/);
+    assert.equal((html.match(/<button[^>]*class="[^"]*w-full min-w-0[^"]*"/g) ?? []).length, 4);
     assert.match(html, /h-ctl-sm/);
   });
 
