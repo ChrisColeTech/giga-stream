@@ -14,7 +14,8 @@ export function EpisodeFooterNavigation(props: EpisodeFooterNavigationProps) {
   const previousReason = props.switching ? EPISODE_SWITCH_REASON : props.adjacency.previous.reason;
   const nextReason = props.switching ? EPISODE_SWITCH_REASON : props.adjacency.next.reason;
   return (
-    <div className="flex items-center gap-1.5">
+    <div role="group" aria-label="Episode navigation"
+      className="flex flex-none flex-nowrap items-center gap-1.5">
       <Button size="sm" aria-label="Previous episode" reason={previousReason}
         onClick={props.onPrevious}>Previous</Button>
       <Button size="sm" aria-label="Next episode" reason={nextReason}
