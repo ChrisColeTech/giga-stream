@@ -5,11 +5,15 @@ import { newAddressOf, type NewPlaylistDraft, type PlaylistDraft } from "./playl
 
 /* Type aliases, not interfaces: a request body is a plain record (`RecordInput`), which an interface cannot be. */
 export type PlaylistUrlBody = {
+  readonly name: string;
   readonly url: string;
 };
 
 /** `POST /api/playlists`, the web-address import: the trimmed address alone. The playlist is named after its host. */
-export const urlBody = (draft: NewPlaylistDraft): PlaylistUrlBody => ({ url: draft.address.trim() });
+export const urlBody = (draft: NewPlaylistDraft): PlaylistUrlBody => ({
+  name: draft.name.trim(),
+  url: draft.address.trim(),
+});
 
 export type PlaylistPatch = {
   readonly name?: string;

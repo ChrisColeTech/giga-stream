@@ -1,16 +1,17 @@
 import { Workspace } from "@giga/ui/form/Workspace";
 import { IndexToolbar } from "@/components/records/IndexToolbar";
 import { TITLES_INDEX_LABELS } from "@/constants/title-copy";
+import { useIndexPreviewPromote } from "@/hooks/useIndexPreviewPromote";
 import { DeletedTitlesGroup } from "./DeletedTitlesGroup";
 import { NewTitleForm } from "./NewTitleForm";
 import { TitleListGroup } from "./TitleListGroup";
 
-/** The Titles index: the page toolbar with `Jobs →` on the right, over `New title` and the list (search, chips, sort,
- *  then the list's first row and the grid), then `Deleted titles` (`37` section 4.4). */
+/** The Titles index: Preview promotes exactly one previewable ticked title over the two retained list modes. */
 export function TitlesIndex() {
+  const promote = useIndexPreviewPromote("titles");
   return (
     <>
-      <IndexToolbar tab="titles" />
+      <IndexToolbar promote={promote} />
       <Workspace labels={TITLES_INDEX_LABELS} fill>
         <NewTitleForm />
         <TitleListGroup />

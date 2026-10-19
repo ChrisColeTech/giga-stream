@@ -52,9 +52,8 @@ describe("the workspace draft", () => {
 });
 
 describe("the New playlist draft", () => {
-  it("starts on File with nothing chosen and no Name", () => {
-    assert.deepEqual(EMPTY_NEW_PLAYLIST, { source: "file", file: null, address: "" });
-    assert.equal("name" in EMPTY_NEW_PLAYLIST, false);
+  it("starts on File with an empty required Name", () => {
+    assert.deepEqual(EMPTY_NEW_PLAYLIST, { name: "", source: "file", file: null, address: "" });
   });
 
   it("holds the chosen file, and a draft with another file or source is another value", () => {
@@ -65,17 +64,20 @@ describe("the New playlist draft", () => {
   });
 
   it("disables Import with the chosen source's missing value first, then busy", () => {
-    assert.equal(createReason(EMPTY_NEW_PLAYLIST, undefined), "Choose a file first.");
-    assert.equal(createReason({ ...EMPTY_NEW_PLAYLIST, file: m3u }, undefined), undefined);
-    assert.equal(createReason({ ...EMPTY_NEW_PLAYLIST, file: m3u }, "Importing."), "Importing.");
-    const web = { ...EMPTY_NEW_PLAYLIST, source: "url" } as const;
+    assert.equal(createReason(EMPTY_NEW_PLAYLIST, undefined), "Name is required.");
+    const named = { ...EMPTY_NEW_PLAYLIST, name: "US" };
+    assert.equal(createReason(named, undefined), "Choose a file first.");
+    assert.equal(createReason({ ...named, file: m3u }, undefined), undefined);
+    assert.equal(createReason({ ...named, file: m3u }, "Importing."), "Importing.");
+    const web = { ...named, source: "url" } as const;
     assert.equal(createReason(web, undefined), "Address is required.");
     assert.equal(createReason({ ...web, address: "https://x.test/a" }, "The admin backend cannot be reached."), "The admin backend cannot be reached.");
     assert.equal(createReason({ ...web, file: m3u }, undefined), "Address is required.", "a file kept from the other source is not an address");
   });
 
-  it("sends the trimmed address alone as the web-address import body", () => {
-    assert.deepEqual(urlBody({ ...EMPTY_NEW_PLAYLIST, source: "url", address: "  https://x.test/a.m3u " }), {
+  it("sends the trimmed name and address as the web-address import body", () => {
+    assert.deepEqual(urlBody({ ...EMPTY_NEW_PLAYLIST, name: " Main ", source: "url", address: "  https://x.test/a.m3u " }), {
+      name: "Main",
       url: "https://x.test/a.m3u",
     });
   });

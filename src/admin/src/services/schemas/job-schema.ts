@@ -10,8 +10,8 @@ import { lastCounts, lastResult } from "./run-counts-schema";
 const PlaylistConfig = z.object({ playlistId: z.number() });
 const CatalogConfig = z.object({
   scope: z.enum(["trending", "popular", "discover", "recent"]),
-  kind: z.enum(["movie", "tv"]).optional(),
-  pages: z.number(),
+  kind: z.enum(["all", "movie", "tv"]).optional(),
+  pages: z.number().optional(),
 });
 
 export const JobSchema = z.object({

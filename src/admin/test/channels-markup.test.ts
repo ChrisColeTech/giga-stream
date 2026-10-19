@@ -73,9 +73,9 @@ describe("the channels table strip", () => {
   const table = () => index().slice(index().indexOf('aria-label="Channels table"'));
   const toolbar = () => index().slice(0, index().indexOf("overflow-y-auto"));
 
-  it("draws Refresh first and no forward verb; Preview → waits in the page toolbar; every bulk verb waits", () => {
+  it("draws Refresh first; Preview waits in the page toolbar; every bulk verb waits", () => {
     const html = table();
-    assert.ok(toolbar().includes('aria-label="Preview →. Tick a row first"') && !html.includes("Preview →"));
+    assert.ok(toolbar().includes('aria-label="Preview. Tick a row first"') && !html.includes(">Preview<"));
     assert.ok(html.indexOf("Refresh channels") < html.indexOf("Select all channels"));
     for (const verb of ["Enable", "Disable", "Rebuild", "Delete"]) assert.ok(html.includes(`aria-label="${verb}. Tick a row first"`), verb);
   });
@@ -94,9 +94,9 @@ describe("the channels table strip", () => {
     holdChannels([live("a"), stream("b")], 1);
     state().channelTick("a", true);
     state().channelTick("b", true);
-    assert.ok(toolbar().includes('aria-label="Preview →. Tick only one row"'));
+    assert.ok(toolbar().includes('aria-label="Preview. Tick only one row"'));
     state().channelTick("a", false);
-    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview →<\/button>/.test(toolbar()) && !toolbar().includes("Preview →. "));
+    assert.ok(/<button[^>]*title="Preview channel"[^>]*>Preview<\/button>/.test(toolbar()) && !toolbar().includes("Preview. "));
   });
 
   it("enables only the verbs a ticked row can run, with the all-skipped reasons", () => {

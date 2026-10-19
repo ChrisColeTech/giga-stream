@@ -34,7 +34,7 @@ describe("the jobs service", () => {
 
   it("reads the typed last run the backend joins in, and a discover job that has no kind", async () => {
     const ran = { ...playlistJob, lastRunAt: 9, lastResult: "ok", lastCounts: counts({ created: 2 }) };
-    const discover = { ...catalogJob, id: 5, config: { scope: "discover", pages: 100 } };
+    const discover = { ...catalogJob, id: 5, config: { scope: "discover" } };
     await withBackend(
       () => success({ items: [ran, discover] }),
       async () => {
@@ -46,6 +46,16 @@ describe("the jobs service", () => {
     );
   });
 
+  it("parses All and displays an omitted legacy kind as Movies", async () => {
+    const all = { ...catalogJob, config: { scope: "popular", kind: "all", pages: 5 } };
+    const legacy = { ...catalogJob, id: 6, config: { scope: "popular", pages: 5 } };
+    await withBackend(() => success({ items: [all, legacy] }), async () => {
+      const list = await jobs.list();
+      assert.equal(draftOf(list.items[0] ?? catalogJob).kind, "all");
+      assert.equal(draftOf(list.items[1] ?? catalogJob).kind, "movie");
+    });
+  });
+
   it("creates catalog jobs only: the scope and kind, and a discover job sends no kind", async () => {
     await withBackend(
       () => success(catalogJob, 201),
@@ -53,15 +63,22 @@ describe("the jobs service", () => {
         const popular = { ...EMPTY_NEW_JOB, name: " Pop ", scope: "popular", kind: "tv" } as const;
         await jobs.create(createBody(popular));
         await jobs.create(createBody({ ...popular, scope: "discover" }));
-        assert.deepEqual(calls[0]?.body, { type: "catalog", name: "Pop", config: { scope: "popular", kind: "tv" } });
-        assert.deepEqual(calls[1]?.body, { type: "catalog", name: "Pop", config: { scope: "discover" } });
+        assert.deepEqual(calls[0]?.body, {
+          type: "catalog", name: "Pop", enabled: true, schedule: "off",
+          config: { scope: "popular", kind: "tv", pages: 5 },
+        });
+        assert.deepEqual(calls[1]?.body, {
+          type: "catalog", name: "Pop", enabled: true, schedule: "off", config: { scope: "discover" },
+        });
       },
     );
   });
 
   it("a recent job sends only its scope - no kind on create, no kind or pages on a patch - and checks no Pages", () => {
     const made = createBody({ ...EMPTY_NEW_JOB, name: " Update ", scope: "recent", kind: "tv" });
-    assert.deepEqual(made, { type: "catalog", name: "Update", config: { scope: "recent" } });
+    assert.deepEqual(made, {
+      type: "catalog", name: "Update", enabled: true, schedule: "off", config: { scope: "recent" },
+    });
     const draft = { ...draftOf(catalogJob), scope: "recent", kind: "tv", pages: "" } as const;
     assert.deepEqual(changedFields(catalogJob, draft), { config: { scope: "recent" } });
     assert.equal(firstSaveRefusal(draft, true), null, "the hidden Pages row is never asked for");

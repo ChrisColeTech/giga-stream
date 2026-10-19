@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { INDEX_FRAMES } from "@/constants/index-frames";
-import { NOTHING_CHANGED, TICK_FIRST } from "@/constants/record-copy";
+import { NOTHING_CHANGED } from "@/constants/record-copy";
 import { TAB_ORDER } from "@/constants/tabs";
-import { indexForward } from "@/lib/index-verbs";
+import { providerPreviewReason } from "@/lib/provider-rows";
+import { titlePreviewReason } from "@/lib/title-rows";
+import type { AdminProvider } from "@/services/schemas/provider-schema";
+import type { AdminTitleRow } from "@/services/schemas/title-schema";
 import { changeReason } from "@/lib/workspace-verbs";
-import type { Tab } from "@/types/shell";
-
-const NOTHING = (): void => undefined;
 
 describe("Save and Discard changes", () => {
   it("wait with `Nothing has changed.` while the draft equals its baseline, whatever else is true", () => {
@@ -23,33 +23,20 @@ describe("Save and Discard changes", () => {
   });
 });
 
-describe("an index's forward verb", () => {
-  it("is the destination's word, the arrow and tooltip drawn by the page toolbar's button", () => {
-    const verb = indexForward(INDEX_FRAMES.providers.forward, NOTHING);
-    assert.deepEqual([verb?.label, verb?.reason], ["Titles", undefined]);
+describe("index preview gates", () => {
+  const provider = { id: 1, family: "embed", movieTemplate: "https://x.test/{tmdbId}" } as AdminProvider;
+  const title = { id: "movie-1", tmdbId: 1, stored: true } as AdminTitleRow;
+  it("require exactly one previewable row", () => {
+    assert.equal(providerPreviewReason([], [provider], false), "Tick a row first");
+    assert.equal(providerPreviewReason([1, 2], [provider], false), "Tick only one row");
+    assert.equal(providerPreviewReason([1], [provider], false), undefined);
+    assert.equal(titlePreviewReason(1, title, false), undefined);
   });
 
-  it("switches to the named tab when it is pressed", () => {
-    const asked: Tab[] = [];
-    indexForward(INDEX_FRAMES.titles.forward, (tab) => asked.push(tab))?.onPress();
-    assert.deepEqual(asked, ["jobs"]);
-  });
-
-  it("is disabled with its reason when the verb acts on a ticked row and none can be ticked yet", () => {
-    assert.equal(indexForward(INDEX_FRAMES.channels.forward, NOTHING)?.reason, TICK_FIRST);
-    assert.equal(TICK_FIRST, "Tick a row first");
-  });
-
-  it("is absent for Accounts and for Jobs, whose `Run job` promote is not a forward verb (the page toolbar draws it)", () => {
-    assert.equal(indexForward(INDEX_FRAMES.accounts.forward, NOTHING), undefined);
-    assert.equal(indexForward(INDEX_FRAMES.jobs.forward, NOTHING), undefined);
-  });
-
-  it("names no table verb: a forward label is a tab or Preview", () => {
-    for (const tab of TAB_ORDER) {
-      const label = INDEX_FRAMES[tab].forward?.label;
-      if (label !== undefined) assert.ok(["Preview", "Titles", "Jobs", "Channels"].includes(label), label);
-    }
+  it("refuse a selected row with no preview target", () => {
+    assert.equal(providerPreviewReason([1], [{ ...provider, movieTemplate: undefined }], false),
+      "That provider cannot be previewed.");
+    assert.equal(titlePreviewReason(1, { ...title, tmdbId: undefined }, false), "That title cannot be previewed.");
   });
 });
 
@@ -67,10 +54,7 @@ describe("the six index frames", () => {
     ]);
   });
 
-  it("send every forward verb on to a tab that exists", () => {
-    for (const tab of TAB_ORDER) {
-      const { to } = INDEX_FRAMES[tab].forward ?? {};
-      if (to !== undefined) assert.ok(TAB_ORDER.includes(to), `${tab} -> ${to}`);
-    }
+  it("hold no static cross-tab action", () => {
+    for (const tab of TAB_ORDER) assert.equal("forward" in INDEX_FRAMES[tab], false);
   });
 });

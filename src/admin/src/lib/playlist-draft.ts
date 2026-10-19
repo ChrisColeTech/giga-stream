@@ -1,4 +1,4 @@
-import { ADDRESS_REQUIRED, FILE_REQUIRED, NAME_LONG, NAME_MAX } from "@/constants/playlist-copy";
+import { ADDRESS_REQUIRED, FILE_REQUIRED, NAME_LONG, NAME_MAX, NAME_REQUIRED } from "@/constants/playlist-copy";
 import type { AdminPlaylist } from "@/services/schemas/playlist-schema";
 import { webAddress } from "./field-checks";
 
@@ -8,18 +8,18 @@ import { webAddress } from "./field-checks";
 
 export type ImportSource = "file" | "url";
 
-/** `New playlist`: one source at a time. The chosen file is held whole until the import; the name is never typed here
- *  (the playlist is named after its file or its host, and renamed in the workspace). */
+/** `New playlist`: a required name and one source at a time. The chosen file is held whole until import. */
 export interface NewPlaylistDraft {
+  readonly name: string;
   readonly source: ImportSource;
   readonly file: File | null;
   readonly address: string;
 }
 
-export const EMPTY_NEW_PLAYLIST: NewPlaylistDraft = { source: "file", file: null, address: "" };
+export const EMPTY_NEW_PLAYLIST: NewPlaylistDraft = { name: "", source: "file", file: null, address: "" };
 
 export const sameNewPlaylist = (a: NewPlaylistDraft, b: NewPlaylistDraft): boolean =>
-  a.source === b.source && a.file === b.file && a.address === b.address;
+  a.name === b.name && a.source === b.source && a.file === b.file && a.address === b.address;
 
 export interface PlaylistDraft {
   readonly name: string;
@@ -47,8 +47,14 @@ export const nameLength = (value: string): string | null => (value.trim().length
 
 /** Why `Import` is disabled, or undefined: the chosen source's missing value, then busy or unreachable. */
 export function createReason(draft: NewPlaylistDraft, busy: string | undefined): string | undefined {
+  if (draft.name.trim() === "") return NAME_REQUIRED;
   if (draft.source === "file") return draft.file === null ? FILE_REQUIRED : busy;
   return draft.address.trim() === "" ? ADDRESS_REQUIRED : busy;
+}
+
+export function firstImportRefusal(draft: NewPlaylistDraft): PlaylistRefusal | null {
+  if (draft.name.trim() === "") return { field: "name", sentence: NAME_REQUIRED };
+  return firstRefusal(draft.name, draft.source === "url" ? draft.address.trim() : null);
 }
 
 export type PlaylistField = "name" | "address" | "enabled" | "file";

@@ -46,18 +46,19 @@ describe("the playlists service", () => {
     );
   });
 
-  it("imports a file as one multipart `file` part, with the bearer and no JSON content type", async () => {
+  it("imports a file as multipart `name` and `file`, with the bearer and no JSON content type", async () => {
     await withBackend(
       () => success({ ...filePlaylist(3), created: true, imported: IMPORTED }, 201),
       async (calls) => {
-        const answer = await playlists.importFile(new File(["#EXTM3U\n"], "us.m3u"));
+        const answer = await playlists.importFile("US", new File(["#EXTM3U\n"], "us.m3u"));
         const [call] = calls;
         assert.deepEqual([call?.method, call?.url], ["POST", "/api/playlists/import"]);
         assert.ok(String(call?.headers["authorization"]).startsWith("Bearer "));
         assert.equal(call?.headers["content-type"], undefined, "the runtime adds the multipart boundary");
         const file = call?.form?.get("file");
         assert.ok(file instanceof File && file.name === "us.m3u");
-        assert.deepEqual([...(call?.form?.keys() ?? [])], ["file"]);
+        assert.deepEqual([...(call?.form?.keys() ?? [])], ["name", "file"]);
+        assert.equal(call?.form?.get("name"), "US");
         assert.deepEqual([answer.created, answer.imported.created, answer.imported.skipped], [true, 3, 1]);
         assert.equal(answer.playlist.fileName, "us.m3u");
         assert.equal("imported" in answer.playlist, false);
@@ -65,12 +66,12 @@ describe("the playlists service", () => {
     );
   });
 
-  it("imports a web address as JSON `{ url }`, and the answer's `url` is read in full", async () => {
+  it("imports a web address as JSON `{ name, url }`, and the answer's `url` is read in full", async () => {
     await withBackend(
       () => success({ ...row(9), url: SECRET, created: true, imported: IMPORTED }, 201),
       async (calls) => {
-        const answer = await playlists.create(urlBody({ source: "url", file: null, address: ` ${SECRET} ` }));
-        assert.deepEqual(calls[0]?.body, { url: SECRET });
+        const answer = await playlists.create(urlBody({ name: " Main ", source: "url", file: null, address: ` ${SECRET} ` }));
+        assert.deepEqual(calls[0]?.body, { name: "Main", url: SECRET });
         assert.equal(calls[0]?.headers["content-type"], "application/json");
         assert.equal(answer.playlist.url, SECRET);
         assert.equal("masked" in answer.playlist, false);
@@ -117,7 +118,7 @@ describe("the playlists service", () => {
           assert.ok(!error.message.includes("hunter2"));
           return true;
         });
-        await assert.rejects(playlists.importFile(new File(["x"], "a.m3u")), { code: "playlist.taken", status: 409 });
+        await assert.rejects(playlists.importFile("A", new File(["x"], "a.m3u")), { code: "playlist.taken", status: 409 });
         await assert.rejects(playlists.update(1, { enabled: true }), { code: "backend.bad_response" });
       },
     );

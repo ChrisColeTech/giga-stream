@@ -47,6 +47,13 @@ describe("Appearance", () => {
   it("offers the five accents as swatches", () => {
     assert.equal(render(AppearanceSection).split('role="radio"').length - 1, 5);
   });
+
+  it("offers exactly Light and Dark, then Off and On, with no System value", () => {
+    const html = render(AppearanceSection);
+    for (const label of ["Light", "Dark", "Off", "On"]) assert.ok(html.includes(`>${label}</button>`), label);
+    assert.equal(html.split('aria-pressed=').length - 1, 4);
+    assert.ok(!html.includes(">System<") && !html.includes("Follow system"));
+  });
 });
 
 describe("Session", () => {

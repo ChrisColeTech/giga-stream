@@ -5,6 +5,7 @@ import type { ChromeKinds, ChromeSlice } from "@giga/ui/store/chrome-types";
 import { APPEARANCE_DEFAULTS } from "@/constants/settings-sections";
 import type { EventArea } from "@/types/events";
 import type { OverlayId } from "@/types/overlays";
+import type { AdminSettings } from "@/services/schemas/account-state-schema";
 import { auditSlice, type AuditSlice } from "./audit-slice";
 import { createListQueriesSlice, type ListQueriesSlice } from "./list-queries-slice";
 import { panesSlice, type PanesSlice } from "./panes-slice";
@@ -26,7 +27,14 @@ export interface AdminKinds extends ChromeKinds {
 
 /** The one store (`01` section 6). Serializable shell state only: no nodes, refs, promises or timers. Nothing here reads
  *  or writes browser storage; the account's saved appearance and layout arrive in Wave 7 (`29`). */
-export type AppState = ChromeSlice<AdminKinds> &
+type AdminChromeSlice = Omit<ChromeSlice<AdminKinds>, "theme" | "motion" | "setTheme" | "setMotion"> & {
+  theme: AdminSettings["theme"];
+  motion: AdminSettings["reducedMotion"];
+  setTheme: (theme: AdminSettings["theme"]) => void;
+  setMotion: (motion: AdminSettings["reducedMotion"]) => void;
+};
+
+export type AppState = AdminChromeSlice &
   WorkspaceSlice &
   PanesSlice &
   SessionSlice &
@@ -38,11 +46,17 @@ export type AppState = ChromeSlice<AdminKinds> &
 
 export const useAppStore = create<AppState>()((set, get) => {
   const session = sessionSlice(set, get);
+  const chrome = createChromeSlice<AdminKinds>(
+    set as (partial: Partial<ChromeSlice<AdminKinds>>) => void,
+    get as () => ChromeSlice<AdminKinds>,
+    { defaults: APPEARANCE_DEFAULTS, defaultArea: "Connection" },
+  );
   return {
-    ...createChromeSlice<AdminKinds>(set, get, {
-      defaults: APPEARANCE_DEFAULTS,
-      defaultArea: "Connection",
-    }),
+    ...chrome,
+    theme: APPEARANCE_DEFAULTS.theme,
+    motion: APPEARANCE_DEFAULTS.motion,
+    setTheme: (theme) => set({ theme }),
+    setMotion: (motion) => set({ motion }),
     ...workspaceSlice(set, get),
     ...panesSlice(set, get),
     ...session,

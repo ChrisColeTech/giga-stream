@@ -17,7 +17,7 @@ import { PlaybackGroup } from "./PlaybackGroup";
  *  (`Discard changes` left; `Save`, then `Preview →` rightmost) and one scrolling page. The Status group's
  *  `Refresh status` and `Rebuild` are their own verbs. */
 export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdminChannel; readonly active: boolean }) {
-  const { form, actions, unreachable, save, forward } = useChannelEditor(channel);
+  const { form, actions, unreachable, save, promote } = useChannelEditor(channel);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
   const loading = useAppStore((state) => state.channels.status === "loading");
   const spy = useScrollSpy(LIVE_SECTION_IDS, LIVE_SECTION_IDS[0] ?? "lv-details");
@@ -43,7 +43,7 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} forward={forward} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} promote={promote} />}
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(CHANNEL_LABELS) } as CSSProperties}>

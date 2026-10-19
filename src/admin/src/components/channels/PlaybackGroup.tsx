@@ -1,22 +1,16 @@
 import { Play } from "lucide-react";
-import { ChipGroup } from "@giga/ui/controls/ChipGroup";
 import { Segmented } from "@giga/ui/controls/Segmented";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { MIN_VARIANTS, MIN_VARIANTS_REASON, VARIANTS } from "@/constants/channel-copy";
 import { CHANNEL_TIPS } from "@/constants/channel-tips";
-import { toggleVariant, type LiveDraft } from "@/lib/channel-draft";
-import type { Variant } from "@/types/admin-channel";
+import type { LiveDraft } from "@/lib/channel-draft";
+import { QualityChecklist } from "./QualityChecklist";
 
 const MODES = [
   { value: "loop", label: "Loop" },
   { value: "encode", label: "Encode" },
 ] as const;
-
-const QUALITY_OPTIONS = VARIANTS.map((variant) => ({ value: variant, label: variant }));
-
-const isVariant = (value: string): value is Variant => VARIANTS.some((variant) => variant === value);
 
 export interface PlaybackGroupProps {
   readonly draft: LiveDraft;
@@ -36,16 +30,7 @@ export function PlaybackGroup({ draft, onChange }: PlaybackGroupProps) {
         <Toggle checked={draft.captions} aria-label="Captions" onChange={(captions) => onChange({ captions })} />
       </Row>
       <Row label="Qualities" tip={CHANNEL_TIPS.qualities}>
-        <ChipGroup
-          options={QUALITY_OPTIONS}
-          selected={new Set<string>(draft.variants)}
-          min={MIN_VARIANTS}
-          minText={MIN_VARIANTS_REASON}
-          aria-label="Qualities"
-          onToggle={(value) => {
-            if (isVariant(value)) onChange({ variants: toggleVariant(draft.variants, value) });
-          }}
-        />
+        <QualityChecklist value={draft.variants} onChange={(variants) => onChange({ variants })} />
       </Row>
     </Group>
   );

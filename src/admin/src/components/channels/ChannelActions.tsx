@@ -2,7 +2,7 @@ import { Eye } from "lucide-react";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
 import { Button } from "@giga/ui/controls/Button";
 import { DELETE_TIP } from "@/constants/channel-copy";
-import { PREVIEW_TOOLTIP } from "@/constants/toolbar-icons";
+import { PREVIEW_CHANNEL_TOOLTIP } from "@/constants/preview-copy";
 import type { ChannelRowView } from "@/lib/channel-rows";
 
 export interface ChannelActionsProps {
@@ -25,8 +25,8 @@ export function ChannelActions({ row, deleteReason, previewReason, onPreview, on
         variant="ghost"
         size="sm"
         className="px-1.5"
-        aria-label={PREVIEW_TOOLTIP}
-        title={previewReason === undefined ? PREVIEW_TOOLTIP : undefined}
+        aria-label={PREVIEW_CHANNEL_TOOLTIP}
+        title={previewReason === undefined ? PREVIEW_CHANNEL_TOOLTIP : undefined}
         reason={previewReason}
         onClick={() => onPreview(row.id)}
       >

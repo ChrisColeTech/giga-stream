@@ -1,9 +1,9 @@
 import { List } from "lucide-react";
 import { TableStrip } from "@giga/ui/lists/TableStrip";
+import type { StripVerb } from "@giga/ui/lists/TableStrip";
 import { ListGroup } from "@/components/records/ListGroup";
 import { LOADING_REASON } from "@/constants/account-copy";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
-import { usePlaylistBulk } from "@/hooks/usePlaylistBulk";
 import { usePlaylistView } from "@/hooks/usePlaylistView";
 import { LIST_BARS } from "@/constants/list-query-copy";
 import { tickState } from "@/lib/list-query";
@@ -16,11 +16,10 @@ import { PlaylistRows } from "./PlaylistRows";
  *  read runs), then `Sync now`, `Enable`, `Disable` and the armed `Delete`, always drawn and disabled with their reason
  *  until a row is ticked; the three-state `All` ticks the rows the query shows. `Jobs →` is the page toolbar's. The
  *  heading carries nothing. */
-export function PlaylistsList() {
+export function PlaylistsList({ verbs }: { readonly verbs: readonly StripVerb[] }) {
   const { status, ticked } = useAppStore((state) => state.playlists);
   const setTicked = useAppStore((state) => state.playlistsSetTicked);
   const { flows, track } = usePlaylistActions();
-  const { verbs } = usePlaylistBulk();
   const view = usePlaylistView();
   const reason = status === "loading" ? LOADING_REASON : undefined;
   const all = {

@@ -24,18 +24,19 @@ beforeEach(() => {
 });
 
 describe("the New playlist form", () => {
-  it("opens on Source File: the Source pills, the File row, no Name and no Address", () => {
+  it("opens with required Name first, then Source File and the File row", () => {
     const html = page();
     assert.ok(html.includes("New playlist"));
     assert.ok(/aria-pressed="true"[^>]*>File</.test(html) && html.includes(">Web address</button>"));
+    assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Source"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="File"'));
-    assert.ok(!html.includes('aria-label="Name"') && !html.includes('aria-label="Address"'));
+    assert.ok(!html.includes('aria-label="Address"'));
     assert.ok(!html.includes('placeholder="'));
   });
 
   it("disables the one primary Import with `Choose a file first.`, and never offers Create", () => {
     const html = page();
-    assert.ok(html.includes('aria-label="Import. Choose a file first."'));
+    assert.ok(html.includes('aria-label="Import. Name is required."'));
     assert.ok(!html.includes("Create"));
     assert.ok(/<button[^>]*text-accent-ink[^>]*>Import<\/button>/.test(html), "Import is the form's one primary");
   });
@@ -81,31 +82,39 @@ describe("the playlists list", () => {
 });
 
 describe("the Playlists table strip", () => {
-  it("holds Refresh and no forward verb; Jobs → is the page toolbar's, above the form; the bulk verbs wait for a tick", () => {
+  it("holds Refresh, Enable, Disable and Delete; Sync now is the page promote", () => {
     state().playlistsLoaded([row(1)], {});
     const html = page();
     assert.ok(html.indexOf('role="toolbar"') < html.indexOf("New playlist"));
     const top = html.slice(0, html.indexOf("overflow-y-auto"));
-    assert.ok(/<button[^>]*title="Go to Jobs"[^>]*>Jobs →<\/button>/.test(top));
+    assert.ok(top.includes('aria-label="Sync now. Tick a row first"'));
     const table = html.slice(html.indexOf('aria-label="Playlists table"'));
-    assert.ok(!table.includes("→"));
+    assert.ok(!table.includes("Sync now"));
     assert.ok(table.includes('title="Refresh playlists"'));
-    for (const verb of ["Sync now", "Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
+    for (const verb of ["Enable", "Disable"]) assert.ok(table.includes(`aria-label="${verb}. Tick `), verb);
   });
 
   it("gives Sync now its reason for a ticked playlist that has no job, and arms the others", () => {
     state().playlistsLoaded([row(1), row(2, { enabled: false })], { 2: { id: 5, enabled: true, running: false } });
     state().playlistTick(1, true);
     const html = page();
-    assert.ok(html.includes('aria-label="Sync now. This playlist has no job to run."'));
+    assert.ok(html.slice(0, html.indexOf("overflow-y-auto")).includes('aria-label="Sync now. This playlist has no job to run."'));
     assert.ok(html.includes('aria-label="Enable. Every ticked playlist is already enabled."'));
     assert.ok(html.includes("Disable</button>") && html.includes(">Delete</button>"));
+  });
+
+  it("allows manual Sync now when the generated job is disabled", () => {
+    state().playlistsLoaded([row(1)], { 1: { id: 5, enabled: false, running: false } });
+    state().playlistTick(1, true);
+    const html = page();
+    const top = html.slice(0, html.indexOf("overflow-y-auto"));
+    assert.ok(/<button[^>]*title="Sync the ticked rows now"[^>]*>Sync now<\/button>/.test(top));
   });
 });
 
 describe("a playlist's workspace", () => {
-  it("opens with the rail, the page toolbar (Discard; Save, Channels →), Details then Status, the full address, no trailing save", () => {
-    state().playlistsLoaded([row(1)], {});
+  it("opens with the rail, the page toolbar (Discard; Save, Sync now), Details then Status", () => {
+    state().playlistsLoaded([row(1)], { 1: { id: 5, enabled: false, running: false } });
     state().openWorkspace("playlists", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Playlist sections"') && at(html, ">Details<") < at(html, ">Status<"));
@@ -115,22 +124,22 @@ describe("a playlist's workspace", () => {
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
     assert.ok(html.includes("Discard changes") && html.includes('aria-label="Save. Nothing has changed."'));
     assert.ok(!html.includes("Save details") && !html.includes("Save question"), "no save on the form");
-    assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "the forward verb is Channels →");
+    assert.ok(/<button[^>]*title="Sync this playlist now"[^>]*>Sync now<\/button>/.test(html));
     assert.ok(
-      html.indexOf("Discard changes") < html.indexOf("Channels →") &&
-        html.indexOf("Channels →") < html.indexOf('id="pw-details"') &&
+      html.indexOf("Discard changes") < html.indexOf("Sync now") &&
+        html.indexOf("Sync now") < html.indexOf('id="pw-details"') &&
         html.indexOf("Discard changes") < html.indexOf('aria-label="Save. Nothing has changed.') &&
-        html.indexOf('aria-label="Save. Nothing has changed.') < html.indexOf("Channels →"),
-      "Discard left; Save, then the forward verb rightmost",
+        html.indexOf('aria-label="Save. Nothing has changed.') < html.indexOf("Sync now"),
+      "Discard left; Save, then Sync now rightmost",
     );
-    assert.ok(!html.includes("Jobs →") && !html.includes("Sync now"), "no sync verb and no Jobs arrow in the workspace");
+    assert.ok(!html.includes("→") && html.includes("Sync now"));
     assert.ok(!html.includes("Channels from this playlist") && !html.includes("<ul"), "no per-channel link list");
   });
 
-  it("disables Channels → with its reason while the playlist has no channels", () => {
+  it("disables Sync now when the generated job is missing", () => {
     state().playlistsLoaded([row(1, { channels: 0 })], {});
     state().openWorkspace("playlists", "1");
-    assert.ok(page().includes('aria-label="Channels →. This playlist has no channels."'));
+    assert.ok(page().includes('aria-label="Sync now. This playlist has no job to run."'));
   });
 
   it("a web playlist's Address is an editable plain text field holding what the draft holds", () => {

@@ -6,6 +6,7 @@ import { RecordRail } from "@/components/records/RecordRail";
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import {
   PREVIEW_PROVIDER_TOOLTIP,
+  PROVIDER_NOT_PREVIEWABLE,
   PROVIDER_GONE,
   PROVIDER_SECTIONS,
   PROVIDER_SECTION_KEYS,
@@ -14,7 +15,7 @@ import {
   SAVING_REASON,
   UNREACHABLE_REASON,
 } from "@/constants/provider-copy";
-import { PREVIEW_ARROW_LABEL } from "@/constants/preview-copy";
+import { PREVIEW_LABEL } from "@/constants/preview-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useProviderActions } from "@/hooks/useProviderActions";
 import { useProviderPreviewOpen } from "@/hooks/useProviderPreviewOpen";
@@ -52,14 +53,12 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
   /* The promote (`55` decision 2): `Preview →`, the `PromoteButton`'s shape, opens the provider preview of the SAVED
      provider - `Save the provider first` while the draft differs. A stream-family provider or a template-less one has
      no embed to preview, so the promote is absent (as its row's eye is). */
-  const promote: ToolbarVerb | undefined = canPreviewProvider(provider)
-    ? {
-        label: PREVIEW_ARROW_LABEL,
-        tip: PREVIEW_PROVIDER_TOOLTIP,
-        reason: form.dirty ? SAVE_PROVIDER_FIRST : undefined,
-        onPress: () => openPreview(provider.id),
-      }
-    : undefined;
+  const promote: ToolbarVerb = {
+    label: PREVIEW_LABEL,
+    tip: PREVIEW_PROVIDER_TOOLTIP,
+    reason: form.dirty ? SAVE_PROVIDER_FIRST : canPreviewProvider(provider) ? undefined : PROVIDER_NOT_PREVIEWABLE,
+    onPress: () => openPreview(provider.id),
+  };
 
   return (
     <WorkspaceFrame

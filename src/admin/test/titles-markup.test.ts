@@ -62,7 +62,8 @@ describe("the list group", () => {
     assert.ok(html.includes('aria-label="Older. This is the last page."'));
     assert.ok(at(row, 'aria-label="Kind"') < at(row, 'aria-label="Titles table"'));
     assert.ok(at(html, 'title="Refresh titles"') < at(html, 'aria-label="Newer. '), "Refresh first, the paging on the right");
-    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. ') && at(html, "Jobs →") < at(html, 'id="ti-list"'));
+    assert.ok(at(html, 'aria-label="Newer. ') < at(html, 'aria-label="Older. '));
+    assert.ok(at(html, 'aria-label="Preview. Tick a row first"') < at(html, 'id="ti-list"'));
     const heading = html.slice(at(html, 'id="ti-list"'), at(html, 'aria-label="Search titles"'));
     assert.ok(!heading.includes("Older") && !heading.includes("Refresh"), "no verb in the heading");
   });
@@ -101,12 +102,11 @@ describe("the titles grid", () => {
 });
 
 describe("the table strip", () => {
-  it("leaves the enabled Jobs → to the page toolbar; Add is drawn and waits for a ticked row", () => {
+  it("puts Preview in the page toolbar; Add is drawn and waits for a ticked row", () => {
     const html = page();
     const table = html.slice(at(html, 'aria-label="Titles table"'), at(html, 'id="ti-deleted"'));
     const top = html.slice(0, at(html, "overflow-y-auto"));
-    const forward = top.match(/<button[^>]*title="Go to Jobs"[^>]*>Jobs →<\/button>/)?.[0] ?? "";
-    assert.ok(forward.length > 0 && !forward.includes('disabled=""') && !table.includes("→"));
+    assert.ok(top.includes('aria-label="Preview. Tick a row first"') && !table.includes(">Preview<"));
     assert.ok(table.includes('aria-label="Add. Tick a row first"'));
     for (const verb of ["Enable", "Disable", "Revert to TMDB"]) assert.ok(!table.includes(`aria-label="${verb}.`), verb);
   });
@@ -129,7 +129,7 @@ describe("a title's workspace", () => {
     assert.ok(html.includes('aria-label="Discard changes. Loading."') && !html.includes('aria-label="Title"'));
     assert.ok(at(html, "Discard changes") < at(html, 'id="tw-details"'), "the page toolbar is drawn while the detail loads");
     assert.ok(!html.includes("Jobs →"), "the tab hop is gone (`55` decision 2)");
-    assert.ok(!html.includes("Preview →"), "no promote over a skeleton: the detail is not known yet");
+    assert.ok(!html.includes(">Preview<"), "no promote over a skeleton: the detail is not known yet");
     assert.ok(!html.includes("Save details") && !html.includes(">Save<"), "no commit over a skeleton");
   });
 
@@ -144,7 +144,7 @@ describe("a title's workspace", () => {
     for (let i = 1; i < order.length; i += 1) {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
-    assert.ok(html.includes('value="120"') && at(html, "Preview →") < at(html, 'id="tw-details"'));
+    assert.ok(html.includes('value="120"') && at(html, ">Preview<") < at(html, 'id="tw-details"'));
     assert.ok(html.includes('aria-label="Save. Nothing has changed."'), "the commit is the toolbar's Save");
     assert.ok(!html.includes("Save details"), "no trailing save after Images");
     assert.ok(!html.includes("Jobs →"), "the promote replaced the tab hop (`55` decision 2)");
@@ -152,17 +152,17 @@ describe("a title's workspace", () => {
     assert.ok(
       at(bar, "Discard changes") < at(bar, "min-w-0 flex-1") &&
         at(bar, "min-w-0 flex-1") < at(bar, ">Save<") &&
-        at(bar, ">Save<") < at(bar, "Preview →"),
+        at(bar, ">Save<") < at(bar, ">Preview<"),
       "Discard left; Save, then the promote rightmost (`55` decision 2)",
     );
-    const promote = html.match(/<button[^>]*title="Preview title"[^>]*>Preview →<\/button>/)?.[0] ?? "";
+    const promote = html.match(/<button[^>]*title="Preview title"[^>]*>Preview<\/button>/)?.[0] ?? "";
     assert.ok(promote.length > 0 && !promote.includes('disabled=""'), "the promote is the PromoteButton's shape");
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });
 
-  it("draws no promote for a title without a TMDB id (`55` decision 4)", () => {
+  it("keeps Preview disabled for a title without a TMDB id", () => {
     const html = open(row("movie-none"), { plot: "P" });
-    assert.ok(!html.includes("Preview →"), "no eye and no promote: no provider source without a TMDB id");
+    assert.ok(html.includes('aria-label="Preview. That title cannot be previewed."'));
   });
 
   it("draws the Plot and the Cast as text areas, 4 rows and 3, with their own aria-labels", () => {

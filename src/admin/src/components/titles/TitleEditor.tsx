@@ -1,5 +1,5 @@
 import { WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
-import { PREVIEW_ARROW_LABEL } from "@/constants/preview-copy";
+import { PREVIEW_LABEL } from "@/constants/preview-copy";
 import {
   MANUAL_NO_TMDB,
   NOTHING_EDITED,
@@ -7,6 +7,7 @@ import {
   SAVE_TITLE_FIRST,
   SAVING_REASON,
   UNREACHABLE_REASON,
+  TITLE_NOT_PREVIEWABLE,
 } from "@/constants/title-copy";
 import { useFollowRecord } from "@/hooks/useFollowRecord";
 import { useRecordForm } from "@/hooks/useRecordForm";
@@ -67,15 +68,12 @@ export function TitleEditor({ detail, active }: TitleEditorProps) {
   };
   const reason = saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : saveRequiredReason(form.draft);
   const saveVerb: SaveVerb = { onPress: () => void save(), reason: changeReason(form.dirty, reason) };
-  const promote: ToolbarVerb | undefined =
-    detail.tmdbId === undefined
-      ? undefined
-      : {
-          label: PREVIEW_ARROW_LABEL,
-          tip: PREVIEW_TITLE_TOOLTIP,
-          reason: form.dirty ? SAVE_TITLE_FIRST : undefined,
-          onPress: () => openPreview(detail.id),
-        };
+  const promote: ToolbarVerb = {
+    label: PREVIEW_LABEL,
+    tip: PREVIEW_TITLE_TOOLTIP,
+    reason: form.dirty ? SAVE_TITLE_FIRST : detail.tmdbId === undefined ? TITLE_NOT_PREVIEWABLE : undefined,
+    onPress: () => openPreview(detail.id),
+  };
 
   return (
     <TitleFrame

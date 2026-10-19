@@ -9,7 +9,7 @@ import { NewAccountForm } from "./NewAccountForm";
 export function AccountsIndex() {
   return (
     <>
-      <IndexToolbar tab="accounts" />
+      <IndexToolbar />
       <Workspace labels={NEW_ACCOUNT_LABELS} fill>
         <NewAccountForm />
         <AccountsList />

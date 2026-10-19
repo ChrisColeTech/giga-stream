@@ -11,7 +11,7 @@ export function JobsIndex() {
   const { verbs, promote } = useJobBulk();
   return (
     <>
-      <IndexToolbar tab="jobs" promote={promote} />
+      <IndexToolbar promote={promote} />
       <Workspace labels={NEW_JOB_LABELS} fill>
         <NewJobForm />
         <JobsList verbs={verbs} />

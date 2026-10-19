@@ -12,6 +12,7 @@ import {
   ZOOM_MIN,
 } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
+import { SettingsSchema } from "@/services/schemas/account-state-schema";
 
 const source = (name: string): string =>
   readFileSync(new URL(`../src/components/settings/${name}.tsx`, import.meta.url), "utf8");
@@ -51,13 +52,20 @@ describe("Settings' label column", () => {
 });
 
 describe("Appearance's defaults", () => {
-  it("are dark, amber, follow system and a zoom of 1, and the store starts there", () => {
-    assert.deepEqual(APPEARANCE_DEFAULTS, { theme: "dark", accent: "amber", motion: "system", uiZoom: 1 });
+  it("are dark, amber, motion off and a zoom of 1, and the store starts there", () => {
+    assert.deepEqual(APPEARANCE_DEFAULTS, { theme: "dark", accent: "amber", motion: "off", uiZoom: 1 });
     const initial = useAppStore.getInitialState();
     assert.deepEqual(
       [initial.theme, initial.accent, initial.motion, initial.uiZoom],
       [APPEARANCE_DEFAULTS.theme, APPEARANCE_DEFAULTS.accent, APPEARANCE_DEFAULTS.motion, APPEARANCE_DEFAULTS.uiZoom],
     );
+  });
+
+  it("accepts only Light/Dark and Off/On at the admin boundary", () => {
+    const base = { theme: "dark", themeAccent: "amber", reducedMotion: "off", uiZoom: 1 };
+    assert.equal(SettingsSchema.safeParse(base).success, true);
+    assert.equal(SettingsSchema.safeParse({ ...base, theme: "system" }).success, false);
+    assert.equal(SettingsSchema.safeParse({ ...base, reducedMotion: "system" }).success, false);
   });
 
   it("say why the zoom stops at either end", () => {

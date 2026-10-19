@@ -5,9 +5,9 @@ import { z } from "zod";
 const TabId = z.enum(["channels", "providers", "titles", "playlists", "jobs", "accounts"]);
 
 export const SettingsSchema = z.object({
-  theme: z.enum(["dark", "light", "system"]),
+  theme: z.enum(["dark", "light"]),
   themeAccent: z.enum(["amber", "blue", "green", "violet", "rose"]),
-  reducedMotion: z.enum(["system", "off", "on"]),
+  reducedMotion: z.enum(["off", "on"]),
   uiZoom: z.number(),
 });
 

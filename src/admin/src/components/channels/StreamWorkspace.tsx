@@ -17,7 +17,7 @@ import { StreamStatusGroup } from "./StreamStatusGroup";
  *  (`Discard changes` left; `Save`, then `Preview →` rightmost) and one page. A hand-made row and a synced row are both editable (the sync keeps an
  *  admin's edits); `Revert to playlist` drops a synced row's edits. */
 export function StreamWorkspace({ channel, active }: { readonly channel: StreamAdminChannel; readonly active: boolean }) {
-  const { form, actions, unreachable, save, forward } = useChannelEditor(channel);
+  const { form, actions, unreachable, save, promote } = useChannelEditor(channel);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
   const spy = useScrollSpy(STREAM_SECTION_IDS, STREAM_SECTION_IDS[0] ?? "st-details");
   const draft = form.draft;
@@ -35,7 +35,7 @@ export function StreamWorkspace({ channel, active }: { readonly channel: StreamA
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} forward={forward} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} promote={promote} />}
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(CHANNEL_LABELS) } as CSSProperties}>

@@ -13,8 +13,8 @@ import { resetStore, signInForTest } from "./support/store";
 const SECRET = "https://iptv.example.test/get.php?password=hunter2";
 const state = () => useAppStore.getState();
 const m3u = new File(["#EXTM3U\n"], "us.m3u");
-const FILE: NewPlaylistDraft = { source: "file", file: m3u, address: "" };
-const WEB: NewPlaylistDraft = { source: "url", file: null, address: SECRET };
+const FILE: NewPlaylistDraft = { name: "US", source: "file", file: m3u, address: "" };
+const WEB: NewPlaylistDraft = { name: "Main", source: "url", file: null, address: SECRET };
 const imported = (name: string, created = true, counts = { created: 3, updated: 0 }): PlaylistImport => ({
   playlist: filePlaylist(3, { name }),
   created,
@@ -27,7 +27,7 @@ function rig(script: Partial<PlaylistsService> = {}, jobScript: Partial<JobsServ
   const service: PlaylistsService = {
     list: async () => (calls.push("list"), { items: [row(1), row(2)], unreadable: 0 }),
     create: async () => (calls.push("create"), imported("iptv.example.test")),
-    importFile: async (file) => (calls.push(`file:${file.name}`), imported(file.name)),
+    importFile: async (name, file) => (calls.push(`file:${name}:${file.name}`), imported(name)),
     update: async (id, patch) => (calls.push(`update:${id}`), row(id, { enabled: patch["enabled"] !== false })),
     remove: async (id) => (calls.push(`remove:${id}`), { id, deletedChannels: 7, deletedJobs: 1 }),
     ...script,
@@ -62,8 +62,8 @@ describe("the playlist flows", () => {
     const { flows, calls, reloads } = rig();
     const result = await flows.importPlaylist(FILE);
     assert.equal(result.ok, true);
-    assert.deepEqual(calls, ["file:us.m3u"]);
-    assert.equal(lastEvent(), "Imported us.m3u: 3 channels, all disabled. Enable them on the Channels tab.");
+    assert.deepEqual(calls, ["file:US:us.m3u"]);
+    assert.equal(lastEvent(), "Imported US: 3 channels, all disabled. Enable them on the Channels tab.");
     assert.deepEqual([state().stale.channels, state().stale.jobs], [true, true]);
     assert.deepEqual(state().playlists.items.map((item) => item.id), [3], "the playlist alone, not the import's extra keys");
     assert.equal("imported" in (state().playlists.items[0] ?? {}), false);

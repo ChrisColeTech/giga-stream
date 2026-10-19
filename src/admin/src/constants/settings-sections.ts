@@ -30,7 +30,12 @@ export const SETTINGS_LABELS: readonly string[] = [
 ];
 
 /** The appearance a fresh load starts from, and what `Restore defaults` returns to (`26` D16: saving is Wave 7). */
-export const APPEARANCE_DEFAULTS: ChromeDefaults = { theme: "dark", accent: "amber", motion: "system", uiZoom: 1 };
+export const APPEARANCE_DEFAULTS = {
+  theme: "dark",
+  accent: "amber",
+  motion: "off",
+  uiZoom: 1,
+} as const satisfies ChromeDefaults;
 
 /** UI zoom: 0.5 to 3 in steps of one decimal. `Ctrl+0` resets it to 1 (the shell). */
 export { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP };
@@ -43,9 +48,8 @@ export const NOT_SIGNED_IN = "You are not signed in.";
 
 /** The tips on the Appearance rows (`01` section 9: an explanation is a tooltip, never text under a control). */
 export const APPEARANCE_TIPS = {
-  theme:
-    "Dark or light colors for the whole app, or System to follow the desktop's own light or dark mode, switching when it does.",
-  motion: "Off keeps panels and sections sliding; On skips every animation; Follow system honors the desktop's setting.",
+  theme: "Light or dark colors for the whole app.",
+  motion: "Off keeps panels and sections sliding; On skips every animation.",
   accent: "The highlight color for selection, focus, progress and the one main button on each screen.",
   zoom: "Scales the whole app, from 0.5 to 3. Ctrl+0 resets it to 1.",
 } as const;
@@ -62,7 +66,7 @@ export const ABOUT_TIPS = {
 } as const;
 
 export const RESTORE_AT_DEFAULTS = "Appearance is already at its defaults.";
-export const RESTORE_TITLE = "Dark, Follow system, Amber and a zoom of 1";
+export const RESTORE_TITLE = "Dark, Off, Amber and a zoom of 1";
 
 /** This admin app's version, shown in About. The backend's facts are dashes until `services/health.ts` is wired. */
 export const APP_VERSION = "0.1.0";

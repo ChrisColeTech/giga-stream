@@ -1,4 +1,4 @@
-import { Palette, RotateCcw } from "lucide-react";
+import { Accessibility, Palette, RotateCcw } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
 import { ACCENT_SWATCHES } from "@giga/ui/controls/accent-swatches";
 import { Segmented } from "@giga/ui/controls/Segmented";
@@ -7,8 +7,6 @@ import { Actions } from "@giga/ui/form/Actions";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
-import type { MotionPreference } from "@giga/ui/hooks/useReduceMotion";
-import type { ThemeChoice } from "@giga/ui/store/chrome-types";
 import {
   APPEARANCE_DEFAULTS,
   APPEARANCE_TIPS,
@@ -17,19 +15,18 @@ import {
   SETTINGS_LABELS,
 } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
+import type { AdminSettings } from "@/services/schemas/account-state-schema";
 import { ZoomStepper } from "./ZoomStepper";
 
 const THEMES = [
-  { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
-  { value: "system", label: "System" },
-] as const satisfies ReadonlyArray<{ value: ThemeChoice; label: string }>;
+  { value: "dark", label: "Dark" },
+] as const satisfies ReadonlyArray<{ value: AdminSettings["theme"]; label: string }>;
 
 const MOTIONS = [
-  { value: "system", label: "Follow system" },
   { value: "off", label: "Off" },
   { value: "on", label: "On" },
-] as const satisfies ReadonlyArray<{ value: MotionPreference; label: string }>;
+] as const satisfies ReadonlyArray<{ value: AdminSettings["reducedMotion"]; label: string }>;
 
 /** Appearance: the Theme and Reduce motion choices, the Accent swatches, the UI zoom stepper and `Restore defaults`. Each
  *  changes the shell at once; nothing is saved until Wave 7. */
@@ -50,10 +47,12 @@ export function AppearanceSection() {
 
   return (
     <Workspace labels={SETTINGS_LABELS}>
-      <Group id="settings.appearance" title="Appearance" icon={Palette} last>
+      <Group id="settings.appearance" title="Appearance" icon={Palette}>
         <Row label="Theme" tip={APPEARANCE_TIPS.theme}>
           <Segmented aria-label="Theme" options={THEMES} value={theme} onChange={setTheme} />
         </Row>
+      </Group>
+      <Group id="settings.motion" title="Preferences" icon={Accessibility} last>
         <Row label="Reduce motion" tip={APPEARANCE_TIPS.motion}>
           <Segmented aria-label="Reduce motion" options={MOTIONS} value={motion} onChange={setMotion} />
         </Row>
