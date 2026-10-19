@@ -12,6 +12,7 @@ interface Migration {
 }
 
 const MIGRATION_FILE = /^(\d{3})-[a-z0-9-]+\.sql$/;
+const IF_TABLE_EXISTS = /^-- migrate-if-table-exists: ([a-z][a-z0-9_]*)$/m;
 
 /**
  * Where the numbered `.sql` files live. `tsc` does not copy them, so a compiled run (`dist/store`)
@@ -38,6 +39,12 @@ export function readSchemaVersion(db: DatabaseSync): number {
   return Number(row?.user_version ?? 0);
 }
 
+function canApply(db: DatabaseSync, sql: string): boolean {
+  const table = IF_TABLE_EXISTS.exec(sql)?.[1];
+  if (!table) return true;
+  return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) !== undefined;
+}
+
 /**
  * Forward-only, numbered, transactional (`02` §7.1). A database written by a newer build is
  * refused untouched (`store.newer_schema`); a failing migration rolls back whole (`store.migrate`).
@@ -60,7 +67,7 @@ export function migrate(db: DatabaseSync): number {
     try {
       const sql = readFileSync(migration.file, "utf-8");
       inTransaction(db, () => {
-        db.exec(sql);
+        if (canApply(db, sql)) db.exec(sql);
         // user_version takes no bound parameter; the value is an integer parsed from a file name.
         db.exec(`PRAGMA user_version = ${migration.version}`);
       });
