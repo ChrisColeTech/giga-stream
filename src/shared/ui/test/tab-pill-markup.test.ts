@@ -20,7 +20,7 @@ const render = (extra: { active?: Surface; disabled?: boolean; disabledReason?: 
     createElement(TabPill<Surface>, { label: 'Surfaces', items: ITEMS, active: 'library', onSelect: () => undefined, ...extra }),
   )
 
-test('the nav is a labelled equal-width grid of raised-chip tabs, one per item, in order', () => {
+test('TabPill navigation is exempt from choice limits and renders every tab in order', () => {
   const html = render()
   assert.ok(html.startsWith('<nav'), 'a nav element')
   assert.ok(html.includes('aria-label="Surfaces"'))

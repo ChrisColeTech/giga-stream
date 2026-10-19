@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChipsInput } from "../src/controls/ChipsInput";
 
-function render(extra: { className?: string } = {}) {
+function render(extra: { className?: string; value?: string[] } = {}) {
   return renderToStaticMarkup(
     createElement(ChipsInput, {
       value: ["https://cdn.example.test"],
@@ -25,5 +25,11 @@ test("without a className the chips box is unchanged and the chips and input are
   const html = render();
   assert.ok(!html.includes("min-h-9"));
   assert.ok(html.includes('aria-label="Remove https://cdn.example.test"'));
+  assert.ok(html.includes('aria-label="Frame origins"'));
+});
+
+test("entered tokens are exempt from offered-choice limits", () => {
+  const html = render({ value: ["one", "two", "three", "four"] });
+  assert.equal(html.split('aria-label="Remove ').length - 1, 4);
   assert.ok(html.includes('aria-label="Frame origins"'));
 });

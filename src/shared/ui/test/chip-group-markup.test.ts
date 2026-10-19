@@ -50,10 +50,15 @@ test("with no min nothing is locked", () => {
   assert.ok(!render(["720p"]).includes('disabled=""'));
 });
 
-test("the last min lit chips are natively disabled with the rule as their title", () => {
+test("the last min lit chips are native pressed buttons in focusable reason wrappers", () => {
   const html = render(["720p", "1080p"], { min: 2 });
   assert.equal(count(html, 'disabled=""'), 2);
-  assert.equal(count(html, `title="${minReason(2)}"`), 2);
+  assert.equal(count(html, 'tabindex="0"'), 2);
+  assert.equal(count(html, 'aria-describedby='), 2);
+  assert.ok(html.includes(`aria-label="720p. ${minReason(2)}"`));
+  assert.equal(count(html, 'aria-pressed="true"'), 2);
+  assert.equal(count(html, `<button`), 3);
+  assert.ok(!html.includes(`title="${minReason(2)}"`));
   assert.ok(!html.includes("aria-disabled"));
 });
 
@@ -65,7 +70,9 @@ test("above min every chip can still be switched off; an off chip is never locke
 });
 
 test("a caller words the reason", () => {
-  assert.ok(render(["720p"], { min: 1, minText: "Pick at least one." }).includes('title="Pick at least one."'));
+  const html = render(["720p"], { min: 1, minText: "Pick at least one." });
+  assert.ok(html.includes('aria-label="720p. Pick at least one."'));
+  assert.ok(html.includes('tabindex="0"'));
 });
 
 test("the whole group disabled disables every chip", () => {

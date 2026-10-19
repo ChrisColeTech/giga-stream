@@ -2,6 +2,7 @@
  * rounded-full pills with no track. Off = hairline edge, muted text; on = the accent tint and edge the buttons use for
  * `data-on`. `equal` sizes every chip to the widest so a row never re-flows. */
 export const PILL_ROW = "inline-flex flex-none flex-wrap items-center gap-1.5";
+export const PILL_SEGMENTED_ROW = "inline-flex flex-none flex-nowrap items-center gap-1.5";
 export const PILL_EQUAL_ROW = "inline-grid auto-cols-fr grid-flow-col gap-1.5";
 
 export const PILL_CHIP =
