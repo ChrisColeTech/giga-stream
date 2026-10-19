@@ -14,7 +14,7 @@ const playlistJob = (id: number, schedule: string, lastRunAt?: number): JobRecor
   id, type: "playlist", playlistId: id, enabled: true, schedule, createdAt: START, ...(lastRunAt !== undefined && { lastRunAt }),
 });
 const catalogJob = (id: number, schedule: string, lastRunAt?: number): JobRecord => ({
-  id, type: "catalog", name: "Fill", config: { scope: "discover", pages: 1 }, enabled: true, schedule, createdAt: START,
+  id, type: "catalog", name: "Fill", config: { scope: "discover" }, enabled: true, schedule, createdAt: START,
   ...(lastRunAt !== undefined && { lastRunAt }),
 });
 

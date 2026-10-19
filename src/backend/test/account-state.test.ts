@@ -8,7 +8,7 @@ import test from "node:test";
 import { DATABASE_FILE_NAME } from "../src/constants/deployment.js";
 import { makeApp, pick, send, signIn, type TestApp } from "./test-app.js";
 
-const DEFAULT_SETTINGS = { theme: "dark", themeAccent: "amber", reducedMotion: "system", uiZoom: 1 };
+const DEFAULT_SETTINGS = { theme: "dark", themeAccent: "amber", reducedMotion: "off", uiZoom: 1 };
 const DEFAULT_SHELL = { tab: "channels", panes: {}, eventsOpen: false, windows: {} };
 const SETTINGS = { theme: "light", themeAccent: "rose", reducedMotion: "on", uiZoom: 1.2 };
 const SHELL = {
@@ -95,6 +95,8 @@ test("an unknown key, a bad value or an empty body is account_state.invalid, nam
     [{ shell: { ...SHELL, tab: "bogus" } }, "shell.tab"],
     [{ shell: { ...SHELL, panes: { channels: { open: true, width: 40 } } } }, "shell.panes.channels.width"],
     [{ settings: { ...SETTINGS, uiZoom: 0.55 } }, "settings.uiZoom"],
+    [{ settings: { ...SETTINGS, theme: "system" } }, "settings.theme"],
+    [{ settings: { ...SETTINGS, reducedMotion: "system" } }, "settings.reducedMotion"],
     [
       { shell: { ...SHELL, windows: { settings: { x: -1, y: 0, width: 10, height: 10 } } } },
       "shell.windows.settings.x",

@@ -7,7 +7,7 @@ export const ADMIN_TABS = ["channels", "providers", "titles", "playlists", "jobs
 export const DEFAULT_SETTINGS: AdminSettings = {
   theme: "dark",
   themeAccent: "amber",
-  reducedMotion: "system",
+  reducedMotion: "off",
   uiZoom: 1,
 };
 export const DEFAULT_SHELL: AdminShell = { tab: "channels", panes: {}, eventsOpen: false, windows: {} };

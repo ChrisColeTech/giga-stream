@@ -19,13 +19,9 @@ const Row = z.object({
   cursor_at: z.number().int().nullable(),
 });
 
-export interface CatalogJobConfig {
-  scope: "trending" | "popular" | "discover" | "recent";
-  /** Not set on a discover or recent job: both walk both kinds (`03` section 7.6b, `49`). */
-  kind?: "movie" | "tv";
-  /** A recent job stores `1`, which it ignores (`49` section 2.1). */
-  pages: number;
-}
+export type CatalogJobConfig =
+  | { scope: "trending" | "popular"; kind: "all" | "movie" | "tv"; pages: number }
+  | { scope: "discover" | "recent" };
 
 /** A sync job record (docs/43 section 3.1): when it runs, and how its last run went (typed, never a sentence). */
 interface JobBase {
@@ -52,11 +48,14 @@ export interface CatalogJob extends JobBase {
 }
 export type JobRecord = PlaylistJob | CatalogJob;
 
-const CatalogConfig = z.object({
-  scope: z.enum(["trending", "popular", "discover", "recent"]),
-  kind: z.enum(["movie", "tv"]).optional(),
-  pages: z.number().int(),
-});
+const CatalogConfig = z.discriminatedUnion("scope", [
+  z.object({
+    scope: z.enum(["trending", "popular"]),
+    kind: z.enum(["all", "movie", "tv"]),
+    pages: z.number().int(),
+  }).strict(),
+  z.object({ scope: z.enum(["discover", "recent"]) }).strict(),
+]);
 
 /** A stored result of an older shape is absent, never an error (docs/43 section 6). */
 function countsOf(text: string | null): RunCounts | undefined {

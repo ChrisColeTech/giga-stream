@@ -92,7 +92,7 @@ test("022 on a version-21 database keeps the channels and videos, rebuilds playl
     const db = new DatabaseSync(file);
     db.exec("PRAGMA foreign_keys = ON");
     try {
-      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 29);
+      assert.equal(db.prepare("PRAGMA user_version").get()?.user_version, 30);
       assert.deepEqual(rows(db, "PRAGMA foreign_key_check"), []);
       assert.deepEqual(rows(db, "SELECT COUNT(*) AS n FROM channels"), [{ n: 9 }]);
       assert.deepEqual(rows(db, "SELECT channel_id, position, path FROM channel_videos ORDER BY channel_id, position").map((v) => `${v.channel_id}${v.position}${v.path}`),
@@ -114,7 +114,7 @@ test("022 on a version-21 database keeps the channels and videos, rebuilds playl
       assert.ok(playlistJobs.every((j) => j.name === null && j.config === "{}" && j.last_run_at === null && j.last_result === null && j.last_counts === null && j.enabled === 1));
       assert.deepEqual(rows(db, "SELECT id FROM sync_jobs WHERE playlist_id = 1"), [{ id: 1 }], "the lowest id per playlist is kept");
       assert.deepEqual(rows(db, "SELECT id, name, schedule, config, last_run_at, last_result, last_counts FROM sync_jobs WHERE type = 'catalog' ORDER BY id"), [
-        { id: 10, name: "Library fill", schedule: "12h", config: '{"scope":"discover","pages":3}', last_run_at: 100, last_result: "ok", last_counts: '{"titles":7,"stale":0}' },
+        { id: 10, name: "Library fill", schedule: "12h", config: '{"scope":"discover"}', last_run_at: 100, last_result: "ok", last_counts: '{"titles":7,"stale":0}' },
         { id: 11, name: "Series", schedule: "off", config: '{"scope":"popular","kind":"tv","pages":2}', last_run_at: 200, last_result: "failed", last_counts: '{"code":"internal.failure"}' },
         { id: 12, name: "Never", schedule: "off", config: '{"scope":"trending","kind":"movie","pages":1}', last_run_at: null, last_result: null, last_counts: null },
       ]);

@@ -1,7 +1,6 @@
 import { LIBRARY_UPDATE_NAME, LIBRARY_UPDATE_SCHEDULE } from "../constants/limits.js";
 import type { Store } from "../store/store.js";
 import { normaliseSchedule } from "./job-schedule.js";
-import { DEFAULT_DISCOVER_PAGES } from "./title-shapes.js";
 
 /**
  * First start only (docs/26 section 3.11): the environment seeds the catalog jobs - the library fill, scope `discover`
@@ -22,7 +21,7 @@ export function seedSyncRecords(store: Store, env: { titleSchedule: string }, no
         name: "Library fill",
         enabled: true,
         schedule: titleSchedule,
-        config: { scope: "discover", pages: DEFAULT_DISCOVER_PAGES },
+        config: { scope: "discover" },
       },
       now,
     );
@@ -31,7 +30,7 @@ export function seedSyncRecords(store: Store, env: { titleSchedule: string }, no
         name: LIBRARY_UPDATE_NAME,
         enabled: true,
         schedule: LIBRARY_UPDATE_SCHEDULE,
-        config: { scope: "recent", pages: 1 },
+        config: { scope: "recent" },
       },
       now,
     );

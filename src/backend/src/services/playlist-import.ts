@@ -20,7 +20,7 @@ const invalid = (field: string, message: string): AppError => new AppError(ERROR
 
 /** Where an import came from: an uploaded file (already sanitised) or a web address (already accepted). */
 type Origin =
-  | { kind: "file"; fileName: string }
+  | { kind: "file"; fileName: string; name?: string }
   | { kind: "url"; url: string; host: string; name?: string; enabled: boolean };
 
 /** What re-reading a web playlist did to its channels (the sync job's step 2). */
@@ -54,7 +54,7 @@ export function createPlaylistImporter(deps: {
     if (held !== undefined && origin.kind === "url") throw new AppError(ERRORS.playlistTaken, { field: "url" });
     let playlistId = held;
     if (playlistId === undefined) {
-      const typed = origin.kind === "url" ? origin.name : undefined;
+      const typed = origin.name;
       if (typed !== undefined && store.playlists.idOfName(typed) !== undefined) {
         throw new AppError(ERRORS.playlistTaken, { field: "name" });
       }
@@ -98,10 +98,14 @@ export function createPlaylistImporter(deps: {
     maxBytes,
 
     /** An uploaded file: the name is sanitised, the body parsed, and nothing is stored but the channels. */
-    importFile(upload: { fileName: string; body: Buffer }, actor: Actor): ImportAnswer {
+    importFile(upload: { fileName: string; body: Buffer; name?: string }, actor: Actor): ImportAnswer {
       const fileName = sanitizeFileName(upload.fileName);
       if (fileName === undefined) throw invalid("file", "The file must be an .m3u or .m3u8 playlist with a name.");
-      return commit({ kind: "file", fileName }, screen(new TextDecoder().decode(upload.body)), actor);
+      return commit(
+        { kind: "file", fileName, ...(upload.name !== undefined && { name: upload.name }) },
+        screen(new TextDecoder().decode(upload.body)),
+        actor,
+      );
     },
 
     /** A web address: checked, fetched once through the guarded fetch, parsed, then written. */
