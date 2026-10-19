@@ -104,7 +104,7 @@ describe("the Playlists table strip", () => {
 });
 
 describe("a playlist's workspace", () => {
-  it("opens with the rail, the page toolbar (Discard, Channels →), Details then Status, the full address, Save details", () => {
+  it("opens with the rail, the page toolbar (Discard; Save, Channels →), Details then Status, the full address, no trailing save", () => {
     state().playlistsLoaded([row(1)], {});
     state().openWorkspace("playlists", "1");
     const html = page();
@@ -113,9 +113,16 @@ describe("a playlist's workspace", () => {
     assert.ok(/<input[^>]*type="text"[^>]*aria-label="Address"[^>]*value="https:\/\/iptv\.example\.test\/list\.m3u"/.test(html));
     assert.ok(!html.includes("readOnly=\"\"") && !html.includes("Replace") && !html.includes('type="password"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
-    assert.ok(html.includes("Discard changes") && html.includes("Save details") && !html.includes(">Save<"));
+    assert.ok(html.includes("Discard changes") && html.includes('aria-label="Save. Nothing has changed."'));
+    assert.ok(!html.includes("Save details") && !html.includes("Save question"), "no save on the form");
     assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "the forward verb is Channels →");
-    assert.ok(html.indexOf("Discard changes") < html.indexOf("Channels →") && html.indexOf("Channels →") < html.indexOf('id="pw-details"'));
+    assert.ok(
+      html.indexOf("Discard changes") < html.indexOf("Channels →") &&
+        html.indexOf("Channels →") < html.indexOf('id="pw-details"') &&
+        html.indexOf("Discard changes") < html.indexOf('aria-label="Save. Nothing has changed.') &&
+        html.indexOf('aria-label="Save. Nothing has changed.') < html.indexOf("Channels →"),
+      "Discard left; Save, then the forward verb rightmost",
+    );
     assert.ok(!html.includes("Jobs →") && !html.includes("Sync now"), "no sync verb and no Jobs arrow in the workspace");
     assert.ok(!html.includes("Channels from this playlist") && !html.includes("<ul"), "no per-channel link list");
   });
@@ -129,7 +136,7 @@ describe("a playlist's workspace", () => {
   it("a web playlist's Address is an editable plain text field holding what the draft holds", () => {
     const playlist = row(1);
     const draft = { ...draftOf(playlist), address: "https://iptv.example.test/new.m3u" };
-    const props = { playlist, draft, errors: {}, onChange: () => undefined, save: { onPress: () => undefined } };
+    const props = { playlist, draft, errors: {}, onChange: () => undefined };
     const html = renderLive(createElement(PlaylistDetailsGroup, props));
     assert.ok(/<input[^>]*type="text"[^>]*aria-label="Address"[^>]*value="https:\/\/iptv\.example\.test\/new\.m3u"/.test(html));
     assert.ok(!/<input[^>]*readOnly=""[^>]*aria-label="Address"/.test(html));
@@ -137,7 +144,7 @@ describe("a playlist's workspace", () => {
 
   it("a file playlist shows its file name read-only: it has no web address", () => {
     const playlist = filePlaylist(2);
-    const props = { playlist, draft: draftOf(playlist), errors: {}, onChange: () => undefined, save: { onPress: () => undefined } };
+    const props = { playlist, draft: draftOf(playlist), errors: {}, onChange: () => undefined };
     const html = renderLive(createElement(PlaylistDetailsGroup, props));
     assert.ok(/<input[^>]*readOnly=""[^>]*aria-label="Address"[^>]*value="us\.m3u"/.test(html));
     assert.ok(!html.includes("Replace"));

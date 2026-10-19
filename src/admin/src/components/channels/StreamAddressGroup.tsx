@@ -4,8 +4,6 @@ import { cn } from "@giga/ui/lib/cn";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { SaveDetails } from "@/components/records/SaveDetails";
-import type { SaveVerb } from "@/lib/workspace-verbs";
 import { CHANNEL_TIPS } from "@/constants/channel-tips";
 import type { StreamDraft } from "@/lib/channel-draft";
 import type { FormErrors } from "@/lib/record-form";
@@ -21,13 +19,11 @@ export interface StreamAddressGroupProps {
   readonly errors: FormErrors;
   readonly edited: readonly string[];
   readonly onChange: (patch: Partial<StreamDraft>) => void;
-  /** The form's one commit, ending this last editable group. */
-  readonly save: SaveVerb;
 }
 
 /** A stream channel's `Stream` group (`36` section 7): the stream address and the logo address, each http or https, checked on
  *  the page and by the backend; a refused address is the row's error, `aria-invalid`, and the notice says it too. */
-export function StreamAddressGroup({ draft, errors, edited, onChange, save }: StreamAddressGroupProps) {
+export function StreamAddressGroup({ draft, errors, edited, onChange }: StreamAddressGroupProps) {
   return (
     <Group id="st-stream" icon={Radio} title="Stream">
       {FIELDS.map((field) => {
@@ -52,7 +48,6 @@ export function StreamAddressGroup({ draft, errors, edited, onChange, save }: St
           </Row>
         );
       })}
-      <SaveDetails save={save} />
     </Group>
   );
 }

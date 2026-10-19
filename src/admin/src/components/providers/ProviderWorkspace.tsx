@@ -60,6 +60,7 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
         <WorkspaceToolbar
           dirty={form.dirty}
           onDiscard={form.discard}
+          save={{ onPress: () => void save(), reason: changeReason(form.dirty, reason) }}
           forward={{ label: "Titles", onPress: () => requestTab("titles") }}
         />
       }
@@ -86,7 +87,6 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
               errors={form.errors}
               onChange={form.set}
               onRefuse={form.setError}
-              save={{ onPress: () => void save(), reason: changeReason(form.dirty, reason) }}
             />
           </div>
         </div>
@@ -96,8 +96,8 @@ function Editor({ provider, active }: { readonly provider: AdminProvider; readon
 }
 
 /** One provider's workspace (`37` section 3.3), opened from the list already held: the rail (`‹ Providers`, Details,
- *  Templates, Player), the page toolbar (`Discard changes` left, `Titles →` rightmost) and one scrolling page. One `Save
- *  details`, ending Player, sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
+ *  Templates, Player), the page toolbar (`Discard changes` left; `Save`, then `Titles →` rightmost) and one scrolling
+ *  page. One Save sends a `PUT` of only the changed fields. If the provider is no longer in a read list, the workspace closes with a
  *  notice. */
 export function ProviderWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const provider = useAppStore((state) => state.providers.items.find((item) => String(item.id) === id));

@@ -14,8 +14,8 @@ import { LiveStatusGroup } from "./LiveStatusGroup";
 import { PlaybackGroup } from "./PlaybackGroup";
 
 /** A live channel's workspace (`36` section 6): the rail (`‹ Channels`, Details, Playback, Status), the page toolbar
- *  (`Discard changes` left, `Preview →` rightmost) and one scrolling page. `Save details` ends Playback; the Status
- *  group's `Refresh status` and `Rebuild` are their own verbs. */
+ *  (`Discard changes` left; `Save`, then `Preview →` rightmost) and one scrolling page. The Status group's
+ *  `Refresh status` and `Rebuild` are their own verbs. */
 export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdminChannel; readonly active: boolean }) {
   const { form, actions, unreachable, save, forward } = useChannelEditor(channel);
   const closeWorkspace = useAppStore((state) => state.closeWorkspace);
@@ -43,7 +43,7 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
           spy={spy}
         />
       }
-      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} forward={forward} />}
+      toolbar={<WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} save={save} forward={forward} />}
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
         <div className="flex flex-col px-6 pb-8" style={{ "--label-col": labelColumn(CHANNEL_LABELS) } as CSSProperties}>
@@ -58,7 +58,7 @@ export function LiveWorkspace({ channel, active }: { readonly channel: LiveAdmin
             />
           </div>
           <div ref={spy.bind("lv-playback")}>
-            <PlaybackGroup draft={draft} onChange={form.set} save={save} />
+            <PlaybackGroup draft={draft} onChange={form.set} />
           </div>
           <div ref={spy.bind("lv-status")}>
             <LiveStatusGroup

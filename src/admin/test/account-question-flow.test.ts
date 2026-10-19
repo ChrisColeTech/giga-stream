@@ -137,11 +137,12 @@ describe("save question", () => {
 });
 
 describe("the group's pure helpers", () => {
-  it("names the first missing field, then a running call, then an unreachable backend", () => {
+  it("names the first missing field, the length refusal, then a running call, then an unreachable backend", () => {
     const draft = { question: "3", answer: "Rex" };
     assert.equal(saveQuestionReason(EMPTY_QUESTION_DRAFT, false, false), "Choose a question.");
     assert.equal(saveQuestionReason({ question: "1", answer: "" }, false, false), "Enter your answer.");
     assert.equal(saveQuestionReason({ question: "1", answer: "  " }, false, false), "Enter your answer.");
+    assert.equal(saveQuestionReason({ question: "1", answer: "x".repeat(201) }, false, false), "Answer must be at most 200 characters.");
     assert.equal(saveQuestionReason(draft, true, false), "Saving.");
     assert.equal(saveQuestionReason(draft, true, true), "Saving.");
     assert.equal(saveQuestionReason(draft, false, true), "The admin backend cannot be reached.");

@@ -12,6 +12,10 @@ export const SAVE_FIRST = "Save the channel first";
 /** Save and Discard while the draft equals its baseline. */
 export const NOTHING_CHANGED = "Nothing has changed.";
 
+/** The toolbar's ONE Save (`55` decision 1) and its tooltip at rest: it commits the whole record. */
+export const SAVE = "Save";
+export const SAVE_TIP = "Save the record";
+
 export const LAST_ACCOUNT = "The last enabled account cannot be deleted.";
 
 /** The titlebar's pane toggles (`28` section 7.1): the rail exists on a workspace only; the admin has no right or bottom

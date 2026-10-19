@@ -56,7 +56,15 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
         />
       }
       toolbar={
-        <WorkspaceToolbar dirty={form.dirty} onDiscard={form.discard} forward={forward} />
+        <WorkspaceToolbar
+          dirty={form.dirty}
+          onDiscard={form.discard}
+          save={{
+            onPress: () => void save(),
+            reason: changeReason(form.dirty, saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined),
+          }}
+          forward={forward}
+        />
       }
     >
       <div ref={spy.container} className="min-h-0 flex-1 overflow-y-auto bg-surface">
@@ -70,10 +78,6 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
               draft={form.draft}
               errors={form.errors}
               onChange={form.set}
-              save={{
-                onPress: () => void save(),
-                reason: changeReason(form.dirty, saving ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined),
-              }}
             />
           </div>
           <div ref={spy.bind("pw-status")}>
@@ -86,8 +90,8 @@ function Editor({ playlist, active }: { readonly playlist: AdminPlaylist; readon
 }
 
 /** One playlist's workspace (`38` section 3.3), opened from the list already held: the rail (`‹ Playlists`, Details,
- *  Status), the page toolbar (`Discard changes` left, `Channels →` rightmost: it opens the Channels list filtered to this
- *  playlist) and one scrolling page whose Details group ends with `Save details`. If the playlist is no longer in a read
+ *  Status), the page toolbar (`Discard changes` left; `Save`, then `Channels →` rightmost: it opens the Channels list
+ *  filtered to this playlist) and one scrolling page. If the playlist is no longer in a read
  *  list (deleted elsewhere), the workspace closes with a notice. */
 export function PlaylistWorkspace({ id, active }: { readonly id: string; readonly active: boolean }) {
   const playlist = useAppStore((state) => state.playlists.items.find((item) => item.id === idOf(id)));

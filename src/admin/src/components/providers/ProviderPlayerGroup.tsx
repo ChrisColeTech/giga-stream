@@ -4,8 +4,6 @@ import { Select } from "@giga/ui/controls/Select";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { SaveDetails } from "@/components/records/SaveDetails";
-import type { SaveVerb } from "@/lib/workspace-verbs";
 import {
   FRAME_ORIGIN_SHAPE,
   FRAME_ORIGINS_MAX_REFUSAL,
@@ -25,8 +23,6 @@ export interface ProviderPlayerGroupProps {
   readonly onChange: (patch: Partial<ProviderDraft>) => void;
   /** A value the row refuses in place (a ninth frame origin): the sentence goes under the row. */
   readonly onRefuse: (field: "frameOrigins", sentence: string) => void;
-  /** The form's one commit, ending this last editable group. */
-  readonly save: SaveVerb;
 }
 
 /** The chips box takes the form's field height (`37` 3.3); `!` because the track's own min-height shares a layer. */
@@ -38,7 +34,7 @@ const isShape = (value: string): value is ProviderDraft["messageShape"] =>
 /** `Player` (`37` section 3.3): Origin, Frame origins (chips: Enter or a comma adds, a chip's X removes, a malformed
  *  origin is refused inline by the chips and a ninth under the row) and Message shape (None, `vidsrc-status`,
  *  `player-event`). */
-export function ProviderPlayerGroup({ draft, errors, onChange, onRefuse, save }: ProviderPlayerGroupProps) {
+export function ProviderPlayerGroup({ draft, errors, onChange, onRefuse }: ProviderPlayerGroupProps) {
   const frames = (tokens: string[]): void => {
     if (tokens.length > FRAME_ORIGINS_MAX) onRefuse("frameOrigins", FRAME_ORIGINS_MAX_REFUSAL);
     else onChange({ frameOrigins: tokens });
@@ -81,7 +77,6 @@ export function ProviderPlayerGroup({ draft, errors, onChange, onRefuse, save }:
           ))}
         </Select>
       </Row>
-      <SaveDetails save={save} />
     </Group>
   );
 }

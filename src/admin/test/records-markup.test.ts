@@ -1,18 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CircleStop, Radio } from "lucide-react";
+import { Radio } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TabPage } from "@/components/chrome/TabPage";
 import { ForwardButton } from "@/components/records/ForwardButton";
 import { IndexSkeleton } from "@/components/records/IndexSkeleton";
-import { SaveDetails } from "@/components/records/SaveDetails";
 import { ListGroup } from "@/components/records/ListGroup";
 import { NewRecordGroup } from "@/components/records/NewRecordGroup";
 import { RecordRail } from "@/components/records/RecordRail";
 import { DISCARD_TIP, WorkspaceToolbar } from "@/components/records/WorkspaceToolbar";
 import { INDEX_FRAMES } from "@/constants/index-frames";
-import { NOTHING_CHANGED } from "@/constants/record-copy";
+import { NOTHING_CHANGED, SAVE_TIP } from "@/constants/record-copy";
 import { TAB_ORDER } from "@/constants/tabs";
 import { AccountsPage } from "@/pages/AccountsPage";
 import { ChannelsPage } from "@/pages/ChannelsPage";
@@ -165,33 +164,44 @@ describe("a workspace's pieces", () => {
     assert.ok(held.includes("Save the channel first") && held.includes('disabled=""'));
   });
 
-  it("draws the workspace toolbar: Discard changes left, the forward verb rightmost; Save details ends the form", () => {
+  it("draws the workspace toolbar: Discard changes left; Save, then the forward verb rightmost (`55` decision 1)", () => {
     const forward = { label: "Jobs" as const, onPress: NOTHING };
-    const bar = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: false, onDiscard: NOTHING, forward }));
+    const save = { onPress: NOTHING, reason: NOTHING_CHANGED };
+    const bar = renderToStaticMarkup(
+      createElement(WorkspaceToolbar, { dirty: false, onDiscard: NOTHING, save, forward }),
+    );
     assert.ok(bar.startsWith('<div class="flex flex-none') && bar.includes('role="toolbar"') && bar.includes("bg-panel"));
     assert.ok(bar.includes(`aria-label="Discard changes. ${NOTHING_CHANGED}"`) && bar.includes("bg-transparent"));
-    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") && bar.indexOf("min-w-0 flex-1") < bar.indexOf("Jobs →"));
-    const dirty = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: true, onDiscard: NOTHING }));
-    assert.ok(!dirty.includes("disabled=\"\"") && dirty.includes(`title="${DISCARD_TIP}"`) && !dirty.includes("→"));
-    const save = renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING, reason: NOTHING_CHANGED } }));
-    assert.ok(save.includes(`aria-label="Save details. ${NOTHING_CHANGED}"`) && save.includes("text-accent-ink"));
-    assert.ok(renderToStaticMarkup(createElement(SaveDetails, { save: { onPress: NOTHING } })).includes(">Save details</button>"));
+    assert.ok(bar.includes(`aria-label="Save. ${NOTHING_CHANGED}"`) && bar.includes("text-accent-ink") && bar.includes("h-ctl-sm"));
+    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1"), "Discard left");
+    assert.ok(
+      bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<") && bar.indexOf(">Save<") < bar.indexOf("Jobs →"),
+      "Save, then the forward verb rightmost",
+    );
+    const dirty = renderToStaticMarkup(
+      createElement(WorkspaceToolbar, { dirty: true, onDiscard: NOTHING, save: { onPress: NOTHING }, forward }),
+    );
+    assert.ok(!dirty.includes('disabled=""') && dirty.includes(`title="${SAVE_TIP}"`) && dirty.includes(`title="${DISCARD_TIP}"`));
   });
 
-  it("draws the page's own verbs before Discard changes: their fill, their icon, their reason as the tooltip", () => {
-    const verbs = [
-      { label: "Run job", tip: "Start the job now.", variant: "primary" as const, onPress: NOTHING },
-      { label: "Stop", tip: "Stop the running job.", reason: "Not running.", icon: CircleStop, onPress: NOTHING },
-    ];
-    const forward = { label: "Jobs" as const, onPress: NOTHING };
-    const bar = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: true, onDiscard: NOTHING, verbs, forward }));
+  it("draws the page's promote (`Run job`) in the forward verb's look, rightmost, disabled with its reason", () => {
+    const promote = { label: "Run job", tip: "Start the job now.", onPress: NOTHING };
+    const bar = renderToStaticMarkup(
+      createElement(WorkspaceToolbar, { dirty: true, onDiscard: NOTHING, save: { onPress: NOTHING }, promote }),
+    );
     assert.ok(/<button[^>]*title="Start the job now\."[^>]*>Run job<\/button>/.test(bar));
-    assert.ok(bar.includes("text-accent-ink") && bar.includes("lucide-circle-stop"));
-    assert.ok(bar.indexOf(">Run job<") < bar.indexOf('aria-label="Stop. Not running."'));
-    assert.ok(bar.indexOf('aria-label="Stop. Not running."') < bar.indexOf("Discard changes"));
-    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") && bar.indexOf("min-w-0 flex-1") < bar.indexOf("Jobs →"));
+    assert.ok(bar.includes("text-accent-ink") && bar.includes("h-ctl-sm") && !bar.includes("<svg"));
+    assert.ok(bar.indexOf(">Run job<") > bar.indexOf(">Save<") && !bar.includes("→"), "the promote is rightmost, no arrow");
+    const held = renderToStaticMarkup(
+      createElement(WorkspaceToolbar, {
+        dirty: true,
+        onDiscard: NOTHING,
+        promote: { label: "Run job", tip: "Start the job now.", reason: "Save the job first", onPress: NOTHING },
+      }),
+    );
+    assert.ok(held.includes('aria-label="Run job. Save the job first"') && held.includes('disabled=""'));
     const plain = renderToStaticMarkup(createElement(WorkspaceToolbar, { dirty: false, onDiscard: NOTHING }));
-    assert.ok(!plain.includes("Run job") && !plain.includes("Stop. "), "the slot is optional");
+    assert.ok(!plain.includes("Run job") && !plain.includes(">Save<"), "both slots are optional");
   });
 
   it("draws the rail: the way back named for the tab, then the sections, the lit one selected", () => {

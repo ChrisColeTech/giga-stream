@@ -1,4 +1,5 @@
 import {
+  ANSWER_TOO_LONG,
   CHOOSE_QUESTION_REASON,
   ENTER_ANSWER_REASON,
   QUESTION_STATUS_NOT_SET,
@@ -6,6 +7,7 @@ import {
   SAVING_REASON,
   UNREACHABLE_REASON,
 } from "@/constants/account-copy";
+import { SECURITY_ANSWER_MAX } from "@/constants/security-questions";
 
 /* The workspace's Security question group as pure values (docs/54 section 2). The backend stores the question's
  * number and answers only with the account's `securityQuestionSet` flag, so the group holds a draft, never a record. */
@@ -23,10 +25,12 @@ export function questionStatus(set: boolean | undefined): string {
   return set === true ? QUESTION_STATUS_SET : QUESTION_STATUS_NOT_SET;
 }
 
-/** Why `Save question` is disabled, in the group's order, or undefined: the missing field, a call that is running, an
- *  unreachable backend. */
+/** Why the question cannot be committed, in the group's order, or undefined: the missing field, the length refusal,
+ *  a call that is running, an unreachable backend. While the group holds a draft this gates the whole Save (`55`
+ *  decision 5). */
 export function saveQuestionReason(draft: QuestionDraft, busy: boolean, unreachable: boolean): string | undefined {
   if (draft.question === "") return CHOOSE_QUESTION_REASON;
   if (draft.answer.trim() === "") return ENTER_ANSWER_REASON;
+  if (draft.answer.length > SECURITY_ANSWER_MAX) return ANSWER_TOO_LONG;
   return busy ? SAVING_REASON : unreachable ? UNREACHABLE_REASON : undefined;
 }

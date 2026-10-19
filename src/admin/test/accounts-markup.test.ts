@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { SECURITY_QUESTIONS, SECURITY_QUESTION_OPTIONS } from "@/constants/security-questions";
+import { NOTHING_CHANGED } from "@/constants/record-copy";
 import { AccountsPage } from "@/pages/AccountsPage";
 import { useAppStore } from "@/store/app-store";
 import type { AdminAccount } from "@/types/admin-account";
@@ -122,7 +123,7 @@ describe("the accounts table strip", () => {
 });
 
 describe("an account's workspace", () => {
-  it("opens from the held list with the rail, Details, Password, Security question, the pinned Discard and Save details ending Details", () => {
+  it("opens from the held list with the rail, Details, Password, Security question, Discard left and the ONE Save right", () => {
     state().accountsLoaded([account("a"), account("b")]);
     state().openWorkspace("accounts", "a");
     const html = page();
@@ -131,12 +132,17 @@ describe("an account's workspace", () => {
     assert.ok(at(html, ">Password<") < at(html, ">Security question<"), "the rail lists the question group last");
     assert.ok(!html.includes('aria-label="Name"') && html.includes('aria-label="Username"'));
     assert.ok(html.includes('role="switch"') && html.includes('aria-checked="true"'));
-    assert.ok(!html.includes(">Save<") && !html.includes("Titles →"));
+    assert.ok(!html.includes("Titles →"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
     const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="ac-details"'));
     assert.ok(bar.includes("Discard changes") && !bar.includes("→"), "the page toolbar: Discard, no forward verb");
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'));
-    assert.ok(at(html, "Save details") > at(html, 'id="ac-details"') && at(html, "Save details") < at(html, 'id="ac-password"'));    assert.ok(html.includes('autoComplete="new-password"'));
+    assert.ok(bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1"), "Discard left");
+    assert.ok(bar.indexOf("min-w-0 flex-1") < bar.indexOf(`aria-label="Save. ${NOTHING_CHANGED}"`), "the ONE Save right");
+    assert.ok(
+      !html.includes("Save details") && !html.includes("Save question"),
+      "no save on the form; the toolbar's Save commits the entire record (`55` decision 5)",
+    );
+    assert.ok(html.includes('autoComplete="new-password"'));
     assert.ok(html.includes('aria-label="Set new password. Type a new password."'));
   });
 
@@ -162,11 +168,11 @@ describe("the Security question group", () => {
     return page();
   };
 
-  it("is the workspace's last group, after Password, with its own primary `Save question`", () => {
+  it("is the workspace's last group, after Password, holding the draft the ONE Save commits; no verb of its own", () => {
     const html = open();
     assert.ok(at(html, 'id="ac-password"') < at(html, 'id="ac-question"'));
-    assert.ok(at(html, 'aria-label="Answer"') < at(html, "Save question"), "the rows come before the verb");
-    assert.ok(html.includes('aria-label="Save question. Choose a question."'));
+    assert.ok(at(html, 'aria-label="Answer"') < at(html, "</form>"), "the rows are the group's body");
+    assert.ok(!html.includes("Save question"), "`Save question` is deleted; the toolbar's Save commits it");
   });
 
   it("offers the backend's eight questions, in its order, numbered 1 to 8", () => {

@@ -76,14 +76,13 @@ describe("the jobs service stops", () => {
 });
 
 describe("the Stop verb on the Jobs strip", () => {
-  it("is drawn after Run job with the CircleStop icon and a tooltip at rest", () => {
-    assert.deepEqual(JOB_BULK_ORDER, ["run", "stop", "enable", "disable", "delete"]);
-    assert.ok(BULK_ICONS.stop !== undefined);
-    assert.ok(BULK_TIPS.stop.length > 0 && !BULK_TIPS.stop.endsWith("."));
+  it("is drawn first on the strip with the CircleStop icon and a tooltip at rest; Run job is the page toolbar's", () => {
+    assert.deepEqual(JOB_BULK_ORDER, ["stop", "enable", "disable", "delete"]);
+    assert.ok(BULK_ICONS.stop !== undefined && BULK_TIPS.stop.length > 0 && !BULK_TIPS.stop.endsWith("."));
     const html = page();
-    assert.ok(html.includes('aria-label="Stop. Tick a job first"'), "always drawn, disabled until a job is ticked");
-    assert.ok(html.includes("lucide-circle-stop"));
-    assert.ok(html.indexOf('aria-label="Run job.') < html.indexOf('aria-label="Stop.'));
+    assert.ok(html.includes('aria-label="Stop. Tick a job first"') && html.includes("lucide-circle-stop"));
+    assert.ok(!html.slice(html.indexOf('aria-label="Jobs table"')).includes("Run job"), "`run` left the strip (`55` decision 6)");
+    assert.ok(html.slice(0, html.indexOf("overflow-y-auto")).includes('aria-label="Run job. Tick a job first"'), "the promote");
   });
 
   it("acts on the ticked jobs that run; a job that does not is skipped with `That job is not running.`", () => {
@@ -195,7 +194,15 @@ describe("a stopped run in the words", () => {
   });
 });
 
-describe("the workspace Run verbs in the toolbar", () => {
+describe("the workspace Run verb in the toolbar", () => {
+  const barOf = (html: string): string => html.slice(html.indexOf('role="toolbar"'), html.indexOf('id="jw-details"'));
+  const before = (html: string, words: readonly string[]): boolean =>
+    words.every((word, index) => index === 0 || html.indexOf(words[index - 1] ?? "") < html.indexOf(word));
+  const openJob = (): void => {
+    state().jobsPlaylistsLoaded([playlist(1)]);
+    state().jobsLoaded([job(1)]);
+    state().openWorkspace("jobs", "1");
+  };
   it("gates Run job and Stop as opposites: Running. / Not running.", () => {
     assert.equal(workspaceRunReason(job(2, { running: true }), IDLE), "Running.");
     assert.equal(workspaceRunReason(job(1), IDLE), undefined);
@@ -204,32 +211,23 @@ describe("the workspace Run verbs in the toolbar", () => {
     assert.equal(workspaceStopReason(job(2, { running: true }), true), "Stopping.");
   });
 
-  it("draws the primary Run job, then Stop, then Discard changes; Stop disabled `Not running.` while idle", () => {
-    state().jobsPlaylistsLoaded([playlist(1)]);
-    state().jobsLoaded([job(1)]);
-    state().openWorkspace("jobs", "1");
-    const idle = page();
-    const bar = (): string => idle.slice(idle.indexOf('role="toolbar"'), idle.indexOf('id="jw-details"'));
-    assert.ok(/<button[^>]*title="Start the job now[^>]*>Run job<\/button>/.test(bar()));
-    assert.ok(bar().includes('aria-label="Stop. Not running."') && bar().includes("lucide-circle-stop"));
-    assert.ok(bar().indexOf(">Run job<") < bar().indexOf('aria-label="Stop. Not running."'));
-    assert.ok(bar().indexOf('aria-label="Stop. Not running."') < bar().indexOf("Discard changes"));
+  it("draws Discard left; Save, then the primary Run job rightmost; no Stop, no forward verb", () => {
+    openJob();
+    const bar = barOf(page());
+    assert.ok(/<button[^>]*title="Start the job now[^>]*>Run job<\/button>/.test(bar) && bar.includes('aria-label="Save. Nothing has changed."'));
+    assert.ok(before(bar, ["Discard changes", "min-w-0 flex-1", ">Save<", ">Run job<"]), "Discard left; Save, then Run job rightmost");
+    assert.ok(!bar.includes("Stop") && !bar.includes("→"), "Stop is the statusbar's; Run job is the promote");
     state().jobsLoaded([job(1, { running: true })]);
-    const running = page();
-    const busy = running.slice(running.indexOf('role="toolbar"'), running.indexOf('id="jw-details"'));
-    assert.ok(busy.includes('aria-label="Run job. Running."') && busy.includes(">Stop</button>"));
+    assert.ok(barOf(page()).includes('aria-label="Run job. Running."'));
   });
 
   it("reads Resume after a stop, and Run job again once it has run", () => {
-    state().jobsPlaylistsLoaded([playlist(1)]);
+    openJob();
     state().jobsLoaded([job(1, { lastRunAt: 5, lastResult: "stopped", lastCounts: counts({ stopped: true }) })]);
-    state().openWorkspace("jobs", "1");
     const html = page();
-    const bar = html.slice(html.indexOf('role="toolbar"'), html.indexOf('id="jw-details"'));
-    assert.ok(bar.includes(">Resume</button>") && !bar.includes(">Run job</button>"));
+    assert.ok(barOf(html).includes(">Resume</button>") && !barOf(html).includes(">Run job</button>"));
     assert.ok(html.includes("Stopped: nothing changed."));
     state().jobsLoaded([job(1, { lastRunAt: 9, lastResult: "ok", lastCounts: counts() })]);
-    const again = page();
-    assert.ok(again.slice(again.indexOf('role="toolbar"'), again.indexOf('id="jw-details"')).includes(">Run job</button>"));
+    assert.ok(barOf(page()).includes(">Run job</button>"));
   });
 });

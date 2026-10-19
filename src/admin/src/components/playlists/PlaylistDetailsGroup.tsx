@@ -4,8 +4,6 @@ import { Toggle } from "@giga/ui/controls/Toggle";
 import { FIELD_CONTROL } from "@giga/ui/form/form-classes";
 import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
-import { SaveDetails } from "@/components/records/SaveDetails";
-import type { SaveVerb } from "@/lib/workspace-verbs";
 import { ADDRESS_TIP, ENABLED_TIP, FILE_ADDRESS_TIP, NAME_TIP } from "@/constants/playlist-copy";
 import type { PlaylistDraft } from "@/lib/playlist-draft";
 import type { FormErrors } from "@/lib/record-form";
@@ -16,14 +14,12 @@ export interface PlaylistDetailsGroupProps {
   readonly draft: PlaylistDraft;
   readonly errors: FormErrors;
   readonly onChange: (patch: Partial<PlaylistDraft>) => void;
-  /** The form's one commit, ending this group. */
-  readonly save: SaveVerb;
 }
 
 /** `Details` (`38` section 3.3, `43` section 4.1): Name (first), Address, Enabled. A web playlist's Address is an
- *  editable plain text field holding the full address (owner, 2026-10-18), saved with the form's `Save details` and
+ *  editable plain text field holding the full address (owner, 2026-10-18), saved with the toolbar's ONE Save and
  *  checked by the same address rule; a file playlist shows its file name, read-only. */
-export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }: PlaylistDetailsGroupProps) {
+export function PlaylistDetailsGroup({ playlist, draft, errors, onChange }: PlaylistDetailsGroupProps) {
   return (
     <Group id="pw-details" icon={FileText} title="Details">
       <Row label="Name" tip={NAME_TIP} error={errors["name"]}>
@@ -67,7 +63,6 @@ export function PlaylistDetailsGroup({ playlist, draft, errors, onChange, save }
       <Row label="Enabled" tip={ENABLED_TIP} error={errors["enabled"]}>
         <Toggle checked={draft.enabled} aria-label="Enabled" onChange={(enabled) => onChange({ enabled })} />
       </Row>
-      <SaveDetails save={save} />
     </Group>
   );
 }

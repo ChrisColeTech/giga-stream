@@ -103,15 +103,21 @@ describe("the table strip", () => {
 });
 
 describe("a provider's workspace", () => {
-  it("opens from the held list: the rail, the page toolbar (Discard, Titles →), Details, Templates, Player, Save details", () => {
+  it("opens from the held list: the rail, the page toolbar (Discard; Save, Titles →), Details, Templates, Player, no trailing save", () => {
     loaded([provider(1)]);
     state().openWorkspace("providers", "1");
     const html = page();
     assert.ok(html.includes('aria-label="Provider sections"'));
     assert.ok(at(html, ">Details<") < at(html, ">Templates<") && at(html, ">Templates<") < at(html, ">Player<"));
     assert.ok(html.includes('aria-label="Discard changes. Nothing has changed."'));
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Player<"));
-    assert.ok(at(html, "Discard changes") < at(html, "Titles →") && at(html, "Titles →") < at(html, 'id="pv-details"'));
+    assert.ok(html.includes('aria-label="Save. Nothing has changed."'));
+    assert.ok(!html.includes("Save details"), "the trailing save is gone (`55` decision 1)");
+    assert.ok(
+      at(html, "Discard changes") < at(html, 'aria-label="Save. Nothing has changed.') &&
+        at(html, 'aria-label="Save. Nothing has changed.') < at(html, "Titles →") &&
+        at(html, "Titles →") < at(html, 'id="pv-details"'),
+      "Discard left; Save, then the forward verb rightmost",
+    );
     assert.ok(at(html, 'aria-label="Name"') < at(html, 'aria-label="Family"'));
     assert.ok(at(html, 'aria-label="Source"') < at(html, 'aria-label="Movie template"'));
     assert.ok(at(html, 'aria-label="Enabled"') < at(html, 'aria-label="Order"'));

@@ -15,10 +15,10 @@ import { tickedOf } from "./playlist-rows";
 
 export type JobBulkVerb = "run" | "stop" | "enable" | "disable" | "delete";
 
-/** The selection toolbar's order (`01` section 9): `Run job` first, as Playlists' `Sync now`, `Stop` beside it, then
- *  Enable and Disable, and the armed `Delete` last (LoRA Trainer `GalleryToolbar.tsx`: the destructive verb ends the
- *  cluster). */
-export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["run", "stop", "enable", "disable", "delete"];
+/** The selection toolbar's order (`01` section 9, `55` decision 6): `Stop` first, then Enable and Disable, and the
+ *  armed `Delete` last (LoRA Trainer `GalleryToolbar.tsx`: the destructive verb ends the cluster). `Run job` is the
+ *  page toolbar's promote, not a strip verb. */
+export const JOB_BULK_ORDER: readonly JobBulkVerb[] = ["stop", "enable", "disable", "delete"];
 
 const words = (past: string): BulkWords => ({ past, noun: "job", nouns: "jobs" });
 

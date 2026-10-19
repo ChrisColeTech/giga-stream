@@ -88,29 +88,32 @@ describe("the jobs list", () => {
     assert.ok(html.includes('title="Deletes the job; what it synced stays."'), "a catalog job's Delete works");
   });
 
-  it("draws Refresh, then Run job, Enable, Disable and the armed Delete last, waiting for a tick, then enabled", () => {
+  it("draws Refresh, then Stop, Enable, Disable and the armed Delete last, waiting for a tick; Run job is the page toolbar's", () => {
     state().jobsLoaded([job(1)]);
     let html = page();
     const table = (): string => html.slice(html.indexOf('aria-label="Jobs table"'));
-    assert.ok(table().includes('title="Refresh jobs"') && table().includes('aria-label="Run job. Tick a job first"'));
+    const top = (): string => html.slice(0, html.indexOf("overflow-y-auto"));
+    assert.ok(table().includes('title="Refresh jobs"') && !table().includes("Run job"), "run left the strip (`55` decision 6)");
+    assert.ok(top().includes('aria-label="Run job. Tick a job first"'), "the promote waits in the page toolbar");
     state().jobTick(1, true);
     html = page();
-    for (const verb of ["Run job", "Enable"]) assert.ok(table().includes(`${verb}</button>`), verb);
-    assert.ok(at(table(), "Run job") < at(table(), "Enable") && at(table(), "Disable") < at(table(), ">Delete</button>"));
+    for (const verb of ["Stop", "Enable"]) assert.ok(table().includes(`${verb}</button>`), verb);
+    assert.ok(at(table(), "Stop") < at(table(), "Enable") && at(table(), "Disable") < at(table(), ">Delete</button>"));
+    assert.ok(/<button[^>]*title="Run the ticked rows now"[^>]*>Run job<\/button>/.test(top()), "ticked, the promote runs");
     assert.ok(table().includes('aria-label="Delete. A playlist&#x27;s job goes with the playlist."'), "bulk Delete of a playlist job");
   });
 
-  it("disables Run job with the gate's reason for a ticked job whose playlist is disabled", () => {
+  it("disables the promote Run job with the gate's reason for a ticked job whose playlist is disabled", () => {
     state().jobsPlaylistsLoaded([playlist(1, { enabled: false })]);
     state().jobsLoaded([job(1)]);
     state().jobTick(1, true);
     const html = page();
-    assert.ok(html.slice(html.indexOf('aria-label="Jobs table"')).includes('aria-label="Run job. A ticked job&#x27;s playlist is disabled."'));
+    assert.ok(html.slice(0, html.indexOf("overflow-y-auto")).includes('aria-label="Run job. A ticked job&#x27;s playlist is disabled."'));
   });
 });
 
 describe("a job's workspace", () => {
-  it("a playlist job: rail without Run, Details in order, the toolbar's Run verbs, Last run from the typed counts", () => {
+  it("a playlist job: rail without Run, Details in order, the toolbar's Save and Run job, Last run from the typed counts", () => {
     const typed = counts({ created: 2, updated: 1, refused: 1, refusalExamples: ["Bad Entry"], source: "unchanged" });
     state().jobsPlaylistsLoaded([playlist(1)]);
     state().jobsLoaded([job(1, { lastRunAt: 5, lastResult: "ok", lastCounts: typed })]);
@@ -130,33 +133,34 @@ describe("a job's workspace", () => {
     assert.ok(html.includes("Synced: 2 created, 1 updated, 1 refused."), "the outcome in words");
     assert.ok(html.includes("2 created · 1 updated · 0 skipped · 1 refused") && html.includes(">Web list unchanged<"));
     assert.ok(html.includes(">Bad Entry<") && !html.includes(">Created<"));
-    assert.ok(/<button[^>]*title="Go to Channels"[^>]*>Channels →<\/button>/.test(html), "a playlist job's forward verb");
     const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="jw-details"'));
     assert.ok(
       /<button[^>]*title="Start the job now[^>]*>Run job<\/button>/.test(bar),
       "an enabled playlist job runs from the toolbar",
     );
     assert.ok(bar.includes("text-accent-ink") && bar.includes("h-ctl-sm"), "Run job is the toolbar's small primary");
-    assert.ok(bar.includes('aria-label="Stop. Not running."'), "Stop waits beside it while the job is idle");
     assert.ok(
-      at(bar, ">Run job<") < at(bar, 'aria-label="Stop. Not running."') &&
-        at(bar, 'aria-label="Stop. Not running."') < at(bar, "Discard changes") &&
-        at(bar, "Discard changes") < at(bar, "Channels →"),
-      "Run job, Stop, Discard changes, then the forward verb",
+      bar.indexOf("Discard changes") < bar.indexOf("min-w-0 flex-1") &&
+        bar.indexOf("min-w-0 flex-1") < bar.indexOf(">Save<") &&
+        bar.indexOf(">Save<") < bar.indexOf(">Run job<"),
+      "Discard left; Save, then Run job rightmost",
     );
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."'), "the commit ends Schedule");
+    assert.ok(!bar.includes("Stop"), "Stop is the statusbar's, never the toolbar's");
+    assert.ok(!bar.includes("→"), "no forward verb: Run job is the promote");
+    assert.ok(html.includes('aria-label="Save. Nothing has changed."'), "the commit is the toolbar's Save");
+    assert.ok(!html.includes("Save details"), "no trailing save on the form");
     assert.ok(html.includes('aria-label="Refresh last run"'), "Refresh is an icon on the State row");
   });
 
-  it("a catalog job: Scope, Kind and Pages, Titles and a shimmer Stale, the Titles arrow", () => {
+  it("a catalog job: Scope, Kind and Pages, Titles and a shimmer Stale, no forward verb", () => {
     state().jobsLoaded([catalog(4, { lastRunAt: 5, lastResult: "ok", lastCounts: { titles: 1240, stale: 3 } })]);
     state().openWorkspace("jobs", "4");
     const html = page();
     assert.ok(html.includes('aria-label="Scope"') && html.includes('aria-label="Pages"'));
     assert.ok(!html.includes('aria-label="Playlist"'));
     assert.ok(html.includes(">1240<") && html.includes(">3<") && html.includes("Synced: 1,240 titles, 3 stale."));
-    assert.ok(/<button[^>]*title="Go to Titles"[^>]*>Titles →<\/button>/.test(html), "a catalog job's forward verb");
-    assert.ok(html.split("text-accent-ink").length <= 4, "the primaries are Run job, Save details and the toolbar's Titles →");
+    assert.ok(!html.includes("→"), "the forward verbs are gone; Run job is the promote");
+    assert.ok(html.split("text-accent-ink").length <= 3, "the primaries are Run job and Save");
   });
 
   it("keeps the toolbar's Run job enabled for a disabled job, and shows a bad interval under its row", () => {
@@ -166,7 +170,7 @@ describe("a job's workspace", () => {
     assert.ok(workspace.includes('title="Start the job now'), "the job's switch gates only its schedule");
     assert.ok(!workspace.includes("Jobs that are disabled cannot run."));
     const sentence = "Interval is a number and s, m or h, like 30m or 6h, or off.";
-    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined, save: { onPress: () => undefined } };
+    const props = { value: "x", job: job(1), error: sentence, onChange: () => undefined };
     const html = renderLive(createElement(JobScheduleGroup, props));
     assert.ok(html.includes('role="alert"') && html.includes(sentence) && html.includes('aria-invalid="true"'));
   });

@@ -128,7 +128,7 @@ describe("a title's workspace", () => {
     assert.ok(html.includes("animate-skel-shimmer") && html.includes(">Seasons<"));
     assert.ok(html.includes('aria-label="Discard changes. Loading."') && !html.includes('aria-label="Title"'));
     assert.ok(at(html, "Discard changes") < at(html, "Jobs →"), "the page toolbar is drawn while the detail loads");
-    assert.ok(!html.includes("Save details"), "no commit over a skeleton");
+    assert.ok(!html.includes("Save details") && !html.includes(">Save<"), "no commit over a skeleton");
   });
 
   it("a movie: Details, Plot, Images, no Seasons and no Sources; every editable field in order", () => {
@@ -143,7 +143,15 @@ describe("a title's workspace", () => {
       assert.ok(at(html, `aria-label="${order[i - 1]}"`) < at(html, `aria-label="${order[i]}"`), order[i]);
     }
     assert.ok(html.includes('value="120"') && at(html, "Jobs →") < at(html, 'id="tw-details"'));
-    assert.ok(html.includes('aria-label="Save details. Nothing has changed."') && at(html, "Save details") > at(html, ">Images<"));
+    assert.ok(html.includes('aria-label="Save. Nothing has changed."'), "the commit is the toolbar's Save");
+    assert.ok(!html.includes("Save details"), "no trailing save after Images");
+    const bar = html.slice(at(html, 'role="toolbar"'), at(html, 'id="tw-details"'));
+    assert.ok(
+      at(bar, "Discard changes") < at(bar, "min-w-0 flex-1") &&
+        at(bar, "min-w-0 flex-1") < at(bar, ">Save<") &&
+        at(bar, ">Save<") < at(bar, "Jobs →"),
+      "Discard left; Save, then the forward verb rightmost",
+    );
     assert.match(html, /<input[^>]*readOnly=""[^>]*aria-label="Kind"/);
   });
 

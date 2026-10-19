@@ -9,7 +9,7 @@ import type { Tab } from "@/types/shell";
 
 const NOTHING = (): void => undefined;
 
-describe("Save details and Discard changes", () => {
+describe("Save and Discard changes", () => {
   it("wait with `Nothing has changed.` while the draft equals its baseline, whatever else is true", () => {
     assert.equal(NOTHING_CHANGED, "Nothing has changed.");
     assert.equal(changeReason(false), NOTHING_CHANGED);
@@ -40,7 +40,7 @@ describe("an index's forward verb", () => {
     assert.equal(TICK_FIRST, "Tick a row first");
   });
 
-  it("is absent for Accounts and for Jobs, whose Run job is a selection verb", () => {
+  it("is absent for Accounts and for Jobs, whose `Run job` promote is not a forward verb (the page toolbar draws it)", () => {
     assert.equal(indexForward(INDEX_FRAMES.accounts.forward, NOTHING), undefined);
     assert.equal(indexForward(INDEX_FRAMES.jobs.forward, NOTHING), undefined);
   });
