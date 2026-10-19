@@ -8,10 +8,11 @@ export interface AboutFacts {
 }
 
 /** The facts About reads from the device (the page's origin and whether the Electron bridge is there), so the component
- *  touches no window or bridge itself. */
+ *  touches no window or bridge itself. A `window` without a `location` (a server render, a partial test shim) is outside
+ *  a browser in every way that matters: the address is the dash. */
 export function useAboutFacts(): AboutFacts {
   return {
-    address: typeof window === "undefined" ? FACT_UNKNOWN : window.location.origin,
+    address: typeof window === "undefined" || window.location === undefined ? FACT_UNKNOWN : window.location.origin,
     runtime: hostAvailable() ? "Electron" : "Browser",
   };
 }
