@@ -66,13 +66,18 @@ function TitlePreviewBody({ titleId }: { readonly titleId: string }) {
     useAppStore.getState().closeOverlay();
   };
 
-  const selectReason = session.reading
-    ? LOADING_REASON
-    : session.failed
-      ? UNREACHABLE_REASON
-      : source === undefined
-        ? NO_PREVIEW_SOURCE
-        : undefined;
+  /* The `Provider` select, like the switch beside it, waits while the backend cannot be reached: the sources it offers
+     are the backend's own reads. Otherwise it waits while the detail (and a series' season) is read, says a failed
+     read, and says when no provider gives this title a source. */
+  const selectReason = unreachable
+    ? UNREACHABLE_REASON
+    : session.reading
+      ? LOADING_REASON
+      : session.failed
+        ? UNREACHABLE_REASON
+        : source === undefined
+          ? NO_PREVIEW_SOURCE
+          : undefined;
 
   return (
     <ChildWindow

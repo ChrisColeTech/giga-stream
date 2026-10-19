@@ -52,21 +52,24 @@ export async function setOverlay(overlay: OverlayColours): Promise<boolean> {
   return found === undefined || typeof found.setOverlay !== "function" ? false : found.setOverlay(overlay);
 }
 
-/** Sets the preview's player policy, mirroring the preload's own `setPlayerPolicy`. A refused or throwing IPC call is
- *  dropped: the preview window is the only caller, and its own guard reports load failures. Answers whether a host took
- *  the policy. */
+/** Sets the preview's player policy, mirroring the preload's own `setPlayerPolicy`. The bridge's answer is external -
+ *  the preload's is a promise from the IPC bridge, but a bridge may answer synchronously - so the swallowed rejection
+ *  rides `Promise.resolve`, which takes a thenable as it is and merely wraps a plain answer: no `.catch` is chained on
+ *  a non-promise. A refused or throwing IPC call is dropped either way: the preview window is the only caller, and its
+ *  own guard reports load failures. Answers whether a host took the policy. */
 export function setPlayerPolicy(policy: PlayerPolicy): boolean {
   const found = host();
   if (found === undefined || typeof found.setPlayerPolicy !== "function") return false;
-  void found
-    .setPlayerPolicy({ origin: policy.origin, frameOrigins: [...policy.frameOrigins] })
-    .catch((): undefined => undefined);
+  void Promise.resolve(
+    found.setPlayerPolicy({ origin: policy.origin, frameOrigins: [...policy.frameOrigins] }),
+  ).catch((): undefined => undefined);
   return true;
 }
 
-/** Ends the player policy, mirroring the preload's own `clearPlayerPolicy`. A browser has no host: nothing happens. */
+/** Ends the player policy, mirroring the preload's own `clearPlayerPolicy`, behind the same `Promise.resolve` guard.
+ *  A browser has no host: nothing happens. */
 export function clearPlayerPolicy(): void {
   const found = host();
   if (found === undefined || typeof found.clearPlayerPolicy !== "function") return;
-  void found.clearPlayerPolicy().catch((): undefined => undefined);
+  void Promise.resolve(found.clearPlayerPolicy()).catch((): undefined => undefined);
 }
