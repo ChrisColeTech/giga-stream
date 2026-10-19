@@ -501,6 +501,8 @@ state while active. `size-ctl-md`, icons `size-3.75`. Close is always ghost; Max
 toggle - Maximize ghost while normal, Restore outlined/accent while maximized. They never pass `bordered` or wear the
 control gradient/drop shadow. The rule lives in the shared `ChildWindow`, so every
 Settings, Preview, Collections and Title information window inherits it without app overrides.
+Window-caption icons are literal: Maximize -> `Square`, Restore -> `Copy` (overlapping windows), Close -> `X`.
+Diagonal expand/collapse arrows (`Maximize2`/`Minimize2`) are content/canvas controls and forbidden in window chrome.
 
 ### Page toolbar
 

@@ -17,8 +17,10 @@ it." Scope: shared UI only. Landing (`07` 6.1): one kit worker; every app inheri
 2. Buttons and icons match the main titlebar controls: `size-ctl-md` button, `size-3.75` icon, same hover/active/focus.
 3. Maximize/Restore IS a state toggle: `on={maximized}` - Maximize is ghost while normal; Restore gains the active
    outline/accent while maximized, exactly like an open pane toggle. Close remains a plain ghost dismissal action.
-4. Labels, tooltips, header ordering, drag exclusion, double-click maximize and keyboard behavior are unchanged.
-5. Bordered IconButton remains available for popup headers/standalone body actions, never any titlebar.
+4. Caption icons are `Square` (Maximize), `Copy` (Restore/overlapping windows) and `X` (Close). `Maximize2`/`Minimize2`
+   diagonal arrows are forbidden in window chrome.
+5. Labels, tooltips, header ordering, drag exclusion, double-click maximize and keyboard behavior are unchanged.
+6. Bordered IconButton remains available for popup headers/standalone body actions, never any titlebar.
 
 ## 3. Changes
 

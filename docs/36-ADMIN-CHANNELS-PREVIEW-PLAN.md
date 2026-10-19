@@ -327,11 +327,12 @@ A template feature in `ChildWindow`, so EVERY child window (Preview, Settings, C
 with `maximizable: false` (default true).
 
 - **The control.** A second ghost `IconButton` in the header, left of the close X, using the same titlebar style as the
-  main window's pane toggles (`01` Buttons and surfaces, amended by `60`): `Maximize2` while normal (aria-label and
-  tooltip `Maximize <name>`), `Minimize2` while maximized (`Restore <name>`). Close is ghost. Maximize/Restore is a
+  main window's pane toggles (`01` Buttons and surfaces, amended by `60`): `Square` while normal (aria-label and
+  tooltip `Maximize <name>`), overlapping-windows `Copy` while maximized (`Restore <name>`). Close is `X`, ghost.
+  Maximize/Restore is a
   toggle: ghost while normal, outlined/accent (`on`) while maximized; never bordered/raised. New rows in the icon
-  vocabulary (`01`): `Maximize, Restore` -> `Maximize2`, `Minimize2` (LoRA Trainer's viewer uses
-  `Maximize2` for its enlarge verb; here it is the window verb).
+  caption vocabulary (`01`): `Maximize, Restore, Close` -> `Square`, `Copy`, `X`. Diagonal expand/collapse arrows are
+  content/canvas controls, never window chrome.
 - **Also:** a double-click on the header (not on a button) toggles it, the desktop convention.
 - **Maximized.** The window fills the main window's available area: the main window minus its titlebar and its statusbar (the chrome stays
   visible and the scrim behaves as for a normal modal window); the box is derived from the container, so resizing the main window keeps it
