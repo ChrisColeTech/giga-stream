@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { ApiError } from "@giga/http/api-error";
-import { BULK_ICONS } from "@/constants/bulk-icons";
-import { BULK_TIPS } from "@/constants/bulk-tips";
 import { bulkNotes } from "@/lib/bulk-plan";
 import { JOB_BULK_ORDER, JOB_BULK_WORDS, jobVerbReason, planJobBulk } from "@/lib/job-bulk";
 import { stateOfJob } from "@/lib/job-rows";
@@ -75,13 +73,15 @@ describe("the jobs service stops", () => {
   });
 });
 
-describe("the Stop verb on the Jobs strip", () => {
-  it("is drawn first on the strip with the CircleStop icon and a tooltip at rest; Run job is the page toolbar's", () => {
-    assert.deepEqual(JOB_BULK_ORDER, ["stop", "enable", "disable", "delete"]);
-    assert.ok(BULK_ICONS.stop !== undefined && BULK_TIPS.stop.length > 0 && !BULK_TIPS.stop.endsWith("."));
+describe("Stop behavior and the Jobs strip", () => {
+  it("keeps Stop out of the strip; Enable, Disable and Delete remain, and Run job is the page promote", () => {
+    assert.deepEqual(JOB_BULK_ORDER, ["enable", "disable", "delete"]);
     const html = page();
-    assert.ok(html.includes('aria-label="Stop. Tick a job first"') && html.includes("lucide-circle-stop"));
-    assert.ok(!html.slice(html.indexOf('aria-label="Jobs table"')).includes("Run job"), "`run` left the strip (`55` decision 6)");
+    const table = html.slice(html.indexOf('aria-label="Jobs table"'));
+    assert.ok(!table.includes(">Stop<") && !table.includes("lucide-circle-stop"));
+    assert.ok(table.indexOf("Enable</button>") < table.indexOf("Disable</button>"));
+    assert.ok(table.indexOf("Disable</button>") < table.indexOf(">Delete</button>"));
+    assert.ok(!table.includes("Run job"), "Run job stays out of the strip");
     assert.ok(html.slice(0, html.indexOf("overflow-y-auto")).includes('aria-label="Run job. Tick a job first"'), "the promote");
   });
 
