@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, X } from "lucide-react";
+import { Copy, Square, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useContext, useRef } from "react";
 import type { ReactNode } from "react";
@@ -40,7 +40,7 @@ export function ChildWindow({ spec, onClose, children, heading, label = spec.tit
   const frame = useRef<HTMLDivElement | null>(null);
   const { box, move, grip, maximized, toggleMaximized } = useChildWindowBox(spec, useContext(ChildMemoryContext));
   const maximizable = spec.maximizable !== false;
-  const MaxIcon = maximized ? Minimize2 : Maximize2;
+  const MaxIcon = maximized ? Copy : Square;
   const maxLabel = `${maximized ? "Restore" : "Maximize"} ${label}`;
   const reduced = useReduceMotion();
   useChildWindowKeys(frame, { escape: spec.escape, modal: spec.modal, onClose });
