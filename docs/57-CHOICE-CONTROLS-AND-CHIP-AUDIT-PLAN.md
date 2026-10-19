@@ -39,7 +39,7 @@ and the shared choice foundation first; then the admin and frontend consumer wav
    responsive grammar as every other admin list (search first line below the container threshold, selects wrapped on
    the second), without changing any control type or option.
 7. **Frontend conversions beyond Genre:** collection Type (3), Library default View (3), Playback Resume (3), Library
-   Type (All/Movies/TV/Local) and Library View (Grid/List/Rows) move to their plan-defined pickers/menus. Theme becomes
+   Type (All/Movies/TV/Local) and Library View (Grid/List/Rows) move to the Library filter grammar below. Theme becomes
    `Light | Dark` and Reduce motion `Off | On`, both Segmented pairs. Other true two-mode pairs stay segmented. Live
    Qualities' admin checklist is not a frontend preference conversion; the frontend rail already uses Select.
 8. **There is no live `system` value.** New defaults: Dark, Reduce motion Off. Data migrations rewrite previously
@@ -50,14 +50,22 @@ and the shared choice foundation first; then the admin and frontend consumer wav
 9. **Compliance:** consumer-built interactive pill clouds outside `Segmented` and exempt navigation are prohibited.
    Apps add inventory tests pinning each Segmented to exactly 2, one pair per group and two per page. The primitive does
    not crash at runtime - the test/lint contract catches repository violations.
+10. **The Library uses faceted pickers, not a row of selects.** The page toolbar carries `Filters · N` (active-filter
+    count), `Sort: <value>` and `View: <value>` menu buttons. The filter pane holds field-shaped picker rows: Media
+    (All/Movies/TV/Local, single-choice checkmark rows), Genre (searchable multi-select checklist), Year (scrollable/
+    searchable single-choice list, Any year first), Watched (single-choice checkmark rows) and one Clear filters.
+    Active non-default values render as removable applied-filter tokens (state, not offered-choice chips). Sort and View
+    remain outside the filter pane as operation menus; View rows carry their Grid/List/Rows icons. At narrow width the
+    pane collapses and `Filters · N` opens the same content as a popover/drawer - no duplicate state or option source.
 
 ## 3. Changes from what is merged
 
 - `src/shared/ui`: binary-pair constants/tests; `ChipGroup` is removed from form-choice use (kept only if a non-form
   consumer earns it); disabled-pair reasons use the focusable-tooltip pattern instead of title-only copy.
-- `src/frontend` + `src/fileserver`: `GenrePopover` list rows + dedicated markup/interaction tests; a compliance
-  inventory over every Segmented/ChipGroup consumer; the fileserver state migration rewrites old System values, then
-  frontend settings schemas/types/defaults contain no System branch.
+- `src/frontend` + `src/fileserver`: the Library's picker/menu/filter-token components (the Genre checklist included),
+  dedicated markup/interaction tests and one shared query state; a compliance inventory over every Segmented/
+  ChipGroup consumer; the fileserver state migration rewrites old System values, then frontend settings schemas/types/
+  defaults contain no System branch.
 - `src/admin`: `ChannelQueryRow` through `QueryBar`/`SortControl`; guide-compliance/choice inventory tests; no field
   control conversion beyond the binary Appearance correction; the backend `admin_ui_state` migration rewrites old
   System values, then admin settings schemas/types/defaults contain no System branch.
@@ -65,8 +73,9 @@ and the shared choice foundation first; then the admin and frontend consumer wav
 ## 4. Tests
 
 - Shared choice semantics and limits; navigation/ChipsInput exemptions; disabled reasons keyboard-reachable.
-- Genre checklist: dynamic rows, multi-select, search at 12, selected summary, keyboard/Escape/focus dismissal, no
-  `aria-pressed` pill cloud.
+- Library filters: Media/Year/Watched single-choice menu rows; dynamic Genre checklist, multi-select and search at 12;
+  Filters active count; removable applied tokens; Sort/View menus; wide pane and narrow popover share state/options;
+  keyboard/Escape/focus dismissal; no `aria-pressed` offered-choice cloud.
 - Admin/front-end inventories: every Segmented exactly 2, at most one pair/group and two/page; no ad-hoc pill groups. Channels query
   responsive markup at wide and narrow container sizes.
 - Settings: only Light/Dark and Off/On render; new defaults Dark/Off; migrations map old System data before parsing;
