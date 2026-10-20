@@ -65,6 +65,16 @@ export function createAppServices(options: ServiceOptions) {
   });
   images.prune();
   const adminUrl = () => settings.get().adminUrl;
+  /**
+   * The admin address exactly as a Settings write saved it, or undefined when no row exists. The reverse
+   * proxy's boot fallback (docs/62 D7) needs the saved row, not the effective setting: `get().adminUrl`
+   * always answers the default, and firing the proxy on it would turn every plain desktop's `/api` and
+   * `/live` towards a backend that may not exist.
+   */
+  const savedAdminUrl = (): string | undefined => {
+    const value = settingsRepository.readAll().get("adminUrl");
+    return typeof value === "string" && value !== "" ? value : undefined;
+  };
   // The one image-rewrite every passed-on address goes through (03 section 3.11): the cache
   // remembers the source so a later miss can fetch it; a source that fails the backend's address
   // rule stays as it is (docs/03 sections 3.11 and 7.3).
@@ -156,6 +166,7 @@ export function createAppServices(options: ServiceOptions) {
       };
     },
     settings: settings as SettingsService,
+    savedAdminUrl,
     shell: shell as ShellStateService,
     channelState,
     cache,
