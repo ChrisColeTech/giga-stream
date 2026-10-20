@@ -1,8 +1,6 @@
 export interface ReloadInput {
   /** The first pass after mount: the list has never been read. */
   readonly initial: boolean;
-  /** The hook lifecycle cancelled its read, so a replayed setup must replace it. */
-  readonly interrupted?: boolean;
   /** Whether the Library is the shown surface now. */
   readonly active: boolean;
   /** The query's key differs from the one the list was last read for. */
@@ -29,7 +27,7 @@ export interface ReloadDecision {
  *  waits (`dirty`) and is applied when it is shown, so the grid never changes out of sight and jumps into view. */
 export function reloadDecision(input: ReloadInput): ReloadDecision {
   if (input.ready === false) return { reload: false, dirty: input.dirty };
-  if (input.initial || input.interrupted === true) return { reload: true, dirty: false };
+  if (input.initial) return { reload: true, dirty: false };
   const invalidated = input.queryChanged || input.serialChanged || input.sessionChanged === true || input.dirty;
   if (!input.active) return { reload: false, dirty: invalidated };
   return { reload: invalidated, dirty: false };
