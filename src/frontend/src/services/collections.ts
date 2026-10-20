@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { CollectionType } from "@/types/collection";
+import type { CollectionAnswer, CollectionType } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import { COLLECTIONS_SIGNED_OUT } from "@/lib/collections-copy";
 import { sessionInputs } from "@/store/selectors";
@@ -13,8 +13,6 @@ import {
   AccountCollectionListSchema,
   AccountCollectionSchema,
 } from "./schemas/collection-schema";
-
-export type CollectionAnswer = z.infer<typeof CollectionSchema>;
 
 const part = (value: string): string => encodeURIComponent(value);
 

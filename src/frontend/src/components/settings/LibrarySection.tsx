@@ -7,12 +7,12 @@ import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { Toggle } from "@giga/ui/controls/Toggle";
 import { ArmedButton } from "@giga/ui/controls/ArmedButton";
+import { Tooltip } from "@giga/ui/form/Tooltip";
 import { SETTINGS_LABELS } from "@/constants/settings-sections";
 import { LIBRARY_COPY, SORT_OPTIONS } from "@/lib/library-copy";
+import { useClearHistory } from "@/hooks/useClearHistory";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryPrefs } from "@/types/settings";
-import { clearWatch } from "@/services/watch";
-import { useState } from "react";
 
 
 const VIEWS = [
@@ -36,21 +36,16 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
   const prefs = useAppStore((state) => state.library);
   const signedIn = useAppStore((state) => state.signedIn);
   const setPrefs = useAppStore((state) => state.setLibraryPrefs);
-  const say = useAppStore((state) => state.say);
-  const [clearing, setClearing] = useState(false);
+  const { clearing, clear } = useClearHistory();
   const historyReason = signedIn ? undefined : LIBRARY_COPY.historySignedOut;
   const collectionsReason = signedIn ? undefined : LIBRARY_COPY.collectionsSignedOut;
-  const clear = () => {
-    if (clearing) return;
-    setClearing(true);
-    void clearWatch().then(() => {
-      useAppStore.getState().forgetAllWatch();
-      useAppStore.getState().requestLibraryRefresh();
-      say("History cleared.");
-    }).catch((error: unknown) => {
-      say(error instanceof Error ? error.message : "Could not reach the fileserver.", "warn");
-    }).finally(() => setClearing(false));
-  };
+  const clearReason = historyReason ?? (clearing ? "History is being cleared." : undefined);
+  const clearButton = (
+    <ArmedButton question={LIBRARY_COPY.clearArmed} title={clearReason === undefined ? LIBRARY_COPY.clearTip : undefined}
+      disabled={clearReason !== undefined} onConfirm={clear}>
+      {LIBRARY_COPY.clearIdle}
+    </ArmedButton>
+  );
   return (
     <Workspace labels={SETTINGS_LABELS}>
       <Group title="Library" icon={Library}>
@@ -97,11 +92,11 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
           label="History"
           tip="Show the library's history, or clear it. Clearing never touches your files or collections."
           trailing={
-            <ArmedButton question={LIBRARY_COPY.clearArmed}
-              title={historyReason ?? (clearing ? undefined : LIBRARY_COPY.clearTip)}
-              disabled={clearing || !signedIn} onConfirm={clear}>
-              {LIBRARY_COPY.clearIdle}
-            </ArmedButton>
+            clearReason === undefined ? clearButton : (
+              <Tooltip text={clearReason} focusable label={`${LIBRARY_COPY.clearIdle}. ${clearReason}`}>
+                {clearButton}
+              </Tooltip>
+            )
           }
         >
           <Button size="sm" variant="ghost" reason={historyReason} onClick={onOpenHistory}>

@@ -4,11 +4,11 @@ import { Button } from "@giga/ui/controls/Button";
 import { Actions } from "@giga/ui/form/Actions";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { menuEventBelow, openMembershipMenu } from "@/components/library/card-menu";
-import { changeFavourite, playRef } from "@/components/library/library-service";
 import { TITLE_INFO_LABELS, TitleInfoBody } from "@/components/library/TitleInfoBody";
 import { TitleInfoSkeleton } from "@/components/library/TitleInfoSkeleton";
 import { workSpec } from "@/constants/child-window";
 import { useTitleDetail } from "@/hooks/useTitleDetail";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { collectionRow } from "@/lib/collections-model";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { NO_HISTORY, resolveItem, type ResolvedItem } from "@/lib/library-marks";
@@ -20,6 +20,7 @@ import { ChildWindow } from "@giga/ui/windows/ChildWindow";
 export const TITLE_INFO_SPEC = workSpec("title-info", "Title information", { width: 880, body: 620 });
 
 export function TitleInfoWindow() {
+  const actions = useLibraryActions();
   const closeOverlay = useAppStore((state) => state.closeOverlay);
   const ref = useAppStore((state) => state.overlayItem);
   const marks = useAppStore((state) => state.marks);
@@ -51,7 +52,7 @@ export function TitleInfoWindow() {
         <Button
           variant="ghost" aria-pressed={item?.favorite === true}
           reason={favoriteReason}
-          onClick={() => { if (item !== undefined && signedIn) void changeFavourite(item.ref, !item.favorite); }}>
+          onClick={() => { if (item !== undefined && signedIn) void actions.favorite(item.ref, !item.favorite); }}>
           <Star className={item?.favorite === true ? "text-accent-text" : undefined}
             fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />
           {item?.favorite === true ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
@@ -59,14 +60,16 @@ export function TitleInfoWindow() {
         {signedIn && (
           <Button variant="ghost" reason={collectionReason}
             onClick={(event) => {
-              if (item !== undefined) openMembershipMenu(menuEventBelow(event.currentTarget), item, collections);
+              if (item !== undefined) {
+                openMembershipMenu(menuEventBelow(event.currentTarget), item, collections, actions);
+              }
             }}>
             <FolderPlus aria-hidden /> Collections
           </Button>
         )}
       </>}>
         <Button variant="primary" reason={playable ? undefined : unavailable}
-          onClick={() => { if (item !== undefined && playable) playRef(item.ref); }}>
+          onClick={() => { if (item !== undefined && playable) actions.play(item.ref); }}>
           <Play aria-hidden /> {item?.kind === "tv" ? "Open in Player" : "Play"}
         </Button>
       </Actions>

@@ -8,6 +8,7 @@ import { progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
 import { useAppStore } from "@/store/app-store";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { CardActions } from "./CardActions";
 import { DetailsGlyph } from "./DetailsGlyph";
 import { menuEventBelow, openCardMenu } from "./card-menu";
@@ -33,6 +34,7 @@ export interface PosterCardProps {
 export function PosterCard({ item, index, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
   /* Title information returns focus here when it closes: the card's own button. */
   const artRef = useRef<HTMLButtonElement>(null);
+  const actions = useLibraryActions();
   const signedIn = useAppStore((state) => state.signedIn);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
@@ -46,7 +48,7 @@ export function PosterCard({ item, index, selected, inHistory, collections, onSe
     onInfo: () => openTitleInfo(item.ref, artRef.current),
     onRemoveWatch: () => onRemoveWatch(item),
   };
-  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
+  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context, actions);
 
   return (
     <div data-card-id={id} data-index={index} className="flex min-w-0 flex-col gap-1" onContextMenu={onMenu}>
@@ -87,7 +89,7 @@ export function PosterCard({ item, index, selected, inHistory, collections, onSe
       <span className="block min-w-0 truncate px-1 font-sans text-sm font-medium text-text" title={item.title}>
         {item.title}
       </span>
-      <CardActions item={item} onMore={(button) => openCardMenu(menuEventBelow(button), item, context)} />
+      <CardActions item={item} onMore={(button) => openCardMenu(menuEventBelow(button), item, context, actions)} />
     </div>
   );
 }

@@ -1,9 +1,5 @@
-import { useEffect, useRef } from "react";
 import { objectFitOf } from "@/lib/live-picture";
-import { applyOpeningPosition, attemptPlayerPlay } from "@/lib/player-opening";
-import { stableAddressOf } from "@/lib/player-sources";
-import { StreamPlayerController } from "@/services/stream-player";
-import { useAppStore } from "@/store/app-store";
+import { useNativePlayer } from "@/hooks/useNativePlayer";
 import type { PictureFit } from "@/types/settings";
 import type { StageState } from "@/types/player";
 
@@ -22,111 +18,20 @@ export interface NativePlayerProps {
   readonly onEnded: () => void;
 }
 
-/** The element's real position and length; a live or unknown length (`Infinity`, `NaN`) reports none. */
-const positionOf = (media: HTMLVideoElement): [number, number | undefined] => [
-  Math.round(media.currentTime * 1000),
-  Number.isFinite(media.duration) && media.duration > 0 ? Math.round(media.duration * 1000) : undefined,
-];
-
-const isHls = (url: string): boolean => /\.m3u8(?:$|[?#])/i.test(url);
-/** The attachment effect's key, on the address's STABLE part (`50` section 2.4's re-drive): a re-answer of the same
- *  media whose play address only re-minted its query must not re-run the effect — its cleanup is the teardown
- *  (`pause` + `removeAttribute("src")` + `load()`), which would drop the playing element's position. A genuinely
- *  different address (path, host, quality) still re-attaches, and a Retry still does (the retry serial). */
-export const nativeAttachmentKey = (url: string, retry: number): string => `${stableAddressOf(url)}\u0000${retry}`;
-
-/** Stop's native action (`50` section 2.4): pause in place — the position stays for Resume, the source is never
- *  cleared. */
-export function pauseForStop(media: { readonly pause: () => void } | null | undefined): void {
-  media?.pause();
-}
-
-const preferences = () => {
-  const playback = useAppStore.getState().playback;
-  return {
-    videoQuality: playback.videoQuality,
-    audioLanguage: playback.audioLanguage,
-    subtitleLanguage: playback.subtitleLanguage,
-    lowLatency: playback.lowLatency,
-  };
-};
-
 /** Native media host for local Range addresses and app-player streams. */
 export function NativePlayer(props: NativePlayerProps) {
-  const video = useRef<HTMLVideoElement>(null);
-  const stopRequest = useAppStore((state) => state.stopRequest);
-  const attachmentKey = nativeAttachmentKey(props.url, props.retry);
-  useEffect(() => {
-    const node = video.current;
-    if (node === null) return undefined;
-    let controller: StreamPlayerController | null = null;
-    if (isHls(props.url)) {
-      controller = new StreamPlayerController(node, preferences(), {
-        onState: (kind, reason) => props.onState(kind === "failed" ? { kind, reason: reason ?? "The stream could not be loaded." } : { kind }),
-        onFacts: () => undefined,
-        onPlayRefused: (sentence) => useAppStore.getState().say(sentence, "warn"),
-        onEvent: (input) => useAppStore.getState().logEvent(input),
-      });
-      controller.attach({ url: props.url, autoplay: props.autoplay, userInitiated: props.userInitiated });
-    } else {
-      props.onState({ kind: "loading" });
-      node.src = props.url;
-      node.load();
-      attemptPlayerPlay(node, props.autoplay, props.userInitiated, () => useAppStore.getState().say(
-          "Playback stayed paused because the browser refused to start it.", "warn",
-      ));
-    }
-    return () => {
-      controller?.destroy();
-      node.pause();
-      node.removeAttribute("src");
-      node.load();
-    };
-  }, [attachmentKey]);
-
-  /* Stop (`50` section 2.4): the serial's change pauses the element; the stage stays mounted. */
-  useEffect(() => {
-    if (stopRequest === 0) return;
-    pauseForStop(video.current);
-  }, [stopRequest]);
+  const player = useNativePlayer(props);
 
   return (
     <video
-      ref={video}
+      ref={player.video}
       controls
       playsInline
       preload="metadata"
       aria-label={props.label}
       className="size-full bg-stage"
       style={{ objectFit: objectFitOf(props.pictureFit) }}
-      onLoadedMetadata={(event) => {
-        // Seek first, then report: the report carries the position playback will start from and the real length.
-        applyOpeningPosition(event.currentTarget, props.positionMs);
-        props.onProgress(...positionOf(event.currentTarget));
-      }}
-      onLoadedData={() => props.onState({ kind: "ready" })}
-      onTimeUpdate={(event) => props.onProgress(...positionOf(event.currentTarget))}
-      onSeeked={(event) => props.onProgress(...positionOf(event.currentTarget))}
-      onPlay={() => {
-        // The element is the truth of the playing gate (`50` section 2.4): any play arms it, whatever asked for it.
-        useAppStore.getState().setPlayerPaused(false);
-        props.onPlaying(true);
-      }}
-      onPause={() => {
-        // Any pause — the user's, the stop's — disarms the gate from the element's own event, not from a flag that
-        // could be stale by the time the statusbar reads it.
-        useAppStore.getState().setPlayerPaused(true);
-        props.onPlaying(false);
-      }}
-      onEnded={(event) => {
-        // The end is the media's own length, not the last tick before it. An ended stream is a paused one: the gate
-        // disarms with it.
-        const [, duration] = positionOf(event.currentTarget);
-        if (duration !== undefined) props.onProgress(duration, duration);
-        useAppStore.getState().setPlayerPaused(true);
-        props.onEnded();
-      }}
-      onError={() => props.onState({ kind: "failed", reason: props.errorReason })}
+      {...player.events}
     />
   );
 }

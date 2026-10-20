@@ -1,4 +1,4 @@
-import type { CollectionAnswer } from "@/services/collections";
+import type { CollectionAnswer } from "@/types/collection";
 import type { FolderAnswer } from "@/services/folders";
 import type { CollectionFolder, CollectionRow, ScanProgress } from "@/types/collection";
 

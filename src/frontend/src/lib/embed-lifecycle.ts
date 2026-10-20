@@ -1,6 +1,6 @@
 import { decodeAllowedEmbedMessage, type EmbedPlaybackEvent } from "@/lib/embed-messages";
 import { stopEmbed, type StoppableFrame } from "@/lib/embed-policy";
-import type { TitleSource } from "@/services/schemas/source-schema";
+import type { TitleSource } from "@/types/title";
 
 export interface EmbedFrame extends StoppableFrame {
   readonly contentWindow: MessageEventSource | null;

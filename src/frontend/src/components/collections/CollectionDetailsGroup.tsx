@@ -46,8 +46,8 @@ export function CollectionDetailsGroup({ collection }: { readonly collection: Co
       <Actions>
         <Button
           variant="primary"
-          disabled={reason !== undefined}
-          title={reason ?? "Save the name and type"}
+          reason={reason}
+          title="Save the name and type"
           onClick={() => void verbs.update(collection.id, name.trim(), type)}
         >
           Save details

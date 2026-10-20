@@ -10,9 +10,8 @@ import { Select } from "@giga/ui/controls/Select";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { COLLECTION_NAME_MAX, NAME_BLOCK_REASON, TYPE_CHOICES } from "@/lib/collections-copy";
 import { createBlock } from "@/lib/collections-name";
-import type { FolderSelection } from "@/services/desktop";
 import { useAppStore } from "@/store/app-store";
-import type { CollectionType } from "@/types/collection";
+import type { CollectionType, FolderSelection } from "@/types/collection";
 
 /** The labels the form's rows carry, so the index fixes its label column once. */
 export const NEW_COLLECTION_LABELS = ["Name", "Type", "Folder"] as const;
@@ -82,8 +81,8 @@ export function NewCollectionForm() {
         trailing={
           <Button
             variant="ghost"
-            disabled={!desktop}
-            title={desktop ? "Choose a folder" : "This action is available in the desktop app."}
+            reason={desktop ? undefined : "This action is available in the desktop app."}
+            title="Choose a folder"
             onClick={() => void verbs.chooseFolder().then((chosen) => chosen !== null && setSelection(chosen))}
           >
             <FolderOpen aria-hidden /> Choose
@@ -95,8 +94,8 @@ export function NewCollectionForm() {
       <Actions>
         <Button
           variant="primary"
-          disabled={blocked}
-          title={blocked ? blockedTitle : pendingCollectionId === undefined ? "Create the collection" : "Attach the folder"}
+          reason={blocked ? blockedTitle : undefined}
+          title={pendingCollectionId === undefined ? "Create the collection" : "Attach the folder"}
           onClick={() => void create()}
         >
           {pendingCollectionId === undefined ? "Create" : "Attach folder"}

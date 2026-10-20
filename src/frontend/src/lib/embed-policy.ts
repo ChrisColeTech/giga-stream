@@ -21,3 +21,7 @@ export interface StoppableFrame {
 export function stopEmbed(frame: StoppableFrame): void {
   frame.src = "about:blank";
 }
+
+export function blankForStop(frame: StoppableFrame | null | undefined): void {
+  if (frame !== null && frame !== undefined) stopEmbed(frame);
+}

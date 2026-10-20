@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { EmbedHost } from "@/components/player/EmbedHost";
 import { NativePlayer } from "@/components/player/NativePlayer";
 import { PlayerStageStatus } from "@/components/player/PlayerStageStatus";
 import { StageNote } from "@/components/player/StageNote";
 import { collectionsSubmenu } from "@/lib/collection-menu";
-import { applyEmbedPlayback } from "@/lib/embed-playback";
+import { useProviderPlayback } from "@/hooks/useProviderPlayback";
+import { useStageFullscreen } from "@/hooks/useStageFullscreen";
 import { objectFitOf } from "@/lib/live-picture";
 import { openMenu } from "@/lib/menu";
 import type { PlayerCommands } from "@/lib/player-commands";
@@ -35,38 +36,13 @@ export interface PlayerStageProps {
   readonly onPausedChange: (paused: boolean) => void;
 }
 
-const isTypingTarget = (target: EventTarget | null): boolean =>
-  target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName));
-
 /** One dark stage, hosting either the app player or a contained provider frame. */
 export function PlayerStage(props: PlayerStageProps) {
-  const stageRef = useRef<HTMLElement>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  const fullscreen = useStageFullscreen();
   const pictureFit = useAppStore((state) => state.playback.pictureFit);
   const autoplay = useAppStore((state) => state.playback.autoplay);
   const subtitleLanguage = useAppStore((state) => state.playback.subtitleLanguage);
-  const electron = typeof window !== "undefined" && window.pocHost?.runtime === "electron";
-
-  useEffect(() => {
-    const node = stageRef.current;
-    if (node === null) return undefined;
-    const sync = () => setFullscreen(document.fullscreenElement === node);
-    node.addEventListener("fullscreenchange", sync);
-    return () => node.removeEventListener("fullscreenchange", sync);
-  }, []);
-
-  const toggleFullscreen = () => {
-    const node = stageRef.current;
-    if (node === null) return;
-    if (document.fullscreenElement === node) void document.exitFullscreen().catch(() => undefined);
-    else void node.requestFullscreen().catch(() => undefined);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if ((event.key !== "f" && event.key !== "F") || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (isTypingTarget(event.target)) return;
-    event.preventDefault();
-    toggleFullscreen();
-  };
+  const electron = useAppStore((state) => state.runtime === "electron");
 
   const { tab, stage, item, favorite, memberIds, collections } = props.view;
   const render = playerStageRender(
@@ -86,52 +62,24 @@ export function PlayerStage(props: PlayerStageProps) {
     if (tab === undefined) return;
     const watchId = item?.progress === undefined ? undefined : item.watchId;
     openMenu(event, stageMenuItems({
-      fullscreen,
+      fullscreen: fullscreen.fullscreen,
       favorite,
       collections: collectionsSubmenu(collections, (id) => memberIds.includes(id), props.commands.toggleMember),
       onRemoveHistory: watchId === undefined ? undefined : () => props.commands.removeHistory(watchId),
       onRetry: props.commands.retry,
-      onFullscreen: toggleFullscreen,
+      onFullscreen: fullscreen.toggle,
       onReveal: props.commands.reveal,
       onFavorite: () => props.commands.favorite(!favorite),
       onClose: props.commands.close,
     }));
   };
-  /* One Provider row per decoded message kind, coalesced to at most one per second like a stream quality switch. */
-  const embedRowsAt = useRef(new Map<string, number>());
-  const embedPlayback = (event: Parameters<typeof applyEmbedPlayback>[0]) => {
-    const at = Date.now();
-    if (embedSource !== undefined && at - (embedRowsAt.current.get(event.event) ?? 0) >= 1000) {
-      embedRowsAt.current.set(event.event, at);
-      useAppStore.getState().logEvent({
-        tone: "info",
-        area: "Provider",
-        sentence: `The provider reported ${event.event}.`,
-        identity: embedSource.name,
-      });
-    }
-    applyEmbedPlayback(event, {
-      progress: props.onProgress,
-      paused: props.onPausedChange,
-      playing: props.onPlaying,
-      checkpoint: props.onBoundary,
-    });
-  };
-
-  /* A frame that never answered keeps its own warning row, once per failed attempt. */
-  useEffect(() => {
-    if (render === "embed-failed" && stage.kind === "failed" && embedSource !== undefined) {
-      useAppStore.getState().logEvent({
-        tone: "warn",
-        area: "Provider",
-        sentence: "The provider's player failed to load.",
-        identity: embedSource.name,
-      });
-    }
-  }, [render, stage.kind, props.retry, embedSource]);
+  const embedPlayback = useProviderPlayback({
+    source: embedSource, render, stage, retry: props.retry, onProgress: props.onProgress,
+    onPausedChange: props.onPausedChange, onPlaying: props.onPlaying, onBoundary: props.onBoundary,
+  });
 
   return (
-    <section ref={stageRef} tabIndex={-1} aria-label="Stage" onKeyDown={onKeyDown} onContextMenu={onContextMenu}
+    <section ref={fullscreen.ref} tabIndex={-1} aria-label="Stage" onKeyDown={fullscreen.onKeyDown} onContextMenu={onContextMenu}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-stage outline-none fullscreen:bg-black">
       {!hasMediaHost && (
         <video controls playsInline preload="none" aria-label={tab?.title ?? "Player"}

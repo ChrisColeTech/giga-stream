@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@giga/ui/lib/cn";
+import { Tooltip } from "@giga/ui/form/Tooltip";
 import { ROWS_COPY } from "./rows-constants";
 import type { ChevronState } from "./rows-navigation";
 
@@ -24,6 +25,17 @@ export function RowChevron({ direction, state, onClick }: RowChevronProps) {
   const isBack = direction === "back";
   const label = isBack ? ROWS_COPY.scrollBack : ROWS_COPY.scrollForward;
   const Icon = isBack ? ChevronLeft : ChevronRight;
+  const button = (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={state.disabled}
+      onClick={onClick}
+      className={CHEVRON}
+    >
+      <Icon className="size-4" aria-hidden />
+    </button>
+  );
   return (
     <div
       className={cn(
@@ -33,16 +45,8 @@ export function RowChevron({ direction, state, onClick }: RowChevronProps) {
         isBack ? "left-1" : "right-1",
       )}
     >
-      <button
-        type="button"
-        aria-label={label}
-        title={state.title}
-        disabled={state.disabled}
-        onClick={onClick}
-        className={CHEVRON}
-      >
-        <Icon className="size-4" aria-hidden />
-      </button>
+      <Tooltip text={state.title} focusable={state.disabled}
+        label={state.disabled ? `${label}. ${state.title}` : undefined}>{button}</Tooltip>
     </div>
   );
 }

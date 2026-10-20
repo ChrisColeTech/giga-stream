@@ -7,6 +7,7 @@ import type { MenuItem } from "@giga/ui/menus/types";
 import { LibraryBody } from "@/components/library/LibraryBody";
 import { LibraryRail } from "@/components/library/LibraryRail";
 import { openCardMenu, type CardMenuContext } from "@/components/library/card-menu";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import type { ResolvedItem } from "@/lib/library-marks";
 import { useAppStore } from "@/store/app-store";
 
@@ -87,6 +88,7 @@ describe("the Library's signed-out surfaces (`63` section 3.4)", () => {
         { clientX: 1, clientY: 1, preventDefault: noop, stopPropagation: noop },
         item("a"),
         signedOutContext(),
+        useLibraryActions(),
       );
     } finally {
       stop();

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { playRef } from "@/components/library/library-service";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { openTitleInfo } from "@/components/library/open-title-info";
 import { LIBRARY_COPY } from "@/lib/library-copy";
 import { DEFAULT_QUERY, type LibraryQuery } from "@/lib/library-query";
@@ -37,6 +37,7 @@ export interface TitleSpotlight {
 /** The Search titles spotlight of Library (`06` section 4.6): its state, its reads and its hand-offs. Leaving Library
  *  closes it, Title information over it included. */
 export function useTitleSpotlight(active: boolean): TitleSpotlight {
+  const actions = useLibraryActions();
   const [state, dispatch] = useReducer(spotlightReducer, SPOTLIGHT_CLOSED);
   const latest = useRef(state);
   latest.current = state;
@@ -109,9 +110,9 @@ export function useTitleSpotlight(active: boolean): TitleSpotlight {
 
   const play = useCallback((item: LibraryItem) => {
     session.current?.cancel();
-    playFromSpotlight(item, playRef);
+    playFromSpotlight(item, actions.play);
     dispatch({ type: "leave" });
-  }, []);
+  }, [actions]);
 
   const submit = useCallback(() => {
     const current = latest.current;

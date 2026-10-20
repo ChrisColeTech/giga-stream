@@ -15,6 +15,16 @@ const favoriteCommitted = new Map<string, boolean>();
 const membershipCommitted = new Map<string, MembershipSource | undefined>();
 const sentence = (error: unknown): string => error instanceof Error ? error.message : "Could not reach the fileserver.";
 
+export interface LibraryActions {
+  readonly play: typeof playRef;
+  readonly favorite: typeof changeFavourite;
+  readonly loadMemberships: typeof loadMemberships;
+  readonly membership: typeof changeMembership;
+  readonly removeWatch: typeof removeWatchEntry;
+  readonly clearHistory: typeof clearWatchHistory;
+  readonly reportError: (error: unknown, fallback: string) => void;
+}
+
 function next(map: Map<string, number>, key: string): number {
   const generation = (map.get(key) ?? 0) + 1;
   map.set(key, generation);
@@ -153,4 +163,22 @@ export async function clearWatchHistory(
     useAppStore.getState().say(sentence(error), "warn");
     return false;
   }
+}
+
+const LIBRARY_ACTIONS: LibraryActions = {
+  play: playRef,
+  favorite: changeFavourite,
+  loadMemberships,
+  membership: changeMembership,
+  removeWatch: removeWatchEntry,
+  clearHistory: clearWatchHistory,
+  reportError: (error, fallback) => useAppStore.getState().say(
+    error instanceof Error ? error.message : fallback,
+    "warn",
+  ),
+};
+
+/** The one component-facing library action boundary. */
+export function useLibraryActions(): LibraryActions {
+  return LIBRARY_ACTIONS;
 }

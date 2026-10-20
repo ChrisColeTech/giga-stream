@@ -1,5 +1,4 @@
 import { MotionConfig } from "framer-motion";
-import { useEffect } from "react";
 import { useAppHydration } from "@/hooks/useAppHydration";
 import { useNativeOverlay } from "@/hooks/useNativeOverlay";
 import { useSessionRestore } from "@/hooks/useSessionRestore";
@@ -9,7 +8,7 @@ import { useShellKeyboard } from "@/hooks/useShellKeyboard";
 import { useShellWriteback } from "@/hooks/useShellWriteback";
 import { useTheatreIdle } from "@/hooks/useTheatreIdle";
 import { useTheme } from "@/hooks/useTheme";
-import { installGuardEvents } from "@/services/guard-events";
+import { useGuardEvents } from "@/hooks/useGuardEvents";
 import { useAppStore } from "@/store/app-store";
 import { GateWall } from "@/components/gate/GateWall";
 import { AppShell } from "./AppShell";
@@ -29,7 +28,7 @@ export function App() {
   useTheatreIdle();
   useNativeOverlay();
   useShellKeyboard();
-  useEffect(() => installGuardEvents(), []);
+  useGuardEvents();
   const reduced = useReduceMotion();
   const visible = useAppStore((state) => state.shellVisible);
   const gateOpen = useAppStore((state) => state.gateOpen);
