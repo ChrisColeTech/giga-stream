@@ -32,6 +32,7 @@ const STREAM_PREFIX = /^\/(live|logos)$/;
 /** The built admin app at `/admin/` (docs/26 section 4.1): only in the backend's one static-serving file. */
 const ADMIN_ROUTE_FILE = "src/backend/src/api/admin-static.ts";
 const ADMIN_ROUTE = /^\/admin(\/|$)/;
+const BACKEND_PREFIXED_FOLDER = "src/backend/src/api/";
 const PREFIX_LITERAL = /\bprefix:\s*["'`]([^"'`]+)["'`]/g;
 
 function inRouteFolder(rel) {
@@ -69,11 +70,18 @@ export const transportAndRoutes = {
       }
 
       if (inRouteFolder(file.rel) && !file.isTest) {
+        // The backend's admin plugin (src/backend/src/app.ts) registers every file in src/backend/src/api
+        // under the prefix /api/admin, so its route literals are short on purpose; the live-stream plugins
+        // and the static /admin app have their own exemptions beside it.
+        const backendPrefixed =
+          file.rel.startsWith(BACKEND_PREFIXED_FOLDER) &&
+          file.rel !== ADMIN_ROUTE_FILE &&
+          !STREAM_ROUTE_FILES.has(file.rel);
         for (const m of file.code.matchAll(ROUTE_LITERAL)) {
           const url = m[2];
           const streamRoute = STREAM_ROUTE_FILES.has(file.rel) && STREAM_ROUTE.test(url);
           const adminRoute = file.rel === ADMIN_ROUTE_FILE && ADMIN_ROUTE.test(url);
-          if (!url.startsWith("/api/") && !ROOT_ALLOWED.has(url) && !streamRoute && !adminRoute) {
+          if (!url.startsWith("/api/") && !ROOT_ALLOWED.has(url) && !streamRoute && !adminRoute && !backendPrefixed) {
             push(m.index, file.code, `route ${url} must begin /api (only /healthz and /ws are root-level)`);
           }
         }

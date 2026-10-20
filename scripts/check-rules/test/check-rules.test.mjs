@@ -90,7 +90,7 @@ test("routes may not do file, process or store work", () => {
 
 test("routes must begin /api except /healthz and /ws; SQL belongs in store/", () => {
   const found = violations({
-    "src/backend/src/api/a.ts": 'app.get("/things", h);\napp.get("/healthz", h);\napp.get("/ws", h);\napp.get("/api/ok", h);\n',
+    "src/fileserver/src/routes/a.ts": 'app.get("/things", h);\napp.get("/healthz", h);\napp.get("/ws", h);\napp.get("/api/ok", h);\n',
     "src/backend/src/services/b.ts": 'export const q = "SELECT id FROM titles";\n',
     "src/backend/src/store/c.ts": 'export const q = "SELECT id FROM titles";\n',
   });
@@ -99,21 +99,30 @@ test("routes must begin /api except /healthz and /ws; SQL belongs in store/", ()
   assert.equal(found.filter((f) => f.message.includes("SQL belongs")).length, 1);
 });
 
+test("the backend's admin plugin prefixes its api folder, so its short routes are its own", () => {
+  const found = violations({
+    "src/backend/src/api/accounts.ts": 'app.get("/accounts", h);\napp.put("/accounts/:id", h);\n',
+    "src/backend/src/api/other.ts": 'app.get("/admin/x", h);\nx.register(p, { prefix: "/live" });\n',
+    "src/frontend/src/services/api.ts": 'export const g = () => fetch("/things");\n',
+  });
+  const routes = found.filter((f) => f.message.includes("must begin /api"));
+  // Only the plugin prefix that is not the live streams' remains: a short route under the backend's
+  // prefixed folder is fine, and the frontend's request layer never names a route literal.
+  assert.deepEqual(routes.map((f) => `${f.file}:${f.line}`), ["src/backend/src/api/other.ts:2"]);
+});
+
 test("the backend's stream plugins and admin app are the only other root routes, each in its one file", () => {
   const found = violations({
+    "src/backend/src/api/admin-static.ts": 'app.get("/admin", h);\napp.get("/admin/*", h);\napp.get("/live/a", h);\n',
     "src/backend/src/api/live-streams.ts":
       'x.register(p, { prefix: "/live" });\nx.register(p, { prefix: "/logos" });\nx.register(p, { prefix: "/nope" });\n' +
       'app.get("/test/player.html", h);\napp.get("/live/a", h);\napp.get("/other", h);\n',
-    "src/backend/src/api/admin-static.ts": 'app.get("/admin", h);\napp.get("/admin/*", h);\napp.get("/live/a", h);\n',
-    "src/backend/src/api/other.ts": 'app.get("/admin/x", h);\nx.register(p, { prefix: "/live" });\n',
   });
   const routes = found.filter((f) => f.message.includes("must begin /api"));
   assert.deepEqual(routes.map((f) => `${f.file}:${f.line}`).sort(), [
     "src/backend/src/api/admin-static.ts:3",
     "src/backend/src/api/live-streams.ts:3",
     "src/backend/src/api/live-streams.ts:6",
-    "src/backend/src/api/other.ts:1",
-    "src/backend/src/api/other.ts:2",
   ]);
 });
 

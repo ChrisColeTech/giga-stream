@@ -29,6 +29,7 @@ const STEP_TIMEOUT_MS = 180_000;
  */
 const STEPS = [
   { name: "typecheck shared/media", cwd: "src/shared/media", cmd: "npm", args: ["run", "typecheck"] },
+  { name: "typecheck shared-watch", cwd: "src/shared/watch", cmd: "npm", args: ["run", "typecheck"] },
   { name: "typecheck shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
   { name: "typecheck shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "typecheck"], needs: "src" },
   { name: "typecheck backend", cwd: "src/backend", cmd: "npm", args: ["run", "typecheck"] },
@@ -37,6 +38,7 @@ const STEPS = [
   { name: "typecheck admin", cwd: "src/admin", cmd: "npm", args: ["run", "typecheck"] },
   { name: "lint shared-http", cwd: "src/shared/http", cmd: "npm", args: ["run", "lint"], needs: "src" },
   { name: "lint shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["run", "lint"], needs: "src" },
+  { name: "lint shared-watch", cwd: "src/shared/watch", cmd: "npm", args: ["run", "lint"] },
   { name: "lint frontend", cwd: "src/frontend", cmd: "npm", args: ["run", "lint"] },
   { name: "lint admin", cwd: "src/admin", cmd: "npm", args: ["run", "lint"] },
   {
@@ -48,6 +50,7 @@ const STEPS = [
   { name: "test checker", cwd: ".", cmd: "node", args: ["--test", "scripts/check-rules/test/*.test.mjs"] },
   { name: "test shared-http", cwd: "src/shared/http", cmd: "npm", args: ["test"], needs: "src" },
   { name: "test shared-ui", cwd: "src/shared/ui", cmd: "npm", args: ["test"], needs: "src" },
+  { name: "test shared-watch", cwd: "src/shared/watch", cmd: "npm", args: ["test"] },
   { name: "test shared/media", cwd: "src/shared/media", cmd: "npm", args: ["test"] },
   { name: "test backend", cwd: "src/backend", cmd: "npm", args: ["test"] },
   { name: "test fileserver", cwd: "src/fileserver", cmd: "npm", args: ["test"] },
