@@ -9,15 +9,15 @@ import { useShellKeyboard } from "@/hooks/useShellKeyboard";
 import { useShellWriteback } from "@/hooks/useShellWriteback";
 import { useTheatreIdle } from "@/hooks/useTheatreIdle";
 import { useTheme } from "@/hooks/useTheme";
-import { SignInGate } from "@/components/gate/SignInGate";
 import { installGuardEvents } from "@/services/guard-events";
 import { useAppStore } from "@/store/app-store";
 import { AppShell } from "./AppShell";
 
 /** The root: the session-long hooks are mounted here and only here (one theme stamp, one keyboard listener, one guard
- *  receiver, one boot restore), then the gate or the shell (`62` section 3.5) - the gate replaces the three surfaces
- *  while no session is held and the desktop has not gone offline; behind it the app is as it was. `MotionConfig`
- *  carries the reduced-motion preference to every framer-motion tween as one setting. */
+ *  receiver, one boot restore), then the shell - always (`63` section 3.1): the gate is no wall but the Account
+ *  control's dialog in the titlebar, and browsing signed out is the app's default state. The boot restore stays
+ *  silent: the shell shows once hydration has settled, signed in or not. `MotionConfig` carries the reduced-motion
+ *  preference to every framer-motion tween as one setting. */
 export function App() {
   useAppHydration();
   useSessionRestore();
@@ -29,18 +29,13 @@ export function App() {
   useShellKeyboard();
   useEffect(() => installGuardEvents(), []);
   const reduced = useReduceMotion();
-  const gating = useAppStore((state) => !state.signedIn && !state.offline);
   const visible = useAppStore((state) => state.shellVisible);
 
   return (
     <MotionConfig reducedMotion={reduced ? "always" : "never"}>
-      {gating ? (
-        <SignInGate />
-      ) : (
-        <div className={visible ? "h-full" : "invisible h-full"}>
-          <AppShell />
-        </div>
-      )}
+      <div className={visible ? "h-full" : "invisible h-full"}>
+        <AppShell />
+      </div>
     </MotionConfig>
   );
 }

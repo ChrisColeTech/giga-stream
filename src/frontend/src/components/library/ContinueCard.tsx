@@ -4,6 +4,7 @@ import { continueLabel, progressRatio, remainingLabel } from "@/lib/library-fact
 import type { ResolvedItem } from "@/lib/library-marks";
 import { posterTone } from "@/lib/poster-tone";
 import type { CollectionRow } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
 import { CardActions } from "./CardActions";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { openTitleInfo } from "./open-title-info";
@@ -24,6 +25,7 @@ export interface ContinueCardProps {
 export function ContinueCard({ item, selected, collections, onSelect, onRemoveWatch }: ContinueCardProps) {
   const artRef = useRef<HTMLButtonElement>(null);
   const [imageFailed, setImageFailed] = useState(false);
+  const signedIn = useAppStore((state) => state.signedIn);
   const progress = item.progress;
   if (progress === undefined) return null;
   const label = continueLabel(item.title, progress);
@@ -32,6 +34,7 @@ export function ContinueCard({ item, selected, collections, onSelect, onRemoveWa
   const tone = `var(${posterTone(item.title)})`;
   const context = {
     collections,
+    signedIn,
     inHistory: false,
     onInfo: () => openTitleInfo(item.ref, artRef.current),
     onRemoveWatch: () => onRemoveWatch(item),

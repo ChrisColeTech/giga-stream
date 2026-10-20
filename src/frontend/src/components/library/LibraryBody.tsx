@@ -18,6 +18,9 @@ export interface LibraryBodyProps {
   readonly scope: Scope;
   /** The rail's view: History draws its strip, and Continue watching narrows to the same source. */
   readonly source: SourceId;
+  /** The session holds (`63` section 3.4): signed out the History strip and the Continue strip are unrendered
+   *  whatever the saved query or setting says. */
+  readonly signedIn: boolean;
   /** The Continue watching setting. */
   readonly showContinue: boolean;
   /** The grid or the list; the Rows view is drawn by the page instead. */
@@ -48,6 +51,7 @@ export interface LibraryBodyProps {
 export function LibraryBody({
   scope,
   source,
+  signedIn,
   showContinue,
   view,
   items,
@@ -68,8 +72,8 @@ export function LibraryBody({
   onRevealed,
 }: LibraryBodyProps) {
   const scroller = useScrollTopWhileLoading<HTMLDivElement>(loading, view);
-  const inHistory = source === "history";
-  const continueRows = inHistory || !showContinue ? [] : continuing;
+  const inHistory = source === "history" && signedIn;
+  const continueRows = !signedIn || inHistory || !showContinue ? [] : continuing;
   const historyEmpty = !items.some((item) => item.progress !== undefined);
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

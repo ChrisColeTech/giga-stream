@@ -134,7 +134,7 @@ test("the renderer may not fetch outside services, store to browser storage or b
   assert.equal(found.filter((f) => f.rule === "transport-and-routes").length, 3);
 });
 
-test("the two local stores are the only browser-storage homes; sessionStorage is banned even there", () => {
+test("local-state is the one browser-storage home; sessionStorage is banned even there", () => {
   const found = violations({
     "src/frontend/src/services/local-state.ts":
       "export const read = () => window.localStorage.getItem('k');\nexport const bad = () => sessionStorage.getItem('k');\n",
@@ -147,6 +147,7 @@ test("the two local stores are the only browser-storage homes; sessionStorage is
     [
       "src/frontend/src/hooks/useThing.ts:1",
       "src/frontend/src/services/local-state.ts:2",
+      "src/frontend/src/services/local-watch.ts:1",
       "src/frontend/src/services/other.ts:1",
     ],
   );

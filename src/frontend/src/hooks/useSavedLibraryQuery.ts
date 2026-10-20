@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_QUERY, type LibraryQuery, type ListView } from "@/lib/library-query";
+import { DEFAULT_QUERY, collectionOf, type LibraryQuery, type ListView } from "@/lib/library-query";
 import { restoredQuery, savedChange } from "@/lib/library-restore";
 import { useAppStore } from "@/store/app-store";
 
 function savedQuery(): LibraryQuery {
   const { library, collections } = useAppStore.getState();
   return { ...DEFAULT_QUERY, ...restoredQuery(library, collections.map((collection) => collection.id)) };
+}
+
+/** Signed out, the account's views do not exist (`63` section 3.4): a saved History or collection source reads as
+ *  All, the rail's own rows for it being unrendered. */
+function clampedSource(source: LibraryQuery["source"], signedIn: boolean): LibraryQuery["source"] {
+  if (signedIn) return source;
+  return source === "history" || collectionOf(source) !== null ? "all" : source;
 }
 
 export interface SavedLibraryQuery {
@@ -27,16 +34,30 @@ export interface SavedLibraryQuery {
 export function useSavedLibraryQuery(): SavedLibraryQuery {
   const hydrated = useAppStore((state) => state.hydrationApplied);
   const ready = useAppStore((state) => state.shellVisible);
+  const signedIn = useAppStore((state) => state.signedIn);
   const [query, setQuery] = useState<LibraryQuery>(savedQuery);
   const [view, setView] = useState<ListView>(() => useAppStore.getState().library.libraryView);
 
   /* The snapshot lands after this mounts: take the saved filters then, the saved Filter text included, unless the person
-     has already typed one. */
+   * has already typed one. */
   useEffect(() => {
     if (!hydrated) return;
     const saved = savedQuery();
-    setQuery((current) => ({ ...saved, search: current.search !== "" ? current.search : saved.search }));
+    setQuery((current) => ({
+      ...saved,
+      source: clampedSource(saved.source, useAppStore.getState().signedIn),
+      search: current.search !== "" ? current.search : saved.search,
+    }));
   }, [hydrated]);
+
+  /* A session that ends under the app leaves the account's views: out of History, out of any collection. */
+  useEffect(() => {
+    if (signedIn) return;
+    setQuery((current) => {
+      const source = clampedSource(current.source, signedIn);
+      return source === current.source ? current : { ...current, source };
+    });
+  }, [signedIn]);
 
   const patch = useCallback((change: Partial<LibraryQuery>) => {
     setQuery((current) => ({ ...current, ...change }));

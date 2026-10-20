@@ -8,6 +8,7 @@ import { barTone } from "@/lib/bar-tone";
 import { useAppStore } from "@/store/app-store";
 import { usePaneOpen, useSurface, useWorkSurfaceOpen } from "@/store/selectors";
 import type { PaneSide } from "@/types/shell";
+import { AccountControl } from "./AccountControl";
 
 const TABS = SURFACE_ORDER.map((id) => ({ id, label: SURFACES[id].label }));
 
@@ -62,7 +63,8 @@ export function Titlebar() {
   };
 
   /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Giga Cut's Export slot, beside the pane toggles. Asleep
-   * under an open window like every other titlebar control (`50` section 2.5) — the props carry it. */
+   * under an open window like every other titlebar control (`50` section 2.5) - the props carry it. The Account
+   * control sits beside Theatre (`63` section 3.5), asleep with it. */
   const asleep = settingsOpen;
   const theatreButton = (
     <Button {...theatreButtonProps(asleep, theatre, toggleTheatre)}>
@@ -78,7 +80,7 @@ export function Titlebar() {
       left={toggle("left")}
       bottom={toggle("bottom")}
       right={toggle("right")}
-      trailing={theatreButton}
+      trailing={<><AccountControl asleep={asleep} />{theatreButton}</>}
     />
   );
 }

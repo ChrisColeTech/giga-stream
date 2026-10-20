@@ -30,12 +30,16 @@ export interface LibrarySectionProps {
 
 /** Library: how it opens (view, sort, the Continue watching strip), whether watching is recorded, the way into History
  *  and Collections, and the folders' scan at startup. The preferences are the store's, applied at once; Clear history
- *  is a fileserver call and an inline two-step. */
+ *  is a fileserver call and an inline two-step. Signed out there is no history or collections to work on (`63`
+ *  section 3.4), so those controls say why they cannot be used. */
 export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySectionProps) {
   const prefs = useAppStore((state) => state.library);
+  const signedIn = useAppStore((state) => state.signedIn);
   const setPrefs = useAppStore((state) => state.setLibraryPrefs);
   const say = useAppStore((state) => state.say);
   const [clearing, setClearing] = useState(false);
+  const historyReason = signedIn ? undefined : LIBRARY_COPY.historySignedOut;
+  const collectionsReason = signedIn ? undefined : LIBRARY_COPY.collectionsSignedOut;
   const clear = () => {
     if (clearing) return;
     setClearing(true);
@@ -93,18 +97,19 @@ export function LibrarySection({ onOpenCollections, onOpenHistory }: LibrarySect
           label="History"
           tip="Show the library's history, or clear it. Clearing never touches your files or collections."
           trailing={
-            <ArmedButton question={LIBRARY_COPY.clearArmed} title={LIBRARY_COPY.clearTip}
-              disabled={clearing} onConfirm={clear}>
+            <ArmedButton question={LIBRARY_COPY.clearArmed}
+              title={historyReason ?? (clearing ? undefined : LIBRARY_COPY.clearTip)}
+              disabled={clearing || !signedIn} onConfirm={clear}>
               {LIBRARY_COPY.clearIdle}
             </ArmedButton>
           }
         >
-          <Button size="sm" variant="ghost" onClick={onOpenHistory}>
+          <Button size="sm" variant="ghost" reason={historyReason} onClick={onOpenHistory}>
             Open History
           </Button>
         </Row>
         <Row label="Collections" tip="Open the collections window.">
-          <Button size="sm" variant="ghost" onClick={onOpenCollections}>
+          <Button size="sm" variant="ghost" reason={collectionsReason} onClick={onOpenCollections}>
             Manage collections
           </Button>
         </Row>

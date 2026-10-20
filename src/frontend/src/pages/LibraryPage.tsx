@@ -32,6 +32,7 @@ import { useAppStore } from "@/store/app-store";
 export function LibraryPage({ active }: { active: boolean }) {
   const prefs = useAppStore((state) => state.library);
   const marks = useAppStore((state) => state.marks);
+  const signedIn = useAppStore((state) => state.signedIn);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const counts = useAppStore((state) => state.libraryCounts);
   const { query, view, ready, patch, setView, changeView } = useSavedLibraryQuery();
@@ -91,7 +92,8 @@ export function LibraryPage({ active }: { active: boolean }) {
     />
   );
   const rowsShelves = useRowsShelves({
-    enabled: rows && active, query, data, collections, history, showContinue: prefs.showContinue && query.source !== "history",
+    enabled: rows && active, query, data, collections, history,
+    showContinue: prefs.showContinue && signedIn && query.source !== "history",
   });
   const center = rows ? (
     <LibraryRows
@@ -102,7 +104,8 @@ export function LibraryPage({ active }: { active: boolean }) {
     />
   ) : (
     <LibraryBody
-      scope={query.scope} source={query.source} showContinue={prefs.showContinue} view={view} items={items}
+      scope={query.scope} source={query.source} signedIn={signedIn} showContinue={prefs.showContinue}
+      view={view} items={items}
       shown={shown} continuing={continuing} collections={collections} selected={selected} toolbar={toolbar}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
       loading={data.loading}
@@ -115,7 +118,11 @@ export function LibraryPage({ active }: { active: boolean }) {
     <>
       <WorkspaceSplit
         surface="library" active={active}
-        left={<LibraryRail source={query.source} counts={counts} collections={collections} onSource={onSource} />}
+        left={
+          <LibraryRail
+            source={query.source} signedIn={signedIn} counts={counts} collections={collections} onSource={onSource}
+          />
+        }
         center={center}
         right={filters}
       />

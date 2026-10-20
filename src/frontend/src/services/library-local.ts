@@ -1,3 +1,4 @@
+import { continueEntries } from "@giga/watch/continue";
 import { itemIdentity, type WatchEntry } from "@giga/watch/entry";
 import { newestFirst, newestPerItem } from "@giga/watch/order";
 import { pageOf } from "@giga/watch/page";
@@ -6,36 +7,42 @@ import { itemKey } from "@/lib/library-marks";
 import { matchesQuery, type LibraryQuery } from "@/lib/library-query";
 import { markOf, type WatchMark } from "@/lib/watch-marks";
 import { useAppStore } from "@/store/app-store";
-import { sharedLocalWatch } from "@/services/local-watch";
+import { readAccountWatch } from "@/services/account-watch";
 import { readTitle } from "@/services/titles";
 import type { Title } from "@/services/schemas/title-schema";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 
-/** The browser runtime's library joins (`61` sections 2.5 and 2.6): the catalog pages still come from
- *  `GET /api/library`, and the watch truth - the rows' progress marks, Continue watching and History - is computed
- *  here from the local entries through `src/shared/watch`, joined to the store's title memory with
- *  `GET /api/titles/:id` as the fallback for an entry whose title was never read. A title neither memory nor the
+/** The browser runtime's library joins (`61` sections 2.5 and 2.6, `63` section 3.3): the catalog pages still come
+ *  from `GET /api/library`, and the watch truth - the rows' progress marks, Continue watching and History - is
+ *  computed here from the signed-in account's entries through `src/shared/watch`, joined to the store's title memory
+ *  with `GET /api/titles/:id` as the fallback for an entry whose title was never read. A title neither memory nor the
  *  fallback can name keeps its row as the id's readable skeleton, the fileserver's own precedent for a row whose
- *  facts are not held; no fact is invented. History pages client-side at the server's page size. */
+ *  facts are not held; no fact is invented. History pages client-side at the server's page size. Signed out there
+ *  are no entries and nothing to decorate: the callers issue none of these reads. */
 
-/** The marks the local entries hold for catalog rows: each item's newest entry (the shared per-item rule) as the
+/** The marks the account's entries hold for catalog rows: each item's newest entry (the shared per-item rule) as the
  *  item key's mark, the same shape a write answer leaves in the store. */
 export function watchMarksOfEntries(entries: readonly WatchEntry[]): ReadonlyMap<string, WatchMark> {
   return new Map(newestPerItem(entries).map((entry) => [itemIdentity(entry), markOf(entry)]));
 }
 
-/** A row wearing this runtime's watch truth in place of whatever the server attached (its own store's state, which
- *  the browser does not share): the item's newest local mark, or none. */
+/** A row wearing this session's watch truth in place of whatever the server attached (its own store's state, which
+ *  a browser does not share): the item's newest mark, or none. */
 export function decorateItem(item: LibraryItem, marks: ReadonlyMap<string, WatchMark>): LibraryItem {
   const mark = marks.get(itemKey(item.ref));
   return { ...item, watchId: mark?.watchId, progress: mark?.progress };
 }
 
-/** A fetched page of catalog rows wearing the local watch marks. */
-export async function decoratedLibraryPage(page: LibraryPage): Promise<LibraryPage> {
-  const entries = await (await sharedLocalWatch()).entries();
-  const marks = watchMarksOfEntries(entries);
+/** A fetched page of catalog rows wearing the account's watch marks. */
+export async function decoratedLibraryPage(page: LibraryPage, signal?: AbortSignal): Promise<LibraryPage> {
+  const marks = watchMarksOfEntries(await readAccountWatch(signal));
   return { ...page, items: page.items.map((item) => decorateItem(item, marks)) };
+}
+
+/** The signed-out answer for a watch-derived view (`63` section 3.3): the established page shape with no rows and
+ *  the query's own facets, so a stray read decorates nothing and invents nothing. */
+export function emptyLibraryPage(query: LibraryQuery): LibraryPage {
+  return { items: [], total: 0, facets: facetsOfRows([], query), trending: false, titlesAvailable: true };
 }
 
 /** A title detail as a row's card facts; the row joins the store's memory so the next read hits it. */
@@ -98,9 +105,9 @@ async function rowsForEntries(entries: readonly WatchEntry[], signal?: AbortSign
   return Promise.all(entries.map((entry) => entryRow(entry, memory, signal)));
 }
 
-/** The Continue strip's rows: the shared selection over the local entries, joined to the title memory. */
+/** The Continue strip's rows: the shared selection over the account's entries, joined to the title memory. */
 export async function readLocalContinue(signal?: AbortSignal): Promise<LibraryItem[]> {
-  const entries = await (await sharedLocalWatch()).continueSelection(CONTINUE_LIMIT);
+  const entries = continueEntries(await readAccountWatch(signal), CONTINUE_LIMIT);
   return rowsForEntries(entries, signal);
 }
 
@@ -123,17 +130,16 @@ function facetsOfRows(rows: readonly LibraryItem[], query: LibraryQuery): Librar
   };
 }
 
-/** The local answer for the views the fileserver computes from its watch table: History (one row per entry, newest
- *  first) and the watching and watched sets (one row per item, the item's newest entry counting). The rows are
- *  narrowed by the query exactly as the grid's own filters read them - the watched filter cannot be honored here,
- *  which is why its control is disabled in this runtime - and paged at the server's page size. */
+/** The account-sourced answer for the views the fileserver computes on the desktop: History (one row per entry,
+ *  newest first) and the watching and watched sets (one row per item, the item's newest entry counting). The rows
+ *  are narrowed by the query exactly as the grid's own filters read them, and paged at the server's page size. */
 export async function readLocalHistory(
   query: LibraryQuery,
   state: "all" | "watching" | "watched",
   signal?: AbortSignal,
   cursor?: string,
 ): Promise<LibraryPage> {
-  const entries = await (await sharedLocalWatch()).entries();
+  const entries = await readAccountWatch(signal);
   const selected = state === "all"
     ? newestFirst(entries)
     : newestPerItem(entries).filter((entry) => entry.state === state);

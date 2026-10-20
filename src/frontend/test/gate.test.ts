@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { z } from "zod";
 import { SESSION_ENDED_NOTICE } from "@/constants/gate-copy";
-import { gateError, gateNotice, offersOfflineEscape } from "@/lib/gate-state";
+import { gateError, gateNotice } from "@/lib/gate-state";
 import { api } from "@/services/api";
 import type { AuthSession } from "@/types/auth";
 import { useAppStore } from "@/store/app-store";
@@ -125,24 +125,10 @@ describe("the gate (`62` section 3.5)", () => {
     assert.equal(state().gate.phase, "idle");
   });
 
-  it("the offline escape is the desktop runtime's alone, and taking it enters the app signed out", () => {
-    assert.equal(offersOfflineEscape("electron"), true);
-    assert.equal(offersOfflineEscape("browser"), false);
-    state().continueOffline();
-    assert.equal(state().offline, true);
+  it("the desktop offline escape has left (`63` section 3.1): signed out, the app keeps running", () => {
+    assert.equal("continueOffline" in state(), false);
+    assert.equal("offline" in state(), false);
     assert.equal(state().signedIn, false);
-    assert.equal(state().restoring, false);
-  });
-
-  it("continueOffline ends the restore wall, and a session that ends under the app closes the escape", () => {
-    state().continueOffline();
-    state().finishRestore(null);
-    assert.equal(state().restoring, false);
-    state().signOut();
-    state().finishSignIn({ ok: true, session: SESSION });
-    state().endSession(SESSION_ENDED_NOTICE);
-    assert.equal(state().offline, false);
-    assert.equal(state().signedIn, false);
-    assert.equal(gateNotice(state().gate), SESSION_ENDED_NOTICE);
+    assert.equal(state().restoring, true);
   });
 });

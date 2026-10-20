@@ -1,7 +1,7 @@
 import { REFUSAL_SENTENCES } from "@/constants/gate-copy";
 import type { AuthResult, RefusalKind } from "@/types/auth";
 
-/* The gate's state and its one transition function (`34` section 3, the app's gate of `62` section 3.5). Pure: the
+/* The gate's state and its one transition function (`34` section 3; the dialog gate of `63` section 3.1). Pure: the
  * sign-in hook awaits the port, the store applies the result, and this decides what the gate becomes. */
 
 export type RefusedPhase = "refused" | "unreachable";
@@ -46,10 +46,4 @@ export function gateError(state: GateState): string | null {
 /** The notice card's sentence, or null. */
 export function gateNotice(state: GateState): string | null {
   return state.phase === "idle" ? state.notice : null;
-}
-
-/** Whether the gate may offer the offline escape (`62` section 3.5): the desktop runtime alone; the public web stays
- *  account-gated, with no way past the wall. */
-export function offersOfflineEscape(runtime: "electron" | "browser"): boolean {
-  return runtime === "electron";
 }

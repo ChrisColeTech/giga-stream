@@ -7,6 +7,7 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import { progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
 import { CardActions } from "./CardActions";
 import { DetailsGlyph } from "./DetailsGlyph";
 import { menuEventBelow, openCardMenu } from "./card-menu";
@@ -32,6 +33,7 @@ export interface PosterCardProps {
 export function PosterCard({ item, index, selected, inHistory, collections, onSelect, onRemoveWatch }: PosterCardProps) {
   /* Title information returns focus here when it closes: the card's own button. */
   const artRef = useRef<HTMLButtonElement>(null);
+  const signedIn = useAppStore((state) => state.signedIn);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
   const rating = ratingBadge(item.rating);
@@ -39,6 +41,7 @@ export function PosterCard({ item, index, selected, inHistory, collections, onSe
   const details = item.kind !== "local";
   const context = {
     collections,
+    signedIn,
     inHistory,
     onInfo: () => openTitleInfo(item.ref, artRef.current),
     onRemoveWatch: () => onRemoveWatch(item),

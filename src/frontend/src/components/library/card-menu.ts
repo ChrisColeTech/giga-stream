@@ -39,13 +39,38 @@ export function openMembershipMenu(event: MenuEvent, item: ResolvedItem, collect
 
 export interface CardMenuContext {
   readonly collections: readonly CollectionRow[];
+  /** The session decides the menu's account rows (`63` section 3.4): signed out there are no collection actions,
+   *  and the favorite heart stays, visibly disabled with its reason. */
+  readonly signedIn: boolean;
   readonly inHistory: boolean;
   readonly onInfo: () => void;
   readonly onRemoveWatch: () => void;
 }
 
+/** A card's menu signed out (`63` section 3.4): Play or Open, Info, and the favorite heart - disabled with the
+ *  sign-in sentence, a disabled per-item control reading as broken otherwise. No memberships are read: a signed-out
+ *  card asks nothing of the account. */
+function signedOutCardMenu(item: ResolvedItem, context: CardMenuContext): Array<MenuItem | false | null | undefined> {
+  return [
+    item.progress !== undefined && { kind: "heading", label: watchLine(item.progress) },
+    { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => playRef(item.ref) },
+    { kind: "action", label: "Info", onSelect: context.onInfo },
+    {
+      kind: "action",
+      label: item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite,
+      disabled: true,
+      disabledReason: LIBRARY_COPY.favoritesSignedOut,
+      onSelect: noop,
+    },
+  ];
+}
+
 /** A card's context menu: Play or Open, Info, Favorite, Collections, and in History the removal of the watch entry. */
 export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: CardMenuContext): void {
+  if (!context.signedIn) {
+    openMenu(event, signedOutCardMenu(item, context));
+    return;
+  }
   void loadMemberships(item.ref).then((memberships) => openMenu(event, [
     item.progress !== undefined && { kind: "heading", label: watchLine(item.progress) },
     { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => playRef(item.ref) },
