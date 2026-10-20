@@ -17,6 +17,7 @@ import { Titlebar } from "./Titlebar";
 export function AppShell() {
   const surface = useSurface();
   const uiZoom = useAppStore((state) => state.uiZoom);
+  const runtime = useAppStore((state) => state.runtime);
   const { menu, close } = useContextMenu();
 
   /* UI zoom applies to the whole interface: the document's own zoom, so every part of the window scales together. */
@@ -28,7 +29,7 @@ export function AppShell() {
     <ShellFrame
       titlebar={<Titlebar />}
       drawer={<EventsDrawer />}
-      statusbar={<Statusbar />}
+      statusbar={runtime === "electron" ? <Statusbar /> : null}
       overlay={<OverlayHost />}
       menu={menu !== null ? <ContextMenu anchor={menu.anchor} items={menu.items} onClose={close} /> : null}
     >

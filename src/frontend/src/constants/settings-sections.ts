@@ -1,8 +1,8 @@
-import { Eye, HardDrive, Info, Library, Play, UserRound } from "lucide-react";
+import { Eye, HardDrive, Info, Library, Play } from "lucide-react";
 import type { ComponentType } from "react";
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "@giga/ui/lib/settings-zoom";
 
-export type SettingsSectionId = "appearance" | "playback" | "library" | "admin" | "session" | "about";
+export type SettingsSectionId = "appearance" | "playback" | "library" | "admin" | "about";
 
 export interface SettingsSection {
   readonly id: SettingsSectionId;
@@ -16,7 +16,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "playback", label: "Playback", icon: Play },
   { id: "library", label: "Library", icon: Library },
   { id: "admin", label: "Admin backend", icon: HardDrive },
-  { id: "session", label: "Session", icon: UserRound },
   { id: "about", label: "About", icon: Info },
 ];
 
@@ -43,7 +42,6 @@ export const SETTINGS_LABELS: readonly string[] = [
   "Revision",
   "Channels read",
   "Error",
-  "Signed in as",
   "Version and build",
   "Runtime mode",
   "Licences",

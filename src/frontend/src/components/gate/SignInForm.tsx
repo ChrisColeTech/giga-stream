@@ -16,13 +16,14 @@ export interface SignInFormProps {
   readonly initialUsername?: string;
   /** `Forgot password?` was pressed with this username typed. */
   readonly onForgot?: (username: string) => void;
+  readonly onSignUp?: () => void;
 }
 
 /** The gate's form: Username, Password and one primary `Sign in`, disabled with its reason until both are filled and
  *  while the port answers. Enter in either field submits. A refusal keeps the username, clears the password (not for
  *  an unreachable backend: the retry needs it), shows its sentence under the Password row and puts focus back there.
  *  Username is focused on open. `Forgot password?` sits right-aligned under the Password row. */
-export function SignInForm({ initialUsername = "", onForgot }: SignInFormProps) {
+export function SignInForm({ initialUsername = "", onForgot, onSignUp }: SignInFormProps) {
   const gate = useAppStore((state) => state.gate);
   const signIn = useSignIn();
   const [username, setUsername] = useState(initialUsername);
@@ -73,9 +74,16 @@ export function SignInForm({ initialUsername = "", onForgot }: SignInFormProps) 
           />
         </Row>
       </div>
-      {onForgot !== undefined && (
-        <ForgotLink onPress={() => onForgot(username)} reason={submitting ? SIGN_IN_WAITING_REASON : undefined} />
-      )}
+      <div className="flex items-center justify-between gap-2">
+        {onSignUp !== undefined && (
+          <Button variant="ghost" reason={submitting ? SIGN_IN_WAITING_REASON : undefined} onClick={onSignUp}>
+            Sign up
+          </Button>
+        )}
+        {onForgot !== undefined && (
+          <ForgotLink onPress={() => onForgot(username)} reason={submitting ? SIGN_IN_WAITING_REASON : undefined} />
+        )}
+      </div>
       <div className="pt-1">
         <Button
           type="submit"

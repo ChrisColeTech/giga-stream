@@ -1,37 +1,27 @@
-import { useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@giga/ui/controls/Button";
 import { GateBrand } from "./GateBrand";
 import { GateForms } from "./GateForms";
+import { useGateWallEscape } from "./gate-wall-escape";
 
 /* The admin console's wall (`34` section 4): it covers the whole window, titlebar included, so nothing of the shell
  * shows behind the gate. The shell behind it is inert (App). Unlike the admin's pre-app gate there is a way out:
  * browsing signed out is this app's default (`63` section 3.1), so Escape closes the wall back to the shell. */
 const WALL = "fixed inset-0 z-75 flex flex-col bg-bg";
 
-/** Whether a key press dismisses the wall: Escape alone (`63` section 3.5). Pure. */
-export function gateWallDismisses(key: string): boolean {
-  return key === "Escape";
-}
-
 export interface GateWallProps {
   /** The wall is leaving: Escape pressed or the sign-in accepted. The shell wakes and the Account control that
    *  opened the wall takes focus back. */
   readonly onClose: () => void;
+  /** Leaves auth and selects Live. */
+  readonly onBack: () => void;
 }
 
 /** The gate as a full-screen wall, the admin console's sign-in template (`34` sections 2 and 4): the brand column
  *  left, the gate's own forms centred in the rest, a drag strip over the top 40px so the desktop window can still be
  *  moved. Escape closes it; signing in closes it. It scrolls inside the window when the window is short. */
-export function GateWall({ onClose }: GateWallProps) {
-  useEffect(() => {
-    /* Capture, so the press is spent here before the shell's own keys see it. */
-    const onKey = (event: KeyboardEvent): void => {
-      if (!gateWallDismisses(event.key)) return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+export function GateWall({ onClose, onBack }: GateWallProps) {
+  useGateWallEscape(onClose);
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Sign in to Giga Stream" className={WALL}>
@@ -44,6 +34,11 @@ export function GateWall({ onClose }: GateWallProps) {
             <GateForms onSignedIn={onClose} />
           </div>
         </div>
+      </div>
+      <div className="absolute right-4 bottom-4 z-2 [-webkit-app-region:no-drag]">
+        <Button variant="ghost" onClick={onBack} title="Back to Live">
+          <ArrowLeft aria-hidden /> Back
+        </Button>
       </div>
     </div>
   );
