@@ -33,12 +33,18 @@ test("continue answers the watching rows, most recently watched first, at most t
 
 test("an item whose newest entry is watched does not continue, whatever older episodes do", () => {
   // The newest entry per item is the one that counts (docs/30 section 3.3): finishing one episode
-  // takes the item out of Continue even when another of it was left mid-way.
-  const entries: WatchEntry[] = [
-    watching(1, 1_000),
-    { ...watching(2, 2_000), item: { kind: "local", id: "part-00" }, state: "watched" },
-  ];
-  assert.deepEqual(continueEntries(entries, 10), []);
+  // takes the item out of Continue even when another of it was left mid-way. Both entries are the
+  // SAME item; the watched one is the newer.
+  const midWay: WatchEntry = { ...watching(1, 1_000), season: 1, episode: 1 };
+  const finished: WatchEntry = {
+    ...midWay,
+    watchId: "w2",
+    updatedAt: 2_000,
+    season: 1,
+    episode: 2,
+    state: "watched",
+  };
+  assert.deepEqual(continueEntries([midWay, finished], 10), []);
 });
 
 test("the cap is the caller's named limit", () => {
