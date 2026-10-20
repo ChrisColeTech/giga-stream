@@ -13,6 +13,10 @@ import type { CachedTitleRepository } from "../store/cached-title-repository.js"
 import type { LibraryFileRow, LibraryRepository, LibraryWatchRow } from "../store/library-repository.js";
 import type { LibraryItem } from "../types/library.js";
 import type { LibraryItems } from "./library-items.js";
+// The per-item selection and the Continue cap are the shared library's (docs/61 section 2.5) — no drift.
+import { continueEntries } from "../../../shared/watch/dist/continue.js";
+import { newestPerItem } from "../../../shared/watch/dist/order.js";
+import { entryOf } from "./watch-service.js";
 
 /** One materialized row: the item the interface sees, and the keys its sorts compare. */
 interface Row {
@@ -64,6 +68,10 @@ export function createLibraryLists(deps: {
     ...new Set(entries.filter((entry) => entry.itemKind === "title").map((entry) => entry.itemId)),
   ];
 
+  // The ids of each item's newest watch entry (the shared per-item rule, docs/61 section 2.5); they select the rows.
+  const newestIds = (rows: readonly LibraryWatchRow[]): Set<string> =>
+    new Set(newestPerItem(rows.map(entryOf)).map((entry) => entry.watchId));
+
   /** `history`: the watch entries, newest first, one row per entry, each with its watch id. */
   function historyRows(): Row[] {
     const entries = repo.listWatchEntries();
@@ -81,18 +89,11 @@ export function createLibraryLists(deps: {
     });
   }
 
-  /** Each item's newest watch entry, newest first (an item with several episodes counts once). */
-  function newestPerItem(): LibraryWatchRow[] {
-    const seen = new Set<string>();
-    return repo.listWatchEntries().filter((entry) => {
-      const key = `${entry.itemKind}:${entry.itemId}`;
-      return !seen.has(key) && seen.add(key);
-    });
-  }
-
   /** Items whose newest watch entry is in `state`, one row each: the history-backed `watched` answer set. */
   function stateRows(state: "watching" | "watched"): Row[] {
-    const entries = newestPerItem().filter((entry) => entry.state === state);
+    const rows = repo.listWatchEntries();
+    const newest = newestIds(rows);
+    const entries = rows.filter((row) => newest.has(row.id) && row.state === state);
     const files = filesById();
     const facts = titleRows(titleIdsOf(entries));
     return entries.flatMap((entry) => {
@@ -176,7 +177,11 @@ export function createLibraryLists(deps: {
     /** `GET /api/library/continue` (03 section 3.5): the watching rows, newest first, at most ten. */
     continueItems(): LibraryItem[] {
       const files = filesById();
-      const watching = newestPerItem().filter((entry) => entry.state === "watching").slice(0, CONTINUE_MAX);
+      // The shared Continue rule (docs/61 section 2.5); the ids select the rows, whose order is the same.
+      const continuing = new Set(
+        continueEntries(repo.listWatchEntries().map(entryOf), CONTINUE_MAX).map((entry) => entry.watchId),
+      );
+      const watching = repo.listWatchEntries().filter((row) => continuing.has(row.id));
       const facts = titleRows(titleIdsOf(watching));
       return watching.map((entry) => {
         const base =
