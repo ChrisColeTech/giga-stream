@@ -19,7 +19,10 @@ const account = (id: string | number, disabled = false, extra: Partial<AdminAcco
   ...extra,
 });
 const page = (): string => renderLive(createElement(AccountsPage, { active: true }));
-const strip = (html: string): string => html.slice(html.indexOf('aria-label="Accounts table"'));
+/** The strip's query row: TableStrip draws the search, Sort and filters FIRST (`01` section 9, `55`), named by the search
+ *  wrapper, and the verb toolbar (`aria-label="Accounts table"`) only under the hairline - so slicing from the toolbar's
+ *  name would begin past the query row. */
+const queryRow = (html: string): string => html.slice(html.indexOf('aria-label="Accounts table search"'));
 const at = (html: string, text: string): number => {
   const index = html.indexOf(text);
   assert.ok(index >= 0, `missing: ${text}`);
@@ -58,8 +61,8 @@ describe("the list's kind column (`62` section 3.7)", () => {
 
   it("filters with the self-labelling select: Any kind at rest, then Admins, Users, before State", () => {
     state().accountsLoaded([account("a"), account("b")]);
-    const table = strip(page());
-    const select = /<select[^>]*aria-label="Kind"[^>]*>[\s\S]*?<\/select>/.exec(table);
+    const row = queryRow(page());
+    const select = /<select[^>]*aria-label="Kind"[^>]*>[\s\S]*?<\/select>/.exec(row);
     assert.ok(select !== null, "the Kind filter sits in the query row");
     assert.deepEqual(
       Array.from(select[0].matchAll(/<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/g), (option) => [option[1], option[2]]),
@@ -69,8 +72,8 @@ describe("the list's kind column (`62` section 3.7)", () => {
         ["User", "Users"],
       ],
     );
-    assert.ok(table.indexOf('aria-label="Kind"') < table.indexOf('aria-label="State"'), "the kind filter before the state filter");
-    assert.ok(table.includes("Sort by kind"), "the kind column sorts, so the Sort select names it too");
+    assert.ok(row.indexOf('aria-label="Kind"') < row.indexOf('aria-label="State"'), "the kind filter before the state filter");
+    assert.ok(page().includes("Sort by kind"), "the kind column sorts, so the Sort select names it too");
   });
 });
 
