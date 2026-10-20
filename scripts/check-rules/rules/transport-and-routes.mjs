@@ -6,6 +6,15 @@ import { lineAt } from "../load-files.mjs";
 const CLIENTS = ["frontend", "admin", "shared-ui", "shared-http"];
 /** Where `fetch` may appear: each app's services/ and the one shared request layer (docs/27 section 4.1). */
 const FETCH_HOMES = /^src\/(frontend|admin)\/src\/services\/|^src\/shared\/http\/src\//;
+/**
+ * Where `localStorage`/`indexedDB` may appear (docs/61 section 2.3, `01` section 4 as amended): the browser
+ * runtime's two local stores and nothing else. The watch store does not exist yet; reserving it keeps wave 2
+ * from a second rule change.
+ */
+const LOCAL_STORE_HOMES = new Set([
+  "src/frontend/src/services/local-state.ts",
+  "src/frontend/src/services/local-watch.ts",
+]);
 
 const ROUTE_LITERAL = /\bapp\.(get|post|patch|put|delete|head)\(\s*["'`]([^"'`]+)["'`]/g;
 const ROOT_ALLOWED = new Set(["/healthz", "/ws"]);
@@ -47,8 +56,15 @@ export const transportAndRoutes = {
             push(m.index, file.bare, `${m[1]} may be constructed only in services/events.ts`);
           }
         }
-        for (const m of file.bare.matchAll(/\b(localStorage|sessionStorage|indexedDB)\b/g)) {
-          push(m.index, file.bare, "the renderer persists nothing to browser storage");
+        // `01` section 4 as amended (plan `61`): the local stores are the only browser-storage homes, and
+        // sessionStorage is banned everywhere - the local state is versioned and never session-scoped.
+        for (const m of file.bare.matchAll(/\b(localStorage|indexedDB)\b/g)) {
+          if (!LOCAL_STORE_HOMES.has(file.rel)) {
+            push(m.index, file.bare, "browser storage belongs to the local stores only (services/local-state.ts)");
+          }
+        }
+        for (const m of file.bare.matchAll(/\bsessionStorage\b/g)) {
+          push(m.index, file.bare, "sessionStorage is banned everywhere; local state lives in the versioned stores");
         }
       }
 

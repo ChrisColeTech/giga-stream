@@ -125,6 +125,24 @@ test("the renderer may not fetch outside services, store to browser storage or b
   assert.equal(found.filter((f) => f.rule === "transport-and-routes").length, 3);
 });
 
+test("the two local stores are the only browser-storage homes; sessionStorage is banned even there", () => {
+  const found = violations({
+    "src/frontend/src/services/local-state.ts":
+      "export const read = () => window.localStorage.getItem('k');\nexport const bad = () => sessionStorage.getItem('k');\n",
+    "src/frontend/src/services/local-watch.ts": "export const open = () => indexedDB.open('giga.v1');\n",
+    "src/frontend/src/services/other.ts": "export const worse = () => localStorage.getItem('k');\n",
+    "src/frontend/src/hooks/useThing.ts": "export const worst = () => sessionStorage.setItem('k', 'v');\n",
+  }).filter((f) => f.rule === "transport-and-routes");
+  assert.deepEqual(
+    found.map((f) => `${f.file}:${f.line}`).sort(),
+    [
+      "src/frontend/src/hooks/useThing.ts:1",
+      "src/frontend/src/services/local-state.ts:2",
+      "src/frontend/src/services/other.ts:1",
+    ],
+  );
+});
+
 test("the renderer contains no admin-backend or metadata-service address", () => {
   const found = violations({
     "src/frontend/src/services/api.ts":
