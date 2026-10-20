@@ -11,7 +11,7 @@ import {
 } from "@/lib/account-checks";
 import { changedFields, draftOf, isEmptyPatch, sameAccountDraft } from "@/lib/account-draft";
 import { deleteReason, disableReason, isLastEnabled } from "@/lib/account-guard";
-import { accountRow, selectAllState } from "@/lib/account-rows";
+import { accountRow, kindLabel, selectAllState } from "@/lib/account-rows";
 import { formatWhen } from "@/lib/format-when";
 import type { AdminAccount } from "@/types/admin-account";
 
@@ -24,6 +24,7 @@ const account = (id: string, disabled = false, extra: Partial<AdminAccount> = {}
   ...extra,
 });
 const FREE = { unreachable: false, busy: false };
+const NEW = (username: string, password: string, kind: "admin" | "user" = "admin") => ({ username, password, kind });
 
 describe("the last-enabled guard", () => {
   it("refuses Delete and disabling for the only enabled account, with their reasons", () => {
@@ -64,19 +65,23 @@ describe("the drafts", () => {
     assert.deepEqual(changedFields(account("d", true), { ...draftOf(account("d", true)), enabled: true }), { disabled: false });
   });
 
-  it("builds the create body with the password untouched", () => {
-    const body = createBody({ username: " e@x.test ", password: " p " });
-    assert.deepEqual(body, { username: "e@x.test", password: " p " });
+  it("builds the create body with the password untouched and the kind always on (`62` section 3.7)", () => {
+    assert.deepEqual(createBody(NEW(" e@x.test ", " p ")), { username: "e@x.test", password: " p ", kind: "admin" });
+    assert.deepEqual(createBody(NEW(" e@x.test ", " p ", "user")), {
+      username: "e@x.test",
+      password: " p ",
+      kind: "user",
+    });
     assert.deepEqual(passwordBody(" p "), { password: " p " });
   });
 });
 
 describe("the field checks", () => {
   it("names the first missing field, in the form's order: Username, Password", () => {
-    assert.equal(createReason({ username: "", password: "" }, false, false), "Username is required.");
-    assert.equal(createReason({ username: " ", password: "" }, false, false), "Username is required.");
-    assert.equal(createReason({ username: "e@x.test", password: "" }, false, false), "Password is required.");
-    const full = { username: "e@x.test", password: "x".repeat(12) };
+    assert.equal(createReason(NEW("", ""), false, false), "Username is required.");
+    assert.equal(createReason(NEW(" ", ""), false, false), "Username is required.");
+    assert.equal(createReason(NEW("e@x.test", ""), false, false), "Password is required.");
+    const full = NEW("e@x.test", "x".repeat(12));
     assert.equal(createReason(full, false, false), undefined);
     assert.equal(createReason(full, true, false), "Saving.");
     assert.equal(createReason(full, false, true), "The admin backend cannot be reached.");
@@ -95,12 +100,12 @@ describe("the field checks", () => {
   });
 
   it("refuses the first bad value on Create, and on a save only the fields being changed", () => {
-    assert.deepEqual(firstCreateRefusal({ username: "u".repeat(255), password: "x".repeat(12) }), {
+    assert.deepEqual(firstCreateRefusal(NEW("u".repeat(255), "x".repeat(12))), {
       field: "username",
       sentence: "Username must be 1 to 254 characters.",
     });
-    assert.equal(firstCreateRefusal({ username: "not an email", password: "x".repeat(12) }), null);
-    assert.equal(firstCreateRefusal({ username: "e@x.test", password: "x".repeat(12) }), null);
+    assert.equal(firstCreateRefusal(NEW("not an email", "x".repeat(12))), null);
+    assert.equal(firstCreateRefusal(NEW("e@x.test", "x".repeat(12), "user")), null);
     assert.equal(firstSaveRefusal({}), null);
     assert.equal(firstSaveRefusal({ username: "" })?.field, "username");
   });
@@ -112,6 +117,13 @@ describe("the rows", () => {
     assert.deepEqual([enabled.state.word, enabled.state.dimmed, enabled.when], ["enabled", false, "2026-10-17 09:05"]);
     const off = accountRow(account("b", true));
     assert.deepEqual([off.state.word, off.state.dimmed, off.when], ["disabled", true, "never"]);
+  });
+
+  it("reads the kind as Admin or User, and an answer without the field as Admin (`62` section 3.7)", () => {
+    assert.deepEqual([accountRow(account("a")).kind, accountRow(account("b", false, { kind: "admin" })).kind], ["Admin", "Admin"]);
+    assert.equal(accountRow(account("c", false, { kind: "user" })).kind, "User");
+    assert.equal(kindLabel({}), "Admin", "absence is what the backend answered before the column existed");
+    assert.deepEqual([kindLabel({ kind: "admin" }), kindLabel({ kind: "user" })], ["Admin", "User"]);
   });
 
   it("builds the time from local parts, padded", () => {

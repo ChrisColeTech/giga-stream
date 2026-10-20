@@ -1,19 +1,20 @@
-import type { AdminAccount } from "@/types/admin-account";
+import type { AccountKind, AdminAccount } from "@/types/admin-account";
 
-/* The Accounts forms' values (`35` sections 5.4 and 5.8), pure. A draft is compared with the saved account's draft, so
- * `dirty` is a fact about values and never a flag set by typing. The username is the identity and comes first on every
- * form; an account has no name (owner, 2026-10-17). */
+/* The Accounts forms' values (`35` sections 5.4 and 5.8; `62` section 3.7), pure. A draft is compared with the saved
+ * account's draft, so `dirty` is a fact about values and never a flag set by typing. The username is the identity and
+ * comes first on every form; an account has no name (owner, 2026-10-17). The New form's kind defaults to admin. */
 
-/** The New account form: all strings, as the fields hold them. */
+/** The New account form: the fields as they are held, the kind as the chips hold it. */
 export interface NewAccountDraft {
   readonly username: string;
   readonly password: string;
+  readonly kind: AccountKind;
 }
 
-export const EMPTY_NEW_ACCOUNT: NewAccountDraft = { username: "", password: "" };
+export const EMPTY_NEW_ACCOUNT: NewAccountDraft = { username: "", password: "", kind: "admin" };
 
 export const sameNewAccount = (a: NewAccountDraft, b: NewAccountDraft): boolean =>
-  a.username === b.username && a.password === b.password;
+  a.username === b.username && a.password === b.password && a.kind === b.kind;
 
 /** The workspace's Details: `enabled` is the inverse of the stored `disabled`. */
 export interface AccountDraft {

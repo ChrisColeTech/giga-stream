@@ -9,13 +9,14 @@ import {
 } from "./schemas/account-schema";
 import type { RecordService } from "./service-types";
 
-/** The Accounts routes (`29` section 9.6), REAL: `GET`, `POST`, `PATCH` and `DELETE /api/admin/accounts`, and
- *  `PUT /api/admin/accounts/:id/security-question` (docs/54 section 2). A create takes `{ username, password }` (1 to
- *  256 characters); a patch any of `username name password disabled`; the question save takes `{ question, answer }` and
- *  answers `{ set: true }`. `409 account.username_taken` and `account.last_admin` arrive as `ApiError`s, a field-named
- *  refusal with its `field`. The list is read row by row: an unreadable row is dropped and counted (`unreadable`). A
- *  write answer that does not parse is `backend.bad_response`; the flows then re-read the list, since the write may
- *  have happened. */
+/** The Accounts routes (`29` section 9.6; `62` section 3.7), REAL: `GET`, `POST`, `PATCH` and `DELETE
+ *  /api/admin/accounts`, and `PUT /api/admin/accounts/:id/security-question` (docs/54 section 2). A create takes
+ *  `{ username, password, kind }` (1 to 256 characters; the kind optional on the wire and always sent); a patch any of
+ *  `username name password disabled`; the question save takes `{ question, answer }` and answers `{ set: true }`.
+ *  `409 account.username_taken` and `account.last_admin` arrive as `ApiError`s, a field-named refusal with its `field`.
+ *  The list is read row by row: an unreadable row is dropped and counted (`unreadable`) — a nonsense `kind` makes its
+ *  row unreadable, so nothing invented is ever shown. A write answer that does not parse is `backend.bad_response`; the
+ *  flows then re-read the list, since the write may have happened. */
 export type AccountsService = RecordService<AdminAccount, string | number, AccountList> & {
   /** Sets or replaces a selected account's question. The answer carries nothing of it back but `{ set: true }`. */
   readonly saveQuestion: (

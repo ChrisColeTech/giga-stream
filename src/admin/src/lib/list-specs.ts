@@ -53,10 +53,11 @@ export const jobSpec: ListSpec<JobRowView> = {
 };
 
 export const accountSpec: ListSpec<AccountRowView> = {
-  fields: (row) => [row.username],
-  filters: { state: (row) => row.state.word, "sign-in": (row) => since(row.when, "signed") },
+  fields: (row) => [row.username, row.kind],
+  filters: { kind: (row) => row.kind, state: (row) => row.state.word, "sign-in": (row) => since(row.when, "signed") },
   sorts: {
     username: (a, b) => byText(a.username, b.username),
+    kind: (a, b) => byText(a.kind, b.kind),
     state: (a, b) => byText(a.state.word, b.state.word),
     "last-sign-in": (a, b) => byText(a.when, b.when),
   },

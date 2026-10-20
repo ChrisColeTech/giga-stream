@@ -10,8 +10,9 @@ const column = createColumnHelper<typeof recordFeatures, AccountRowView>();
  * lands in a follow-up after that backend work merges, as a column here reading the id the backend sends (`AccountId`,
  * `types/admin-account.ts`). The client never derives or invents an id, so until then the list has no such column. */
 
-/** The Accounts list's columns (`35` section 5.8, `45` section 2.3): username, state, last sign-in, which is hidden first
- *  in a narrow pane and holds the 16 mono characters of `formatWhen` whole (152px). */
+/** The Accounts list's columns (`35` section 5.8, `45` section 2.3, `62` section 3.7): username, kind, state, last
+ *  sign-in, which is hidden first in a narrow pane and holds the 16 mono characters of `formatWhen` whole (152px). The
+ *  kind hides before it (priority 2, as Deleted titles' kind does) and sorts by its word. */
 export const accountColumns = column.columns([
   column.accessor((row) => row.username, {
     id: "username",
@@ -19,6 +20,14 @@ export const accountColumns = column.columns([
     size: 192,
     sortFn: "alphanumeric",
     meta: { kind: "name", grow: 1.6, priority: 0 },
+    cell: (info) => info.getValue(),
+  }),
+  column.accessor((row) => row.kind, {
+    id: "kind",
+    header: "kind",
+    size: 72,
+    sortFn: "alphanumeric",
+    meta: { kind: "text", priority: 2 },
     cell: (info) => info.getValue(),
   }),
   column.accessor((row) => row.state.word, {

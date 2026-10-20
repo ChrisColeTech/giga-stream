@@ -48,33 +48,44 @@ beforeEach(() => {
 describe("create", () => {
   it("upserts, says Created, reloads the audit tail with limit 10 and returns ok", async () => {
     const { flows, reloads } = rig();
-    const result = await flows.create({username: "new@x.test", password: PASSWORD });
+    const result = await flows.create({ username: "new@x.test", password: PASSWORD, kind: "admin" });
     assert.equal(result.ok, true);
     assert.ok(state().accounts.items.some((item) => item.username === "new@x.test"));
     assert.equal(lastEvent(), "Created new@x.test.");
     assert.deepEqual(reloads, [10]);
   });
 
+  it("sends the draft's kind whole, whichever chip is lit (`62` section 3.7)", async () => {
+    const sent: unknown[] = [];
+    const { flows } = rig({ create: async (input) => (sent.push(input), account("n")) });
+    await flows.create({ username: "one@x.test", password: PASSWORD, kind: "user" });
+    await flows.create({ username: "two@x.test", password: PASSWORD, kind: "admin" });
+    assert.deepEqual(sent, [
+      { username: "one@x.test", password: PASSWORD, kind: "user" },
+      { username: "two@x.test", password: PASSWORD, kind: "admin" },
+    ]);
+  });
+
   it("refuses a bad value under its row before sending anything", async () => {
     const { flows, calls } = rig();
-    const result = await flows.create({username: "u".repeat(255), password: PASSWORD });
+    const result = await flows.create({ username: "u".repeat(255), password: PASSWORD, kind: "admin" });
     assert.deepEqual(result, { ok: false, field: "username", sentence: "Username must be 1 to 254 characters." });
     assert.deepEqual(calls, []);
   });
 
   it("puts username_taken under Username and keeps the notice a warning", async () => {
     const { flows } = rig({ create: async () => Promise.reject(refuse("account.username_taken", 409, "username")) });
-    const result = await flows.create({username: "a@x.test", password: PASSWORD });
+    const result = await flows.create({ username: "a@x.test", password: PASSWORD, kind: "admin" });
     assert.deepEqual([result.ok, !result.ok && result.field], [false, "username"]);
     assert.equal(state().notice?.tone, "warn");
   });
 
   it("marks the backend unreachable on a transport failure, and reads the list again on an unreadable answer", async () => {
     const down = rig({ create: async () => Promise.reject(new ApiError("backend.unreachable", "The admin backend cannot be reached.")) });
-    await down.flows.create({username: "a@x.test", password: PASSWORD });
+    await down.flows.create({ username: "a@x.test", password: PASSWORD, kind: "admin" });
     assert.equal(state().accounts.unreachable, true);
     const bad = rig({ create: async () => Promise.reject(new ApiError("backend.bad_response", "Unreadable.", 201)) });
-    await bad.flows.create({username: "a@x.test", password: PASSWORD });
+    await bad.flows.create({ username: "a@x.test", password: PASSWORD, kind: "admin" });
     assert.ok(bad.calls.includes("list"));
   });
 });
@@ -220,7 +231,7 @@ describe("a late answer", () => {
           release = () => resolve(account("late"));
         }),
     });
-    const pending = slow.flows.create({username: "late@x.test", password: PASSWORD });
+    const pending = slow.flows.create({ username: "late@x.test", password: PASSWORD, kind: "admin" });
     state().signOut();
     release();
     const result = await pending;

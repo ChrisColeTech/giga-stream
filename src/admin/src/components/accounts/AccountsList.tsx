@@ -11,8 +11,8 @@ import { useAppStore } from "@/store/app-store";
 import { ListQueryBar } from "@/components/records/ListQueryBar";
 import { AccountRows } from "./AccountRows";
 
-/** `Accounts`: the list group. Its first rows (`01` section 9) are the query row (search, Sort, State and Sign-in) and
- *  the selection toolbar: `Refresh` (it reads the accounts and the audit tail together, disabled with `Loading.` while a
+/** `Accounts`: the list group. Its first rows (`01` section 9) are the query row (search, Sort, Kind, State and Sign-in)
+ *  and the selection toolbar: `Refresh` (it reads the accounts and the audit tail together, disabled with `Loading.` while a
  *  read runs), then `Enable`, `Disable` and the armed `Delete`, always drawn and disabled with their reason until a row
  *  is ticked; the three-state `All` ticks the rows the query shows. */
 export function AccountsList() {

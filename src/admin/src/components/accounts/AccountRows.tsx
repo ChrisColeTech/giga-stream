@@ -11,10 +11,11 @@ import { accountColumns } from "./account-columns";
 
 const idOf = (row: AccountRowView): string => String(row.id);
 
-/** The accounts table: a row for each account (the username, the state word, the last sign-in in mono, `never` if it has
- *  not signed in) and the end `Delete`, an armed two-step naming who dies (`Delete ed@example.test?`). A disabled account
- *  stays in the list, dimmed. Skeleton rows in the same columns draw while nothing has been read yet and when there is
- *  nothing to list (never a sentence); a refresh keeps the rows it has, and so does a failed read. */
+/** The accounts table: a row for each account (the username, the kind (`62` section 3.7), the state word, the last
+ *  sign-in in mono, `never` if it has not signed in) and the end `Delete`, an armed two-step naming who dies
+ *  (`Delete ed@example.test?`). A disabled account stays in the list, dimmed. Skeleton rows in the same columns draw
+ *  while nothing has been read yet and when there is nothing to list (never a sentence); a refresh keeps the rows it
+ *  has, and so does a failed read. */
 export function AccountRows() {
   const { status, items, ticked, unreachable } = useAppStore((state) => state.accounts);
   const tick = useAppStore((state) => state.accountTick);
