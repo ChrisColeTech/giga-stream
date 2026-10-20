@@ -26,6 +26,7 @@ import { registerTitlesRoutes } from "./routes/titles.js";
 import { registerWatchRoutes } from "./routes/watch.js";
 import { createAppServices, type ServiceOptions } from "./services/app-services.js";
 import { createPocResultsService } from "./services/poc-results-service.js";
+import { createWatchPass } from "./services/watch-pass-service.js";
 
 /** The parts of the served folder a browser may load; the PoC's scripts and results are not among them. */
 const SERVED_TOP = new Set(["html", "css", "js", "data", "assets"]);
@@ -147,7 +148,16 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   registerLocalMediaRoutes(app, services);
   registerImagesRoutes(app, services);
   registerFavoritesRoutes(app, services);
-  registerWatchRoutes(app, services);
+  // The watch fork's pass (docs/63 section 3.2) shares the resolution above — no second knob; a
+  // browser write without a configured backend answers the standard unreachable envelope.
+  registerWatchRoutes(
+    app,
+    services,
+    createWatchPass({
+      baseUrl: adminProxyTarget,
+      ...(overrides.adminFetch !== undefined && { fetch: overrides.adminFetch }),
+    }),
+  );
   registerLibraryRoutes(app, services);
   registerTitlesRoutes(app, services);
 
