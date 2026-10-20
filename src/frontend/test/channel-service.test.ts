@@ -9,6 +9,7 @@ import {
   rememberLastChannel,
   type ChannelQuery,
 } from "@/services/channels";
+import { LOCAL_LAST_CHANNEL_KEY } from "@/services/local-state";
 import type { ChannelListAnswer } from "@/services/schemas/channel-schema";
 import { useAppStore } from "@/store/app-store";
 
@@ -27,8 +28,24 @@ const list: ChannelListAnswer = {
 };
 const success = (data: unknown) => new Response(JSON.stringify({ ok: true, data }), { status: 200 });
 
+/** Mounts a fake window whose storage is a plain record; `pocHost` marks the desktop runtime when given. */
+function fakeWindow(local: Record<string, string>, desktop = false): void {
+  (globalThis as { window?: unknown }).window = {
+    ...(desktop ? { pocHost: { runtime: "electron" } } : {}),
+    localStorage: {
+      getItem: (key: string) => (key in local ? local[key] : null),
+      setItem: (key: string, value: string) => {
+        local[key] = value;
+      },
+    },
+  };
+}
+
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
-afterEach(() => { globalThis.fetch = originalFetch; });
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
+});
 
 describe("channel routes", () => {
   it("sends the exact GET query and validates its channel list", async () => {
@@ -66,6 +83,27 @@ describe("channel routes", () => {
       "/api/channels/refresh",
       "/api/channels?q=night&category=News",
     ]);
+  });
+
+  it("mirrors the last channel into the browser's local store beside the server write", async () => {
+    const local: Record<string, string> = {};
+    fakeWindow(local);
+    const calls: Array<{ input: string; method?: string; body?: BodyInit | null }> = [];
+    globalThis.fetch = async (input, init) => {
+      calls.push({ input: String(input), method: init?.method, body: init?.body });
+      return success({ id: "news" });
+    };
+    assert.deepEqual(await rememberLastChannel("news"), { id: "news" });
+    assert.deepEqual(calls.map((call) => [call.input, call.method]), [["/api/channels/last", "PATCH"]]);
+    assert.equal(local[LOCAL_LAST_CHANNEL_KEY], JSON.stringify("news"));
+  });
+
+  it("keeps the desktop's last-channel write server-only", async () => {
+    const local: Record<string, string> = {};
+    fakeWindow(local, true);
+    globalThis.fetch = async () => success({ id: "news" });
+    await rememberLastChannel("news");
+    assert.deepEqual(local, {});
   });
 
   it("refuses malformed channel data and keeps server refusal sentences", async () => {
