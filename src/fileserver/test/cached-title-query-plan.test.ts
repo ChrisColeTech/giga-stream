@@ -8,7 +8,7 @@ import test from "node:test";
 import { createCachedTitleQuery } from "../src/store/cached-title-query.js";
 import { migrate } from "../src/store/migrate.js";
 import type { TitleFilter, TitlePageRequest } from "../src/types/cached-title.js";
-import type { TitleSort } from "../src/services/admin-titles.js";
+import type { TitleSort } from "../src/store/admin-title-repository.js";
 
 const GENRES = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "War"];
 const SORTS: TitleSort[] = ["newest", "oldest", "year", "az", "trending"];

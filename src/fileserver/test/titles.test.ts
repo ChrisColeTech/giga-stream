@@ -1,215 +1,140 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import type { FastifyInstance } from "fastify";
+import test from "node:test";
 
-import { buildApp } from "../src/build-app.js";
 import { imageIdOf } from "../src/services/image-cache-service.js";
-import { makeApp, pick, pointAt, send, startBackend } from "./app-fixture.js";
-
-const backend = await startBackend();
+import { makeAdminDatabase, seedTitle } from "./admin-database.js";
+import { makeApp, pick, send } from "./app-fixture.js";
 
 const POSTER = "https://image.tmdb.org/t/p/w500/matrix.jpg";
 const BACKDROP = "https://image.tmdb.org/t/p/w1280/matrix-b.jpg";
 const STILL = "https://image.tmdb.org/t/p/w300/ep1.jpg";
 const STREAM = "https://streams.example.test/movie-603.m3u8";
-const cast = (name: string, at: number): string => `${name} ${at}`;
 
-const MOVIE_SOURCES = [
+const providers = [
   {
-    providerId: 2,
-    name: "VidSrc",
-    url: "https://vidsrc.example/embed/movie?tmdbId=603",
-    origin: "https://vidsrc.example",
-    order: 1,
-    startParam: "startAt",
+    id: 2, name: "VidSrc", source: "vidsrc", is_active: true, order: 1, family: "embed",
+    movieTemplate: "https://vidsrc.example/embed/movie?tmdbId={tmdbId}",
+    episodeTemplate: "https://vidsrc.example/embed/tv?tmdbId={tmdbId}&season={season}&episode={episode}",
+    origin: "https://vidsrc.example", startParam: "startAt", created_at: "2026-10-20T00:00:00Z",
   },
   {
-    providerId: 4,
-    name: "VidZee",
-    url: "https://vidzee.example/embed/movie-603",
-    origin: "https://vidzee.example",
-    order: 2,
-    frameOrigins: ["https://vidzee.example"],
-  },
-];
-const EPISODE_SOURCES = [
-  {
-    providerId: 2,
-    name: "VidSrc",
-    url: "https://vidsrc.example/embed/tv?tmdbId=1399&season=1&episode=1",
-    origin: "https://vidsrc.example",
-    order: 1,
+    id: 4, name: "VidZee", source: "vidzee", is_active: true, order: 2, family: "embed",
+    movieTemplate: "https://vidzee.example/embed/movie-{tmdbId}", origin: "https://vidzee.example",
+    frameOrigins: ["https://vidzee.example"], created_at: "2026-10-20T00:00:00Z",
   },
 ];
 
-const MATRIX = {
-  ok: true,
-  data: {
-    id: "movie-603", tmdbId: 603, kind: "movie", title: "The Matrix", year: 1999,
-    genres: ["Science Fiction"], rating: 8.2, plot: "A computer hacker learns the truth.",
-    posterUrl: POSTER, backdropUrl: BACKDROP, runtimeMs: 8_160_000, streamUrl: STREAM,
-    sources: MOVIE_SOURCES,
-    cast: Array.from({ length: 11 }, (_, at) => cast("Actor", at)),
-  },
+const providerFetch: typeof fetch = async (input) => {
+  assert.equal(new URL(String(input)).pathname, "/api/admin/providers");
+  return new Response(JSON.stringify({ ok: true, data: { items: providers } }), {
+    status: 200, headers: { "content-type": "application/json" },
+  });
 };
-const GOT = {
-  ok: true,
-  data: {
-    id: "tv-1399", tmdbId: 1399, kind: "tv", title: "Game of Thrones", year: 2011,
-    genres: ["Drama"], rating: 8.4, plot: "Winters come.", posterUrl: "https://image.tmdb.org/t/p/w500/got.jpg",
-    seasons: [{ season: 1, episodes: [{ episode: 1 }, { episode: 2 }] }],
-  },
-};
-const SEASON = {
-  ok: true,
-  data: {
-    episodes: [
-      { season: 1, episode: 2, title: "The Kingsroad", airDate: "2011-04-24", runtimeMs: 3_300_000, stillUrl: "https://image.tmdb.org/t/p/w300/ep2.jpg", streamUrl: "https://streams.example.test/tv-1399-1-2.m3u8" },
-      { season: 1, episode: 1, title: "Winter Is Coming", airDate: "2011-04-17", runtimeMs: 3_720_000, stillUrl: STILL, streamUrl: "https://streams.example.test/tv-1399-1-1.m3u8", sources: EPISODE_SOURCES },
-    ],
-  },
-};
-const GENRES = { ok: true, data: [{ id: 878, name: "Science Fiction" }] };
-const TV_GENRES = { ok: true, data: [{ id: 18, name: "Drama" }] };
-const FIGHT_CLUB_ROW = { id: "movie-550", kind: "movie", title: "Fight Club", year: 1999, genres: ["878"], rating: 8.4, posterUrl: POSTER };
-const LATE_TV_ROW = { id: "tv-9999", kind: "tv", title: "Late Row", year: 2020, genres: ["18"], rating: 7.1, posterUrl: POSTER };
-const RECOMMENDED = { ok: true, data: { items: [{ ...FIGHT_CLUB_ROW }] } };
-/** The catalog read the sync walks (`GET /api/titles/catalog`): thin rows with TMDB genre ids and the stored popularity. */
-const CATALOG_ROWS = [
-  { id: "movie-603", kind: "movie", title: "The Matrix", year: 1999, genres: ["878"], rating: 8.2, popularity: 90, posterUrl: POSTER },
-  FIGHT_CLUB_ROW,
-  { id: "tv-1399", kind: "tv", title: "Game of Thrones", year: 2011, genres: ["18"], rating: 8.4, popularity: 80, posterUrl: POSTER },
-  LATE_TV_ROW,
-];
 
-const json = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-
-/** The seam over the admin client's fetch: hand-written answers shaped as the backend answers
- * them (the style of test/image-cache.test.ts's live-view lane). */
-function titlesSeam(overrides: Record<string, unknown> = {}): typeof fetch {
-  return (async (input: string | URL | Request) => {
-    const url = new URL(String(input instanceof Request ? input.url : input));
-    const at = url.pathname;
-    if (overrides[at] !== undefined) return json(overrides[at]);
-    if (at === "/healthz") return json({ ok: true, data: { role: "admin-backend", version: "t", revision: 1, tmdb: "configured" } });
-    if (at === "/api/titles/genres") return json(url.searchParams.get("kind") === "tv" ? TV_GENRES : GENRES);
-    if (at === "/api/titles/movie-603") return json(MATRIX);
-    if (at === "/api/titles/tv-1399") return json(GOT);
-    if (at === "/api/titles/tv-1399/seasons/1") return json(SEASON);
-    if (at === "/api/titles/movie-603/recommendations") return json(RECOMMENDED);
-    if (at === "/api/titles/catalog") return json({ ok: true, data: { items: CATALOG_ROWS } });
-    return json({ ok: false, error: { code: "title.not_found", message: "no such title" } }, 404);
-  }) as typeof fetch;
+async function boot() {
+  const database = await makeAdminDatabase();
+  await database.executeMultiple(`
+    INSERT INTO title_genres VALUES ('movie', 878, 'Science Fiction');
+    INSERT INTO title_genres VALUES ('tv', 18, 'Drama');
+  `);
+  await seedTitle(database, {
+    id: "movie-603", kind: "movie", title: "The Matrix", genres: ["Science Fiction"], popularity: 90,
+    extra: {
+      year: 1999, rating: 8.2, plot: "A computer hacker learns the truth.", posterUrl: POSTER,
+      backdropUrl: BACKDROP, runtimeMs: 8_160_000, streamUrl: STREAM,
+      cast: Array.from({ length: 11 }, (_, at) => `Actor ${at}`),
+    },
+  });
+  await seedTitle(database, {
+    id: "movie-550", kind: "movie", title: "Fight Club", genres: ["Science Fiction"],
+    popularity: 80, extra: { year: 1999, rating: 8.4, posterUrl: POSTER },
+  });
+  await seedTitle(database, {
+    id: "tv-1399", kind: "tv", title: "Game of Thrones", genres: ["Drama"], popularity: 70,
+    extra: {
+      year: 2011, rating: 8.4, seasons: [{
+        season: 1, episodeCount: 2, episodes: [
+          {
+            season: 1, episode: 2, title: "The Kingsroad", airDate: "2011-04-24",
+            runtimeMs: 3_300_000, stillUrl: "https://image.tmdb.org/t/p/w300/ep2.jpg",
+          },
+          {
+            season: 1, episode: 1, title: "Winter Is Coming", airDate: "2011-04-17",
+            runtimeMs: 3_720_000, stillUrl: STILL,
+          },
+        ],
+      }],
+    },
+  });
+  await seedTitle(database, {
+    id: "tv-9999", kind: "tv", title: "Late Row", genres: ["Drama"],
+    popularity: 60, extra: { year: 2020, rating: 7.1, posterUrl: POSTER },
+  });
+  return { database, t: await makeApp({ adminDatabase: database, adminFetch: providerFetch }) };
 }
 
-async function seamApp(overrides: Record<string, unknown> = {}): Promise<{ app: FastifyInstance; close: () => Promise<void> }> {
-  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-titles-"));
-  const app = await buildApp({ dataDir, adminFetch: titlesSeam(overrides), logger: false, syncOnStart: false });
-  return { app, close: async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); } };
-}
-
-test("a detail passes through with rewritten images, cast of ten, and the backend's sources", async () => {
-  const t = await seamApp();
+test("detail rewrites images, truncates cast, generates sources, and hides stored episodes", async () => {
+  const { t } = await boot();
   const detail = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.equal(detail.status, 200);
   assert.equal(pick(detail.body, "data.title"), "The Matrix");
   assert.equal(pick(detail.body, "data.posterUrl"), `/api/images/${imageIdOf(POSTER)}`);
   assert.equal(pick(detail.body, "data.backdropUrl"), `/api/images/${imageIdOf(BACKDROP)}`);
-  assert.equal(pick(detail.body, "data.cast.length"), 10, "at most ten names (03 section 3.6)");
-  assert.equal(pick(detail.body, "data.runtimeMs"), 8_160_000);
-  assert.equal(pick(detail.body, "data.streamUrl"), STREAM, "passed through as the backend filled it");
-  assert.deepEqual(pick(detail.body, "data.sources"), MOVIE_SOURCES, "in the backend's preference order (03 section 7.5)");
-  assert.equal(pick(detail.body, "data.providers"), undefined, "provider records stop at the fileserver (22 section 8.4)");
-  await t.close();
-});
-
-test("a series answers seasons; a season answers episodes in order with rewritten stills", async () => {
-  const t = await seamApp();
+  assert.equal(pick(detail.body, "data.cast.length"), 10);
+  assert.equal(pick(detail.body, "data.streamUrl"), STREAM);
+  assert.equal(pick(detail.body, "data.sources.0.url"), "https://vidsrc.example/embed/movie?tmdbId=603");
   const series = await send(t.app, "GET", "/api/titles/tv-1399");
   assert.deepEqual(pick(series.body, "data.seasons"), [{ season: 1, episodeCount: 2 }]);
-  assert.equal(pick(series.body, "data.runtimeMs"), undefined, "a series carries no movie runtime");
-  const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
-  const episodes = pick(season.body, "data.episodes") as Array<{ episode: number; stillUrl?: string; streamUrl?: string; sources?: unknown }>;
-  assert.deepEqual(episodes.map((one) => one.episode), [1, 2], "in episode order (03 section 3.6)");
-  assert.equal(episodes[0]?.stillUrl, `/api/images/${imageIdOf(STILL)}`);
-  assert.equal(episodes[0]?.streamUrl, "https://streams.example.test/tv-1399-1-1.m3u8");
-  assert.deepEqual(episodes[0]?.sources, EPISODE_SOURCES, "the episode's own sources (03 section 7.5)");
-  assert.equal(episodes[1]?.sources, undefined, "an episode without sources answers none");
-  assert.equal(pick(season.body, "data.providers"), undefined);
-  await t.close();
+  assert.equal(pick(series.body, "data.seasons.0.episodes"), undefined);
+  await t.dispose();
 });
 
-test("related answers TMDB's recommendations, the row's genres decoded", async () => {
-  const t = await seamApp();
+test("season answers episodes in order with rewritten stills and request-local sources", async () => {
+  const { t } = await boot();
+  const season = await send(t.app, "GET", "/api/titles/tv-1399/seasons/1");
+  assert.deepEqual([
+    pick(season.body, "data.episodes.0.episode"), pick(season.body, "data.episodes.1.episode"),
+  ], [1, 2]);
+  assert.equal(pick(season.body, "data.episodes.0.stillUrl"), `/api/images/${imageIdOf(STILL)}`);
+  assert.equal(
+    pick(season.body, "data.episodes.0.sources.0.url"),
+    "https://vidsrc.example/embed/tv?tmdbId=1399&season=1&episode=1",
+  );
+  await t.dispose();
+});
+
+test("related preserves tmdb basis and falls back to cached genre-year when authoritative rows disappear", async () => {
+  const { database, t } = await boot();
   await send(t.app, "POST", "/api/library/refresh");
   const related = await send(t.app, "GET", "/api/titles/movie-603/related");
   assert.equal(pick(related.body, "data.basis"), "tmdb");
   assert.equal(pick(related.body, "data.items.0.ref.id"), "movie-550");
-  assert.equal(pick(related.body, "data.items.0.title"), "Fight Club");
-  assert.deepEqual(pick(related.body, "data.items.0.genres"), ["Science Fiction"], "ids decoded through the genre list");
-  await t.close();
-});
-
-test("with no recommendations the band falls back to genre and year, read from the cache", async () => {
-  const t = await seamApp({ "/api/titles/movie-603/recommendations": { ok: true, data: { items: [] } } });
-  assert.equal((await send(t.app, "POST", "/api/library/refresh")).status, 200);
-  const related = await send(t.app, "GET", "/api/titles/movie-603/related");
-  assert.equal(pick(related.body, "data.basis"), "genre-year");
-  assert.equal(pick(related.body, "data.items.0.ref.id"), "movie-550");
-  await t.close();
-});
-
-test("an unknown title is 404 title.not_found", async () => {
-  const t = await seamApp();
-  const missing = await send(t.app, "GET", "/api/titles/movie-999");
-  assert.equal(missing.status, 404);
-  assert.equal(pick(missing.body, "error.code"), "title.not_found");
-  await t.close();
-});
-
-test("the library lists the synced catalog with flags, decoded genres, facets and an exact total", async () => {
-  const t = await seamApp();
-  const first = await send(t.app, "GET", "/api/library");
-  assert.equal(pick(first.body, "data.titlesAvailable"), true);
-  assert.equal(pick(first.body, "data.trending"), true);
-  assert.equal(pick(first.body, "data.total"), 4);
-  assert.deepEqual(pick(first.body, "data.facets.genres"), ["Drama", "Science Fiction"]);
-  const ids = (pick(first.body, "data.items") as Array<{ ref: { id: string } }>).map((one) => one.ref.id);
-  assert.deepEqual(ids, ["tv-9999", "tv-1399", "movie-603", "movie-550"], "newest: year, then popularity");
-  assert.equal(pick(first.body, "data.items.2.posterUrl"), `/api/images/${imageIdOf(POSTER)}`);
-  assert.equal(pick(first.body, "data.items.2.rating"), 8.2, "the card carries the rating, unrounded");
-  assert.deepEqual(pick(first.body, "data.items.2.genres"), ["Science Fiction"], "ids decoded through the stored dictionary");
-  assert.equal(pick(first.body, "data.nextCursor"), undefined);
-  await t.close();
-});
-
-test("the backend down answers 503; the library stays usable and refuses trending", async () => {
-  const t = await makeApp();
-  await send(t.app, "PATCH", "/api/settings", { adminUrl: "http://127.0.0.1:1" });
-  const down = await send(t.app, "GET", "/api/titles/movie-603");
-  assert.equal(down.status, 503);
-  assert.equal(pick(down.body, "error.code"), "backend.unreachable");
-  const library = await send(t.app, "GET", "/api/library");
-  assert.equal(library.status, 200);
-  assert.equal(pick(library.body, "data.titlesAvailable"), false);
-  const trending = await send(t.app, "GET", "/api/library?sort=trending");
-  assert.equal(trending.status, 422);
-  assert.equal(pick(trending.body, "error.code"), "library.invalid");
+  await database.execute("DELETE FROM titles WHERE id = 'movie-550'");
+  const fallback = await send(t.app, "GET", "/api/titles/movie-603/related");
+  assert.equal(pick(fallback.body, "data.basis"), "genre-year");
+  assert.equal(pick(fallback.body, "data.items.0.ref.id"), "movie-550");
   await t.dispose();
 });
 
-test("against the real backend (TMDB absent) the pass-through answers honestly", async () => {
-  const t = await makeApp();
-  await pointAt(t, backend.url);
-  const title = await send(t.app, "GET", "/api/titles/movie-603");
-  // 503 while the backend still asks TMDB for a detail, 404 once its public reads are store-only (docs/47 section 3.2).
-  assert.ok([404, 503].includes(title.status), `an uncached title is an honest error, not ${title.status}`);
-  const library = await send(t.app, "GET", "/api/library");
-  assert.equal(pick(library.body, "data.titlesAvailable"), false);
-  assert.equal(pick(library.body, "data.trending"), false);
+test("library catalog carries flags, decoded genres, facets, paging facts and exact total", async () => {
+  const { t } = await boot();
+  const page = await send(t.app, "GET", "/api/library");
+  assert.equal(pick(page.body, "data.titlesAvailable"), true);
+  assert.equal(pick(page.body, "data.trending"), true);
+  assert.equal(pick(page.body, "data.total"), 4);
+  assert.deepEqual(pick(page.body, "data.facets.genres"), ["Drama", "Science Fiction"]);
+  assert.deepEqual(
+    (pick(page.body, "data.items") as Array<{ ref: { id: string } }>).map((item) => item.ref.id),
+    ["tv-9999", "tv-1399", "movie-603", "movie-550"],
+  );
+  await t.dispose();
+});
+
+test("unknown and malformed stored titles distinguish 404 and 502", async () => {
+  const { database, t } = await boot();
+  const missing = await send(t.app, "GET", "/api/titles/movie-999");
+  assert.deepEqual([missing.status, pick(missing.body, "error.code")], [404, "title.not_found"]);
+  await database.execute("UPDATE titles SET payload = '{}' WHERE id = 'movie-603'");
+  const malformed = await send(t.app, "GET", "/api/titles/movie-603");
+  assert.deepEqual([malformed.status, pick(malformed.body, "error.code")], [502, "backend.bad_response"]);
   await t.dispose();
 });

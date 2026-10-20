@@ -1,7 +1,11 @@
-import os from "node:os";
 import path from "node:path";
 
 import { APP_ROLE, APP_RUNTIME, APP_VERSION } from "../constants/deployment.js";
+import { createAdminChannelRepository } from "../store/admin-channel-repository.js";
+import { createAdminTitleRepository } from "../store/admin-title-repository.js";
+import {
+  openAdminDatabase, scopeAdminDatabase, validateAdminSchema,
+} from "../store/admin-database.js";
 import { openDatabase, pingDatabase, type Database } from "../store/database.js";
 import { createChannelStateRepository } from "../store/channel-state-repository.js";
 import { createCollectionRepository } from "../store/collection-repository.js";
@@ -12,9 +16,7 @@ import { createLocalFileRepository } from "../store/local-file-repository.js";
 import { createSettingsRepository } from "../store/settings-repository.js";
 import { createShellStateRepository } from "../store/shell-state-repository.js";
 import { createWatchRepository } from "../store/watch-repository.js";
-import { createAdminCatalog } from "./admin-catalog.js";
-import { createAdminClient } from "./admin-client.js";
-import { createAdminTitles } from "./admin-titles.js";
+import { createAccountServices } from "./account-setup.js";
 import { createBackendCache } from "./backend-cache-setup.js";
 import {
   createCollectionService,
@@ -27,28 +29,26 @@ import { createLibrary } from "./library-setup.js";
 import { createLiveChannelsService, type LiveChannelsService } from "./live-channels-service.js";
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
 import { createPosterFetchService, type PosterFetchService } from "./poster-fetch.js";
-import { createScanService, type FolderScanner, type ScanService } from "./scan-service.js";
+import { createProviderClient } from "./provider-client.js";
+import { createScanService, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
-import { createFavoritesService, createWatchService, type FavoritesService, type WatchService } from "./watch-service.js";
+import {
+  createFavoritesService, createWatchService, type FavoritesService, type WatchService,
+} from "./watch-service.js";
+import { createWatchRoutingService } from "./watch-routing-service.js";
+import type { ServiceOptions } from "./service-options.js";
+import { createTitleSources } from "./title-sources.js";
 
-export interface ServiceOptions {
-  dataDir: string;
-  allowInsecureAdmin: boolean;
-  /** The admin address before one is saved (config: the backend's port for this mode). */
-  defaultAdminUrl: string;
-  now: () => number;
-  /** Test seams: the fetches the admin client and the image cache use, and the folder scanner. */
-  adminFetch?: typeof fetch;
-  imageFetch?: typeof fetch; scan?: FolderScanner;
-  /** Electron lane: the native folder picker lives only here (docs/03 section 3.8). */
-  openFolderPicker?: () => Promise<{ path: string } | "cancelled">;
-  /** Test seam: `POST /api/fs/dialog` then takes `{ name }` under this root (3.8). */
-  testFolderRoot?: string;
-}
+export type { ServiceOptions } from "./service-options.js";
 /** Every service of the fileserver, built once from the one database (docs/01 section 4.1). */
-export function createAppServices(options: ServiceOptions) {
+export async function createAppServices(options: ServiceOptions) {
   const database: Database = openDatabase(path.join(options.dataDir, "giga-stream.db"));
+  const ownsAdminDatabase = options.adminDatabase === undefined;
+  const adminDatabase = options.adminDatabase === undefined
+    ? openAdminDatabase(options.tursoDatabaseUrl, options.tursoAuthToken)
+    : scopeAdminDatabase(options.adminDatabase);
+  await validateAdminSchema(adminDatabase);
   const settingsRepository = createSettingsRepository(database);
   const settings = createSettingsService({
     repository: settingsRepository,
@@ -65,16 +65,7 @@ export function createAppServices(options: ServiceOptions) {
   });
   images.prune();
   const adminUrl = () => settings.get().adminUrl;
-  /**
-   * The admin address exactly as a Settings write saved it, or undefined when no row exists. The reverse
-   * proxy's boot fallback (docs/62 D7) needs the saved row, not the effective setting: `get().adminUrl`
-   * always answers the default, and firing the proxy on it would turn every plain desktop's `/api` and
-   * `/live` towards a backend that may not exist.
-   */
-  const savedAdminUrl = (): string | undefined => {
-    const value = settingsRepository.readAll().get("adminUrl");
-    return typeof value === "string" && value !== "" ? value : undefined;
-  };
+  const adminSource = () => options.tursoDatabaseUrl || "injected-admin-database";
   // The one image-rewrite every passed-on address goes through (03 section 3.11): the cache
   // remembers the source so a later miss can fetch it; a source that fails the backend's address
   // rule stays as it is (docs/03 sections 3.11 and 7.3).
@@ -82,7 +73,8 @@ export function createAppServices(options: ServiceOptions) {
     images.rememberSource(source);
     return rewriteImageUrl(source) ?? source;
   };
-  const admin = createAdminClient({ fetch: options.adminFetch });
+  const adminChannels = createAdminChannelRepository(adminDatabase, adminUrl);
+  const adminTitles = createAdminTitleRepository(adminDatabase);
   const {
     cache,
     channels: cachedChannels,
@@ -90,9 +82,9 @@ export function createAppServices(options: ServiceOptions) {
     titleQuery,
   } = createBackendCache({
     database,
-    admin,
-    catalog: createAdminCatalog({ fetch: options.adminFetch }),
-    adminUrl,
+    admin: adminChannels,
+    catalog: adminTitles,
+    adminUrl: adminSource,
     now: options.now,
   });
   const live: LiveChannelsService = createLiveChannelsService({
@@ -101,7 +93,7 @@ export function createAppServices(options: ServiceOptions) {
     adminUrl,
     rewriteImageUrl: rewrite,
   });
-  const titlesAdmin = createAdminTitles({ fetch: options.adminFetch });
+  const titleSources = createTitleSources(createProviderClient({ fetch: options.adminFetch }), adminUrl);
   const collectionsRepo = createCollectionRepository(database);
   const filesRepo = createLocalFileRepository(database);
   const jobRepo = createJobRepository(database);
@@ -131,7 +123,9 @@ export function createAppServices(options: ServiceOptions) {
     testFolderRoot: options.testFolderRoot ?? "",
     now: options.now,
   });
-  const collections: CollectionService = createCollectionService({ collections: collectionsRepo, scans, dialog, now: options.now });
+  const collections: CollectionService = createCollectionService({
+    collections: collectionsRepo, scans, dialog, now: options.now,
+  });
   const media: LocalMediaService = createLocalMediaService({ files: filesRepo, collections: collectionsRepo });
   const favorites: FavoritesService = createFavoritesService(favoritesRepo, options.now);
   const watches: WatchService = createWatchService({
@@ -143,7 +137,8 @@ export function createAppServices(options: ServiceOptions) {
     cache,
     cachedTitles,
     titleQuery,
-    titlesAdmin,
+    titlesAdmin: adminTitles,
+    titleSources,
     adminUrl,
     libraryRepo: createLibraryRepository(database),
     favorites: favoritesRepo,
@@ -152,6 +147,8 @@ export function createAppServices(options: ServiceOptions) {
     now: options.now,
   });
 
+  const accounts = createAccountServices(adminDatabase, options.jwtSecret, options.now);
+  const watchRouting = createWatchRoutingService(watches, accounts.accountApi);
   return {
     database,
     /** `GET /healthz` (docs/03 section 3.1): the database answers, and the fileserver's view of the backend. */
@@ -166,7 +163,6 @@ export function createAppServices(options: ServiceOptions) {
       };
     },
     settings: settings as SettingsService,
-    savedAdminUrl,
     shell: shell as ShellStateService,
     channelState,
     cache,
@@ -181,18 +177,16 @@ export function createAppServices(options: ServiceOptions) {
     watches,
     titles,
     library,
+    ...accounts,
+    watchRouting,
     async close(): Promise<void> {
       // The cache first: abort its syncs and wait for them, so none writes to a closed database.
       await cache.close();
       await jobs.close();
       database.close();
+      if (ownsAdminDatabase) adminDatabase.close();
     },
   };
 }
 
-export type AppServices = ReturnType<typeof createAppServices>;
-
-/** The default data folder (docs/03 section 1): `~/.giga-stream`, overridable with `DATA_DIR`. */
-export function defaultDataDir(): string {
-  return process.env.DATA_DIR || path.join(os.homedir(), ".giga-stream");
-}
+export type AppServices = Awaited<ReturnType<typeof createAppServices>>;

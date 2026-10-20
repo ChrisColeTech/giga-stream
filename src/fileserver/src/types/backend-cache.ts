@@ -1,4 +1,4 @@
-import type { AdminFailure } from "../services/admin-client.js";
+import type { AdminFailure } from "../services/admin-failure.js";
 
 /** The datasets the fileserver keeps from the backend (docs/46 section A). */
 export type CacheDataset = "channels" | "titles";
