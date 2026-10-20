@@ -1,6 +1,8 @@
-import { limitsOfKey } from "@/constants/surfaces";
+import { DEFAULT_SURFACE, limitsOfKey } from "@/constants/surfaces";
 import type { PaneKey, Surface } from "@/types/shell";
 import { api } from "./api";
+import { readLocalShell, writeLocalShell } from "./local-state";
+import { storeFor, type ShellBackends } from "./persistence";
 import { ShellStateSchema, type ShellStateAnswer } from "./schemas/state-schema";
 
 const PANES = [
@@ -46,15 +48,33 @@ export function toWireShell(layout: ShellLayout): ShellStateAnswer {
   return { activeSurface: layout.surface, paneVisibility, paneSizes };
 }
 
+/** The two backends (`61` section 2.2). The server's is today's REST transport, byte for byte. The local one keeps
+ *  the same wire shape in `giga.v1.shell`, answers the store's own starting surface when nothing is stored yet, and
+ *  a refused write (quota, private mode) surfaces as the layout write-back's warning, never as a crash. */
+const BACKENDS: ShellBackends = {
+  server: {
+    read: async (signal) => fromWireShell(await api("/api/shell-state", ShellStateSchema, { signal })),
+    write: async (layout, signal) =>
+      fromWireShell(
+        await api("/api/shell-state", ShellStateSchema, { method: "PATCH", body: toWireShell(layout), signal }),
+      ),
+  },
+  local: {
+    read: async () => {
+      const part = readLocalShell();
+      return part.value === undefined ? { surface: DEFAULT_SURFACE, open: {}, sizes: {} } : fromWireShell(part.value);
+    },
+    write: async (layout) => {
+      if (!writeLocalShell(toWireShell(layout))) throw new Error("The layout could not be saved in this browser.");
+      return layout;
+    },
+  },
+};
+
 export async function readShellState(signal?: AbortSignal): Promise<ShellLayout> {
-  return fromWireShell(await api("/api/shell-state", ShellStateSchema, { signal }));
+  return storeFor("shell", BACKENDS).read(signal);
 }
 
 export async function patchShellState(layout: ShellLayout, signal?: AbortSignal): Promise<ShellLayout> {
-  const answer = await api("/api/shell-state", ShellStateSchema, {
-    method: "PATCH",
-    body: toWireShell(layout),
-    signal,
-  });
-  return fromWireShell(answer);
+  return storeFor("shell", BACKENDS).write(layout, signal);
 }
