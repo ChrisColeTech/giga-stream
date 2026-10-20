@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { choicePopoverSearches, nextChoiceValues } from "@giga/ui/lib/choice-popover-state";
@@ -89,5 +89,28 @@ describe("Library composition", () => {
       "src/components/library/GenrePopover.tsx", "src/components/library/AppliedFilters.tsx",
       "src/lib/library-filter-state.ts",
     ]) assert.equal(existsSync(path), false, path);
+  });
+});
+
+describe("the Library watched filter control (`61` section 2.5)", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, "window");
+  });
+
+  it("is visibly disabled with its truthful reason in the browser runtime", () => {
+    (globalThis as { window?: unknown }).window = {};
+    const markup = render(createElement(LibraryFilters, {
+      query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
+    }));
+    assert.match(markup, /The watched filter needs the desktop library or an account\./);
+    assert.match(markup, /disabled/);
+  });
+
+  it("works on the desktop runtime, with no disabled reason", () => {
+    (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
+    const markup = render(createElement(LibraryFilters, {
+      query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
+    }));
+    assert.equal(markup.includes("The watched filter needs the desktop library or an account."), false);
   });
 });

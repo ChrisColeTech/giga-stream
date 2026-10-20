@@ -6,7 +6,7 @@ import {
   appendLibraryPage,
   canLoadLibraryPage,
   libraryQueryKey,
-  readContinue,
+  readContinueRows,
   readLibrary,
 } from "@/services/library";
 import { listCollections } from "@/services/collections";
@@ -88,7 +88,7 @@ export function useLibraryData(
     const collectionsVersion = useAppStore.getState().beginCollectionsRead();
     const neutral = { ...DEFAULT_QUERY, scope: ALL_MEDIA, sort: "newest" as const };
     const reads = [
-      showContinue ? readContinue(controller.signal) : Promise.resolve([]),
+      showContinue ? readContinueRows(controller.signal) : Promise.resolve([]),
       listCollections(controller.signal),
       readLibrary({ ...neutral, source: "all" }, controller.signal),
       readLibrary({ ...neutral, source: "history" }, controller.signal),
