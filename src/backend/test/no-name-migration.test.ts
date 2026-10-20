@@ -69,7 +69,10 @@ test("021 drops the account name and keeps every account, hash, session and secu
       );
       assert.equal(boss?.account.securityQuestionSet, true);
       assert.equal((await store.refreshTokens.findByHash("hash-1"))?.accountId, "acct_a");
-      await store.accounts.insert({ id: "acct_c", username: "New", passwordHash: "scrypt$c", disabled: false }, 10);
+      await store.accounts.insert(
+        { id: "acct_c", username: "New", kind: "admin", passwordHash: "scrypt$c", disabled: false },
+        10,
+      );
       assert.equal(await store.accounts.count(), 3);
     } finally {
       store.close();
@@ -78,7 +81,7 @@ test("021 drops the account name and keeps every account, hash, session and secu
     try {
       const columns = (await queryRows(db, "PRAGMA table_info(admin_accounts)")).map((r) => String(r.name));
       assert.equal(columns.includes("name"), false);
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
       assert.equal(Object.values((await queryRow(db, "SELECT COUNT(*) AS n FROM admin_ui_state")) ?? {})[0], 1);
     } finally {
       db.close();

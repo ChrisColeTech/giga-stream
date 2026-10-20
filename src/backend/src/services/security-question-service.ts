@@ -77,7 +77,7 @@ export function createSecurityQuestionService(deps: {
         await store.accounts.update({ ...stored.account, passwordHash }, now());
         await revokeAll(id);
       });
-      const principal: Principal = { accountId: id, username: stored.account.username };
+      const principal: Principal = { accountId: id, username: stored.account.username, kind: stored.account.kind };
       await audit.record(
         { ...actor, principal },
         { action: "auth.reset_completed", subject: id, detail: { username: stored.account.username } },

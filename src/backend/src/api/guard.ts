@@ -11,10 +11,19 @@ export const actorOf = (request: FastifyRequest, principal?: Principal): Actor =
 });
 
 /**
- * A signed-in admin (docs/03 sections 7.11-7.12); every admin account is equal (docs/26 D22). No or a bad
- * token is `401 auth.unauthorized`.
+ * A signed-in admin (docs/03 sections 7.11-7.12): the one choke point every `/api/admin` route passes, and it
+ * demands `kind='admin'` (docs/62 D3), so a user token is refused here with the usual 401 auth.unauthorized.
+ * No or a bad token is the same refusal.
  */
 export async function signedIn(services: Services, request: FastifyRequest): Promise<Principal> {
+  return services.auth.authenticate(request.headers.authorization, "admin");
+}
+
+/**
+ * A signed-in account of either kind (docs/62 section 3.3): the `/api/account` routes' guard. An admin may
+ * use the app; a user never reaches the console, because that guard is `signedIn` above.
+ */
+export async function anySignedIn(services: Services, request: FastifyRequest): Promise<Principal> {
   return services.auth.authenticate(request.headers.authorization);
 }
 

@@ -51,7 +51,7 @@ test("migrations 015 and 016 drop role and api_key and keep every row, id and th
     try {
       // Migrations 017 (account UI state), 018 (security questions), 019 (username), 020 (deleted titles), 021, 022
       // (the playlist model) and 023 (no lockout) run after 015 and 016.
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
       await verifyRows(db);
     } finally {
       db.close();

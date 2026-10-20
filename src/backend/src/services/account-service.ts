@@ -45,8 +45,15 @@ export function createAccountService(deps: {
       await assertUsernameFree(input.username);
       const id = `acct_${randomUUID()}`;
       const passwordHash = await hashPassword(input.password);
-      await store.accounts.insert({ id, username: input.username, passwordHash, disabled: false }, now());
-      await audit.record(actor, { action: "account.created", subject: id, detail: { username: input.username } });
+      await store.accounts.insert(
+        { id, username: input.username, kind: input.kind, passwordHash, disabled: false },
+        now(),
+      );
+      await audit.record(actor, {
+        action: "account.created",
+        subject: id,
+        detail: { username: input.username, kind: input.kind },
+      });
       return (await existing(id)).account;
     },
 
@@ -63,6 +70,7 @@ export function createAccountService(deps: {
           {
             id,
             username: patch.username ?? a.username,
+            kind: a.kind, // a patch never moves an account between kinds (docs/62 section 3.7)
             disabled: patch.disabled ?? a.disabled,
             passwordHash,
           },

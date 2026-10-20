@@ -77,7 +77,7 @@ test("migration 008 keeps every existing stream row, its sync keys and the revis
     const db = await openTestDatabase(path.join(dataDir, "admin.db"));
     try {
       // The schema is at the newest migration, not at 008.
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
     } finally {
       db.close();
     }
