@@ -26,8 +26,13 @@ export const WatchWriteAnswerSchema = z.object({ applied: z.boolean(), entry: Wa
 export const RemovedWatchSchema = z.object({ removed: z.string().min(1) });
 export const ClearedWatchSchema = z.object({ cleared: z.number().int().nonnegative() });
 
+/** `GET /api/account/watch` (`63` section 3.2): the account's entries, newest first, the same entry shape the
+ *  fileserver's watch reads answer. */
+export const AccountWatchSchema = z.object({ entries: z.array(WatchEntrySchema) });
+
 export type WatchEntry = z.infer<typeof WatchEntrySchema>;
 export type WatchWrite = z.input<typeof WatchWriteSchema>;
 export type WatchWriteAnswer = z.infer<typeof WatchWriteAnswerSchema>;
 export type RemovedWatch = z.infer<typeof RemovedWatchSchema>;
 export type ClearedWatch = z.infer<typeof ClearedWatchSchema>;
+export type AccountWatch = z.infer<typeof AccountWatchSchema>;

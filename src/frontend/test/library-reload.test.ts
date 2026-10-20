@@ -17,6 +17,10 @@ describe("library reload decision", () => {
   it("reloads for a refresh serial bump", () => {
     assert.equal(reloadDecision({ ...base, serialChanged: true }).reload, true);
   });
+  it("reloads when the session started or ended (`63` section 3.3: the watch truth changed home)", () => {
+    assert.equal(reloadDecision({ ...base, sessionChanged: true }).reload, true);
+    assert.equal(reloadDecision({ ...base, sessionChanged: false }).reload, false);
+  });
   it("defers an invalidation while hidden, then applies it once shown", () => {
     const hidden = reloadDecision({ ...base, active: false, serialChanged: true });
     assert.deepEqual(hidden, { reload: false, dirty: true });

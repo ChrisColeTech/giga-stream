@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_QUERY, collectionOf, matchesQuery, type LibraryQuery, type ViewCounts } from "@/lib/library-query";
-import { ALL_MEDIA } from "@/lib/library-media";
+import { collectionOf, matchesQuery, type LibraryQuery } from "@/lib/library-query";
+import { acceptCount } from "@/lib/library-counts";
+import { reloadDecision } from "@/lib/library-reload";
+import { logLibraryPage } from "@/services/library-log";
+import { syncLibrary } from "@/services/library-refresh";
 import {
   LibrarySearchSession,
   appendLibraryPage,
   canLoadLibraryPage,
   libraryQueryKey,
-  readContinueRows,
   readLibrary,
 } from "@/services/library";
-import { listCollections } from "@/services/collections";
-import { acceptCount, resultCount } from "@/lib/library-counts";
-import { reloadDecision } from "@/lib/library-reload";
-import { logLibraryPage } from "@/services/library-log";
-import { syncLibrary } from "@/services/library-refresh";
 import { useAppStore } from "@/store/app-store";
+import { useLibrarySideData } from "./useLibrarySideData";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 
 const aborted = (error: unknown): boolean => error instanceof DOMException && error.name === "AbortError";
@@ -29,7 +27,7 @@ export interface LibraryData {
   /** Requests the next page; answers whether one really was requested. */
   readonly loadMore: () => boolean;
   readonly refresh: () => void;
-  /** Continue watching and the collections have answered (the Rows view plans its shelves only once they have). */
+  /** The side reads have answered (the Rows view plans its shelves only once they have). */
   readonly sideReady: boolean;
   /** The query key and refresh serial the held page was read for; null before any page. */
   readonly pageFor: { readonly queryKey: string | null; readonly serial: number | null };
@@ -40,28 +38,27 @@ export function useLibraryData(
   active: boolean, query: LibraryQuery, showContinue: boolean, ready: boolean,
 ): LibraryData {
   const [page, setPage] = useState<LibraryPage | null>(null);
-  const [continuing, setContinuing] = useState<readonly LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [paging, setPaging] = useState(false);
   const [accepted, setAccepted] = useState<{ readonly queryKey: string | null; readonly serial: number | null }>(
     { queryKey: null, serial: null });
-  const [sideReady, setSideReady] = useState(false);
+  const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
+  const signedIn = useAppStore((state) => state.signedIn);
+  const { continuing, sideReady, readSideData } = useLibrarySideData(showContinue, signedIn);
   const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
   const session = useRef<LibrarySearchSession | null>(null);
-  const sideRequest = useRef<AbortController | null>(null);
   const pageRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
   const firstPagePending = useRef(true);
   const pagesLoaded = useRef(0);
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
-  const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
   const previousKey = useRef(libraryQueryKey(query));
   const previousSerial = useRef(refreshSerial);
+  const previousSignedIn = useRef(signedIn);
   const firstPass = useRef(true);
   const dirty = useRef(false);
-
   if (session.current === null) {
     session.current = new LibrarySearchSession(
       (answer) => {
@@ -80,44 +77,6 @@ export function useLibraryData(
       },
     );
   }
-
-  const readSideData = (): void => {
-    sideRequest.current?.abort();
-    const controller = new AbortController();
-    sideRequest.current = controller;
-    const collectionsVersion = useAppStore.getState().beginCollectionsRead();
-    const neutral = { ...DEFAULT_QUERY, scope: ALL_MEDIA, sort: "newest" as const };
-    const reads = [
-      showContinue ? readContinueRows(controller.signal) : Promise.resolve([]),
-      listCollections(controller.signal),
-      readLibrary({ ...neutral, source: "all" }, controller.signal),
-      readLibrary({ ...neutral, source: "history" }, controller.signal),
-      readLibrary({ ...neutral, source: "favorites" }, controller.signal),
-    ] as const;
-    void Promise.allSettled(reads).then((results) => {
-      if (sideRequest.current !== controller) return;
-      const store = useAppStore.getState();
-      const [nextContinue, collections, all, history, favorites] = results;
-      if (nextContinue.status === "fulfilled") {
-        setContinuing(nextContinue.value);
-        store.rememberLibraryItems(nextContinue.value);
-      }
-      const collectionsAccepted = collections.status === "fulfilled"
-        && store.acceptCollectionsRead(collectionsVersion, collections.value);
-      const collectionCounts = collections.status === "fulfilled" && collectionsAccepted
-        ? Object.fromEntries(collections.value.map((row) => [row.id, row.itemCount])) : store.libraryCounts.collections;
-      const counts: ViewCounts = {
-        all: resultCount(all, store.libraryCounts.all),
-        history: resultCount(history, store.libraryCounts.history),
-        favorites: resultCount(favorites, store.libraryCounts.favorites),
-        collections: collectionCounts,
-      };
-      store.setLibraryCounts(counts);
-      const failed = results.find((result) => result.status === "rejected" && !aborted(result.reason));
-      if (failed?.status === "rejected") store.say(sentence(failed.reason), "warn");
-      setSideReady(true);
-    });
-  };
 
   const read = (debounce: boolean): void => {
     queryGeneration.current += 1;
@@ -157,9 +116,9 @@ export function useLibraryData(
     return true;
   };
 
-  /* The first page is read again only for an invalidation (`library-reload`): a changed query or a bumped refresh
-     serial, applied when the Library is shown. Showing it again reads nothing for the list, which keeps its place;
-     only the side data (counts, Continue) refreshes quietly. */
+  /* The first page is read again only for an invalidation (`library-reload`): a changed query, a bumped refresh
+     serial, a session that started or ended (`63` section 3.3 - the watch truth changed home). Showing it again
+     reads nothing for the list, which keeps its place; only the side data refreshes quietly. */
   useEffect(() => {
     const searchChanged = previousSearch.current !== query.search;
     previousSearch.current = query.search;
@@ -167,24 +126,20 @@ export function useLibraryData(
     previousKey.current = libraryQueryKey(query);
     const serialChanged = previousSerial.current !== refreshSerial;
     previousSerial.current = refreshSerial;
+    const sessionChanged = previousSignedIn.current !== signedIn;
+    previousSignedIn.current = signedIn;
     const shownNow = active && !previousActive.current;
     previousActive.current = active;
     useAppStore.getState().setLibraryQuery(query);
     const decision = reloadDecision({
-      initial: firstPass.current, active, queryChanged, serialChanged, dirty: dirty.current, ready,
+      initial: firstPass.current, active, queryChanged, serialChanged, sessionChanged, dirty: dirty.current, ready,
     });
     if (ready) firstPass.current = false;
     dirty.current = decision.dirty;
     if (decision.reload) read(searchChanged && !shownNow);
-    if (active && (shownNow || serialChanged) && !decision.reload) readSideData();
-  }, [query, refreshSerial, active, ready]);
-  useEffect(() => {
-    setSideReady(false);
-    readSideData();
-    return () => { session.current?.cancel(); sideRequest.current?.abort(); pageRequest.current?.abort(); };
-  }, [showContinue]);
-
-  /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
+    if (active && (shownNow || serialChanged || sessionChanged) && !decision.reload) readSideData();
+  }, [query, refreshSerial, active, ready, signedIn, readSideData]);
+  useEffect(() => () => { session.current?.cancel(); pageRequest.current?.abort(); }, []);  /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
   useEffect(() => {
     useAppStore.getState().setActivity("library", loading || paging);
     return () => useAppStore.getState().setActivity("library", false);
@@ -195,6 +150,10 @@ export function useLibraryData(
     ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
   const hasMore = canLoadLibraryPage(accepted.queryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
-  const pageFor = { queryKey: accepted.queryKey, serial: accepted.serial };
-  const refresh = (): void => { void syncLibrary(readSideData); };
-  return { page, continuing: filtered, loading, paging, hasMore, loadMore, refresh, sideReady, pageFor };}
+  return {
+    page, continuing: filtered, loading, paging, hasMore, loadMore,
+    refresh: (): void => { void syncLibrary(readSideData); },
+    sideReady,
+    pageFor: { queryKey: accepted.queryKey, serial: accepted.serial },
+  };
+}

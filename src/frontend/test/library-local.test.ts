@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { continueEntries } from "@giga/watch/continue";
-import { newestFirst } from "@giga/watch/order";
-import { pageOf } from "@giga/watch/page";
 import { DEFAULT_QUERY } from "@/lib/library-query";
 import type { LibraryItem } from "@/types/library";
-import { setSharedLocalWatch, type LocalWatch } from "@/services/local-watch";
+import { setAccountWatchReader } from "@/services/account-watch";
 import { readContinueRows, readLibrary } from "@/services/library";
 import type { WatchEntry } from "@/services/schemas/watch-schema";
 import { useAppStore } from "@/store/app-store";
@@ -48,38 +45,22 @@ const CATALOG_PAGE = {
   titlesAvailable: true,
 };
 
-/** The local store stub: whole-list reads answered from the given entries; the selections are the shared ones. */
-function localStoreOf(entries: readonly WatchEntry[], seen: string[]): LocalWatch {
-  return {
-    write: async () => {
-      throw new Error("the library reads write nothing");
-    },
-    remove: async () => {
-      throw new Error("the library reads remove nothing");
-    },
-    clear: async () => {
-      throw new Error("the library reads clear nothing");
-    },
-    entries: async () => {
-      seen.push("entries");
-      return [...entries];
-    },
-    continueSelection: async (max) => continueEntries(entries, max),
-    historyPage: async (page, pageSize) => pageOf(newestFirst(entries), page, pageSize),
-  };
-}
-
 interface Seams {
   readonly libraryUrls: string[];
   readonly titleIds: string[];
-  readonly storeSeen: string[];
+  accountReads: number;
 }
 
-/** Mounts the browser window, the local store and a fetch that answers the catalog, the titles and a refused id. */
+/** Mounts a browser window, the signed-in session and an account reader over `entries`; fetch answers the catalog,
+ *  the titles and a refused id. */
 function mountBrowser(entries: readonly WatchEntry[]): Seams {
-  const seams: Seams = { libraryUrls: [], titleIds: [], storeSeen: [] };
+  const seams: Seams = { libraryUrls: [], titleIds: [], accountReads: 0 };
   browserWindow();
-  setSharedLocalWatch(Promise.resolve(localStoreOf(entries, seams.storeSeen)));
+  useAppStore.setState({ signedIn: true });
+  setAccountWatchReader(() => {
+    seams.accountReads += 1;
+    return Promise.resolve([...entries]);
+  });
   globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.startsWith("/api/library/continue")) {
@@ -107,13 +88,13 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   Reflect.deleteProperty(globalThis, "window");
-  setSharedLocalWatch(null);
+  setAccountWatchReader(null);
 });
 
-const LOCAL_ENTRY_COUNT = 25;
+const ACCOUNT_ENTRY_COUNT = 25;
 
-describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
-  it("decorates catalog rows with the items' newest local marks, without the server watched param", async () => {
+describe("the signed-in browser's library joins (`63` section 3.3)", () => {
+  it("decorates catalog rows with the account's newest marks, without the server watched param", async () => {
     const seams = mountBrowser([entry({ updatedAt: 300, item: { kind: "title", id: "m1" } })]);
     const page = await readLibrary({ ...DEFAULT_QUERY });
     assert.equal(seams.libraryUrls.length, 1);
@@ -122,10 +103,10 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     assert.equal(decorated?.watchId, "w300");
     assert.equal(decorated?.progress?.positionMs, 300);
     assert.equal(page.items.find((item) => item.ref.id === "plain")?.progress, undefined);
-    assert.equal(seams.storeSeen.join(","), "entries");
+    assert.equal(seams.accountReads, 1);
   });
 
-  it("answers History from the local entries: memory hit, titles fallback, then the id's skeleton", async () => {
+  it("answers History from the account's entries: memory hit, titles fallback, then the id's skeleton", async () => {
     const seams = mountBrowser([
       entry({ updatedAt: 300, item: { kind: "title", id: "m1" } }),
       entry({ updatedAt: 200, item: { kind: "title", id: "tv-7" } }),
@@ -145,12 +126,12 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     assert.ok(useAppStore.getState().libraryItems.some((item) => item.ref.id === "tv-7"));
   });
 
-  it("pages the local history client-side at the server's page size", async () => {
-    mountBrowser(Array.from({ length: LOCAL_ENTRY_COUNT }, (_, at) => entry({
+  it("pages the account's history client-side at the server's page size", async () => {
+    mountBrowser(Array.from({ length: ACCOUNT_ENTRY_COUNT }, (_, at) => entry({
       updatedAt: at + 1, item: { kind: "local", id: `f${at}` },
     })));
     const first = await readLibrary({ ...DEFAULT_QUERY, source: "history" });
-    assert.equal(first.total, LOCAL_ENTRY_COUNT);
+    assert.equal(first.total, ACCOUNT_ENTRY_COUNT);
     assert.equal(first.items.length, 20);
     assert.equal(first.nextCursor, "1");
     assert.equal(first.titlesAvailable, true);
@@ -161,7 +142,7 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     assert.equal(second.items[0]?.ref.id, "f4");
   });
 
-  it("narrows the local history by the query and keeps the chosen facets listed", async () => {
+  it("narrows the account's history by the query and keeps the chosen facets listed", async () => {
     mountBrowser([
       entry({ updatedAt: 300, item: { kind: "title", id: "m1" } }),
       entry({ updatedAt: 200, item: { kind: "title", id: "tv-7" } }),
@@ -172,7 +153,7 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     assert.ok(page.facets.genres.includes("Drama"));
   });
 
-  it("answers the watching and watched sets from the items' newest local entries", async () => {
+  it("answers the watching and watched sets from the items' newest account entries", async () => {
     const seams = mountBrowser([
       entry({ updatedAt: 300, item: { kind: "title", id: "m1" } }),
       entry({ updatedAt: 200, item: { kind: "title", id: "m2" }, state: "watched", positionMs: 999 }),
@@ -186,7 +167,7 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     assert.equal(watched.items[0]?.progress?.state, "watched");
   });
 
-  it("reads the Continue strip from the local selection, joined to the memory", async () => {
+  it("reads the Continue strip from the shared selection over the account's entries", async () => {
     mountBrowser([
       entry({ updatedAt: 300, item: { kind: "title", id: "m1" } }),
       entry({ updatedAt: 200, item: { kind: "title", id: "tv-7" } }),
@@ -202,11 +183,35 @@ describe("the browser library joins (`61` sections 2.5 and 2.6)", () => {
     const page = await readLibrary({ ...DEFAULT_QUERY, watched: "watching" });
     assert.equal(seams.libraryUrls.length, 1);
     assert.ok(seams.libraryUrls[0]?.includes("watched=watching"));
-    assert.deepEqual(seams.storeSeen, []);
+    assert.equal(seams.accountReads, 0);
     const undecorated = page.items.find((item) => item.ref.id === "m1");
     assert.equal(undecorated?.progress, undefined);
     const continuing = await readContinueRows();
     assert.deepEqual(continuing.map((item) => item.ref.id), ["m1"]);
     assert.equal(seams.libraryUrls.at(-1)?.includes("/api/library/continue"), true);
+  });
+});
+
+describe("signed out, the watch-derived reads answer none (`63` sections 3.3 and 3.4)", () => {
+  it("issues no call for History, the watched sets, Continue or decoration, and decorates nothing", async () => {
+    browserWindow();
+    globalThis.fetch = async () => {
+      throw new Error("no request may leave the page");
+    };
+    const history = await readLibrary({ ...DEFAULT_QUERY, source: "history" });
+    assert.deepEqual(history.items, []);
+    assert.equal(history.total, 0);
+    const watching = await readLibrary({ ...DEFAULT_QUERY, watched: "watching" });
+    assert.deepEqual(watching.items, []);
+    const continuing = await readContinueRows();
+    assert.deepEqual(continuing, []);
+  });
+
+  it("a catalog page stands as fetched, undecorated", async () => {
+    browserWindow();
+    globalThis.fetch = async () => success(CATALOG_PAGE);
+    const page = await readLibrary({ ...DEFAULT_QUERY });
+    assert.deepEqual(page.items.map((item) => item.progress), [undefined, undefined]);
+    assert.equal(page.total, 2);
   });
 });

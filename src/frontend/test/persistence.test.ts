@@ -3,7 +3,10 @@ import { afterEach, describe, it } from "node:test";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { patchShellState, readShellState } from "@/services/shell-state";
 import { patchSettings, readSettings } from "@/services/settings";
-import { onDesktopRuntime, routeFor, storeFor, type ShellStore, type SettingsStore } from "@/services/persistence";
+import {
+  onDesktopRuntime, routeFor, storeFor,
+  type ShellStore, type SettingsStore, type WatchStore,
+} from "@/services/persistence";
 import type { LocalStorageLike } from "@/services/local-state";
 import { useAppStore } from "@/store/app-store";
 
@@ -117,5 +120,24 @@ describe("the storage resolver", () => {
     assert.equal(storeFor("settings", backends, { signedIn: true }), account);
     assert.equal(routeFor("favorites", { signedIn: true }), "account");
     assert.equal(routeFor("collections", { signedIn: true }), "account");
+  });
+
+  it("routes the watch by the session (`63` section 3.3): a session keeps the one contract, signed out answers none", () => {
+    const server: WatchStore = {
+      write: async () => ({ applied: true, entry: null }),
+      remove: async (watchId) => ({ removed: watchId }),
+      clear: async () => ({ cleared: 0 }),
+    };
+    const backends = { server };
+    // Browser, signed in: the single /api/watch contract, the fileserver passing the write to the account.
+    browserWindow({});
+    assert.equal(storeFor("watch", backends, { signedIn: true }), server);
+    // Browser, signed out: none - the client never calls.
+    assert.equal(storeFor("watch", backends), null);
+    // Desktop, signed in: today's server path.
+    desktopWindow({});
+    assert.equal(storeFor("watch", backends, { signedIn: true }), server);
+    // Desktop, signed out: none here too - no watch tracking at all.
+    assert.equal(storeFor("watch", backends), null);
   });
 });

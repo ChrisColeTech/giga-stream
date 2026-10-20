@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import type { WatchEntry } from "@/services/schemas/watch-schema";
-import { type LocalWatch, setSharedLocalWatch } from "@/services/local-watch";
-import { onDesktopRuntime } from "@/services/persistence";
 import { clearWatch, removeWatch, writeWatch } from "@/services/watch";
+import { onDesktopRuntime } from "@/services/persistence";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
@@ -18,38 +16,33 @@ function desktopWindow(): void {
   (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
 }
 
-/** A `LocalWatch` that records what it is asked, answering entries built from the write, so the transport's answers
- *  keep the shape the Player and the store read. */
-function recordingStore(calls: string[]): LocalWatch {
-  const entryOf = (write: Parameters<LocalWatch["write"]>[0]): WatchEntry => ({
-    watchId: `watch-${write.seq}`,
-    item: write.item,
-    ...(write.season === undefined ? {} : { season: write.season }),
-    ...(write.episode === undefined ? {} : { episode: write.episode }),
-    positionMs: write.positionMs,
-    ...(write.durationMs === undefined ? {} : { durationMs: write.durationMs }),
-    state: "watching",
-    updatedAt: 1,
-  });
-  const written: WatchEntry[] = [];
-  return {
-    write: async (write) => {
-      calls.push(`write:${write.positionMs}`);
-      return { applied: true, entry: entryOf(write) };
-    },
-    remove: async (watchId) => {
-      calls.push(`remove:${watchId}`);
-      return { removed: watchId };
-    },
-    clear: async () => {
-      calls.push("clear");
-      return { cleared: written.length };
-    },
-    entries: async () => written,
-    continueSelection: async () => [],
-    historyPage: async () => ({ items: [], total: 0 }),
+interface Call {
+  readonly input: string;
+  readonly method?: string;
+  readonly body?: string;
+  readonly keepalive?: boolean;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+/** A fetch that records every call and answers each watch route its own envelope shape. */
+function recordingFetch(calls: Call[]): void {
+  globalThis.fetch = async (input, init) => {
+    const path = String(input);
+    calls.push({
+      input: path, method: init?.method,
+      body: typeof init?.body === "string" ? init.body : undefined,
+      keepalive: init?.keepalive === true ? true : undefined,
+      headers: (init?.headers ?? {}) as Readonly<Record<string, string>>,
+    });
+    // Each route its own answer shape: the schemas at the boundary are exact, so a write answer would not parse
+    // as a removal or a clear.
+    if (init?.method === "PUT") return success({ applied: true, entry: null });
+    if (path === "/api/watch/watch-1") return success({ removed: "watch-1" });
+    return success({ cleared: 2 });
   };
 }
+
+const WRITE = { item: { kind: "title" as const, id: "t1" }, positionMs: 5_000, durationMs: 10_000, playbackId: "p1", seq: 3 };
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true);
@@ -58,33 +51,17 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   Reflect.deleteProperty(globalThis, "window");
-  setSharedLocalWatch(null);
 });
 
-describe("the watch transport over the resolver (`61` section 2.5)", () => {
-  it("on the desktop the three calls are the exact REST transport, keepalive included", async () => {
+describe("the watch write's single contract (`63` sections 3.2 and 3.3)", () => {
+  it("on the desktop the three calls are the exact REST transport, the runtime marker and keepalive included", async () => {
     desktopWindow();
     assert.equal(onDesktopRuntime(), true);
-    const calls: Array<{ input: string; method?: string; body?: string; keepalive?: boolean }> = [];
-    globalThis.fetch = async (input, init) => {
-      const path = String(input);
-      calls.push({
-        input: path, method: init?.method,
-        body: typeof init?.body === "string" ? init.body : undefined,
-        keepalive: init?.keepalive === true ? true : undefined,
-      });
-      // Each route its own answer shape: the schemas at the boundary are exact, so a write answer would not parse
-      // as a removal or a clear.
-      if (init?.method === "PUT") return success({ applied: true, entry: null });
-      if (path === "/api/watch/watch-1") return success({ removed: "watch-1" });
-      return success({ cleared: 2 });
-    };
-    const answer = await writeWatch({
-      item: { kind: "title", id: "t1" }, positionMs: 5_000, durationMs: 10_000, playbackId: "p1", seq: 3,
-    });
+    const calls: Call[] = [];
+    recordingFetch(calls);
+    const answer = await writeWatch(WRITE);
     assert.deepEqual(answer, { applied: true, entry: null });
-    await writeWatch({ item: { kind: "title", id: "t1" }, positionMs: 6_000, playbackId: "p1", seq: 4 },
-      { keepalive: true });
+    await writeWatch({ ...WRITE, positionMs: 6_000, seq: 4 }, { keepalive: true });
     await removeWatch("watch-1");
     await clearWatch();
     assert.deepEqual(calls.map((call) => [call.input, call.method, call.keepalive]), [
@@ -94,22 +71,57 @@ describe("the watch transport over the resolver (`61` section 2.5)", () => {
       ["/api/watch", "DELETE", undefined],
     ]);
     assert.equal(JSON.parse(calls[0]?.body ?? "null")?.positionMs, 5_000);
+    for (const call of calls) assert.equal(call.headers["x-giga-runtime"], "electron");
   });
 
-  it("in a browser the same calls go to the local store and no request leaves the page", async () => {
+  it("in a signed-in browser the same contract goes out - the bearer rides it, the marker does not", async () => {
     browserWindow();
-    assert.equal(onDesktopRuntime(), false);
-    const calls: string[] = [];
-    setSharedLocalWatch(Promise.resolve(recordingStore(calls)));
+    useAppStore.setState({
+      signedIn: true,
+      session: { id: "acc-1", username: "ivy", kind: "user" },
+      tokens: { accessToken: "token-1", accessExpiresAt: 1, refreshToken: "r", refreshExpiresAt: 2 },
+    });
+    const calls: Call[] = [];
+    recordingFetch(calls);
+    await writeWatch(WRITE);
+    await removeWatch("watch-1");
+    await clearWatch();
+    assert.deepEqual(calls.map((call) => [call.input, call.method]), [
+      ["/api/watch", "PUT"],
+      ["/api/watch/watch-1", "DELETE"],
+      ["/api/watch", "DELETE"],
+    ]);
+    for (const call of calls) {
+      assert.equal(call.headers["x-giga-runtime"], undefined);
+      assert.equal(call.headers.authorization, "Bearer token-1");
+    }
+  });
+
+  it("signed out the client never calls - every verb refuses before the wire", async () => {
+    browserWindow();
     globalThis.fetch = async () => {
       throw new Error("no request may leave the page");
     };
-    const answer = await writeWatch({
-      item: { kind: "title", id: "t1" }, positionMs: 5_000, playbackId: "p1", seq: 1,
-    }, { keepalive: true });
-    assert.equal(answer.entry?.watchId, "watch-1");
-    assert.deepEqual(await removeWatch("watch-9"), { removed: "watch-9" });
-    assert.deepEqual(await clearWatch(), { cleared: 0 });
-    assert.deepEqual(calls, ["write:5000", "remove:watch-9", "clear"]);
+    await assert.rejects(writeWatch(WRITE), /not kept while signed out/);
+    await assert.rejects(removeWatch("watch-1"), /not kept while signed out/);
+    await assert.rejects(clearWatch(), /not kept while signed out/);
+  });
+
+  it("signed out on the desktop too: the fileserver's watch routes are simply never called", async () => {
+    desktopWindow();
+    globalThis.fetch = async () => {
+      throw new Error("no request may leave the page");
+    };
+    await assert.rejects(writeWatch(WRITE), /not kept while signed out/);
+    await assert.rejects(clearWatch(), /not kept while signed out/);
+  });
+
+  it("the runtime marker appears only under pocHost: a browser window sends none", async () => {
+    browserWindow();
+    useAppStore.setState({ signedIn: true });
+    const calls: Call[] = [];
+    recordingFetch(calls);
+    await writeWatch(WRITE);
+    assert.equal(calls[0]?.headers["x-giga-runtime"], undefined);
   });
 });

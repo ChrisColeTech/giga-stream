@@ -7,6 +7,8 @@ export interface ReloadInput {
   readonly queryChanged: boolean;
   /** `libraryRefreshSerial` was bumped (a Refresh, a watch or favorite write, a scan). */
   readonly serialChanged: boolean;
+  /** The session started or ended (`63` section 3.3): the watch truth changed home, so the rows are read again. */
+  readonly sessionChanged?: boolean;
   /** An invalidation arrived while the surface was hidden and has not been applied yet. */
   readonly dirty: boolean;
   /** The saved Library state has been applied (or could not be): until then nothing is read, so the first read already
@@ -26,7 +28,7 @@ export interface ReloadDecision {
 export function reloadDecision(input: ReloadInput): ReloadDecision {
   if (input.ready === false) return { reload: false, dirty: input.dirty };
   if (input.initial) return { reload: true, dirty: false };
-  const invalidated = input.queryChanged || input.serialChanged || input.dirty;
+  const invalidated = input.queryChanged || input.serialChanged || input.sessionChanged === true || input.dirty;
   if (!input.active) return { reload: false, dirty: invalidated };
   return { reload: invalidated, dirty: false };
 }

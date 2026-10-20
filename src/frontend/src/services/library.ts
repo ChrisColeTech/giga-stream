@@ -1,8 +1,9 @@
 import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
+import { sessionInputs } from "@/store/selectors";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
-import { decoratedLibraryPage, readLocalContinue, readLocalHistory } from "./library-local";
+import { decoratedLibraryPage, emptyLibraryPage, readLocalContinue, readLocalHistory } from "./library-local";
 import { onDesktopRuntime } from "./persistence";
 import {
   CollectionLibraryPageSchema,
@@ -77,14 +78,21 @@ export class LibrarySearchSession {
   }
 }
 
-/** The Library's page read. The desktop is today's transport, byte for byte. In the browser (`61` sections 2.5 and
- *  2.6) the server's watch table is not this runtime's truth: History and the watching and watched sets are computed
- *  from the local entries (`library-local.ts`), the catalog pages go out without the `watched` param, and their rows
- *  come back decorated with the local watch marks. */
+/** The Library's page read. The desktop is today's transport, byte for byte. In a browser with a session (`63`
+ *  section 3.3) the fileserver's watch table is not this session's truth: History and the watching and watched sets
+ *  are computed from the account's entries (`library-local.ts`), the catalog pages go out without the `watched`
+ *  param, and their rows come back decorated with the account's marks. Signed out the watch domain answers none: a
+ *  watch-derived read is never issued, and a stray one is answered empty - nothing is decorated, no call leaves. */
 export async function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string): Promise<LibraryPage> {
   const desktop = onDesktopRuntime();
-  if (!desktop && query.source === "history") return readLocalHistory(query, "all", signal, cursor);
-  if (!desktop && (query.watched === "watching" || query.watched === "watched")) {
+  const signedIn = sessionInputs().signedIn === true;
+  if (!signedIn) {
+    if (query.source === "history" || query.watched === "watching" || query.watched === "watched") {
+      return emptyLibraryPage(query);
+    }
+  } else if (!desktop && query.source === "history") {
+    return readLocalHistory(query, "all", signal, cursor);
+  } else if (!desktop && (query.watched === "watching" || query.watched === "watched")) {
     return readLocalHistory(query, query.watched, signal, cursor);
   }
   const params = new URLSearchParams();
@@ -101,11 +109,13 @@ export async function readLibrary(query: LibraryQuery, signal?: AbortSignal, cur
   if (cursor !== undefined) params.set("cursor", cursor);
   const schema = collectionId === null ? LibraryPageSchema : CollectionLibraryPageSchema;
   const answer = await api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
-  return desktop ? answer : decoratedLibraryPage(answer);
+  return desktop || !signedIn ? answer : decoratedLibraryPage(answer, signal);
 }
 
-/** The Continue strip's rows: the server's selection on the desktop, the local one in the browser (`61` 2.5). */
+/** The Continue strip's rows: the server's selection on the desktop, the account's in a signed-in browser (`63`
+ *  3.3). Signed out there is no Continue: no call, no rows. */
 export function readContinueRows(signal?: AbortSignal): Promise<readonly LibraryItem[]> {
+  if (sessionInputs().signedIn !== true) return Promise.resolve([]);
   return onDesktopRuntime() ? readContinue(signal) : readLocalContinue(signal);
 }
 
@@ -114,7 +124,7 @@ export function readContinue(signal?: AbortSignal) {
 }
 
 /** `POST /api/library/refresh` (`46` section E): the fileserver syncs its titles from the backend now and answers once
- *  the sync ends; a failure is the standard envelope's 503/502 with the cache still serving. */
+ * the sync ends; a failure is the standard envelope's 503/502 with the cache still serving. */
 export function refreshLibrary(signal?: AbortSignal) {
   return api("/api/library/refresh", LibraryRefreshSchema, { method: "POST", signal, area: "Catalog" });
 }

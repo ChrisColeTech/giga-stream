@@ -29,6 +29,10 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
   const begins = useRef(new ProgressBeginQueue());
   const failing = useRef(false);
   const pauseHistory = useAppStore((state) => state.library.pauseHistory);
+  const signedIn = useAppStore((state) => state.signedIn);
+  /* Watch history is a registered feature (`63` section 3.3): signed out nothing is recorded and nothing is sent,
+   * whatever the pause setting says. */
+  const recording = signedIn && !pauseHistory;
 
   /** Runs one write; one notice per outage, not one per write. Throws only when the caller asked to see failures. */
   const settle = async (write: Promise<unknown> | undefined, refresh: boolean, reportFailure = true) => {
@@ -48,8 +52,8 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
     settle(session.current?.flush(keepalive), true, reportFailure);
 
   useEffect(() => {
-    session.current?.setEnabled(!pauseHistory);
-  }, [pauseHistory]);
+    session.current?.setEnabled(recording);
+  }, [recording]);
   useEffect(() => {
     if (!active) void flushNow();
   }, [active]);
@@ -73,9 +77,10 @@ export function usePlayerProgress(active: boolean): PlayerProgressControls {
   return {
     begin: async (identity, key) => {
       await begins.current.begin(() => flushNow(), () => {
+        const store = useAppStore.getState();
         session.current = new PlayerProgress(
           identity,
-          !useAppStore.getState().library.pauseHistory,
+          store.signedIn && !store.library.pauseHistory,
           (write, keepalive) => writeWatch(write, { keepalive }).then(record),
           crypto.randomUUID(),
           key,
