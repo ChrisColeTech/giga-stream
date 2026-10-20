@@ -1,6 +1,14 @@
-import { refusalFor, resetRefusalFor } from "@/lib/auth-errors";
-import type { AuthResult, AuthSession, ResetResult, ResetStartResult } from "@/types/auth";
-import { actorOf, tokensOf, type BackendSession } from "./schemas/session-schema";
+import { profileRefusalFor, refusalFor, registrationRefusalFor, resetRefusalFor } from "@/lib/auth-errors";
+import type {
+  AuthResult,
+  AuthSession,
+  ProfileResult,
+  RegistrationInput,
+  RegistrationResult,
+  ResetResult,
+  ResetStartResult,
+} from "@/types/auth";
+import { actorOf, actorOfAccount, tokensOf, type BackendSession } from "./schemas/session-schema";
 import { createSessionApi, type SessionApi } from "./session-api";
 
 /** The sign-in seam (`62` section 3.5), the console's `services/auth-port.ts` for the app: the session transport plus
@@ -8,13 +16,32 @@ import { createSessionApi, type SessionApi } from "./session-api";
  *  rejects: every failure is a refusal the gate can show. */
 const sessionOf = (session: BackendSession): AuthSession => ({ actor: actorOf(session), tokens: tokensOf(session) });
 
-export function createAuthPort(api: Pick<SessionApi, "login" | "signOut" | "resetStart" | "resetPassword" | "restore">) {
+type AuthApi = Pick<
+  SessionApi,
+  "login" | "register" | "updateUsername" | "signOut" | "resetStart" | "resetPassword" | "restore"
+>;
+
+export function createAuthPort(api: AuthApi) {
   return {
     signIn: async (username: string, password: string): Promise<AuthResult> => {
       try {
         return { ok: true, session: sessionOf(await api.login(username, password)) };
       } catch (error: unknown) {
         return { ok: false, refusal: refusalFor(error) };
+      }
+    },
+    register: async (input: RegistrationInput & { readonly securityQuestion: number }): Promise<RegistrationResult> => {
+      try {
+        return { ok: true, session: sessionOf(await api.register(input)) };
+      } catch (error: unknown) {
+        return { ok: false, refusal: registrationRefusalFor(error) };
+      }
+    },
+    updateUsername: async (username: string): Promise<ProfileResult> => {
+      try {
+        return { ok: true, actor: actorOfAccount(await api.updateUsername(username)) };
+      } catch (error: unknown) {
+        return { ok: false, refusal: profileRefusalFor(error) };
       }
     },
     restore: async (): Promise<AuthSession | null> => {

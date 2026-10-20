@@ -23,6 +23,9 @@ function stubStorage(entries: Record<string, string> = {}): LocalStorageLike & {
     setItem: (key, value) => {
       entries[key] = value;
     },
+    removeItem: (key) => {
+      delete entries[key];
+    },
   };
 }
 
@@ -79,6 +82,7 @@ describe("the local store", () => {
       setItem: () => {
         throw new Error("quota");
       },
+      removeItem: (key) => storage.removeItem(key),
     };
     assert.equal(writeLocalShell({ ...SHELL, activeSurface: "live" }, refusing), false);
     assert.equal(writeLocalLastChannel("fx-news", refusing), false);

@@ -31,14 +31,17 @@ export interface SessionSlice {
    *  signed out. Only the first answer counts, so a double mount or a probe that lands after the fallback changes
    *  nothing. */
   finishRestore: (session: AuthSession | null) => void;
+  /** Adopts registration's returned session exactly as login adopts its answer. */
+  adoptSession: (session: AuthSession) => void;
+  /** Replaces the current actor after an authenticated profile update; tokens stay untouched. */
+  updateSessionActor: (actor: SessionActor) => void;
   /** The account's settings document wins once at sign-in (`62` D8); `replaced` says whether the account's document
    *  had anything in it to replace the device's settings with. */
   applyAccountSettings: (settings: SettingsAnswer, replaced: boolean) => void;
   /** The session ended under the app (a 401 the cookie could not answer): the app drops to signed out and the
    *  dialog's gate carries `sentence` on its notice when it is next opened. */
   endSession: (sentence: string) => void;
-  /** The user signed out: the app keeps running signed out, and the device's local state is kept - nothing is
-   *  wiped (`62` D8). */
+  /** The user signed out: account projections and flows close synchronously and Live is selected. */
   signOut: () => void;
   /** The Account control opened the gate wall; idempotent. */
   openGate: () => void;
@@ -57,6 +60,31 @@ const signedOut = (gate: GateState): Partial<AppState> => ({
   tokens: null,
   gate,
 });
+
+const EMPTY_MARKS = { favourites: {}, memberships: {}, membershipSources: {} };
+
+function logoutState(state: AppState): Partial<AppState> {
+  return {
+    ...signedOut(GATE_START),
+    gateOpen: false,
+    overlay: null,
+    overlayAnchor: null,
+    overlayItem: null,
+    collectionsFocus: null,
+    collections: [],
+    collectionsVersion: state.collectionsVersion + 1,
+    libraryItems: [],
+    libraryRefreshSerial: state.libraryRefreshSerial + 1,
+    libraryCounts: { collections: {} },
+    marks: EMPTY_MARKS,
+    watchMarks: {},
+    playerItem: null,
+    playerMedia: { sources: [], activeSourceId: null, stage: { kind: "idle" } },
+    playerPaused: true,
+    surface: "live",
+    shellRevision: state.shellRevision + 1,
+  };
+}
 
 export function sessionSlice(set: Set, get: Get): SessionSlice {
   return {
@@ -78,9 +106,15 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
       if (session === null || get().signedIn) return set({ restoring: false });
       set({ restoring: false, signedIn: true, session: session.actor, tokens: session.tokens });
     },
+    adoptSession: (session) =>
+      set({ signedIn: true, session: session.actor, tokens: session.tokens, gate: GATE_START }),
+    updateSessionActor: (actor) => {
+      if (!get().signedIn || get().session?.id !== actor.id) return;
+      set({ session: actor });
+    },
     applyAccountSettings: (settings, replaced) => applyAccountSettings(set, get, settings, replaced),
     endSession: (sentence) => set(signedOut(nextGate(get().gate, { type: "ended", sentence }))),
-    signOut: () => set(signedOut(GATE_START)),
+    signOut: () => set(logoutState(get())),
     openGate: () => set({ gateOpen: true }),
     closeGate: () => set({ gateOpen: false }),
   };

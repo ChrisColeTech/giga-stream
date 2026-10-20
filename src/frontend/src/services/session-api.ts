@@ -1,6 +1,13 @@
 import { api } from "./api";
 import { ResetDoneSchema, ResetStartSchema } from "./schemas/reset-schema";
-import { LogoutSchema, SessionSchema, type BackendSession } from "./schemas/session-schema";
+import {
+  LogoutSchema,
+  ProfileSchema,
+  SessionSchema,
+  type BackendSession,
+} from "./schemas/session-schema";
+import type { RegistrationInput } from "@/types/auth";
+import type { z } from "zod";
 import { useAppStore } from "@/store/app-store";
 
 /* The app's auth transport (`62` sections 3.2 and 3.5), through the one request layer so every call keeps the
@@ -12,6 +19,10 @@ import { useAppStore } from "@/store/app-store";
 export interface SessionApi {
   /** `POST /api/account/auth/login`: no token. Rejects; `lib/auth-errors` turns a refusal into a sentence. */
   login: (username: string, password: string) => Promise<BackendSession>;
+  /** Registration answers the same session contract as login and sets the same refresh cookie. */
+  register: (input: RegistrationInput & { readonly securityQuestion: number }) => Promise<BackendSession>;
+  /** The authenticated profile patch answers the updated account row. */
+  updateUsername: (username: string) => Promise<z.infer<typeof ProfileSchema>>;
   /** `POST /api/account/auth/restore`, the boot's cookie-only probe. Never rejects: a refused or absent cookie is
    *  null. One instance shares one probe, so a double boot sends one probe and the single-use refresh cookie's
    *  rotation is presented exactly once (a second presentation reads as a stolen token and ends every session). */
@@ -33,6 +44,20 @@ export function createSessionApi(): SessionApi {
       api("/api/account/auth/login", SessionSchema, {
         method: "POST",
         body: { username, password },
+        area: "Connection",
+      }),
+
+    register: (input) =>
+      api("/api/account/auth/register", SessionSchema, {
+        method: "POST",
+        body: input,
+        area: "Connection",
+      }),
+
+    updateUsername: (username) =>
+      api("/api/account/me", ProfileSchema, {
+        method: "PATCH",
+        body: { username },
         area: "Connection",
       }),
 
