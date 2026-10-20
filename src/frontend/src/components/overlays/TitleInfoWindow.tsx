@@ -25,6 +25,7 @@ export function TitleInfoWindow() {
   const ref = useAppStore((state) => state.overlayItem);
   const marks = useAppStore((state) => state.marks);
   const libraryItems = useAppStore((state) => state.libraryItems);
+  const signedIn = useAppStore((state) => state.signedIn);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const [detail, setDetail] = useState<TitleDetail | undefined>();
   const base = libraryItems.find((candidate) => ref !== null && candidate.ref.kind === ref.kind && candidate.ref.id === ref.id);
@@ -49,21 +50,27 @@ export function TitleInfoWindow() {
 
   return (
     <ChildWindow spec={TITLE_INFO_SPEC} onClose={closeOverlay}>
-      {/* The strip sits directly under the header and above the scroller: only the body scrolls, nothing is at the foot. */}
+      {/* The strip sits directly under the header and above the scroller: only the body scrolls, nothing is at the foot.
+          Signed out, the favorite heart stays, visibly disabled with its reason, and the collection action is
+          unrendered (`63` section 3.4). */}
       <Actions pinned left={<>
-        <Button variant="ghost" aria-pressed={item?.favorite === true} disabled={item === undefined}
-          title={item === undefined ? LIBRARY_COPY.noItem : undefined}
-          onClick={() => { if (item !== undefined) void changeFavourite(item.ref, !item.favorite); }}>
+        <Button
+          variant="ghost" aria-pressed={item?.favorite === true}
+          disabled={item === undefined || !signedIn}
+          title={item === undefined ? LIBRARY_COPY.noItem : !signedIn ? LIBRARY_COPY.favoritesSignedOut : undefined}
+          onClick={() => { if (item !== undefined && signedIn) void changeFavourite(item.ref, !item.favorite); }}>
           <Star className={item?.favorite === true ? "text-accent-text" : undefined}
             fill={item?.favorite === true ? "currentColor" : "none"} aria-hidden />
           {item?.favorite === true ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         </Button>
-        <Button variant="ghost" disabled={item === undefined} title={item === undefined ? LIBRARY_COPY.noItem : undefined}
-          onClick={(event) => {
-            if (item !== undefined) openMembershipMenu(menuEventBelow(event.currentTarget), item, collections);
-          }}>
-          <FolderPlus aria-hidden /> Collections
-        </Button>
+        {signedIn && (
+          <Button variant="ghost" disabled={item === undefined} title={item === undefined ? LIBRARY_COPY.noItem : undefined}
+            onClick={(event) => {
+              if (item !== undefined) openMembershipMenu(menuEventBelow(event.currentTarget), item, collections);
+            }}>
+            <FolderPlus aria-hidden /> Collections
+          </Button>
+        )}
       </>}>
         <Button variant="primary" disabled={!playable} title={unavailable}
           onClick={() => { if (item !== undefined && playable) playRef(item.ref); }}>

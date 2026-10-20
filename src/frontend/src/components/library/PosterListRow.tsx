@@ -8,6 +8,7 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import { identityLine, progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { changeFavourite, playRef } from "./library-service";
 import { openTitleInfo } from "./open-title-info";
@@ -29,11 +30,14 @@ export function PosterListRow({
   item, index, selected, inHistory, collections, onSelect, onRemoveWatch,
 }: PosterListRowProps) {
   const infoRef = useRef<HTMLButtonElement>(null);
+  const signedIn = useAppStore((state) => state.signedIn);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
   const facts = [identityLine(item), item.genres.join(", ")].filter((part) => part !== "").join(" · ");
+  const favoriteReason = signedIn ? undefined : LIBRARY_COPY.favoritesSignedOut;
   const context = {
     collections,
+    signedIn,
     inHistory,
     onInfo: () => openTitleInfo(item.ref, infoRef.current),
     onRemoveWatch: () => onRemoveWatch(item),
@@ -69,11 +73,13 @@ export function PosterListRow({
           {ratio !== undefined && <ProgressBar ratio={ratio} />}
         </span>
       </button>
-      {/* Lit is the filled accent star alone: a body toggle carries no raised edge. */}
+      {/* Lit is the filled accent star alone: a body toggle carries no raised edge. Signed out the heart stays,
+          visibly disabled with its reason (`63` section 3.4). */}
       <IconButton
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
-        title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
+        title={favoriteReason === undefined ? (item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite) : undefined}
+        reason={favoriteReason}
         onClick={() => void changeFavourite(item.ref, !item.favorite)}
       >
         <Star

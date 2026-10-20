@@ -12,15 +12,19 @@ const VIEWS = [
 
 export interface ViewsSectionProps {
   readonly source: SourceId;
+  /** Signed out, History is not a view at all (`63` section 3.4): the row is unrendered, its query unissued. */
+  readonly signedIn: boolean;
   readonly counts: ViewCounts;
   readonly onSource: (source: SourceId) => void;
 }
 
-/** The Views group of the rail: All, History and Favorites, each with its count. */
-export function ViewsSection({ source, counts, onSource }: ViewsSectionProps) {
+/** The Views group of the rail: All, History and Favorites, each with its count - History only while a session is
+ *  held. */
+export function ViewsSection({ source, signedIn, counts, onSource }: ViewsSectionProps) {
+  const views = VIEWS.filter((view) => signedIn || view.id !== "history");
   return (
     <NavGroup heading="Views">
-      {VIEWS.map((view) => (
+      {views.map((view) => (
         <NavItem key={view.id} selected={source === view.id}
           count={counts[view.id] ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
           onClick={() => onSource(view.id)}>
