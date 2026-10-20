@@ -3,7 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import { DEFAULT_SETTINGS } from "@/constants/settings-defaults";
 import { patchShellState, readShellState } from "@/services/shell-state";
 import { patchSettings, readSettings } from "@/services/settings";
-import { onDesktopRuntime, storeFor, type ShellStore } from "@/services/persistence";
+import { onDesktopRuntime, routeFor, storeFor, type ShellStore, type SettingsStore } from "@/services/persistence";
 import type { LocalStorageLike } from "@/services/local-state";
 import { useAppStore } from "@/store/app-store";
 
@@ -79,16 +79,43 @@ describe("the storage resolver", () => {
     assert.equal(layout.open["player.left"], false);
   });
 
-  it("consults the runtime at each call and keeps the session input pinned to the server backend", () => {
+  it("consults the runtime at each call, and the shell ignores the session in every cell", () => {
     const layout = { surface: "live" as const, open: {}, sizes: {} };
     const server: ShellStore = { read: async () => layout, write: async (value) => value };
     const local: ShellStore = { read: async () => layout, write: async (value) => value };
     const backends = { server, local };
     browserWindow({});
     assert.equal(storeFor("shell", backends), local);
+    assert.equal(storeFor("shell", backends, { signedIn: true }), local);
     desktopWindow({});
     assert.equal(storeFor("shell", backends), server);
-    browserWindow({});
     assert.equal(storeFor("shell", backends, { signedIn: true }), server);
+  });
+
+  it("routes the account domains by the matrix of `62` section 3.6, cell by cell", () => {
+    const answer = { ...DEFAULT_SETTINGS };
+    const server: SettingsStore = { read: async () => answer, write: async () => answer };
+    const local: SettingsStore = { read: async () => answer, write: async () => answer };
+    const account: SettingsStore = { read: async () => answer, write: async () => answer };
+    const backends = { server, local, account };
+    // Browser, signed out: the settings live locally; favorites and collections have no home at all.
+    browserWindow({});
+    assert.equal(storeFor("settings", backends), local);
+    assert.equal(routeFor("settings"), "local");
+    assert.equal(routeFor("favorites"), "unavailable");
+    assert.equal(routeFor("collections"), "unavailable");
+    // Browser, signed in: the account owns all three.
+    assert.equal(storeFor("settings", backends, { signedIn: true }), account);
+    assert.equal(routeFor("settings", { signedIn: true }), "account");
+    assert.equal(routeFor("favorites", { signedIn: true }), "account");
+    assert.equal(routeFor("collections", { signedIn: true }), "account");
+    // Desktop, signed out: the fileserver's shared stores keep everything.
+    desktopWindow({});
+    assert.equal(storeFor("settings", backends), server);
+    assert.equal(routeFor("favorites"), "server");
+    // Desktop, signed in: the account takes the three; the shell stays the fileserver's (the cell above).
+    assert.equal(storeFor("settings", backends, { signedIn: true }), account);
+    assert.equal(routeFor("favorites", { signedIn: true }), "account");
+    assert.equal(routeFor("collections", { signedIn: true }), "account");
   });
 });

@@ -2,10 +2,11 @@ import type { SettingsAnswer, SettingsPatch } from "./schemas/settings-schema";
 import type { ClearedWatch, RemovedWatch, WatchWrite, WatchWriteAnswer } from "./schemas/watch-schema";
 import type { ShellLayout } from "./shell-state";
 
-/** The storage resolver (`61` section 2.2): the program's one fork point between the fileserver's REST stores and
- *  the browser's local ones. Each persisted domain is a `DomainStore` - a read and a write, zod at the boundary -
- *  and a transport service hands both of its backends to `storeFor` at every call, so the choice is never frozen
- *  at boot. `62` adds the account backend and the real session beside these, with no new mechanism. */
+/** The storage resolver (`61` section 2.2, `62` section 3.6): the program's one fork point between the fileserver's
+ *  REST stores, the browser's local ones and the account backend. Each persisted domain is a `DomainStore` - a read
+ *  and a write, zod at the boundary - and a transport service consults the resolver at every call, so the choice is
+ *  never frozen at boot. The two inputs are the runtime (`window.pocHost`, the signal `services/desktop.ts` reads)
+ *  and the session, which the store's session slice answers live. */
 
 /** One persisted domain's two operations. `read` answers the domain's current value; `write` applies a change and
  *  answers the value as this backend now holds it, which is the contract the REST answers set. */
@@ -30,7 +31,7 @@ export interface WatchStore {
   readonly clear: (signal?: AbortSignal) => Promise<ClearedWatch>;
 }
 
-/** The pair of backends a transport service offers the resolver: the fileserver's REST store and the browser's
+/** The pair of backends a whole-document domain offers the resolver: the fileserver's REST store and the browser's
  *  local one. The REST calls themselves stay in the resource modules (`02` section 2.2). */
 export interface DomainBackends<Read, Write> {
   readonly server: DomainStore<Read, Write>;
@@ -38,7 +39,6 @@ export interface DomainBackends<Read, Write> {
 }
 
 export type ShellBackends = DomainBackends<ShellLayout, ShellLayout>;
-export type SettingsBackends = DomainBackends<SettingsAnswer, SettingsPatch>;
 
 /** The watch domain's pair of backends; its store is its own interface, so it carries its own pair. */
 export interface WatchBackends {
@@ -46,11 +46,23 @@ export interface WatchBackends {
   readonly local: WatchStore;
 }
 
-/** The domains that resolve; favorites and collections join in `62`. */
+/** The settings domain's backends with the account backend beside them (`62` D9: no new mechanism, one more home). */
+export interface SettingsBackends extends DomainBackends<SettingsAnswer, SettingsPatch> {
+  readonly account: SettingsStore;
+}
+
+/** The domains that resolve to a whole store; favorites and collections are verb sets, routed by `routeFor` below. */
 export type DomainKey = "shell" | "settings" | "watch";
 
-/** The resolver's second input, pinned to signed-out until `62` supplies the session. It will then route settings,
- *  favorites and collections to the account backend; today a signed-in caller keeps the server backend. */
+/** The domains the account can own (`62` section 3.6): never the shell or the watch, whose rows of the matrix are
+ *  the runtime alone. */
+export type AccountDomain = "settings" | "favorites" | "collections";
+
+/** Where a domain can land. `unavailable` means the runtime and session combination has no home for it: a signed-out
+ *  browser has no favorites or collections of its own, and the controls say why (docs/06's disabled-with-reason rule). */
+export type BackendName = "server" | "local" | "account" | "unavailable";
+
+/** The resolver's inputs. `signedIn` is live since `62`: the store's session slice answers it at every call. */
 export interface StoreInputs {
   readonly signedIn?: boolean;
 }
@@ -61,6 +73,15 @@ export function onDesktopRuntime(): boolean {
   return typeof window !== "undefined" && window.pocHost?.runtime === "electron";
 }
 
+/** The one matrix (`62` section 3.6), for the domains the account owns: signed in, the account; signed out, the
+ *  desktop keeps the fileserver and a browser keeps its local store - except favorites and collections, which a
+ *  signed-out browser has no home for at all. Pure. */
+export function routeFor(domain: AccountDomain, inputs: StoreInputs = {}): BackendName {
+  if (inputs.signedIn === true) return "account";
+  if (onDesktopRuntime()) return "server";
+  return domain === "settings" ? "local" : "unavailable";
+}
+
 export function storeFor(domain: "shell", backends: ShellBackends, inputs?: StoreInputs): ShellStore;
 export function storeFor(domain: "settings", backends: SettingsBackends, inputs?: StoreInputs): SettingsStore;
 export function storeFor(domain: "watch", backends: WatchBackends, inputs?: StoreInputs): WatchStore;
@@ -69,7 +90,11 @@ export function storeFor(
   backends: ShellBackends | SettingsBackends | WatchBackends,
   inputs: StoreInputs = {},
 ): ShellStore | SettingsStore | WatchStore {
-  void domain; // the domain names the account backend too, once `62` adds it beside these.
-  if (onDesktopRuntime() || inputs.signedIn === true) return backends.server;
-  return backends.local;
+  /* The shell and the watch never move to the account (`62` section 3.6): their rows of the matrix are the runtime
+   *  alone, signed in or out - the desktop's layout and history stay the fileserver's, a browser's stay local. The
+   *  settings consult the account matrix. */
+  if (domain === "shell" || domain === "watch") return onDesktopRuntime() ? backends.server : backends.local;
+  const route = routeFor("settings", inputs);
+  const settings = backends as SettingsBackends;
+  return route === "unavailable" ? settings.local : settings[route];
 }
