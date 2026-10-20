@@ -10,14 +10,14 @@ const { makeApp, pick, send } = await import("./app-fixture.js");
 
 test("with the flag unset, one write per family answers as today", async () => {
   const t = await makeApp();
-  const patched = await send(t.app, "PATCH", "/api/settings", { watchedPercent: 80 });
+  const patched = await send(t.app, "PATCH", "/api/settings", { watchedPercent: 95 });
   assert.equal(patched.status, 200);
   assert.equal(pick(patched.body, "ok"), true);
 
   const favorite = await send(t.app, "PUT", "/api/favorites/title/tt111");
   assert.deepEqual(pick(favorite.body, "data"), { ref: { kind: "title", id: "tt111" }, favorite: true });
 
-  const created = await send(t.app, "POST", "/api/collections", { name: "Friday night", type: "manual" });
+  const created = await send(t.app, "POST", "/api/collections", { name: "Friday night", type: "movie" });
   assert.equal(created.status, 201);
 
   const watch = await send(t.app, "PUT", "/api/watch", {
