@@ -181,23 +181,4 @@ describe("settings writes with a live session (`62` section 3.6)", () => {
     stop();
   });
 
-  it("sign-out keeps the device's local state: the cache and the committed settings stand", async () => {
-    const local: Record<string, string> = {};
-    fakeBrowserWindow(local);
-    useAppStore.setState({ signedIn: true });
-    globalThis.fetch = async (_input, init) => success({ settings: JSON.parse(String(init?.body)) });
-    const stop = startSettingsWriteback({
-      getState: useAppStore.getState,
-      subscribe: useAppStore.subscribe,
-      write: patchSettings,
-    });
-    state().setTheme("light");
-    await settled();
-    stop();
-    state().signOut();
-    assert.equal(state().signedIn, false);
-    assert.deepEqual(JSON.parse(local["giga.v1.settings"] ?? "{}"), { ...DEVICE, theme: "light" });
-    assert.deepEqual(state().committedSettings, { ...DEVICE, theme: "light" });
-    assert.equal(state().theme, "light");
-  });
 });

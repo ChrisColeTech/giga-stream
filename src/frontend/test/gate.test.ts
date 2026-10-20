@@ -89,7 +89,7 @@ describe("the gate (`62` section 3.5)", () => {
     assert.equal(state().gate.phase, "idle");
   });
 
-  it("sign-out returns to the gate and keeps the device's state", () => {
+  it("sign-out clears the session state and selects Live", () => {
     state().finishSignIn({ ok: true, session: SESSION });
     state().setSurface("player");
     state().signOut();
@@ -98,7 +98,7 @@ describe("the gate (`62` section 3.5)", () => {
     assert.equal(state().tokens, null);
     assert.equal(state().gate.phase, "idle");
     assert.equal(gateNotice(state().gate), null);
-    assert.equal(state().surface, "player");
+    assert.equal(state().surface, "live");
   });
 
   it("ends a live session on a 401 and says so, signed out", async () => {
