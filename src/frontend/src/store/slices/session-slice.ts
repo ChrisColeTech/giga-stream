@@ -19,6 +19,8 @@ export interface SessionSlice {
   /** The access and refresh tokens and their expiries; null signed out. */
   tokens: SessionTokens | null;
   gate: GateState;
+  /** The gate wall is up (`63` section 3.1, amended): the Account control opened it, the shell behind is inert. */
+  gateOpen: boolean;
   /** True from load until the boot's restore probe answers, so a restored session never flashes a form. */
   restoring: boolean;
   /** The Sign in verb was pressed: the gate waits for the port. Ignored while it already waits. */
@@ -38,6 +40,10 @@ export interface SessionSlice {
   /** The user signed out: the app keeps running signed out, and the device's local state is kept - nothing is
    *  wiped (`62` D8). */
   signOut: () => void;
+  /** The Account control opened the gate wall; idempotent. */
+  openGate: () => void;
+  /** Escape or a completed sign-in closes the wall; focus returns to the control that opened it. */
+  closeGate: () => void;
 }
 
 type Set = (partial: Partial<AppState>) => void;
@@ -58,6 +64,7 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
     session: null,
     tokens: null,
     gate: GATE_START,
+    gateOpen: false,
     restoring: true,
     beginSignIn: () => set({ gate: nextGate(get().gate, { type: "submit" }) }),
     finishSignIn: (result) => {
@@ -74,5 +81,7 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
     applyAccountSettings: (settings, replaced) => applyAccountSettings(set, get, settings, replaced),
     endSession: (sentence) => set(signedOut(nextGate(get().gate, { type: "ended", sentence }))),
     signOut: () => set(signedOut(GATE_START)),
+    openGate: () => set({ gateOpen: true }),
+    closeGate: () => set({ gateOpen: false }),
   };
 }

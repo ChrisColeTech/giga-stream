@@ -5,7 +5,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AccountControl, accountButtonProps } from "@/components/chrome/AccountControl";
 import { AccountDialog, dialogDismisses } from "@/components/chrome/AccountDialog";
 import { AccountSignOut } from "@/components/chrome/AccountSignOut";
-import { GATE_HEADING } from "@/constants/gate-copy";
 import { useAppStore } from "@/store/app-store";
 
 const draw = (element: ReactElement): string => renderToStaticMarkup(element);
@@ -44,27 +43,33 @@ describe("the Account dialog (`63` sections 3.1 and 3.5)", () => {
     assert.equal(dialogDismisses("Tab"), false);
   });
 
-  it("signed out it mounts the gate's own forms: sign in, with the forgot-password flow beside it", () => {
-    const markup = draw(createElement(AccountDialog, { mode: "gate", onClose: () => undefined }));
+  it("signed out it defers to the wall: the gate's forms live in the full-screen gate, not here", () => {
+    const markup = draw(createElement(AccountDialog, { session: null, onGate: noop, onClose: () => undefined }));
     assert.ok(markup.includes('role="dialog"') && markup.includes('aria-modal="true"'));
-    assert.ok(markup.includes(GATE_HEADING));
-    assert.ok(markup.includes("Username") && markup.includes("Password"));
-    assert.ok(markup.includes("Forgot password?"), "the reset flow rides the same dialog");
-    assert.ok(markup.includes("bg-scrim"), "the family backdrop closes it");
+    assert.ok(markup.includes("Open the full-screen gate"), "the signed-out dialog is a handoff to the wall");
+    assert.ok(!markup.includes("Password"), "the gate's forms are not mounted here");
+    assert.ok(!markup.includes("bg-scrim"), "the backdrop cannot close the signed-out dialog; the wall owns dismissal");
   });
 
   it("signed in it mounts the session's sign-out instead", () => {
-    /* SSR renders the store's initial snapshot (zustand v5 serves getInitialState on the server), so the session's
-       half is drawn through its presentational panel - the same pure-seam approach the sleeping Theatre button's
-       test takes - while the dialog itself proves it mounts that half and not the gate's forms. */
+    /* The dialog is presentational - it takes the session as a prop, the same pure-seam seam the sign-out panel
+       takes its username with - so the signed-in half draws deterministically here, no store seeding: SSR would
+       render the store's initial snapshot and a mid-test write never reaches it. */
     const panel = draw(createElement(AccountSignOut, { username: "ivy", onDone: noop }));
     assert.ok(panel.includes("Signed in as") && panel.includes("ivy"));
     assert.ok(panel.includes("Sign out"));
     const unknown = draw(createElement(AccountSignOut, { username: null, onDone: noop }));
     assert.ok(!unknown.includes("ivy"), "no username is invented");
-    const markup = draw(createElement(AccountDialog, { mode: "session", onClose: noop }));
+    const markup = draw(
+      createElement(AccountDialog, {
+        session: { id: "acc-1", username: "ivy", kind: "user" },
+        onGate: noop,
+        onClose: noop,
+      }),
+    );
     assert.ok(markup.includes("Sign out") && markup.includes("Session"));
     assert.ok(!markup.includes("Password"), "the gate's forms are not mounted over a live session");
+    assert.ok(!markup.includes("Open the full-screen gate"), "the handoff is a signed-out state only");
   });
 
   it("the control opens it; closed, only the button is there", () => {
