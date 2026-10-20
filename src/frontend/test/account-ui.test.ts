@@ -45,9 +45,10 @@ describe("the shared account flows", () => {
     const popup = readFileSync("src/components/chrome/AccountPopup.tsx", "utf8");
     const window = readFileSync("src/components/chrome/AccountWindow.tsx", "utf8");
     assert.equal((popup.match(/<PopupPanel\b/g) ?? []).length, 1);
-    const actions = [...popup.matchAll(/<Button\b[\s\S]*?>([^<]+)<\/Button>/g)]
-      .map((match) => match[1]?.trim());
-    assert.deepEqual(actions, ["Account", "Logout"]);
+    assert.equal((popup.match(/<Button\b/g) ?? []).length, 2);
+    assert.equal((popup.match(/>Account<\/Button>/g) ?? []).length, 1);
+    assert.equal((popup.match(/>Logout<\/Button>/g) ?? []).length, 1);
+    assert.ok(popup.indexOf(">Account</Button>") < popup.indexOf(">Logout</Button>"));
     assert.match(popup, /close\(\); open\("account"\)/, "the popup closes before Account opens");
     assert.match(popup, /close\(\); void signOut\(\)/, "Logout closes before invoking its callback");
     for (const primitive of ["ChildWindow", "Toolbar", "Workspace", "Group", "Row", "useProfileUpdate"]) {
