@@ -41,6 +41,10 @@ const EnvSchema = z.object({
   // `/api/admin` (identity, its admin API), `/admin` (stripped, its console UI) and `/live`, `/logos`
   // (pass-through streams). Empty means the proxy is off, the desktop shape with no sibling.
   ADMIN_PROXY_TARGET: z.string().trim().default(""),
+  // Deployment only (docs/62 wave 0): set on a public deployment, the unauthenticated write routes for
+  // settings, favorites, collections and watch history refuse (403 writes.closed) until accounts ship.
+  // A desktop never sets it, because its local writes are the point.
+  REQUIRE_ACCOUNT_WRITES: BooleanFlag,
 });
 
 const env = EnvSchema.parse(process.env);
@@ -63,5 +67,7 @@ export const config = {
   testFolderRoot: env.TEST_FOLDER_ROOT !== "" ? path.resolve(env.TEST_FOLDER_ROOT) : "",
   /** The admin backend to reverse-proxy (`/api/admin`, `/admin`, `/live`, `/logos`); empty means the proxy is off. */
   adminProxyTarget: env.ADMIN_PROXY_TARGET,
+  /** Deployment only (docs/62 wave 0): on, the shared write routes refuse with `403 writes.closed`. */
+  requireAccountWrites: env.REQUIRE_ACCOUNT_WRITES,
   version: "0.2.0",
 } as const;
