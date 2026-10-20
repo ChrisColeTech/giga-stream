@@ -6,7 +6,7 @@ import {
   type DatasetSync,
   type SyncOutcome,
 } from "../types/backend-cache.js";
-import { badResponse, unreachable } from "./admin-client.js";
+import { badResponse, unreachable } from "./admin-failure.js";
 import { isDue, sourceKeyOf } from "./cache-freshness.js";
 
 interface Run {

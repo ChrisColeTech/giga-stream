@@ -1,11 +1,10 @@
 import { CATALOG_PAGE_SIZE, CATALOG_ROWS_MAX } from "../constants/backend-cache.js";
 import { decodeGenres } from "../lib/genre-decode.js";
 import type { CacheStateRepository } from "../store/cache-state-repository.js";
+import type { AdminTitleRepository, TitleKind } from "../store/admin-title-repository.js";
 import type { CachedTitleRepository } from "../store/cached-title-repository.js";
 import type { DatasetSync, SyncOutcome } from "../types/backend-cache.js";
-import { badResponse, unreachable, type AdminFailure } from "./admin-client.js";
-import type { AdminCatalog } from "./admin-catalog.js";
-import type { TitleKind } from "./admin-titles.js";
+import { badResponse, unreachable, type AdminFailure } from "./admin-failure.js";
 
 const KINDS: readonly TitleKind[] = ["movie", "tv"];
 
@@ -16,7 +15,7 @@ const KINDS: readonly TitleKind[] = ["movie", "tv"];
  * row cap or a quit leaves every row alone and stamps only the error code. Public reads only: nothing is sent but GETs.
  */
 export function createTitlesSync(deps: {
-  catalog: AdminCatalog;
+  catalog: AdminTitleRepository;
   titles: CachedTitleRepository;
   state: CacheStateRepository;
 }): DatasetSync {
@@ -32,7 +31,7 @@ export function createTitlesSync(deps: {
 
     // The dictionaries: a failed read keeps the stored one; with none stored there is nothing to decode with.
     for (const kind of KINDS) {
-      const answer = await catalog.genres(baseUrl, kind, signal);
+      const answer = await catalog.genres(kind);
       if (signal.aborted) return quit;
       if (answer.ok) titles.replaceGenres(kind, answer.value);
       else if (titles.genreNames(kind).size === 0) return fail(answer.failure);
@@ -43,7 +42,7 @@ export function createTitlesSync(deps: {
     let seen = 0;
     for (;;) {
       if (signal.aborted) return quit;
-      const answer = await catalog.page(baseUrl, after, CATALOG_PAGE_SIZE, signal);
+      const answer = await catalog.page(after, CATALOG_PAGE_SIZE);
       if (signal.aborted) return quit;
       if (!answer.ok) return fail(answer.failure);
       seen += answer.value.items.length;

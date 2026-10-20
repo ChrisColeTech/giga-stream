@@ -2,9 +2,9 @@ import { createCacheStateRepository } from "../store/cache-state-repository.js";
 import { createCachedChannelRepository } from "../store/cached-channel-repository.js";
 import { createCachedTitleQuery } from "../store/cached-title-query.js";
 import { createCachedTitleRepository } from "../store/cached-title-repository.js";
+import type { AdminChannelRepository } from "../store/admin-channel-repository.js";
+import type { AdminTitleRepository } from "../store/admin-title-repository.js";
 import type { Database } from "../store/database.js";
-import type { AdminCatalog } from "./admin-catalog.js";
-import type { AdminClient } from "./admin-client.js";
 import { createBackendCacheService } from "./backend-cache-service.js";
 import { createChannelsSync } from "./channels-sync.js";
 import { createTitlesSync } from "./titles-sync.js";
@@ -15,8 +15,8 @@ import { createTitlesSync } from "./titles-sync.js";
  */
 export function createBackendCache(deps: {
   database: Database;
-  admin: AdminClient;
-  catalog: AdminCatalog;
+  admin: AdminChannelRepository;
+  catalog: AdminTitleRepository;
   adminUrl: () => string;
   now: () => number;
 }) {

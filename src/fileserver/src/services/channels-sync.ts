@@ -1,26 +1,15 @@
 import type { CachedChannelRepository } from "../store/cached-channel-repository.js";
 import type { CacheStateRepository } from "../store/cache-state-repository.js";
+import type { AdminChannelRepository, PublishedChannel } from "../store/admin-channel-repository.js";
 import type { CachedChannelRow, DatasetSync } from "../types/backend-cache.js";
-import { unreachable, type AdminChannel, type AdminClient } from "./admin-client.js";
-
-/** A logo address resolved against the backend that sent it (a cached copy is a path on that backend). */
-function absoluteOf(address: string, baseUrl: string): string {
-  try {
-    return new URL(address, `${baseUrl}/`).toString();
-  } catch {
-    return address;
-  }
-}
+import { unreachable } from "./admin-failure.js";
 
 /**
  * The stored row of one published channel (docs/46 section A): named fields only, never a spread, so a field
  * the backend adds later is not stored by accident. The logo is the backend's cached copy when it sent one.
  */
-export function channelRowOf(channel: AdminChannel, position: number, baseUrl: string): CachedChannelRow {
-  const logo =
-    channel.cachedLogoUrl !== undefined && channel.cachedLogoUrl !== ""
-      ? absoluteOf(channel.cachedLogoUrl, baseUrl)
-      : channel.logoUrl;
+export function channelRowOf(channel: PublishedChannel, position: number): CachedChannelRow {
+  const source = channel.cachedLogoUrl ?? channel.logoUrl;
   return {
     id: channel.id,
     position,
@@ -29,7 +18,7 @@ export function channelRowOf(channel: AdminChannel, position: number, baseUrl: s
     streamUrl: channel.streamUrl,
     revision: channel.revision,
     ...(channel.number !== undefined && { number: channel.number }),
-    ...(logo !== undefined && logo !== "" && { logoUrl: logo }),
+    ...(source !== undefined && source !== "" && { logoUrl: source }),
   };
 }
 
@@ -39,18 +28,18 @@ export function channelRowOf(channel: AdminChannel, position: number, baseUrl: s
  * is written once the signal has aborted.
  */
 export function createChannelsSync(deps: {
-  admin: AdminClient;
+  admin: AdminChannelRepository;
   channels: CachedChannelRepository;
   state: CacheStateRepository;
 }): DatasetSync {
   return async ({ baseUrl, sourceKey, startedAt, signal }) => {
-    const answer = await deps.admin.channels(baseUrl, signal);
+    const answer = await deps.admin.list();
     if (signal.aborted) return { ok: false, failure: unreachable };
     if (!answer.ok) {
       deps.state.markFailed("channels", answer.failure.code);
       return answer;
     }
-    const rows = answer.value.items.map((channel, position) => channelRowOf(channel, position, baseUrl));
+    const rows = answer.value.items.map((channel, position) => channelRowOf(channel, position));
     deps.state.commitSynced("channels", { sourceKey, syncedAt: startedAt, revision: answer.value.revision }, () =>
       deps.channels.replaceAll(rows),
     );

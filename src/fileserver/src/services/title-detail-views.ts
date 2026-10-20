@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CAST_MAX } from "../constants/titles.js";
 import type { CachedTitle, DetailWrite, SeasonCount } from "../types/cached-title.js";
 import type { TitleDetail } from "../types/library.js";
-import type { BackendTitle } from "./admin-titles.js";
+import type { StoredTitleView as BackendTitle } from "../store/admin-title-repository.js";
 
 const SeasonEntry = z.object({
   season: z.number(),

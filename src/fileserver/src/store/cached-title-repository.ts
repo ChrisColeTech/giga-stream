@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { TitleKind } from "../services/admin-titles.js";
+import type { TitleKind } from "./admin-title-repository.js";
 import type { CachedTitle, CatalogItem, DetailWrite, GenreEntry } from "../types/cached-title.js";
 import { cachedTitleOf, cachedTitlesOf, TITLE_COLUMNS } from "./cached-title-row.js";
 import type { Database } from "./database.js";

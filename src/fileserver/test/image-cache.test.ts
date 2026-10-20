@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { buildApp } from "../src/build-app.js";
+import { makeAdminDatabase } from "./admin-database.js";
 import { imageIdOf, rewriteImageUrl, createImageCacheService, type ImageCacheService } from "../src/services/image-cache-service.js";
 import { AppError } from "../src/lib/app-error.js";
 import { errorEnvelope } from "../src/lib/envelope.js";
@@ -137,28 +138,28 @@ test("the live view answers each channel's logo through the image cache", async 
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-images-live-"));
   const good = "https://img.example.test/news.png";
   const refused = "http://far.example.test/logo.png";
-  const answer = {
-    ok: true,
-    data: {
-      items: [
-        { id: "c1", name: "News", category: "News", revision: 3, streamUrl: "http://127.0.0.1:9/one.m3u8", logoUrl: good },
-        { id: "c2", name: "Docs", category: "Fact", revision: 3, streamUrl: "http://127.0.0.1:9/two.m3u8", logoUrl: refused },
-        {
-          id: "c3", name: "Cached", category: "Fact", revision: 3, streamUrl: "http://127.0.0.1:9/three.m3u8",
-          logoUrl: refused, cachedLogoUrl: "/logos/c/three.png",
-        },
-      ],
-      revision: 9,
-    },
-  };
-  const adminFetch = (async () =>
-    new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+  const adminDatabase = await makeAdminDatabase();
+  for (const row of [
+    ["c1", "News", "News", good, null, "http://127.0.0.1:9/one.m3u8"],
+    ["c2", "Docs", "Fact", refused, null, "http://127.0.0.1:9/two.m3u8"],
+    ["c3", "Cached", "Fact", refused, "three.png", "http://127.0.0.1:9/three.m3u8"],
+  ]) {
+    await adminDatabase.execute({
+      sql: `INSERT INTO channels (id, name, category, logo_url, logo_file, stream_url, kind,
+        revision, enabled) VALUES (?, ?, ?, ?, ?, ?, 'stream', 3, 1)`,
+      args: row,
+    });
+  }
+  await adminDatabase.execute("UPDATE backend_revision SET revision = 9 WHERE id = 1");
   const fetched: string[] = [];
   const imageFetch = (async (input: string | URL | Request) => {
     fetched.push(String(input instanceof Request ? input.url : input));
     return new Response(new Uint8Array([7, 7]), { status: 200, headers: { "content-type": "image/png" } });
   }) as typeof fetch;
-  const app = await buildApp({ dataDir, adminFetch, imageFetch, logger: false, syncOnStart: false });
+  const app = await buildApp({
+    dataDir, imageFetch, logger: false, syncOnStart: false, adminDatabase,
+    jwtSecret: "test-secret-that-is-at-least-32-characters",
+  });
   try {
     await app.inject({
       method: "PATCH",

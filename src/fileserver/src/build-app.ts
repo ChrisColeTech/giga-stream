@@ -2,13 +2,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import httpProxy from "@fastify/http-proxy";
-import type { FastifyReplyFromHooks } from "@fastify/reply-from";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { config } from "./config.js";
 import { registerErrorHandling } from "./lib/error-handler.js";
 import { registerChannelsRoutes } from "./routes/channels.js";
+import { registerAccountAuthRoutes } from "./routes/account-auth.js";
+import { registerAccountDataRoutes } from "./routes/account-data.js";
 import { registerCollectionsRoutes } from "./routes/collections.js";
 import { registerFavoritesRoutes } from "./routes/favorites.js";
 import { registerFoldersRoutes } from "./routes/folders.js";
@@ -26,7 +27,6 @@ import { registerTitlesRoutes } from "./routes/titles.js";
 import { registerWatchRoutes } from "./routes/watch.js";
 import { createAppServices, type ServiceOptions } from "./services/app-services.js";
 import { createPocResultsService } from "./services/poc-results-service.js";
-import { createWatchPass } from "./services/watch-pass-service.js";
 
 /** The parts of the served folder a browser may load; the PoC's scripts and results are not among them. */
 const SERVED_TOP = new Set(["html", "css", "js", "data", "assets"]);
@@ -44,42 +44,13 @@ export interface BuildOptions extends Partial<ServiceOptions> {
   logger?: boolean;
   /** Check the backend cache at launch, detached (docs/46 section C). Defaults to true; tests turn it off. */
   syncOnStart?: boolean;
-  /** The admin backend the reverse proxy points at (the `ADMIN_PROXY_TARGET` env); empty falls back to the
-   *  saved `adminUrl` setting, and neither means the proxy stays off (docs/62 D7). */
-  adminProxyTarget?: string;
+  adminMediaTarget?: string;
 }
 
-/**
- * The header list a proxied request carries on to the backend: the forwarded-for chain it arrived
- * with, then this fileserver's direct peer (`request.ip`). Render's public entry is this proxy, so
- * the chain is what lets the backend's `TRUST_PROXY` rate limiting see the real client.
- */
-const withForwardedFor: NonNullable<FastifyReplyFromHooks["rewriteRequestHeaders"]> = (request, headers) => {
-  const seen = headers["x-forwarded-for"];
-  const chain = seen === undefined ? [] : Array.isArray(seen) ? seen : [seen];
-  return { ...headers, "x-forwarded-for": [...chain, request.ip].join(", ") };
-};
-
-/**
- * The reverse proxy to the admin backend sibling (docs/03 section 1's Render shape, one public port): the
- * backend's admin API and the app's account API pass through identity (`/api/admin/...` and
- * `/api/account/...` → the same paths on the backend, every other `/api` address stays here), the console UI
- * arrives with its prefix stripped (`/admin/...` → the backend's root), and the live stream addresses keep
- * their paths. REST only (docs/01 section 4.4): the WebSocket default stays off. Registered before the
- * static plugin; the prefixes touch no other `/api`, `/healthz` or SPA address of this fileserver.
- */
-async function registerAdminProxy(app: FastifyInstance, target: string): Promise<void> {
-  const replyOptions = { rewriteRequestHeaders: withForwardedFor };
-  const pass = (prefix: string) =>
-    app.register(httpProxy, { upstream: target, prefix, rewritePrefix: prefix, replyOptions });
-  await pass("/api/admin");
-  await pass("/api/account");
-  // The password reset is public and serves both kinds (docs/40; docs/62 D2), so the app's gate reaches it
-  // through the same proxy (docs/03's route table has it at the root `/api/auth`).
-  await pass("/api/auth");
-  await app.register(httpProxy, { upstream: target, prefix: "/admin", rewritePrefix: "", replyOptions });
-  await pass("/live");
-  await pass("/logos");
+/** Byte-only media proxy. No admin API or console prefix is registered here (docs/64 section 1). */
+async function registerAdminMediaProxy(app: FastifyInstance, target: string): Promise<void> {
+  await app.register(httpProxy, { upstream: target, prefix: "/live", rewritePrefix: "/live" });
+  await app.register(httpProxy, { upstream: target, prefix: "/logos", rewritePrefix: "/logos" });
 }
 
 /**
@@ -94,10 +65,14 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
 
   const webDist = path.resolve(overrides.webDist ?? config.webDist);
-  const services = createAppServices({
+  const services = await createAppServices({
     dataDir: overrides.dataDir ?? config.dataDir,
     allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
     defaultAdminUrl: overrides.defaultAdminUrl ?? config.defaultAdminUrl,
+    tursoDatabaseUrl: overrides.tursoDatabaseUrl ?? config.tursoDatabaseUrl,
+    tursoAuthToken: overrides.tursoAuthToken ?? config.tursoAuthToken,
+    jwtSecret: overrides.jwtSecret ?? config.jwtSecret,
+    ...(overrides.adminDatabase !== undefined && { adminDatabase: overrides.adminDatabase }),
     now: overrides.now ?? Date.now,
     ...(overrides.adminFetch !== undefined && { adminFetch: overrides.adminFetch }),
     ...(overrides.imageFetch !== undefined && { imageFetch: overrides.imageFetch }),
@@ -111,12 +86,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
   if (overrides.syncOnStart ?? true) services.cache.start();
 
-  // The proxy target (docs/62 D7): the env, else the adminUrl a Settings write saved, read once at boot so
-  // an installed desktop can be pointed at the cloud backend without a rebuild. Neither: off — the
-  // desktop's signed-out local mode, where every `/api` address stays this fileserver's own.
-  const envTarget = overrides.adminProxyTarget ?? config.adminProxyTarget;
-  const adminProxyTarget = envTarget !== "" ? envTarget : (services.savedAdminUrl() ?? "");
-  if (adminProxyTarget !== "") await registerAdminProxy(app, adminProxyTarget);
+  const mediaTarget = overrides.adminMediaTarget ?? config.adminMediaTarget;
+  if (mediaTarget !== "") await registerAdminMediaProxy(app, mediaTarget);
 
   // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file
   // answers index.html when the dist has one; everything else stays the JSON 404 envelope.
@@ -136,6 +107,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
     allowedPath: (pathName) => isServed(pathName),
   });
   registerHealth(app, services);
+  registerAccountAuthRoutes(app, services);
+  registerAccountDataRoutes(app, services);
   registerSettingsRoutes(app, services);
   registerShellStateRoutes(app, services);
   registerChannelsRoutes(app, services);
@@ -148,16 +121,7 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   registerLocalMediaRoutes(app, services);
   registerImagesRoutes(app, services);
   registerFavoritesRoutes(app, services);
-  // The watch fork's pass (docs/63 section 3.2) shares the resolution above — no second knob; a
-  // browser write without a configured backend answers the standard unreachable envelope.
-  registerWatchRoutes(
-    app,
-    services,
-    createWatchPass({
-      baseUrl: adminProxyTarget,
-      ...(overrides.adminFetch !== undefined && { fetch: overrides.adminFetch }),
-    }),
-  );
+  registerWatchRoutes(app, services);
   registerLibraryRoutes(app, services);
   registerTitlesRoutes(app, services);
 

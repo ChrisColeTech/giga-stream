@@ -1,7 +1,7 @@
 import type { LibraryQuery } from "../lib/library-query.js";
 import type { CachedTitleQuery } from "../store/cached-title-query.js";
 import type { CachedTitleRepository } from "../store/cached-title-repository.js";
-import type { TitleKind } from "./admin-titles.js";
+import type { TitleKind } from "../store/admin-title-repository.js";
 import type { LibraryItems } from "./library-items.js";
 import type { LibraryItem } from "../types/library.js";
 

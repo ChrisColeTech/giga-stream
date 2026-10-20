@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { LIBRARY_PAGE_SIZE, FACET_YEARS } from "../constants/library.js";
-import type { TitleKind } from "../services/admin-titles.js";
+import type { TitleKind } from "../store/admin-title-repository.js";
 import type { LibraryItem, LibraryMediaTypes } from "../types/library.js";
 import { AppError } from "./app-error.js";
 
