@@ -1,4 +1,3 @@
-import { isPopupOverlay } from "@/constants/popups";
 import { paneKey } from "@/constants/surfaces";
 import type { StoreInputs } from "@/services/persistence";
 import type { PaneSide, Surface } from "@/types/shell";
@@ -14,7 +13,6 @@ export const sessionInputs = (): StoreInputs => ({ signedIn: useAppStore.getStat
 export const usePaneOpen = (surface: Surface, side: PaneSide): boolean =>
   useAppStore((state) => state.open[paneKey(surface, side)] ?? true);
 
-/** True while a work surface (a modal child window) is open: the titlebar's pane toggles and page tabs sleep with it,
- *  because a control whose effect would land somewhere nobody can see reads as stuck. A popup covers nothing. */
+/** True while a modal child window is open: titlebar controls sleep because their effect would land under its scrim. */
 export const useWorkSurfaceOpen = (): boolean =>
-  useAppStore((state) => state.overlay !== null && !isPopupOverlay(state.overlay));
+  useAppStore((state) => state.overlay !== null);

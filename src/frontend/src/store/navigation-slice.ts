@@ -1,6 +1,6 @@
 import type { SourceId } from "@/lib/library-query";
 import type { ItemRef } from "@/types/library";
-import type { OverlayId, PopupAnchor } from "@/types/overlays";
+import type { OverlayId } from "@/types/overlays";
 import type { Surface } from "@/types/shell";
 
 /* Cross-surface navigation, a slice of the one store: a request is a value with a serial, so asking twice for the same
@@ -25,7 +25,7 @@ interface Host {
   surface: Surface;
   shellRevision: number;
   overlay: OverlayId | null;
-  overlayAnchor: PopupAnchor;
+  overlayAnchor: null;
   overlayItem: ItemRef | null;
 }
 

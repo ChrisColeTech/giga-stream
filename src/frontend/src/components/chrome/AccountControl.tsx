@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
 import { UserRound } from "lucide-react";
 import { IconButton, type IconButtonProps } from "@giga/ui/controls/IconButton";
-import { useAppStore } from "@/store/app-store";
+import { useAccountMenu } from "@/hooks/useAccountMenu";
 
 const SLEEPING = "Close the open window to open the account flow.";
 
@@ -17,36 +16,15 @@ export function accountButtonProps(
     reason: asleep ? SLEEPING : undefined,
     title: asleep ? undefined : label,
     "aria-label": label,
-    "aria-haspopup": "dialog",
+    "aria-haspopup": signedIn ? "menu" : "dialog",
     onClick: onOpen,
     children: <UserRound className="size-3.75" aria-hidden />,
   };
 }
 
-/** The titlebar's icon-only account door. Every signed-in surface is hosted by the one overlay state. */
+/** The titlebar's icon-only account door. Signed-in actions use the shell's one shared menu host. */
 export function AccountControl({ asleep }: { readonly asleep: boolean }) {
-  const session = useAppStore((state) => state.session);
-  const gateOpen = useAppStore((state) => state.gateOpen);
-  const overlay = useAppStore((state) => state.overlay);
-  const openGate = useAppStore((state) => state.openGate);
-  const openOverlay = useAppStore((state) => state.openOverlay);
-  const opener = useRef<HTMLButtonElement | null>(null);
-  const returning = useRef(false);
+  const { signedIn, username, open } = useAccountMenu();
 
-  useEffect(() => {
-    const flowOpen = gateOpen || overlay === "account-popup" || overlay === "account";
-    if (flowOpen) returning.current = true;
-    else if (returning.current) {
-      returning.current = false;
-      opener.current?.focus();
-    }
-  }, [gateOpen, overlay]);
-
-  const open: IconButtonProps["onClick"] = (event) => {
-    opener.current = event.currentTarget;
-    if (session === null) openGate();
-    else openOverlay("account-popup", event.currentTarget);
-  };
-
-  return <IconButton {...accountButtonProps(session !== null, session?.username ?? null, asleep, open)} />;
+  return <IconButton {...accountButtonProps(signedIn, username, asleep, open)} />;
 }

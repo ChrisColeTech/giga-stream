@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, it } from "node:test";
-import { Button } from "@giga/ui/controls/Button";
+import { IconButton } from "@giga/ui/controls/IconButton";
 import { Statusbar } from "@/components/chrome/Statusbar";
 import { theatreButtonProps, Titlebar } from "@/components/chrome/Titlebar";
 import { SIDES, SURFACES, SURFACE_ORDER, paneKey } from "@/constants/surfaces";
@@ -102,8 +102,8 @@ describe("Theatre mode", () => {
     /* SSR renders the store's INITIAL snapshot (zustand v5 serves getInitialState on the server), so the sleeping
        carriage is asserted through the very props the titlebar builds when `useWorkSurfaceOpen` is true — the same
        pure-decision approach the theatre-tone assertion uses above — at the place the family really renders the
-       words: Button's `reason`, the focusable tooltip group labelled "Verb. reason". */
-    const asleep = renderToStaticMarkup(createElement(Button, theatreButtonProps(true, false, noop), "Theatre"));
+       words: IconButton's `reason`, the focusable tooltip group labelled "Verb. reason". */
+    const asleep = renderToStaticMarkup(createElement(IconButton, theatreButtonProps(true, false, noop)));
     assert.ok(asleep.startsWith("<span"), "the reason's tooltip wrapper is the root");
     assert.ok(asleep.includes('role="group"') && asleep.includes('tabindex="0"'),
       "the group takes the focus the disabled button cannot");
@@ -117,12 +117,22 @@ describe("Theatre mode", () => {
   });
 
   it("awake, the Theatre button keeps its own title, no reason wrapper and no disabled attribute", () => {
-    const awake = renderToStaticMarkup(createElement(Button, theatreButtonProps(false, false, noop), "Theatre"));
+    const awake = renderToStaticMarkup(createElement(IconButton, theatreButtonProps(false, false, noop)));
     assert.ok(awake.startsWith("<button"), "no wrapper");
     assert.ok(!awake.includes('role="group"') && !awake.includes("aria-describedby"));
     const tag = /<button[^>]*>/.exec(awake)?.[0] ?? "";
     assert.ok(tag.includes('title="Theatre mode"'));
     assert.ok(!/\sdisabled(="")?[\s>]/.test(tag), "no native disabled");
     assert.ok(tag.includes('aria-pressed="false"'));
+    assert.match(awake, /lucide-monitor-play/);
+    assert.ok(!awake.includes(">Theatre<"), "the control is icon-only");
+  });
+
+  it("keeps its truthful active state and tooltip", () => {
+    const active = renderToStaticMarkup(createElement(IconButton, theatreButtonProps(false, true, noop)));
+    const tag = /<button[^>]*>/.exec(active)?.[0] ?? "";
+    assert.ok(tag.includes('aria-pressed="true"'));
+    assert.ok(tag.includes('data-on=""'));
+    assert.ok(tag.includes('title="Theatre mode is on. Press to leave it; reopen panes with their toggles."'));
   });
 });
