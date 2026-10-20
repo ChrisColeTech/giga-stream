@@ -49,10 +49,14 @@ describe("the shared account flows", () => {
       ["Account", "Logout"]);
     assert.match(popup, /close\(\); open\("account"\)/, "the popup closes before Account opens");
     assert.match(popup, /close\(\); void signOut\(\)/, "Logout closes before invoking its callback");
-    for (const primitive of ["ChildWindow", "Workspace", "Group", "Row", "useProfileUpdate"]) {
+    for (const primitive of ["ChildWindow", "Toolbar", "Workspace", "Group", "Row", "useProfileUpdate"]) {
       assert.ok(window.includes(primitive), primitive);
     }
     assert.equal((window.match(/>Save<\/Button>/g) ?? []).length, 1);
+    assert.ok(window.indexOf("<Toolbar") < window.indexOf("<Workspace"), "the toolbar precedes the scroller");
+    assert.match(window, /<Toolbar right=\{[\s\S]*type="submit"[\s\S]*>Save<\/Button>[\s\S]*\} \/>/);
+    assert.doesNotMatch(window, /<Group[\s\S]*<Actions>[\s\S]*>Save<\/Button>/,
+      "a group never ends with the Save commit");
   });
 
   it("has no AccountDialog or duplicate Settings Session surface", () => {

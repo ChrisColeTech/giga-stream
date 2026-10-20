@@ -15,14 +15,14 @@ import { SignInForm } from "./SignInForm";
 import { SignUpForm } from "./SignUpForm";
 
 export interface GateFormsProps {
-  /** A sign-in was accepted: the session has started, so the dialog around these forms closes and focus returns to
+  /** A sign-in was accepted: the session has started, so the auth wall closes and focus returns to
    *  the titlebar control. */
   readonly onSignedIn?: () => void;
 }
 
-/** The gate's forms, mounted in the Account dialog (`63` section 3.1): sign in, or the two steps of the password
+/** The auth wall's forms (`65` section 1): sign in, sign up, or the two steps of the password
  *  reset (`40`), all in the same column. A refusal keeps its sentence; a session that ended under the app speaks on
- *  the notice card the next time the dialog opens. */
+ *  the notice card the next time the wall opens. */
 export function GateForms({ onSignedIn }: GateFormsProps) {
   const signedIn = useAppStore((state) => state.signedIn);
   const gateSentence = gateNotice(useAppStore((state) => state.gate));
