@@ -9,11 +9,12 @@ describe("auth chrome composition (`65` wave 3)", () => {
     assert.match(shell, /statusbar=\{desktop \? <Statusbar \/> : null\}/);
   });
 
-  it("hosts both account surfaces in the one OverlayHost with shared primitives", () => {
+  it("hosts only the Account work window as an overlay and uses the shell's shared menu host", () => {
     const host = readFileSync("src/components/overlays/OverlayHost.tsx", "utf8");
-    assert.match(host, /overlay === "account-popup"/);
     assert.match(host, /overlay === "account"/);
-    assert.match(readFileSync("src/components/chrome/AccountPopup.tsx", "utf8"), /PopupPanel/);
+    assert.doesNotMatch(host, /account-popup|AccountPopup|PopupPanel/);
+    assert.match(readFileSync("src/components/chrome/AppShell.tsx", "utf8"), /<ContextMenu\b/);
+    assert.match(readFileSync("src/hooks/useAccountMenu.ts", "utf8"), /openMenu\(/);
     assert.match(readFileSync("src/components/chrome/AccountWindow.tsx", "utf8"), /ChildWindow/);
   });
 
@@ -21,10 +22,11 @@ describe("auth chrome composition (`65` wave 3)", () => {
     const wall = readFileSync("src/components/gate/GateWall.tsx", "utf8");
     const hook = readFileSync("src/hooks/useGateWallEscape.ts", "utf8");
     const control = readFileSync("src/components/chrome/AccountControl.tsx", "utf8");
+    const menu = readFileSync("src/hooks/useAccountMenu.ts", "utf8");
     assert.ok(!wall.includes("addEventListener"));
     assert.match(hook, /defaultPrevented/);
     assert.match(hook, /isComposing/);
-    assert.match(control, /opener\.current\?\.focus\(\)/);
-    assert.match(readFileSync("src/components/chrome/AccountPopup.tsx", "utf8"), /<Button autoFocus/);
+    assert.match(menu, /opener\.current\?\.focus\(\)/);
+    assert.doesNotMatch(control, /addEventListener|setTimeout|PopupPanel|getBoundingClientRect/);
   });
 });

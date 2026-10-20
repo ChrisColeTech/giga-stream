@@ -2,7 +2,6 @@ import { AnimatePresence } from "framer-motion";
 import { ChildMemoryContext } from "@giga/ui/lib/child-memory";
 import type { ChildMemory } from "@giga/ui/lib/child-memory";
 import { useAppStore } from "@/store/app-store";
-import { AccountPopup } from "@/components/chrome/AccountPopup";
 import { AccountWindow } from "@/components/chrome/AccountWindow";
 import { CollectionsWindow } from "./CollectionsWindow";
 import { SettingsWindow } from "./SettingsWindow";
@@ -22,7 +21,6 @@ const MEMORY: ChildMemory = {
  *  removed. */
 export function OverlayHost() {
   const overlay = useAppStore((state) => state.overlay);
-  const anchor = useAppStore((state) => state.overlayAnchor);
 
   return (
     <ChildMemoryContext value={MEMORY}>
@@ -30,7 +28,6 @@ export function OverlayHost() {
         {overlay === "settings" && <SettingsWindow key="settings" />}
         {overlay === "collections" && <CollectionsWindow key="collections" />}
         {overlay === "title-info" && <TitleInfoWindow key="title-info" />}
-        {overlay === "account-popup" && <AccountPopup key="account-popup" anchor={anchor} />}
         {overlay === "account" && <AccountWindow key="account" />}
       </AnimatePresence>
     </ChildMemoryContext>

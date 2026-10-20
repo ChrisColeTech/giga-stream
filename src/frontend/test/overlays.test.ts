@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { isPopupOverlay } from "@/constants/popups";
 import { useAppStore } from "@/store/app-store";
 
 const state = () => useAppStore.getState();
@@ -10,29 +9,18 @@ beforeEach(() => {
 });
 
 describe("the one open flow", () => {
-  it("opening a flow replaces the open one and carries its anchor", () => {
+  it("opening a work window replaces the open one", () => {
     state().openOverlay("settings");
     assert.equal(state().overlay, "settings");
-    state().openOverlay("collections", { x: 40, y: 60 });
+    state().openOverlay("collections");
     assert.equal(state().overlay, "collections");
-    assert.deepEqual(state().overlayAnchor, { x: 40, y: 60 });
+    assert.equal(state().overlayAnchor, null);
     state().closeOverlay();
     assert.equal(state().overlay, null);
     assert.equal(state().overlayAnchor, null);
   });
 
-  it("tells a popup from a work frame; Title information is a work frame", () => {
-    assert.equal(isPopupOverlay("account-popup"), true);
-    assert.equal(isPopupOverlay("account"), false);
-    assert.equal(isPopupOverlay("title-info"), false);
-    assert.equal(isPopupOverlay("collections"), false);
-    assert.equal(isPopupOverlay("settings"), false);
-    assert.equal(isPopupOverlay(null), false);
-  });
-
-  it("replaces the popup with the Account window instead of stacking flows", () => {
-    state().openOverlay("account-popup", { x: 20, y: 30 });
-    state().closeOverlay();
+  it("opens Account as a work window without a popup overlay handoff", () => {
     state().openOverlay("account");
     assert.equal(state().overlay, "account");
     assert.equal(state().overlayAnchor, null);
