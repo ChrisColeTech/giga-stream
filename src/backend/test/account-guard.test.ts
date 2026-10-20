@@ -70,7 +70,7 @@ test("the console's sign-in itself stays open, and the user's session refreshes 
   assert.equal(consoleLogin.status, 200);
   assert.equal(pick(consoleLogin.body, "data.account.kind"), "user");
 
-  const renewed = await send(t.app, "POST", "/api/account/auth/refresh", { refresh });
+  const renewed = await send(t.app, "POST", "/api/account/auth/refresh", { refreshToken: refresh });
   assert.equal(renewed.status, 200);
   assert.equal(typeof pick(renewed.body, "data.accessToken"), "string");
 });
