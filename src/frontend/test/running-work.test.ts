@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { runningWorkView, trackedJob, videoPlayingOf } from "@/components/chrome/RunningWork";
+import { runningWorkView, trackedJob, videoPlayingOf } from "@/lib/running-work";
 import { useAppStore } from "@/store/app-store";
 import type { ActivityFlags } from "@/store/slices/shell-slice";
 import type { PlayerMediaState } from "@/types/player";

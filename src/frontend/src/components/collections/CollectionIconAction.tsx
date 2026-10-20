@@ -12,14 +12,11 @@ export interface CollectionIconActionProps {
   readonly onBlur?: () => void;
 }
 
-/** A row's icon action (`06` section 2, rule 3). Disabled only with a reason; its tooltip is on the wrapper, because a
- *  disabled icon button takes no pointer. */
+/** A row's icon action (`06` section 2, rule 3). Disabled only with a focusable reason. */
 export function CollectionIconAction({ icon: Icon, label, title, reason, onPress, onBlur }: CollectionIconActionProps) {
   return (
-    <span title={reason ?? title ?? label} className="inline-flex">
-      <IconButton aria-label={label} disabled={reason !== undefined} onClick={onPress} onBlur={onBlur}>
-        <Icon className="size-3.5" />
-      </IconButton>
-    </span>
+    <IconButton aria-label={label} title={title ?? label} reason={reason} onClick={onPress} onBlur={onBlur}>
+      <Icon className="size-3.5" />
+    </IconButton>
   );
 }

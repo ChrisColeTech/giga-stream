@@ -18,7 +18,7 @@ describe("auth chrome composition (`65` wave 3)", () => {
 
   it("keeps Escape in a focused wall hook and returns account-flow focus to its opener", () => {
     const wall = readFileSync("src/components/gate/GateWall.tsx", "utf8");
-    const hook = readFileSync("src/components/gate/gate-wall-escape.ts", "utf8");
+    const hook = readFileSync("src/hooks/useGateWallEscape.ts", "utf8");
     const control = readFileSync("src/components/chrome/AccountControl.tsx", "utf8");
     assert.ok(!wall.includes("addEventListener"));
     assert.match(hook, /defaultPrevented/);

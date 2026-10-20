@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@giga/ui/controls/Button";
 import { GateBrand } from "./GateBrand";
 import { GateForms } from "./GateForms";
-import { useGateWallEscape } from "./gate-wall-escape";
+import { useGateWallEscape } from "@/hooks/useGateWallEscape";
 
 /* The admin console's wall (`34` section 4): it covers the whole window, titlebar included, so nothing of the shell
  * shows behind the gate. The shell behind it is inert (App). Unlike the admin's pre-app gate there is a way out:

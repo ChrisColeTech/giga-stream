@@ -6,7 +6,7 @@ import {
   clearWatchHistory,
   loadMemberships,
   removeWatchEntry,
-} from "@/components/library/library-service";
+} from "@/hooks/useLibraryActions";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;

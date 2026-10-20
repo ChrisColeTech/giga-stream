@@ -1,4 +1,4 @@
-import type { TitleSource } from "@/services/schemas/source-schema";
+import type { TitleSource } from "@/types/title";
 
 export type PlayerSource =
   | { readonly id: string; readonly kind: "embed"; readonly name: string; readonly embed: TitleSource }

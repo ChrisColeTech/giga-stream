@@ -29,8 +29,8 @@ export function FilterField({ value, onChange }: FilterFieldProps) {
       />
       <IconButton
         aria-label={LIBRARY_COPY.filterClear}
-        title={empty ? LIBRARY_COPY.filterEmpty : LIBRARY_COPY.filterClear}
-        disabled={empty}
+        title={LIBRARY_COPY.filterClear}
+        reason={empty ? LIBRARY_COPY.filterEmpty : undefined}
         onClick={() => onChange("")}
         className="absolute right-1"
       >

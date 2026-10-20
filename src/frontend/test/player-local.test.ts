@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { localMediaAddress, readLocalMediaInfo } from "@/services/local-media";
 import { applyOpeningPosition } from "@/lib/player-opening";
-import { nativeAttachmentKey } from "@/components/player/NativePlayer";
+import { nativeAttachmentKey } from "@/lib/native-player";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;

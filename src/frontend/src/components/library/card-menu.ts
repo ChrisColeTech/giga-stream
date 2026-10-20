@@ -6,8 +6,7 @@ import { openMenu } from "@/lib/menu";
 import type { CollectionRow } from "@/types/collection";
 import type { MenuItem } from "@giga/ui/menus/types";
 import type { MembershipSource } from "@/types/library";
-import { useAppStore } from "@/store/app-store";
-import { changeFavourite, changeMembership, loadMemberships, playRef } from "./library-service";
+import type { LibraryActions } from "@/hooks/useLibraryActions";
 
 /** What openMenu reads from a pointer event: the anchor, and the two calls that keep a parent's handler out of it. */
 export type MenuEvent = Parameters<typeof openMenu>[0];
@@ -21,20 +20,27 @@ export function menuEventBelow(element: HTMLElement): MenuEvent {
 }
 
 /** The `Collections ▸` row of one item: a check for each membership, and a click toggles it. */
-export function membershipRow(item: ResolvedItem, collections: readonly CollectionRow[]): MenuItem {
+export function membershipRow(
+  item: ResolvedItem,
+  collections: readonly CollectionRow[],
+  actions: LibraryActions,
+): MenuItem {
   const source = (id: string): MembershipSource | false => item.collectionSources[id] ?? false;
   return collectionsSubmenu(collections, source, (id) =>
-    void changeMembership(item.ref, id, source(id) === false),
+    void actions.membership(item.ref, id, source(id) === false),
   );
 }
 
 /** A menu of only the Collections submenu, opened from Title information's Collections button. */
-export function openMembershipMenu(event: MenuEvent, item: ResolvedItem, collections: readonly CollectionRow[]): void {
-  void loadMemberships(item.ref).then((memberships) => {
-    openMenu(event, [membershipRow(withMemberships(item, memberships), collections)]);
-  }).catch((error: unknown) => useAppStore.getState().say(
-    error instanceof Error ? error.message : "Collection memberships could not be read.", "warn",
-  ));
+export function openMembershipMenu(
+  event: MenuEvent,
+  item: ResolvedItem,
+  collections: readonly CollectionRow[],
+  actions: LibraryActions,
+): void {
+  void actions.loadMemberships(item.ref).then((memberships) => {
+    openMenu(event, [membershipRow(withMemberships(item, memberships), collections, actions)]);
+  }).catch((error: unknown) => actions.reportError(error, "Collection memberships could not be read."));
 }
 
 export interface CardMenuContext {
@@ -50,10 +56,14 @@ export interface CardMenuContext {
 /** A card's menu signed out (`63` section 3.4): Play or Open, Info, and the favorite heart - disabled with the
  *  sign-in sentence, a disabled per-item control reading as broken otherwise. No memberships are read: a signed-out
  *  card asks nothing of the account. */
-function signedOutCardMenu(item: ResolvedItem, context: CardMenuContext): Array<MenuItem | false | null | undefined> {
+function signedOutCardMenu(
+  item: ResolvedItem,
+  context: CardMenuContext,
+  actions: LibraryActions,
+): Array<MenuItem | false | null | undefined> {
   return [
     item.progress !== undefined && { kind: "heading", label: watchLine(item.progress) },
-    { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => playRef(item.ref) },
+    { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => actions.play(item.ref) },
     { kind: "action", label: "Info", onSelect: context.onInfo },
     {
       kind: "action",
@@ -66,22 +76,27 @@ function signedOutCardMenu(item: ResolvedItem, context: CardMenuContext): Array<
 }
 
 /** A card's context menu: Play or Open, Info, Favorite, Collections, and in History the removal of the watch entry. */
-export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: CardMenuContext): void {
+export function openCardMenu(
+  event: MenuEvent,
+  item: ResolvedItem,
+  context: CardMenuContext,
+  actions: LibraryActions,
+): void {
   if (!context.signedIn) {
-    openMenu(event, signedOutCardMenu(item, context));
+    openMenu(event, signedOutCardMenu(item, context, actions));
     return;
   }
-  void loadMemberships(item.ref).then((memberships) => openMenu(event, [
+  void actions.loadMemberships(item.ref).then((memberships) => openMenu(event, [
     item.progress !== undefined && { kind: "heading", label: watchLine(item.progress) },
-    { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => playRef(item.ref) },
+    { kind: "action", label: item.kind === "tv" ? "Open" : "Play", onSelect: () => actions.play(item.ref) },
     { kind: "action", label: "Info", onSelect: context.onInfo },
     {
       kind: "action",
       label: item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite,
-      onSelect: () => void changeFavourite(item.ref, !item.favorite),
+      onSelect: () => void actions.favorite(item.ref, !item.favorite),
     },
     { kind: "separator" },
-    membershipRow(withMemberships(item, memberships), context.collections),
+    membershipRow(withMemberships(item, memberships), context.collections, actions),
     context.inHistory && {
       kind: "action",
       label: LIBRARY_COPY.removeWatch,
@@ -89,9 +104,7 @@ export function openCardMenu(event: MenuEvent, item: ResolvedItem, context: Card
       disabledReason: LIBRARY_COPY.noWatchEntry,
       onSelect: context.onRemoveWatch,
     },
-  ])).catch((error: unknown) => useAppStore.getState().say(
-    error instanceof Error ? error.message : "Collection memberships could not be read.", "warn",
-  ));
+  ])).catch((error: unknown) => actions.reportError(error, "Collection memberships could not be read."));
 }
 
 function withMemberships(item: ResolvedItem, memberships: readonly import("@/types/library").Membership[]): ResolvedItem {

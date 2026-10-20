@@ -9,7 +9,7 @@ import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { TitleSpotlight } from "@/components/library/TitleSpotlight";
 import { useTitleSpotlight } from "@/hooks/useTitleSpotlight";
-import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { useLibraryData } from "@/hooks/useLibraryData";
 import { useRowsShelves } from "@/hooks/useRowsShelves";
 import { useLibraryRequest } from "@/hooks/useLibraryRequest";
@@ -30,6 +30,7 @@ import { libraryRenderState, shownItems } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
 
 export function LibraryPage({ active }: { active: boolean }) {
+  const actions = useLibraryActions();
   const prefs = useAppStore((state) => state.library);
   const marks = useAppStore((state) => state.marks);
   const signedIn = useAppStore((state) => state.signedIn);
@@ -61,22 +62,22 @@ export function LibraryPage({ active }: { active: boolean }) {
   const onRemoveWatch = useCallback((item: ResolvedItem): void => {
     if (item.watchId === undefined) return;
     const watchId = item.watchId;
-    void removeWatchEntry(
+    void actions.removeWatch(
       watchId,
       () => setHistory((current) => withRemoved(current, watchId)),
       () => setHistory((current) => withRestored(current, watchId)),
     );
-  }, []);
+  }, [actions]);
   const onClearHistory = useCallback((): void => {
     let previous = NO_HISTORY;
-    void clearWatchHistory(
+    void actions.clearHistory(
       () => setHistory((current) => {
         previous = current;
         return withCleared(items.flatMap((item) => item.watchId === undefined ? [] : [item.watchId]));
       }),
       () => setHistory(previous),
     );
-  }, [items]);
+  }, [actions, items]);
   const rows = view === "rows";
   const genres = [...new Set([...(data.page?.facets.genres ?? []), ...query.genres])];
   const years = [...new Set([

@@ -48,12 +48,8 @@ export function CollectionFolders({
       <Actions>
         <Button
           variant="ghost"
-          disabled={!desktop}
-          title={
-            desktop
-              ? "Attach a folder this collection is built from. Files on disk are only read, never changed."
-              : "This action is available in the desktop app."
-          }
+          reason={desktop ? undefined : "This action is available in the desktop app."}
+          title="Attach a folder this collection is built from. Files on disk are only read, never changed."
           onClick={() => void verbs.attach(collectionId)}
         >
           <FolderPlus aria-hidden /> Attach folder

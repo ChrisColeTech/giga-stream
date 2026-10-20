@@ -1,6 +1,31 @@
 /** What a collection holds, the owner's tag (`03` section 3.7): movies, TV, or local files. */
 export type CollectionType = "movie" | "tv" | "local";
 
+/** A folder choice returned by the desktop picker. The token is opaque and never rendered. */
+export interface FolderSelection {
+  readonly token: string;
+  readonly name: string;
+}
+
+/** The validated collection shape shared by the request layer, store and collection window. */
+export interface CollectionAnswer {
+  readonly id: string;
+  readonly name: string;
+  readonly type: CollectionType;
+  readonly itemCount: number;
+  readonly folders: {
+    readonly id: string;
+    readonly collectionId: string;
+    readonly name: string;
+    readonly fileCount: number;
+    readonly scanning: boolean;
+    readonly lastScannedAt?: number;
+  }[];
+  readonly scanning: boolean;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
 /** One collection as the manager lists it: its type, its totals (every item), its manual members and the items its
  *  attached folders hold, and the aggregate scan state of those folders. */
 export interface CollectionRow {

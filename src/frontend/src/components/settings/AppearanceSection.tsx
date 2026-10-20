@@ -63,8 +63,8 @@ export function AppearanceSection() {
         <Actions>
           <Button
             variant="ghost"
-            disabled={atDefaults}
-            title={atDefaults ? "Appearance is already at its defaults." : "Dark, Off, Amber and a zoom of 1"}
+            reason={atDefaults ? "Appearance is already at its defaults." : undefined}
+            title="Dark, Off, Amber and a zoom of 1"
             onClick={() => {
               setTheme(DEFAULT_SETTINGS.theme);
               setMotion(DEFAULT_SETTINGS.reducedMotion);

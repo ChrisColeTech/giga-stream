@@ -1,4 +1,4 @@
-import type { TitleSource } from "@/services/schemas/source-schema";
+import type { TitleSource } from "@/types/title";
 
 export interface EmbedPlaybackEvent {
   readonly event: string;
