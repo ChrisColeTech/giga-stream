@@ -4,6 +4,7 @@ import { z } from "zod";
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
+import { refuseWritesWhenClosed } from "./writes-closed.js";
 
 /** Longest id or playback id accepted; real ones are a few dozen characters. */
 const ID_MAX = 200;
@@ -26,6 +27,7 @@ const IdParams = z.object({ watchId: z.string() });
 
 /** Watch history: a progress write, one entry removed, or the whole history cleared. */
 export function registerWatchRoutes(app: FastifyInstance, services: AppServices): void {
+  refuseWritesWhenClosed(app, "/api/watch");
   app.put("/api/watch", async (request) => {
     const body = parseInput(WriteBody, request.body);
     return okEnvelope(services.watches.write(body));

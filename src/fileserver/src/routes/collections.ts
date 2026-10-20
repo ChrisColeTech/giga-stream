@@ -4,6 +4,7 @@ import { z } from "zod";
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
+import { refuseWritesWhenClosed } from "./writes-closed.js";
 
 const IdParams = z.object({ collectionId: z.string() });
 const CreateBody = z.object({ name: z.string(), type: z.string() }).passthrough();
@@ -14,6 +15,7 @@ const ItemOfKind = z.object({ kind: z.string(), itemId: z.string() });
 
 /** Collections: `GET|POST`, `PATCH|DELETE`, members, and what an item is in (docs/03 section 3.7). */
 export function registerCollectionsRoutes(app: FastifyInstance, services: AppServices): void {
+  refuseWritesWhenClosed(app, "/api/collections");
   app.get("/api/collections", async () => okEnvelope(services.collections.list()));
 
   app.post("/api/collections", async (request, reply) => {
