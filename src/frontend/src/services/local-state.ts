@@ -13,7 +13,7 @@ export const LOCAL_SETTINGS_KEY = "giga.v1.settings";
 export const LOCAL_LAST_CHANNEL_KEY = "giga.v1.lastChannelId";
 
 /** The slice of DOM Storage the store needs; tests inject a stub of this shape instead of a real window. */
-export type LocalStorageLike = Pick<Storage, "getItem" | "setItem">;
+export type LocalStorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 /** One part's read: the validated value, or nothing plus `unreadable` when the stored blob could not be trusted. */
 export interface LocalPart<T> {
@@ -97,4 +97,18 @@ export function writeLocalLastChannel(
   storage: LocalStorageLike | null = browserStorage(),
 ): boolean {
   return writePart(LOCAL_LAST_CHANNEL_KEY, z.string(), channelId, storage);
+}
+
+/** Removes only this app's versioned keys. A failure on one key does not stop attempts for its siblings. */
+export function clearOwnedLocalState(storage: LocalStorageLike | null = browserStorage()): boolean {
+  if (storage === null) return true;
+  let cleared = true;
+  for (const key of [LOCAL_SHELL_KEY, LOCAL_SETTINGS_KEY, LOCAL_LAST_CHANNEL_KEY]) {
+    try {
+      storage.removeItem(key);
+    } catch {
+      cleared = false;
+    }
+  }
+  return cleared;
 }

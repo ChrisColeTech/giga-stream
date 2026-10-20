@@ -1,5 +1,5 @@
 import { ApiError } from "@giga/http/api-error";
-import type { RefusalKind, ResetResult } from "@/types/auth";
+import type { ProfileResult, RefusalKind, RegistrationResult, ResetResult } from "@/types/auth";
 
 /* The gate's refusal kinds (`62` section 3.5): the console's `lib/auth-errors.ts`, reading the app's failure codes.
  * An unreachable account backend is a truthful refusal, never a fake answer. */
@@ -31,4 +31,20 @@ export function resetRefusalFor(error: unknown): Exclude<ResetResult, { ok: true
     default:
       return "unreachable";
   }
+}
+
+export function registrationRefusalFor(
+  error: unknown,
+): Exclude<RegistrationResult, { ok: true }>["refusal"] {
+  if (!(error instanceof ApiError)) return "unreachable";
+  if (error.code === "account.username_taken") return "usernameTaken";
+  if (error.code === "account.invalid" || (error.status !== undefined && error.status < 500)) return "invalid";
+  return "unreachable";
+}
+
+export function profileRefusalFor(error: unknown): Exclude<ProfileResult, { ok: true }>["refusal"] {
+  if (!(error instanceof ApiError)) return "unreachable";
+  if (error.code === "account.username_taken") return "usernameTaken";
+  if (error.code === "account.invalid") return "invalid";
+  return "unreachable";
 }

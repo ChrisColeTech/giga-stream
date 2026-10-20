@@ -19,6 +19,9 @@ function stubOf(entries: Record<string, string>): LocalStorageLike {
     setItem: (key, value) => {
       entries[key] = value;
     },
+    removeItem: (key) => {
+      delete entries[key];
+    },
   };
 }
 

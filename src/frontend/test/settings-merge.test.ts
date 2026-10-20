@@ -31,6 +31,9 @@ function fakeBrowserWindow(entries: Record<string, string>): void {
     setItem: (key, value) => {
       entries[key] = value;
     },
+    removeItem: (key) => {
+      delete entries[key];
+    },
   };
   (globalThis as { window?: unknown }).window = { localStorage: storage };
 }
@@ -42,6 +45,9 @@ function fakeDesktopWindow(entries: Record<string, string>): void {
     getItem: (key) => (key in entries ? entries[key] : null),
     setItem: (key, value) => {
       entries[key] = value;
+    },
+    removeItem: (key) => {
+      delete entries[key];
     },
   };
   (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" }, localStorage: storage };
@@ -115,6 +121,7 @@ describe("the settings merge at sign-in (`62` D8)", () => {
       setItem: () => {
         throw new Error("quota");
       },
+      removeItem: () => undefined,
     };
     (globalThis as { window?: unknown }).window = { localStorage: refusing };
     globalThis.fetch = async () => success({ settings: { theme: "light" } });

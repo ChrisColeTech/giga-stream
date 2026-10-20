@@ -21,6 +21,9 @@ function fakeBrowserWindow(entries: Record<string, string>): void {
     setItem: (key, value) => {
       entries[key] = value;
     },
+    removeItem: (key) => {
+      delete entries[key];
+    },
   };
   (globalThis as { window?: unknown }).window = { localStorage: storage };
 }

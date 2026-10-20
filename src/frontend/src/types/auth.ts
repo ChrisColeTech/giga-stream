@@ -34,6 +34,26 @@ export type AuthResult =
   | { readonly ok: true; readonly session: AuthSession }
   | { readonly ok: false; readonly refusal: RefusalKind };
 
+export interface RegistrationInput {
+  readonly username: string;
+  readonly password: string;
+  readonly securityQuestion: number | null;
+  readonly securityAnswer: string;
+}
+
+export type RegistrationRefusal =
+  | "usernameTaken"
+  | "invalid"
+  | "unreachable";
+
+export type RegistrationResult =
+  | { readonly ok: true; readonly session: AuthSession }
+  | { readonly ok: false; readonly refusal: RegistrationRefusal };
+
+export type ProfileResult =
+  | { readonly ok: true; readonly actor: SessionActor }
+  | { readonly ok: false; readonly refusal: "usernameTaken" | "invalid" | "unreachable" };
+
 /** `POST /api/auth/reset-start`: the question to answer (the account's own, or a stand-in: the backend
  *  never says which), or why it could not be asked. */
 export type ResetStartResult =
