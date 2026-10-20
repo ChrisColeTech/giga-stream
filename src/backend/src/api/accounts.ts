@@ -8,7 +8,7 @@ import { AccountSecurityQuestionSchema } from "../types/security-question.js";
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
-import { clearRefreshCookie } from "./refresh-cookie.js";
+import { adminRefreshCookie } from "./refresh-cookie.js";
 
 const AccountParams = z.object({ accountId: z.string().min(1).max(200) });
 
@@ -38,7 +38,7 @@ export function registerAccounts(app: FastifyInstance, services: Services): void
     const saved = await services.accounts.update(accountId, patch, actorOf(request, principal));
     // Changing the caller's own password or disabling it revokes the caller's sessions: the cookie goes with them.
     if (accountId === principal.accountId && (patch.password !== undefined || patch.disabled !== undefined)) {
-      clearRefreshCookie(request, reply);
+      adminRefreshCookie.clear(request, reply);
     }
     return ok(reply, saved);
   });

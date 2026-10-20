@@ -14,6 +14,9 @@ import { createRefreshTokenRepository } from "./refresh-token-repository.js";
 import { createRevisionRepository } from "./revision-repository.js";
 import { createTitleRepository } from "./title-repository.js";
 import { createUiStateRepository } from "./ui-state-repository.js";
+import { createUserCollectionRepository } from "./user-collection-repository.js";
+import { createUserFavoritesRepository } from "./user-favorites-repository.js";
+import { createUserSettingsRepository } from "./user-settings-repository.js";
 
 /**
  * The store composition root: opens and migrates the one database, and hands out its repositories. The read is the
@@ -40,6 +43,9 @@ export async function createStore(file: string) {
     refreshTokens: createRefreshTokenRepository(db),
     audit: createAuditRepository(db),
     uiState: createUiStateRepository(db),
+    userSettings: createUserSettingsRepository(db),
+    userFavorites: createUserFavoritesRepository(db),
+    userCollections: createUserCollectionRepository(db),
     transaction: <T>(work: (txn: Transaction) => Promise<T>): Promise<T> => runInTransaction(db, work),
     close: (): void => db.close(),
   };

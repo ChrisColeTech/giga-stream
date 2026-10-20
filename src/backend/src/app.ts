@@ -5,6 +5,9 @@ import { existsSync } from "node:fs";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerAccountState } from "./api/account-state.js";
+import { registerAccountAuth } from "./api/account-auth.js";
+import { registerAccountCollections } from "./api/account-collections.js";
+import { registerAccountData } from "./api/account-data.js";
 import { registerAccounts } from "./api/accounts.js";
 import { registerAdminChannels } from "./api/admin-channels.js";
 import { registerAdminStatic } from "./api/admin-static.js";
@@ -143,7 +146,7 @@ export async function buildApp(
     // The admin console's whole API is one encapsulated plugin (the same shape as the `/live` and `/logos`
     // prefixes): every register function in it names its path relative to `/api/admin`, so the admin surface
     // is one namespace no public route shares. The per-route `signedIn` checks stay in each file; sign-in
-    // itself has none.
+    // itself has none. Its guard demands kind='admin' (docs/62 D3).
     await app.register(
       async (admin) => {
         registerAccountState(admin, ready);
@@ -160,6 +163,16 @@ export async function buildApp(
         registerProviders(admin, ready);
       },
       { prefix: "/api/admin" },
+    );
+    // The app's own API (docs/62 sections 3.2-3.3): the same plugin shape, any signed-in account at its
+    // guard, its refresh cookie scoped to its own auth prefix (docs/62 D4).
+    await app.register(
+      async (account) => {
+        registerAccountAuth(account, ready);
+        registerAccountCollections(account, ready);
+        registerAccountData(account, ready);
+      },
+      { prefix: "/api/account" },
     );
     registerAdminStatic(app, ready);
     // The root-level admin UI (docs/26 section 4.1), after every API route so nothing shadows `/api`, `/healthz`,
