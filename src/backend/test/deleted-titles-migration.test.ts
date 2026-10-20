@@ -53,7 +53,7 @@ test("020 applies on an 018 database: the title stays, the table is empty, and a
     const db = await openTestDatabase(file);
     try {
       const version = await queryRow(db, "PRAGMA user_version");
-      assert.equal(Number(Object.values(version ?? {})[0]), 31);
+      assert.equal(Number(Object.values(version ?? {})[0]), 32);
     } finally {
       db.close();
     }

@@ -117,7 +117,7 @@ test("022 on a version-21 database keeps the channels and videos, rebuilds playl
     const db = await openTestDatabase(file);
     await runSql(db, "PRAGMA foreign_keys = ON");
     try {
-      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 31);
+      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 32);
       assert.deepEqual(await rows(db, "PRAGMA foreign_key_check"), []);
       assert.deepEqual(await rows(db, "SELECT COUNT(*) AS n FROM channels"), [{ n: 9 }]);
       assert.deepEqual(

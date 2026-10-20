@@ -69,7 +69,7 @@ test("migration 017 lands on a 016 database: the table appears and the later mig
 
     (await createStore(file)).close();
 
-    assert.equal(await versionOf(file), 31);
+    assert.equal(await versionOf(file), 32);
     assert.equal(await tableExists(file, "admin_ui_state"), true);
   } finally {
     removeDir(dataDir);
@@ -82,9 +82,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     (await createStore(file)).close();
     (await createStore(file)).close();
-    assert.equal(await versionOf(file), 31);
+    assert.equal(await versionOf(file), 32);
 
-    await reshape(file, [], 32);
+    await reshape(file, [], 33);
     await assert.rejects(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,

@@ -43,7 +43,7 @@ test("027 lands on a version-26 database: the titles are kept, omdb_failed_at is
 
     const db = await openTestDatabase(file);
     try {
-      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 31);
+      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 32);
       const column = (await queryRows(db, "PRAGMA table_info(titles)")).find((c) => c.name === "omdb_failed_at");
       assert.deepEqual([column?.type, column?.notnull], ["INTEGER", 0]);
       assert.deepEqual(await queryRows(db, "SELECT omdb_failed_at FROM titles"),

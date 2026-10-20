@@ -35,7 +35,7 @@ test("026 lands on a version-25 database: the titles are kept, the new columns a
 
     const db = await openTestDatabase(file);
     try {
-      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 31);
+      assert.equal((await queryRow(db, "PRAGMA user_version"))?.user_version, 32);
       const columns = (await queryRows(db, "PRAGMA table_info(titles)")).filter((c) => String(c.name).startsWith("detail_"));
       assert.deepEqual(columns.map((c) => [c.name, c.notnull]), [["detail_failed_at", 0], ["detail_failures", 0]]);
       assert.deepEqual(await queryRows(db, "SELECT detail_failed_at, detail_failures FROM titles"),
