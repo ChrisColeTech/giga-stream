@@ -115,7 +115,7 @@ export function sessionSlice(set: Set, get: Get): SessionSlice {
     applyAccountSettings: (settings, replaced) => applyAccountSettings(set, get, settings, replaced),
     endSession: (sentence) => set(signedOut(nextGate(get().gate, { type: "ended", sentence }))),
     signOut: () => set(logoutState(get())),
-    openGate: () => set({ gateOpen: true }),
+    openGate: () => set({ gateOpen: true, overlay: null, overlayAnchor: null, overlayItem: null }),
     closeGate: () => set({ gateOpen: false }),
   };
 }

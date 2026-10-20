@@ -22,10 +22,20 @@ describe("the one open flow", () => {
   });
 
   it("tells a popup from a work frame; Title information is a work frame", () => {
+    assert.equal(isPopupOverlay("account-popup"), true);
+    assert.equal(isPopupOverlay("account"), false);
     assert.equal(isPopupOverlay("title-info"), false);
     assert.equal(isPopupOverlay("collections"), false);
     assert.equal(isPopupOverlay("settings"), false);
     assert.equal(isPopupOverlay(null), false);
+  });
+
+  it("replaces the popup with the Account window instead of stacking flows", () => {
+    state().openOverlay("account-popup", { x: 20, y: 30 });
+    state().closeOverlay();
+    state().openOverlay("account");
+    assert.equal(state().overlay, "account");
+    assert.equal(state().overlayAnchor, null);
   });
 
   it("keeps one notice line and re-announces an identical sentence", () => {

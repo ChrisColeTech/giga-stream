@@ -4,7 +4,6 @@ import { AdminBackendSection } from "@/components/settings/AdminBackendSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { LibrarySection } from "@/components/settings/LibrarySection";
 import { PlaybackSection } from "@/components/settings/PlaybackSection";
-import { SessionSection } from "@/components/settings/SessionSection";
 import { workSpec } from "@/constants/child-window";
 import { SETTINGS_LABELS, SETTINGS_SECTIONS, type SettingsSectionId } from "@/constants/settings-sections";
 import { useAppStore } from "@/store/app-store";
@@ -47,7 +46,6 @@ export function SettingsWindow() {
             onCommit={setAdminUrl}
           />
         )}
-        {section === "session" && <SessionSection />}
         {section === "about" && <AboutSection version={appVersion} runtime={runtime} />}
       </SettingsFrame>
     </ChildWindow>

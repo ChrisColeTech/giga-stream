@@ -34,13 +34,14 @@ export function App() {
   const visible = useAppStore((state) => state.shellVisible);
   const gateOpen = useAppStore((state) => state.gateOpen);
   const closeGate = useAppStore((state) => state.closeGate);
+  const setSurface = useAppStore((state) => state.setSurface);
 
   return (
     <MotionConfig reducedMotion={reduced ? "always" : "never"}>
       <div className={visible ? "h-full" : "invisible h-full"} inert={gateOpen || undefined} aria-hidden={gateOpen || undefined}>
         <AppShell />
       </div>
-      {gateOpen && <GateWall onClose={closeGate} />}
+      {gateOpen && <GateWall onClose={closeGate} onBack={() => { setSurface("live"); closeGate(); }} />}
     </MotionConfig>
   );
 }
