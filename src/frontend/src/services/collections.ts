@@ -59,8 +59,8 @@ const FILESERVER = {
 
 const ACCOUNT = {
   list: async (signal?: AbortSignal): Promise<CollectionAnswer[]> => {
-    const rows = await api("/api/account/collections", AccountCollectionListSchema, { signal, area: "Catalog" });
-    return rows.map(withFolders);
+    const answer = await api("/api/account/collections", AccountCollectionListSchema, { signal, area: "Catalog" });
+    return answer.items.map(withFolders);
   },
   create: async (name: string, type: CollectionType): Promise<CollectionAnswer> =>
     withFolders(

@@ -85,9 +85,27 @@ describe("collections routed through the resolver (`62` section 3.6)", () => {
       ["/api/account/collections", "GET"],
       ["/api/account/collections", "POST"],
     ]);
-    assert.deepEqual(created, { id: "col-2", name: "Rewatch", type: "tv", itemCount: 0, folders: [], scanning: false });
+    assert.deepEqual(created, {
+      id: "col-2",
+      name: "Rewatch",
+      type: "tv",
+      itemCount: 0,
+      createdAt: 3,
+      updatedAt: 4,
+      folders: [],
+      scanning: false,
+    });
     assert.deepEqual(rows, [
-      { id: "col-1", name: "Night movies", type: "movie", itemCount: 3, folders: [], scanning: false },
+      {
+        id: "col-1",
+        name: "Night movies",
+        type: "movie",
+        itemCount: 3,
+        createdAt: 1,
+        updatedAt: 2,
+        folders: [],
+        scanning: false,
+      },
     ]);
   });
 
