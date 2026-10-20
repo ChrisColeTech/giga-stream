@@ -45,15 +45,25 @@ export function selectAllState(items: readonly AdminAccount[], ticked: readonly 
 export interface AccountRowView {
   readonly id: AccountId;
   readonly username: string;
+  /** The kind as the column and the filter read it (`62` section 3.7): `Admin` or `User`, absence read as `Admin`. */
+  readonly kind: string;
   readonly state: RowState;
   /** The last sign-in as the list shows it, `never` if absent. */
   readonly when: string;
+}
+
+/** The account's kind as the console words it, everywhere the same (`62` section 3.7): an old answer without the field
+ *  is an admin, because absence is what the backend answered before the column existed. A kind the schema refused never
+ *  reaches here — the list dropped that row whole. */
+export function kindLabel(account: Pick<AdminAccount, "kind">): "Admin" | "User" {
+  return account.kind === "user" ? "User" : "Admin";
 }
 
 export function accountRow(account: AdminAccount): AccountRowView {
   return {
     id: account.id,
     username: account.username,
+    kind: kindLabel(account),
     state: enabledState(!account.disabled),
     when: formatWhen(account.lastSignInAt),
   };

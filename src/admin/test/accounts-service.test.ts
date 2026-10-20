@@ -1,19 +1,43 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { ApiError } from "@giga/http/api-error";
+import { AccountSchema } from "@/services/schemas/account-schema";
 import { createBody } from "@/lib/account-body";
 import { accounts } from "@/services/accounts";
 import { json, success } from "./support/fake-backend";
 import { withBackend } from "./support/global-fetch";
 import { resetStore, signInForTest } from "./support/store";
 
-const row = (id: string, username: string) => ({ id, username, disabled: false, createdAt: 1, updatedAt: 2 });
+const row = (id: string, username: string, kind?: "admin" | "user") => ({
+  id,
+  username,
+  disabled: false,
+  createdAt: 1,
+  updatedAt: 2,
+  ...(kind === undefined ? {} : { kind }),
+});
 const refusal = (status: number, code: string, field?: string) =>
   json({ ok: false, error: { code, message: "Server sentence.", ...(field && { details: { field } }) } }, status);
 
 beforeEach(() => {
   resetStore();
   signInForTest();
+});
+
+describe("the account schema (`62` section 3.7)", () => {
+  it("reads an answer with a kind, and an answer without one (absent means admin)", () => {
+    const withKind = AccountSchema.safeParse(row("a", "a@x.test", "user"));
+    assert.ok(withKind.success && withKind.data.kind === "user");
+    const admin = AccountSchema.safeParse(row("b", "b@x.test", "admin"));
+    assert.ok(admin.success && admin.data.kind === "admin");
+    const old = AccountSchema.safeParse(row("c", "c@x.test"));
+    assert.ok(old.success && old.data.kind === undefined, "an answer from before the column still reads");
+  });
+
+  it("refuses a kind the schema does not know, so the list drops that row whole", () => {
+    const nonsense = AccountSchema.safeParse({ ...row("d", "d@x.test"), kind: "wizard" });
+    assert.equal(nonsense.success, false);
+  });
 });
 
 describe("the accounts service", () => {
@@ -28,13 +52,34 @@ describe("the accounts service", () => {
     );
   });
 
-  it("posts the trimmed username and the password untouched", async () => {
+  it("keeps the kinds it read and counts a nonsense kind among the unreadable rows", async () => {
     await withBackend(
-      () => success(row("n", "new@x.test"), 201),
+      () => success({ items: [row("a", "a@x.test", "admin"), row("u", "u@x.test", "user"), { ...row("w", "w@x.test"), kind: "wizard" }] }),
+      async () => {
+        const list = await accounts.list();
+        assert.deepEqual(
+          list.items.map((item) => [item.id, item.kind]),
+          [["a", "admin"], ["u", "user"]],
+        );
+        assert.equal(list.unreadable, 1);
+      },
+    );
+  });
+
+  it("posts the trimmed username, the password untouched and the chosen kind", async () => {
+    await withBackend(
+      () => success(row("n", "new@x.test", "user"), 201),
       async (calls) => {
-        await accounts.create(createBody({ username: " new@x.test ", password: "  pass word 12  " }));
+        await accounts.create(createBody({ username: " new@x.test ", password: "  pass word 12  ", kind: "user" }));
         assert.equal(calls[0]?.method, "POST");
-        assert.deepEqual(calls[0]?.body, { username: "new@x.test", password: "  pass word 12  " });
+        assert.deepEqual(calls[0]?.body, { username: "new@x.test", password: "  pass word 12  ", kind: "user" });
+      },
+    );
+    await withBackend(
+      () => success(row("a", "a@x.test"), 201),
+      async (calls) => {
+        await accounts.create(createBody({ username: "a@x.test", password: "x".repeat(12), kind: "admin" }));
+        assert.deepEqual(calls[0]?.body, { username: "a@x.test", password: "x".repeat(12), kind: "admin" });
       },
     );
   });

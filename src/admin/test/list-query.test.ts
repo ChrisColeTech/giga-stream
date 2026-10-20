@@ -98,15 +98,33 @@ describe("a held list's query", () => {
   });
 
   it("filters accounts by whether they ever signed in", () => {
-    const account = (id: number, when: string): AccountRowView => ({
+    const account = (id: number, when: string, kind = "Admin"): AccountRowView => ({
       id,
       username: `u${id}`,
+      kind,
       state: enabledState(true),
       when,
     });
     const list = [account(1, "2026-10-01 10:00"), account(2, "never")];
     const never = withFilter(start, "sign-in", "never");
     assert.deepEqual(visibleRows(list, never, accountSpec).map((row) => row.username), ["u2"]);
+  });
+
+  it("filters accounts by kind: admins, users, any (`62` section 3.7)", () => {
+    const account = (id: number, kind: string): AccountRowView => ({
+      id,
+      username: `u${id}`,
+      kind,
+      state: enabledState(true),
+      when: "never",
+    });
+    const list = [account(1, "Admin"), account(2, "User"), account(3, "Admin")];
+    const admins = visibleRows(list, withFilter(start, "kind", "Admin"), accountSpec).map((row) => row.username);
+    const users = visibleRows(list, withFilter(start, "kind", "User"), accountSpec).map((row) => row.username);
+    assert.deepEqual([admins, users], [["u1", "u3"], ["u2"]]);
+    assert.equal(visibleRows(list, withFilter(start, "kind", ANY), accountSpec).length, 3, "any lets every row through");
+    const searched = visibleRows(list, withSearch(withTyped(start, "user")), accountSpec);
+    assert.deepEqual(searched.map((row) => row.username), ["u2"], "the kind is in the row text a search looks in");
   });
 
   it("states the header All over the rows shown: ticked, mixed, or none", () => {
