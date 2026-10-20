@@ -76,7 +76,7 @@ describe("Title information's window", () => {
     assert.match(longHtml, /Final sentence\./);
     assert.doesNotMatch(longHtml, /line-clamp/);
     assert.match(draw(baseItem, movieDetail), /A short complete plot\./);
-    assert.doesNotMatch(draw(baseItem, { ...movieDetail, plot: undefined }), /<p/);
+    assert.doesNotMatch(draw(baseItem, { ...movieDetail, plot: undefined }), /<p(?:\s|>)/);
   });
 
   it("preserves movie, series and local facts while omitting only unavailable detail", () => {
@@ -103,7 +103,8 @@ describe("Title information's window", () => {
     const localHtml = draw(local, undefined);
     assert.match(localHtml, /Local/);
     assert.match(localHtml, /4K/);
-    assert.doesNotMatch(localHtml, /animate-skel-shimmer|<p/);
+    assert.doesNotMatch(localHtml, /w-\[(?:95|88|70)%\]/);
+    assert.doesNotMatch(localHtml, /<p(?:\s|>)/);
   });
 
   it("keeps real and missing artwork in the same fixed frame", () => {
@@ -126,7 +127,9 @@ describe("Title information's window", () => {
 
   it("preserves actions, shared disabled reasons and hook-owned detail I/O", () => {
     const source = readFileSync("src/components/overlays/TitleInfoWindow.tsx", "utf8");
-    assert.match(source, /Favorite/);
+    assert.match(source, /LIBRARY_COPY\.favorite/);
+    assert.match(source, /LIBRARY_COPY\.unfavorite/);
+    assert.match(source, /<Star/);
     assert.match(source, /Collections/);
     assert.match(source, /Open in Player/);
     assert.match(source, /variant="primary" reason=/);
