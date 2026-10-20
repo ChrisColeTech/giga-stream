@@ -19,7 +19,7 @@ player can show the provider's ads (`14` check 14).
    |  talks only to the fileserver
    v
  Fileserver (on your computer)
-   |  passes the backend's data through, live
+   |  reads the shared admin Turso database directly
    v
  Admin backend (a server)
 
@@ -29,9 +29,9 @@ player can show the provider's ads (`14` check 14).
 
 - **The interface** shows things and plays video. It never talks to the admin backend.
 - **The fileserver** holds everything that belongs to your computer: your local video files, your
-  settings, your layout, your favorites, your watch history and your collections. It passes the admin
-  backend's channels, titles and providers through to the interface as they are, live. It keeps
-  nothing from the backend except images.
+  settings, your layout, your favorites, your watch history and your collections. It reads channels,
+  titles and account data directly from the admin Turso database. Providers are the only data it reads
+  through the admin API and are never stored locally (`64`).
 - **The admin backend** owns channels, titles and providers, including each stream's address.
   Providers are its business alone: the fileserver and the interface do not know what a provider is.
 - **The player** is given a stream address and loads it. Nothing converts, resolves or relays a

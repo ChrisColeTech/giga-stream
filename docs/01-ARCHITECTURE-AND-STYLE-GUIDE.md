@@ -19,9 +19,8 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
    only, synced in the background, at most every 6 hours; `46`) and the
    image cache; providers and their sources are never stored
         |
-        | live reads on demand: /api/library, /api/titles*,
-        | /api/channels, /api/providers (never stored; the revision
-        | in an answer says whether the view moved)
+        | direct SQL reads and account writes through Turso;
+        | the sole admin API read is /api/admin/providers
         v
  Admin backend (src/backend)  :8091 loopback, TLS off loopback (03 section 7.10)
    owns: channels, providers, admin accounts, the title store,
@@ -43,7 +42,7 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
 
 | | Interface | Fileserver | Admin backend |
 |---|---|---|---|
-| Talks to | fileserver only | interface, backend | fileserver (answers), TMDB, OMDb |
+| Talks to | fileserver only | interface, admin Turso, provider API | fileserver provider read, admin app, TMDB, OMDb |
 | Owns | nothing persisted | your data (settings, layout, collections, favorites, history, local files) | channels, providers, accounts, the title store, audit |
 | Port | - | 8090 | 8091 |
 | Database | - | `~/.giga-stream` | `~/.giga-stream-admin` |
@@ -164,7 +163,8 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 ### 4.2 Import boundaries
 
 - The interface never imports fileserver or backend source; the fileserver never imports backend
-  source; the backend imports neither. They talk over HTTP.
+  source; the backend imports neither. Cross-program TypeScript source imports remain forbidden. The fileserver uses
+  the admin database schema as a versioned SQL contract (`64`) and calls the admin HTTP API only for providers.
 - **A shared library is not a program.** Code more than one program or tool needs lives once, in
   `src/shared/<domain>/` (for example `src/shared/media`: finding and running the bundled FFmpeg,
   reading a file's facts with ffprobe, and finding the video files in a folder). Any program and the
@@ -259,6 +259,9 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 ### Fileserver
 
 - Repositories own SQL, services compose repositories, routes call services.
+- The fileserver owns one `@libsql/client` connection to the configured admin Turso database. It never runs the
+  admin backend's migrations. Every admin-database query remains under the fileserver's `store/`, and startup refuses
+  an unsupported schema version. Providers are the sole admin HTTP API read and are request-local.
 - Migrations are forward-only, numbered and transactional; a newer schema is refused.
 - Backend channels and titles are cached in the fileserver's database as a snapshot (`46`): synced in the background at launch
   and when a page reads them after 6 hours, served from the cache at once (a cache that was never filled is awaited). A failed

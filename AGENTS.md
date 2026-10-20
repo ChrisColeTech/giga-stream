@@ -27,7 +27,8 @@ person's changes.
 ## Layout
 
 - `src/frontend` the React interface (Vite). `src/fileserver` the application server and Electron host;
-  it serves the built interface. `src/backend` the optional admin backend; it also serves the live
+  it serves the built interface and reads the admin Turso database directly (`docs/64`). `src/backend` the
+  optional admin backend; it also serves the live
   channels (`src/backend/src/live`, the `/live` and `/logos` routes; `docs/10`, `docs/26`). `src/mockup` the provider
   playback proof of concept (`docs/14`): plain HTML, CSS and JS, never packaged.
 - **Ports: development and production never share one** (owner, 2026-10-17; `docs/03` section 1), so the
@@ -45,7 +46,8 @@ person's changes.
 - `scripts/fixtures` makes the test video files (`docs/10` section 2.1), cached per machine, never committed.
 - `scripts/ffmpeg` the FFmpeg builds and verifiers (`docs/09`); app-specific Windows and Linux x64 payloads are versioned
   under `tools/ffmpeg/<platform>/bin`.
-- The programs never import each other's source; they talk over HTTP. The interface has no application socket.
+- The programs never import each other's source. The interface talks to the fileserver over HTTP; the fileserver reads
+  the admin Turso database directly and calls the admin API only for providers. The interface has no application socket.
 
 ## Commands
 
@@ -84,7 +86,7 @@ Checks and drives run against the started stack, never against ad-hoc per-progra
   backend cache (`docs/46`) has no timer: staleness (6 hours) is checked at launch and when a page reads, and it stores no
   providers, tokens or secrets.
 - Routes: parse, one service call, the standard envelope. SQL only under `store/`. Electron only in the
-  fileserver's `src/app`. Providers only in the admin backend.
+  fileserver's `src/app`. Provider records remain in the admin backend and are the fileserver's sole admin API read.
 - Every route begins `/api`; the root-level routes are `/healthz` and the backend's live stream addresses (`/live`,
   `/logos`, the test page) and its static `/admin/` app. Error codes are dotted and stable.
 - A control works or is visibly disabled with its reason as a tooltip; no text under controls;

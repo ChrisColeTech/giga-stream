@@ -34,8 +34,8 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 There are two servers, and they are separate programs:
 
 - **The fileserver** (Part A) serves the interface. Every route the interface calls is a fileserver
-  route. It keeps your own data (settings, layout, collections, favorites, watch history, your own video
-  files) and reads the backend's channels and titles live, without storing them.
+  route. It keeps device-local data and reads the admin Turso database directly for channels, titles and
+  account data. Its only admin API data call is the provider read (`64`).
 - **The admin backend** (Part B) holds the channels, and is the app's window onto TMDB's titles (`11`):
   it browses, searches and describes them, and gives each movie and episode its stream address from a
   rule. Only the fileserver reads from it; a signed-in admin changes the channels.
@@ -67,6 +67,8 @@ interface, default `src/frontend/dist`; point it at `src/mockup` to serve the pr
 `ALLOW_INSECURE_ADMIN` (accept a plain `http` admin address off loopback; development only),
 `TEST_FOLDER_ROOT` (tests only: lets a browser run choose a folder under this root without Electron's
 picker), `GIGA_APP_URL` (desktop shell only: the page the window loads),
+`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (the admin database; required for direct admin reads), `JWT_SECRET`
+(account sessions), `ADMIN_MEDIA_TARGET` (optional `/live` and `/logos` byte origin),
 `REQUIRE_ACCOUNT_WRITES` (deployment only, plan `62` wave 0: set on a public deployment, it makes the
 unauthenticated write routes for settings, favorites, collections and watch history refuse with the standard
 envelope, `403 writes.closed`; never set on a desktop, whose local writes are the point).
@@ -529,6 +531,10 @@ interface BackendState {
   list that cannot be read becomes "no list" and one notice, and never costs the saved shell.
 
 ## 5. The backend cache (owner, 2026-10-18; plan `46`)
+
+**Transport amendment (owner, 2026-10-20; plan `64`).** Every channel and title cache fill below reads the admin
+Turso database directly. References in this section to backend catalog HTTP routes describe the old transport and are
+superseded. Provider records are still read through `GET /api/admin/providers` and are never cached.
 
 ### 5.1 Freshness: launch and page reads, no timers
 

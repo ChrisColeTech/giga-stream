@@ -1,6 +1,7 @@
 # 62 - User accounts plan
 
-**Status: plan, written before the code (coordinator, branch `dev`).** Owner, 2026-10-19: phase 2 "will be
+**Status: plan, written before the code (coordinator, branch `dev`).** Its proxy transport is superseded by `64`:
+the fileserver terminates account/auth routes and reads or writes Turso directly. Owner, 2026-10-19: phase 2 "will be
 adding the user api to the backend to persist profile, collections, settings, favorites. we might be able to
 make the current user infrastructure by just adding a type to the table row. just need to see what changes we
 would need to make to the admin console"; "phase 2 needs an auth gate on the frontend. and we arent using

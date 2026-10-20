@@ -7,6 +7,11 @@ we need to hide the collections feature and history from non registered users. w
 persistence in the browser and in the cloud and registered vs unregistered flow." This supersedes the signed-out
 homes of `docs/61` and the offline escape of `docs/62`: persistence is a registered feature, full stop.
 
+**Superseded transport and UI (owner, 2026-10-20; `64`, `65`).** The fileserver no longer passes account or watch
+requests to the backend API; it performs them against Turso. The titlebar account control is icon-only, signed-out
+opens the family auth wall, signed-in opens the Account/Logout popup, and logout clears the browser's owned local
+state and returns to Live.
+
 ## 1. The model
 
 Corrected (owner, 2026-10-20): unregistered users were never denied storage - they keep their **device's local
