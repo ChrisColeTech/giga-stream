@@ -67,12 +67,17 @@ describe("the watch transport over the resolver (`61` section 2.5)", () => {
     assert.equal(onDesktopRuntime(), true);
     const calls: Array<{ input: string; method?: string; body?: string; keepalive?: boolean }> = [];
     globalThis.fetch = async (input, init) => {
+      const path = String(input);
       calls.push({
-        input: String(input), method: init?.method,
+        input: path, method: init?.method,
         body: typeof init?.body === "string" ? init.body : undefined,
         keepalive: init?.keepalive === true ? true : undefined,
       });
-      return success({ applied: true, entry: null });
+      // Each route its own answer shape: the schemas at the boundary are exact, so a write answer would not parse
+      // as a removal or a clear.
+      if (init?.method === "PUT") return success({ applied: true, entry: null });
+      if (path === "/api/watch/watch-1") return success({ removed: "watch-1" });
+      return success({ cleared: 2 });
     };
     const answer = await writeWatch({
       item: { kind: "title", id: "t1" }, positionMs: 5_000, durationMs: 10_000, playbackId: "p1", seq: 3,

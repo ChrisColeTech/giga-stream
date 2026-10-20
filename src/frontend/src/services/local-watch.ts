@@ -61,19 +61,22 @@ function createLocalWatch(start: EntryCore, deps: LocalWatchDeps): LocalWatch {
       return operation(active);
     }
   };
+  const load = (): Promise<WatchEntry[]> => run((core) => core.load());
+  /** The last seq APPLIED for the playback moves to the newest end (the oldest dropped when the room runs out). */
+  const rememberSeq = (playbackId: string, seq: number): void => {
+    lastSeqByPlayback.delete(playbackId);
+    lastSeqByPlayback.set(playbackId, seq);
+    if (lastSeqByPlayback.size > WATCH_PLAYBACKS_REMEMBERED) {
+      const oldest = lastSeqByPlayback.keys().next();
+      if (!oldest.done) lastSeqByPlayback.delete(oldest.value);
+    }
+  };
   return {
     write: (input) => run(async (core) => {
       const done = lastSeqByPlayback.get(input.playbackId) ?? 0;
       const existing = (await core.load()).find((entry) => entryIdentity(entry) === entryIdentity(input));
-      // A late write answers the entry as it stands and changes nothing; a fresh one moves the playback to the
-      // newest end of the remembered seqs, so the oldest is the one dropped when the room runs out.
+      // A late write answers the entry as it stands and changes nothing.
       if (input.seq <= done) return { applied: false, entry: existing ?? null };
-      lastSeqByPlayback.delete(input.playbackId);
-      lastSeqByPlayback.set(input.playbackId, input.seq);
-      if (lastSeqByPlayback.size > WATCH_PLAYBACKS_REMEMBERED) {
-        const oldest = lastSeqByPlayback.keys().next();
-        if (!oldest.done) lastSeqByPlayback.delete(oldest.value);
-      }
       // The position and the state are the shared semantics: the clamp, the sticky `watched` and the
       // `watchedPercent` threshold read at this write.
       const positionMs = clampPosition(input.positionMs, input.durationMs);
@@ -88,16 +91,21 @@ function createLocalWatch(start: EntryCore, deps: LocalWatchDeps): LocalWatch {
         updatedAt: now(),
       };
       await core.put(entry);
+      // Only a landed write remembers its seq: the seq is the last APPLIED one (docs/30 section 3.13), so a write
+      // whose storage failed - whose degrade retry re-runs this body - is not answered stale by its own record.
+      rememberSeq(input.playbackId, input.seq);
       return { applied: true, entry };
     }),
-    remove: (watchId) => run(async (core) => {
-      const found = (await core.load()).find((entry) => entry.watchId === watchId);
+    remove: async (watchId) => {
+      // The unknown-id refusal is the store's own answer, not a storage failure: it is raised outside the guarded
+      // `run`, so a missing entry never flips the store to memory or speaks the degrade warning.
+      const found = (await load()).find((entry) => entry.watchId === watchId);
       if (found === undefined) throw new Error("There is no such watch entry.");
-      await core.drop(entryIdentity(found));
+      await run((core) => core.drop(entryIdentity(found)));
       return { removed: watchId };
-    }),
+    },
     clear: () => run((core) => core.clearAll().then((cleared) => ({ cleared }))),
-    entries: () => run((core) => core.load()),
+    entries: () => load(),
     continueSelection: (max) => run(async (core) => continueEntries(await core.load(), max)),
     historyPage: (page, pageSize) => run(async (core) => pageOf(newestFirst(await core.load()), page, pageSize)),
   };

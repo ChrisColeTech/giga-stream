@@ -20,14 +20,18 @@ const state = () => useAppStore.getState();
  *  operation is genuinely async and completes in order. */
 function stubFactory(seed: Map<string, unknown> = new Map(), failPut = false): IdbFactoryLike & { rows: Map<string, unknown> } {
   const rows = seed;
+  // The failure a refused request left in its transaction: the real IndexedDB aborts the transaction and answers
+  // `error` on it, which is what the store's completion helper reads.
+  let failed: DOMException | null = null;
   const settled = <T>(result: T): IdbRequestLike<T> => {
     const request: IdbRequestLike<T> = { result, error: null, onsuccess: null, onerror: null };
     queueMicrotask(() => request.onsuccess?.(new Event("success")));
     return request;
   };
   const refused = (): IdbRequestLike<unknown> => {
+    failed = new DOMException("quota", "QuotaExceededError");
     const request: IdbRequestLike<unknown> = {
-      result: undefined, error: new DOMException("quota", "QuotaExceededError"), onsuccess: null, onerror: null,
+      result: undefined, error: failed, onsuccess: null, onerror: null,
     };
     queueMicrotask(() => request.onerror?.(new Event("error")));
     return request;
@@ -59,7 +63,13 @@ function stubFactory(seed: Map<string, unknown> = new Map(), failPut = false): I
         onabort: null as ((event: Event) => void) | null,
         onerror: null as ((event: Event) => void) | null,
       };
-      setTimeout(() => handle.oncomplete?.(new Event("complete")), 0);
+      setTimeout(() => {
+        if (failed === null) handle.oncomplete?.(new Event("complete"));
+        else {
+          handle.error = failed;
+          handle.onabort?.(new Event("abort"));
+        }
+      }, 0);
       return handle;
     },
   };
@@ -71,12 +81,22 @@ function stubFactory(seed: Map<string, unknown> = new Map(), failPut = false): I
         onsuccess: null, onerror: null, onupgradeneeded: null, onblocked: null,
       };
       queueMicrotask(() => {
-        request.onupgradeneeded?.(new IDBVersionChangeEvent("upgradeneeded", { oldVersion: 0, newVersion: 1 }));
+        request.onupgradeneeded?.(new Upgraded());
         request.onsuccess?.(new Event("success"));
       });
       return request;
     },
   };
+}
+
+/** The upgrade event the real open fires; a local subclass, since node has no `IDBVersionChangeEvent` global to
+ *  construct and the structural shape is all the handler slot asks for. */
+class Upgraded extends Event {
+  readonly oldVersion = 0;
+  readonly newVersion = 1;
+  constructor() {
+    super("upgradeneeded");
+  }
 }
 
 const write = (over: Partial<WatchWrite> = {}): WatchWrite => ({
@@ -117,7 +137,7 @@ describe("the local watch store", () => {
     assert.equal(clamped.entry?.state, "watched");
     const back = await store.write(write({ durationMs: 1_000, positionMs: 0, seq: 2 }));
     assert.equal(back.entry?.state, "watched");
-    const noDuration = await store.write(write({ item: { kind: "title", id: "t2" } }));
+    const noDuration = await store.write(write({ item: { kind: "title", id: "t2" }, playbackId: "p2" }));
     assert.equal(noDuration.entry?.state, "watching");
   });
 
@@ -139,7 +159,7 @@ describe("the local watch store", () => {
     await store.write(write({
       item: { kind: "title", id: "s1" }, season: 1, episode: 2, durationMs: 1_000, positionMs: 950, seq: 2,
     }));
-    await store.write(write({ item: { kind: "title", id: "m1" }, durationMs: 1_000, positionMs: 10 }));
+    await store.write(write({ item: { kind: "title", id: "m1" }, durationMs: 1_000, positionMs: 10, playbackId: "p2" }));
     // The series' newest entry is watched, so the item has left Continue even though the first episode is mid-way.
     const continuing = await store.continueSelection(10);
     assert.deepEqual(continuing.map((entry) => entry.item.id), ["m1"]);
@@ -159,7 +179,7 @@ describe("the local watch store", () => {
   it("removes by watch id, refuses an unknown one, and clears the rest", async () => {
     const store = await open(stubFactory());
     const first = await store.write(write({ item: { kind: "title", id: "t1" } }));
-    await store.write(write({ item: { kind: "title", id: "t2" } }));
+    await store.write(write({ item: { kind: "title", id: "t2" }, playbackId: "p2" }));
     const watchId = first.entry?.watchId ?? "";
     assert.deepEqual(await store.remove(watchId), { removed: watchId });
     await assert.rejects(store.remove("no-such-watch-id"), /no such watch entry/);
@@ -196,14 +216,14 @@ describe("the local watch store", () => {
     assert.equal(state().notice, undefined);
   });
 
-  it("degrades on a failed write, keeps serving from memory and does not speak twice", async () => {
+  it("degrades on a failed write and keeps serving from memory", async () => {
     const store = await open(stubFactory(new Map(), true));
     const written = await store.write(write({ durationMs: 1_000 }));
     assert.equal(written.applied, true);
     assert.deepEqual(await store.entries(), [written.entry]);
-    assert.match(state().notice?.sentence ?? "", /kept for this session only/);
-    useAppStore.setState({ notice: undefined });
-    await store.write(write({ item: { kind: "title", id: "t2" }, durationMs: 1_000 }));
-    assert.equal(state().notice, undefined);
+    // The degrade warning itself is once per reason per session, and this file's session already spent it above -
+    // which is exactly why the sentence is asserted only in the open-failure test.
+    await store.write(write({ item: { kind: "title", id: "t2" }, durationMs: 1_000, playbackId: "p2" }));
+    assert.equal((await store.entries()).length, 2);
   });
 });

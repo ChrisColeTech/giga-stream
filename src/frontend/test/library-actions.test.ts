@@ -14,12 +14,24 @@ const success = (data: unknown): Response => new Response(JSON.stringify({ ok: t
 const refusal = (message: string): Response => new Response(JSON.stringify({
   ok: false, error: { code: "request.refused", message },
 }), { status: 409 });
+/** These tests pin the fileserver verbs' optimistic flows, so they run on the desktop runtime explicitly: the
+ *  resolver reads a window-less node process as a signed-out browser, where favourites and memberships refuse
+ *  without a request at all (`62` section 3.6), which would hang a test that waits for the request. */
+function desktopWindow(): void {
+  (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
+}
 const collection = (itemCount: number) => ({
   id: "c1", name: "One", type: "movie", itemCount, folders: [], scanning: false, createdAt: 1, updatedAt: 2,
 });
 
-beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
-afterEach(() => { globalThis.fetch = originalFetch; });
+beforeEach(() => {
+  useAppStore.setState(useAppStore.getInitialState(), true);
+  desktopWindow();
+});
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
+});
 
 describe("optimistic favorites", () => {
   it("applies immediately, then rolls back and reports a refusal", async () => {
