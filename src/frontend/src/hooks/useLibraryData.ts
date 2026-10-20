@@ -4,6 +4,7 @@ import { acceptCount } from "@/lib/library-counts";
 import { reloadDecision } from "@/lib/library-reload";
 import { logLibraryPage } from "@/services/library-log";
 import { syncLibrary } from "@/services/library-refresh";
+import { LibrarySearchLifecycle } from "@/services/library-search-lifecycle";
 import {
   LibrarySearchSession,
   appendLibraryPage,
@@ -47,7 +48,7 @@ export function useLibraryData(
   const { continuing, sideReady, readSideData } = useLibrarySideData(showContinue, signedIn);
   const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
-  const session = useRef<LibrarySearchSession | null>(null);
+  const searchLifecycle = useRef<LibrarySearchLifecycle | null>(null);
   const pageRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
   const firstPagePending = useRef(true);
@@ -58,25 +59,21 @@ export function useLibraryData(
   const previousSerial = useRef(refreshSerial);
   const previousSignedIn = useRef(signedIn);
   const firstPass = useRef(true);
-  const interrupted = useRef(false);
   const dirty = useRef(false);
-  if (session.current === null) {
-    session.current = new LibrarySearchSession(
-      (answer) => {
-        pageRef.current = answer;
-        setPage(answer);
-        setAccepted({ queryKey: libraryQueryKey(useAppStore.getState().libraryQuery), serial: readSerial.current });
-        firstPagePending.current = false; pagesLoaded.current = 1;
-        setLoading(false);
-        const store = useAppStore.getState();
-        store.rememberLibraryItems(answer.items);
-        acceptCount(store.libraryQuery, answer);
-      },
-      (error) => {
-        firstPagePending.current = false; setLoading(false);
-        useAppStore.getState().say(sentence(error), "warn");
-      },
-    );
+  if (searchLifecycle.current === null) {
+    searchLifecycle.current = new LibrarySearchLifecycle(() => new LibrarySearchSession((answer) => {
+      pageRef.current = answer;
+      setPage(answer);
+      setAccepted({ queryKey: libraryQueryKey(useAppStore.getState().libraryQuery), serial: readSerial.current });
+      firstPagePending.current = false; pagesLoaded.current = 1;
+      setLoading(false);
+      const store = useAppStore.getState();
+      store.rememberLibraryItems(answer.items);
+      acceptCount(store.libraryQuery, answer);
+    }, (error) => {
+      firstPagePending.current = false; setLoading(false);
+      useAppStore.getState().say(sentence(error), "warn");
+    }));
   }
 
   const read = (debounce: boolean): void => {
@@ -89,8 +86,8 @@ export function useLibraryData(
        stale position (no cursor, so no pager). */
     pageRef.current = null; setPage(null);
     setLoading(true);
-    if (debounce) session.current?.search(query);
-    else session.current?.readNow(query);
+    if (debounce) searchLifecycle.current?.search(query);
+    else searchLifecycle.current?.readNow(query);
   };
 
   const loadMore = (): boolean => {
@@ -121,6 +118,19 @@ export function useLibraryData(
      serial, a session that started or ended (`63` section 3.3 - the watch truth changed home). Showing it again
      reads nothing for the list, which keeps its place; only the side data refreshes quietly. */
   useEffect(() => {
+    const lifecycle = searchLifecycle.current;
+    if (lifecycle === null) return;
+    firstPass.current = true;
+    lifecycle.setup();
+    return () => {
+      lifecycle.cleanup();
+      queryGeneration.current += 1;
+      const request = pageRequest.current;
+      pageRequest.current = null;
+      request?.abort();
+    };
+  }, []);
+  useEffect(() => {
     const searchChanged = previousSearch.current !== query.search;
     previousSearch.current = query.search;
     const queryChanged = previousKey.current !== libraryQueryKey(query);
@@ -133,22 +143,13 @@ export function useLibraryData(
     previousActive.current = active;
     useAppStore.getState().setLibraryQuery(query);
     const decision = reloadDecision({
-      initial: firstPass.current, interrupted: interrupted.current, active, queryChanged, serialChanged, sessionChanged,
-      dirty: dirty.current, ready,
+      initial: firstPass.current, active, queryChanged, serialChanged, sessionChanged, dirty: dirty.current, ready,
     });
     if (ready) firstPass.current = false;
     dirty.current = decision.dirty;
-    if (decision.reload) {
-      interrupted.current = false;
-      read(searchChanged && !shownNow);
-    }
+    if (decision.reload) read(searchChanged && !shownNow);
     if (active && (shownNow || serialChanged || sessionChanged) && !decision.reload) readSideData();
   }, [query, refreshSerial, active, ready, signedIn, readSideData]);
-  useEffect(() => () => {
-    interrupted.current = true;
-    session.current?.cancel();
-    pageRequest.current?.abort();
-  }, []);
   /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
   useEffect(() => {
     useAppStore.getState().setActivity("library", loading || paging);
