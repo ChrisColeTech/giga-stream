@@ -11,10 +11,17 @@ export interface TitleDetailRead {
 
 /** One title's detail (`GET /api/titles/:id`, the read Title information and the Player make), read when the component
  *  mounts and abandoned when it unmounts. A failed read is said once, as the other readers say theirs. */
-export function useTitleDetail(titleId: string): TitleDetailRead {
+export function useTitleDetail(
+  titleId: string | undefined,
+  failureMessage = "Title details could not be read.",
+): TitleDetailRead {
   const [read, setRead] = useState<TitleDetailRead>({ detail: undefined, pending: true });
 
   useEffect(() => {
+    if (titleId === undefined) {
+      setRead({ detail: undefined, pending: false });
+      return;
+    }
     const controller = new AbortController();
     setRead({ detail: undefined, pending: true });
     void readTitle(titleId, controller.signal)
@@ -24,10 +31,10 @@ export function useTitleDetail(titleId: string): TitleDetailRead {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setRead({ detail: undefined, pending: false });
-        useAppStore.getState().say(error instanceof Error ? error.message : "Title details could not be read.", "warn");
+        useAppStore.getState().say(error instanceof Error ? error.message : failureMessage, "warn");
       });
     return () => controller.abort();
-  }, [titleId]);
+  }, [failureMessage, titleId]);
 
   return read;
 }
