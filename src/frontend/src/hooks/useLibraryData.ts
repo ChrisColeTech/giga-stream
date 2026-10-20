@@ -58,6 +58,7 @@ export function useLibraryData(
   const previousSerial = useRef(refreshSerial);
   const previousSignedIn = useRef(signedIn);
   const firstPass = useRef(true);
+  const interrupted = useRef(false);
   const dirty = useRef(false);
   if (session.current === null) {
     session.current = new LibrarySearchSession(
@@ -132,14 +133,23 @@ export function useLibraryData(
     previousActive.current = active;
     useAppStore.getState().setLibraryQuery(query);
     const decision = reloadDecision({
-      initial: firstPass.current, active, queryChanged, serialChanged, sessionChanged, dirty: dirty.current, ready,
+      initial: firstPass.current, interrupted: interrupted.current, active, queryChanged, serialChanged, sessionChanged,
+      dirty: dirty.current, ready,
     });
     if (ready) firstPass.current = false;
     dirty.current = decision.dirty;
-    if (decision.reload) read(searchChanged && !shownNow);
+    if (decision.reload) {
+      interrupted.current = false;
+      read(searchChanged && !shownNow);
+    }
     if (active && (shownNow || serialChanged || sessionChanged) && !decision.reload) readSideData();
   }, [query, refreshSerial, active, ready, signedIn, readSideData]);
-  useEffect(() => () => { session.current?.cancel(); pageRequest.current?.abort(); }, []);  /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
+  useEffect(() => () => {
+    interrupted.current = true;
+    session.current?.cancel();
+    pageRequest.current?.abort();
+  }, []);
+  /* The statusbar's bar reads the store (`50` section 2.3): busy while a read or a paging read is in flight. */
   useEffect(() => {
     useAppStore.getState().setActivity("library", loading || paging);
     return () => useAppStore.getState().setActivity("library", false);
