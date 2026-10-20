@@ -4,10 +4,12 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountControl, accountButtonProps } from "@/components/chrome/AccountControl";
 import { AccountDialog, dialogDismisses } from "@/components/chrome/AccountDialog";
+import { AccountSignOut } from "@/components/chrome/AccountSignOut";
 import { GATE_HEADING } from "@/constants/gate-copy";
 import { useAppStore } from "@/store/app-store";
 
 const draw = (element: ReactElement): string => renderToStaticMarkup(element);
+const noop = (): void => undefined;
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true);
@@ -52,10 +54,16 @@ describe("the Account dialog (`63` sections 3.1 and 3.5)", () => {
   });
 
   it("signed in it mounts the session's sign-out instead", () => {
-    useAppStore.setState({ signedIn: true, session: { id: "acc-1", username: "ivy", kind: "user" } });
-    const markup = draw(createElement(AccountDialog, { mode: "session", onClose: () => undefined }));
-    assert.ok(markup.includes("Signed in as") && markup.includes("ivy"));
-    assert.ok(markup.includes("Sign out"));
+    /* SSR renders the store's initial snapshot (zustand v5 serves getInitialState on the server), so the session's
+       half is drawn through its presentational panel - the same pure-seam approach the sleeping Theatre button's
+       test takes - while the dialog itself proves it mounts that half and not the gate's forms. */
+    const panel = draw(createElement(AccountSignOut, { username: "ivy", onDone: noop }));
+    assert.ok(panel.includes("Signed in as") && panel.includes("ivy"));
+    assert.ok(panel.includes("Sign out"));
+    const unknown = draw(createElement(AccountSignOut, { username: null, onDone: noop }));
+    assert.ok(!unknown.includes("ivy"), "no username is invented");
+    const markup = draw(createElement(AccountDialog, { mode: "session", onClose: noop }));
+    assert.ok(markup.includes("Sign out") && markup.includes("Session"));
     assert.ok(!markup.includes("Password"), "the gate's forms are not mounted over a live session");
   });
 

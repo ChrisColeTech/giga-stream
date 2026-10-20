@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AccountSignOut } from "@/components/chrome/AccountSignOut";
 import { GateForms } from "@/components/gate/GateForms";
+import { useAppStore } from "@/store/app-store";
 
 /* The family dialog (`50` section 2.6): the one scrim over the app, the card above it. The titlebar's drag strip
  * lies under the scrim, so the card repeats its no-drag word - a drag here would move a window whose owner cannot
@@ -27,6 +28,7 @@ export interface AccountDialogProps {
 /** The gate as an overlay dialog (`63` sections 3.1 and 3.5): the app stays mounted and visible behind the scrim.
  *  Escape or a backdrop press closes it; the forms themselves are the gate's own (`components/gate`). */
 export function AccountDialog({ mode, onClose }: AccountDialogProps) {
+  const session = useAppStore((state) => state.session);
   useEffect(() => {
     /* Capture, so the press is spent here before the shell's own keys see it. */
     const onKey = (event: KeyboardEvent): void => {
@@ -42,7 +44,9 @@ export function AccountDialog({ mode, onClose }: AccountDialogProps) {
     <div role="dialog" aria-modal="true" aria-label="Account">
       <div className={SCRIM} aria-hidden onClick={onClose} />
       <div className={CARD}>
-        {mode === "gate" ? <GateForms onSignedIn={onClose} /> : <AccountSignOut onDone={onClose} />}
+        {mode === "gate"
+          ? <GateForms onSignedIn={onClose} />
+          : <AccountSignOut username={session?.username ?? null} onDone={onClose} />}
       </div>
     </div>
   );

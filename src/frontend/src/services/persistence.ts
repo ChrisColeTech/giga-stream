@@ -91,10 +91,12 @@ export function storeFor(
   backends: ShellBackends | SettingsBackends | WatchBackends,
   inputs: StoreInputs = {},
 ): ShellStore | SettingsStore | WatchStore | null {
-  /* The shell never moves to the account (`62` section 3.6): the device holds the layout on every runtime. The watch
-   *  keeps its single `/api/watch` contract while a session is held (`63` section 3.3); signed out it is not tracked
-   *  at all, on the desktop as in a browser. The settings consult the account matrix. */
-  if (domain === "shell") return (backends as ShellBackends).server;
+  /* The shell stays on the device (`62` section 3.6, `63` section 1): the fileserver's rows on the desktop, the
+    *  browser's local store (`61`) elsewhere - never the account. The watch keeps its single `/api/watch` contract
+    *  while a session is held (`63` section 3.3); signed out it is not tracked at all, on the desktop as in a
+    *  browser. The settings consult the account matrix. */
+  const shell = backends as ShellBackends;
+  if (domain === "shell") return onDesktopRuntime() ? shell.server : shell.local;
   if (domain === "watch") return inputs.signedIn === true ? (backends as WatchBackends).server : null;
   const route = routeFor("settings", inputs);
   const settings = backends as SettingsBackends;

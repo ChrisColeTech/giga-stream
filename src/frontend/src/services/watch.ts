@@ -42,15 +42,18 @@ function store(): WatchStore {
 
 /** Records progress. A periodic write is quiet (no Events row on success); `keepalive` lets the write made as the
  *  window hides or closes finish after the page is gone (on the desktop runtime). */
-export function writeWatch(write: WatchWrite, options: { readonly keepalive?: boolean } = {}): Promise<WatchWriteAnswer> {
+export async function writeWatch(
+  write: WatchWrite,
+  options: { readonly keepalive?: boolean } = {},
+): Promise<WatchWriteAnswer> {
   return store().write(write, options);
 }
 
-export function removeWatch(watchId: string): Promise<RemovedWatch> {
+export async function removeWatch(watchId: string): Promise<RemovedWatch> {
   return store().remove(watchId);
 }
 
-export function clearWatch(): Promise<ClearedWatch> {
+export async function clearWatch(): Promise<ClearedWatch> {
   return store().clear();
 }
 

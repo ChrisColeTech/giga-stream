@@ -92,25 +92,28 @@ describe("Library composition", () => {
   });
 });
 
-describe("the Library watched filter control (`61` section 2.5)", () => {
+describe("the Library watched filter control (`63` section 3.3)", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "window");
   });
 
-  it("is visibly disabled with its truthful reason in the browser runtime", () => {
+  it("is visibly disabled signed out, with the session's reason as its tooltip", () => {
+    /* SSR renders the store's initial snapshot (zustand v5 serves getInitialState on the server), which is the
+       signed-out cell: no watch is tracked on any runtime, so the control says why. */
     (globalThis as { window?: unknown }).window = {};
     const markup = render(createElement(LibraryFilters, {
       query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
     }));
-    assert.match(markup, /The watched filter needs the desktop library or an account\./);
+    assert.match(markup, /The watched filter needs a session&#x27;s watch history\./);
     assert.match(markup, /disabled/);
   });
 
-  it("works on the desktop runtime, with no disabled reason", () => {
+  it("keeps no word of the `61` runtime fork: the reason is the session's on the desktop too", () => {
     (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
     const markup = render(createElement(LibraryFilters, {
       query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
     }));
-    assert.equal(markup.includes("The watched filter needs the desktop library or an account."), false);
+    assert.equal(markup.includes("desktop library"), false);
+    assert.match(markup, /The watched filter needs a session&#x27;s watch history\./);
   });
 });

@@ -47,6 +47,8 @@ afterEach(() => {
 
 describe("library routes", () => {
   it("sends every all-view query field, including repeated genres", async () => {
+    /* The watched filter is a watch read (`63` section 3.3): pinned under a session, the only state that issues it. */
+    useAppStore.setState({ signedIn: true });
     globalThis.fetch = async (input, init) => {
       assert.equal(init?.method, "GET");
       assert.equal(
@@ -65,6 +67,7 @@ describe("library routes", () => {
   });
 
   it("sends history, favorites and collection views exactly", async () => {
+    useAppStore.setState({ signedIn: true });
     const calls: string[] = [];
     globalThis.fetch = async (input) => {
       calls.push(String(input));
@@ -124,6 +127,7 @@ describe("latest-only Library search", () => {
 
 describe("library pagination", () => {
   it("sends the cursor, drains pages, and deduplicates by watch row before item identity", async () => {
+    useAppStore.setState({ signedIn: true });
     const calls: string[] = [];
     const first = { ...page, items: [{ ...item, watchId: "w1" }], nextCursor: "page/2" };
     const second = {
@@ -203,24 +207,34 @@ describe("title, favorite and watch routes", () => {
     assert.deepEqual(calls, ["/api/titles/movie-603", "/api/titles/tv-1/seasons/1", "/api/titles/movie-603/related"]);
   });
 
-  it("uses exact favorite and watch methods, paths and bodies", async () => {
+  it("uses the exact favorite method and path on the desktop signed out, the fileserver's own (`62` 3.6)", async () => {
     const calls: Array<{ path: string; method?: string; body?: BodyInit | null }> = [];
     globalThis.fetch = async (input, init) => {
       calls.push({ path: String(input), method: init?.method, body: init?.body });
-      if (calls.length <= 2) return success({ ref: item.ref, favorite: calls.length === 1 });
-      if (calls.length === 3) return success({ applied: true, entry: { watchId: "w1", item: item.ref, positionMs: 2, state: "watching", updatedAt: 3 } });
-      if (calls.length === 4) return success({ removed: "w1" });
-      return success({ cleared: 1 });
+      return success({ ref: item.ref, favorite: calls.length === 1 });
     };
     await writeFavorite(item.ref, true);
     await writeFavorite(item.ref, false);
+    assert.deepEqual(calls.map((call) => [call.path, call.method]), [
+      ["/api/favorites/title/movie-603", "PUT"], ["/api/favorites/title/movie-603", "DELETE"],
+    ]);
+  });
+
+  it("uses exact watch methods, paths and bodies under the session (`63` section 3.2)", async () => {
+    useAppStore.setState({ signedIn: true });
+    const calls: Array<{ path: string; method?: string; body?: BodyInit | null }> = [];
+    globalThis.fetch = async (input, init) => {
+      calls.push({ path: String(input), method: init?.method, body: init?.body });
+      if (calls.length === 1) return success({ applied: true, entry: { watchId: "w1", item: item.ref, positionMs: 2, state: "watching", updatedAt: 3 } });
+      if (calls.length === 2) return success({ removed: "w1" });
+      return success({ cleared: 1 });
+    };
     await writeWatch({ item: item.ref, positionMs: 2, playbackId: "play-1", seq: 1 });
     await removeWatch("w1");
     await clearWatch();
     assert.deepEqual(calls.map((call) => [call.path, call.method]), [
-      ["/api/favorites/title/movie-603", "PUT"], ["/api/favorites/title/movie-603", "DELETE"],
       ["/api/watch", "PUT"], ["/api/watch/w1", "DELETE"], ["/api/watch", "DELETE"],
     ]);
-    assert.equal(calls[2]?.body, JSON.stringify({ item: item.ref, positionMs: 2, playbackId: "play-1", seq: 1 }));
+    assert.equal(calls[0]?.body, JSON.stringify({ item: item.ref, positionMs: 2, playbackId: "play-1", seq: 1 }));
   });
 });
