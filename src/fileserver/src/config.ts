@@ -38,8 +38,10 @@ const EnvSchema = z.object({
   // Test lane only: `POST /api/fs/dialog` then takes `{ name }` directly under this root (03 section 3.8).
   TEST_FOLDER_ROOT: z.string().default(""),
   // Render's one public port (docs/03 section 1): the admin backend this fileserver reverse-proxies at
-  // `/api/admin` (identity, its admin API), `/admin` (stripped, its console UI) and `/live`, `/logos`
-  // (pass-through streams). Empty means the proxy is off, the desktop shape with no sibling.
+  // `/api/admin` (identity, its admin API), `/api/account` (identity, the app's account API), `/admin`
+  // (stripped, its console UI) and `/live`, `/logos` (pass-through streams). Empty falls back to the
+  // saved `adminUrl` setting (docs/62 D7); neither means the proxy is off, the desktop shape with no
+  // sibling.
   ADMIN_PROXY_TARGET: z.string().trim().default(""),
   // Deployment only (docs/62 wave 0): set on a public deployment, the unauthenticated write routes for
   // settings, favorites, collections and watch history refuse (403 writes.closed) until accounts ship.
@@ -65,7 +67,8 @@ export const config = {
   // Empty stays empty (path.resolve("") would answer the process working directory, a root that
   // is never empty and so would leave the test lane always on); a set value becomes absolute.
   testFolderRoot: env.TEST_FOLDER_ROOT !== "" ? path.resolve(env.TEST_FOLDER_ROOT) : "",
-  /** The admin backend to reverse-proxy (`/api/admin`, `/admin`, `/live`, `/logos`); empty means the proxy is off. */
+  /** The admin backend to reverse-proxy (`/api/admin`, `/api/account`, `/admin`, `/live`, `/logos`); empty
+   *  falls back to the saved `adminUrl` setting, and neither leaves the proxy off. */
   adminProxyTarget: env.ADMIN_PROXY_TARGET,
   /** Deployment only (docs/62 wave 0): on, the shared write routes refuse with `403 writes.closed`. */
   requireAccountWrites: env.REQUIRE_ACCOUNT_WRITES,

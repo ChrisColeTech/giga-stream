@@ -8,7 +8,7 @@ import {
 } from "../constants/limits.js";
 import type { StoredAccount } from "../store/account-repository.js";
 import type { Store } from "../store/store.js";
-import type { AdminAccount, Principal, Session } from "../types/account.js";
+import type { AccountKind, AdminAccount, Principal, Session } from "../types/account.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { AUDIENCE, ISSUER, signAccessToken, verifyAccessToken } from "./jwt.js";
 import { decoyHash, hashPassword, verifyPassword } from "./password.js";
@@ -51,7 +51,7 @@ export function createAuthService(deps: {
     await store.refreshTokens.revokeAll(accountId, now());
   }
 
-  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, username: a.username });
+  const principalOf = (a: AdminAccount): Principal => ({ accountId: a.id, username: a.username, kind: a.kind });
 
   return {
     revokeAll,
@@ -91,12 +91,19 @@ export function createAuthService(deps: {
       return { signedOut: true };
     },
 
-    /** The request's admin, as the token says and the account now is; refused if either disagrees. */
-    async authenticate(authorization: string | undefined): Promise<Principal> {
+    /**
+     * The request's account, as the token says and the account now is; refused if either disagrees. A
+     * `requiredKind` (docs/62 D3) refuses an account of any other kind the same way, so a user token at the
+     * console is indistinguishable from a bad one.
+     */
+    async authenticate(authorization: string | undefined, requiredKind?: AccountKind): Promise<Principal> {
       const token = authorization ? BEARER.exec(authorization)?.[1] : undefined;
       const claims = token ? verifyAccessToken(token, secret, now()) : undefined;
       const stored = claims ? await store.accounts.find(claims.sub) : undefined;
-      if (!claims || !stored || stored.account.disabled || stored.sessionVersion !== claims.ver) {
+      if (
+        !claims || !stored || stored.account.disabled || stored.sessionVersion !== claims.ver ||
+        (requiredKind !== undefined && stored.account.kind !== requiredKind)
+      ) {
         throw new AppError(ERRORS.authUnauthorized);
       }
       return principalOf(stored.account);

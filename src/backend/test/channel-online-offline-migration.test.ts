@@ -87,7 +87,7 @@ test("029 maps the stored verdicts and the run-count keys, and leaves history an
     const db = await openTestDatabase(file);
     await runSql(db, "PRAGMA foreign_keys = ON");
     try {
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
       assert.deepEqual(await rows(db, "PRAGMA foreign_key_check"), []);
       assert.deepEqual(await rows(db, "SELECT id, status, checked_at FROM channels WHERE kind = 'stream' ORDER BY id"), [
         { id: "off", status: "offline", checked_at: 20 },

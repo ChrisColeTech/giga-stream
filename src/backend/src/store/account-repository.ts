@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 import type { Database } from "./database.js";
-import type { AdminAccount } from "../types/account.js";
+import type { AccountKind, AdminAccount } from "../types/account.js";
 
 const AccountRow = z.object({
   id: z.string(),
   username: z.string(),
+  kind: z.enum(["admin", "user"]),
   password_hash: z.string(),
   disabled: z.number().int(),
   session_version: z.number().int(),
@@ -32,6 +33,7 @@ function toStored(row: unknown): StoredAccount {
     account: {
       id: r.id,
       username: r.username,
+      kind: r.kind,
       disabled: r.disabled === 1,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -48,11 +50,12 @@ function toStored(row: unknown): StoredAccount {
 export interface AccountWrite {
   id: string;
   username: string;
+  kind: AccountKind;
   passwordHash: string;
   disabled: boolean;
 }
 
-const COLUMNS = `id, username, password_hash, disabled, session_version,
+const COLUMNS = `id, username, kind, password_hash, disabled, session_version,
   created_at, updated_at, last_sign_in_at, security_question, security_answer_hash`;
 
 const SQL = {
@@ -61,9 +64,9 @@ const SQL = {
   all: `SELECT ${COLUMNS} FROM admin_accounts ORDER BY username_key`,
   count: "SELECT COUNT(*) AS n FROM admin_accounts",
   enabled: "SELECT COUNT(*) AS n FROM admin_accounts WHERE disabled = 0",
-  insert: `INSERT INTO admin_accounts (id, username, username_key, password_hash, disabled,
-    created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  update: `UPDATE admin_accounts SET username = ?, username_key = ?, password_hash = ?,
+  insert: `INSERT INTO admin_accounts (id, username, username_key, kind, password_hash, disabled,
+    created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  update: `UPDATE admin_accounts SET username = ?, username_key = ?, kind = ?, password_hash = ?,
     disabled = ?, updated_at = ? WHERE id = ?`,
   bumpVersion: "UPDATE admin_accounts SET session_version = session_version + 1 WHERE id = ?",
   signedIn: "UPDATE admin_accounts SET last_sign_in_at = ? WHERE id = ?",
@@ -71,7 +74,8 @@ const SQL = {
   remove: "DELETE FROM admin_accounts WHERE id = ?",
 };
 
-/** The admin accounts table (docs/03 section 7.11). Usernames are unique without case. */
+/** The accounts table (docs/03 section 7.11, docs/62 D1): admins and users, the `kind` column telling them
+ *  apart. Usernames are unique without case. */
 export function createAccountRepository(db: Database) {
   const countOf = async (sql: string): Promise<number> =>
     z.object({ n: z.number() }).parse((await db.execute(sql)).rows[0]).n;
@@ -91,13 +95,13 @@ export function createAccountRepository(db: Database) {
     async insert(a: AccountWrite, at: number): Promise<void> {
       await db.execute({
         sql: SQL.insert,
-        args: [a.id, a.username, a.username.toLowerCase(), a.passwordHash, a.disabled ? 1 : 0, at, at],
+        args: [a.id, a.username, a.username.toLowerCase(), a.kind, a.passwordHash, a.disabled ? 1 : 0, at, at],
       });
     },
     async update(a: AccountWrite, at: number): Promise<void> {
       await db.execute({
         sql: SQL.update,
-        args: [a.username, a.username.toLowerCase(), a.passwordHash, a.disabled ? 1 : 0, at, a.id],
+        args: [a.username, a.username.toLowerCase(), a.kind, a.passwordHash, a.disabled ? 1 : 0, at, a.id],
       });
     },
     /** Every access token issued before this stops working (the `ver` claim no longer matches). */

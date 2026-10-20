@@ -43,7 +43,8 @@ export interface BuildOptions extends Partial<ServiceOptions> {
   logger?: boolean;
   /** Check the backend cache at launch, detached (docs/46 section C). Defaults to true; tests turn it off. */
   syncOnStart?: boolean;
-  /** The admin backend the reverse proxy points at; empty (the config default) leaves the proxy off. */
+  /** The admin backend the reverse proxy points at (the `ADMIN_PROXY_TARGET` env); empty falls back to the
+   *  saved `adminUrl` setting, and neither means the proxy stays off (docs/62 D7). */
   adminProxyTarget?: string;
 }
 
@@ -60,18 +61,21 @@ const withForwardedFor: NonNullable<FastifyReplyFromHooks["rewriteRequestHeaders
 
 /**
  * The reverse proxy to the admin backend sibling (docs/03 section 1's Render shape, one public port): the
- * backend's admin API passes through identity (`/api/admin/...` → the backend's `/api/admin/...`, every other
- * `/api` address stays here), the console UI arrives with its prefix stripped (`/admin/...` → the backend's
- * root), and the live stream addresses keep their paths. REST only (docs/01 section 4.4): the WebSocket
- * default stays off. Registered before the static plugin; the prefixes touch no other `/api`, `/healthz` or
- * SPA address of this fileserver.
+ * backend's admin API and the app's account API pass through identity (`/api/admin/...` and
+ * `/api/account/...` → the same paths on the backend, every other `/api` address stays here), the console UI
+ * arrives with its prefix stripped (`/admin/...` → the backend's root), and the live stream addresses keep
+ * their paths. REST only (docs/01 section 4.4): the WebSocket default stays off. Registered before the
+ * static plugin; the prefixes touch no other `/api`, `/healthz` or SPA address of this fileserver.
  */
 async function registerAdminProxy(app: FastifyInstance, target: string): Promise<void> {
   const replyOptions = { rewriteRequestHeaders: withForwardedFor };
-  await app.register(httpProxy, { upstream: target, prefix: "/api/admin", rewritePrefix: "/api/admin", replyOptions });
+  const pass = (prefix: string) =>
+    app.register(httpProxy, { upstream: target, prefix, rewritePrefix: prefix, replyOptions });
+  await pass("/api/admin");
+  await pass("/api/account");
   await app.register(httpProxy, { upstream: target, prefix: "/admin", rewritePrefix: "", replyOptions });
-  await app.register(httpProxy, { upstream: target, prefix: "/live", rewritePrefix: "/live", replyOptions });
-  await app.register(httpProxy, { upstream: target, prefix: "/logos", rewritePrefix: "/logos", replyOptions });
+  await pass("/live");
+  await pass("/logos");
 }
 
 /**
@@ -86,7 +90,6 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
 
   const webDist = path.resolve(overrides.webDist ?? config.webDist);
-  const adminProxyTarget = overrides.adminProxyTarget ?? config.adminProxyTarget;
   const services = createAppServices({
     dataDir: overrides.dataDir ?? config.dataDir,
     allowInsecureAdmin: overrides.allowInsecureAdmin ?? config.allowInsecureAdmin,
@@ -104,6 +107,11 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
   if (overrides.syncOnStart ?? true) services.cache.start();
 
+  // The proxy target (docs/62 D7): the env, else the adminUrl a Settings write saved, read once at boot so
+  // an installed desktop can be pointed at the cloud backend without a rebuild. Neither: off — the
+  // desktop's signed-out local mode, where every `/api` address stays this fileserver's own.
+  const envTarget = overrides.adminProxyTarget ?? config.adminProxyTarget;
+  const adminProxyTarget = envTarget !== "" ? envTarget : (services.savedAdminUrl() ?? "");
   if (adminProxyTarget !== "") await registerAdminProxy(app, adminProxyTarget);
 
   // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file

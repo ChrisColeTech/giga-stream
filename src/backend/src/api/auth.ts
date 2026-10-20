@@ -6,12 +6,12 @@ import { LoginSchema, PasswordChangeSchema, RefreshSchema } from "../types/accou
 import { ok } from "./envelope.js";
 import { actorOf, signedIn } from "./guard.js";
 import { parseInput } from "./parse-input.js";
-import { clearRefreshCookie, refreshCookieOf, setRefreshCookie } from "./refresh-cookie.js";
+import { adminRefreshCookie } from "./refresh-cookie.js";
 
 /** The refresh token a request presents: its body's, else its cookie's; none is `401 auth.refresh_invalid`. */
 function tokenOf(request: FastifyRequest): string {
   const { refreshToken } = parseInput(RefreshSchema, request.body ?? {});
-  const token = refreshToken ?? refreshCookieOf(request);
+  const token = refreshToken ?? adminRefreshCookie.of(request);
   if (token === undefined) throw new AppError(ERRORS.authRefreshInvalid);
   return token;
 }
@@ -24,7 +24,7 @@ export function registerAuth(app: FastifyInstance, services: Services): void {
   app.post("/auth/login", async (request, reply) => {
     const { username, password } = parseInput(LoginSchema, request.body);
     const session = await services.auth.login(username, password, actorOf(request));
-    setRefreshCookie(request, reply, session.refreshToken);
+    adminRefreshCookie.set(request, reply, session.refreshToken);
     return ok(reply, session);
   });
 
@@ -32,16 +32,16 @@ export function registerAuth(app: FastifyInstance, services: Services): void {
   app.post("/auth/refresh", async (request, reply) => {
     try {
       const session = await services.auth.refresh(tokenOf(request));
-      setRefreshCookie(request, reply, session.refreshToken);
+      adminRefreshCookie.set(request, reply, session.refreshToken);
       return ok(reply, session);
     } catch (error: unknown) {
-      clearRefreshCookie(request, reply);
+      adminRefreshCookie.clear(request, reply);
       throw error;
     }
   });
 
   app.post("/auth/logout", async (request, reply) => {
-    clearRefreshCookie(request, reply);
+    adminRefreshCookie.clear(request, reply);
     return ok(reply, await services.auth.logout(tokenOf(request), actorOf(request)));
   });
 
@@ -54,7 +54,7 @@ export function registerAuth(app: FastifyInstance, services: Services): void {
     const principal = await signedIn(services, request);
     const { currentPassword, newPassword } = parseInput(PasswordChangeSchema, request.body);
     const changed = await services.auth.changePassword(principal, currentPassword, newPassword, actorOf(request, principal));
-    clearRefreshCookie(request, reply); // every session of the account ended
+    adminRefreshCookie.clear(request, reply); // every session of the account ended
     return ok(reply, changed);
   });
 }

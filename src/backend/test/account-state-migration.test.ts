@@ -82,9 +82,9 @@ test("a current database opens again, and a database from a newer program is ref
   try {
     (await createStore(file)).close();
     (await createStore(file)).close();
-    assert.equal(await versionOf(file), 30);
+    assert.equal(await versionOf(file), 31);
 
-    await reshape(file, [], 31);
+    await reshape(file, [], 32);
     await assert.rejects(
       () => createStore(file),
       (error: unknown) => error instanceof AppError && error.code === ERRORS.storeNewerSchema.code,

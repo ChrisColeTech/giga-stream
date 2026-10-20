@@ -6,7 +6,7 @@ import { ResetSchema, ResetStartSchema } from "../types/security-question.js";
 import { ok } from "./envelope.js";
 import { actorOf } from "./guard.js";
 import { parseInput } from "./parse-input.js";
-import { clearRefreshCookie } from "./refresh-cookie.js";
+import { accountRefreshCookie, adminRefreshCookie } from "./refresh-cookie.js";
 
 /**
  * The password reset by security question (docs/40 section 2.4). Both routes are under `/api/admin/auth-security`,
@@ -23,7 +23,9 @@ export function registerAuthSecurity(app: FastifyInstance, services: Services): 
   app.post("/auth-security/reset", async (request, reply) => {
     const { username, answer, newPassword } = parseInput(ResetSchema, request.body, ERRORS.accountInvalid);
     const done = await services.securityQuestions.reset(username, answer, newPassword, actorOf(request));
-    clearRefreshCookie(request, reply); // the reset ended every session of the account
+    // The reset ended every session of the account, admin or user: both cookie scopes go with it, so
+    // whichever program asked holds no token its next refresh would refuse (docs/62 section 3.2).
+    reply.header("set-cookie", [adminRefreshCookie.clearHeader(request), accountRefreshCookie.clearHeader(request)]);
     return ok(reply, done);
   });
 }
