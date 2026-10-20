@@ -149,12 +149,12 @@ async function replaceTitles(
     for (const title of titles) {
       const kind = title.kind ?? (title.id.startsWith("tv-") ? "tv" : "movie");
       const tmdbId = Number(title.id.split("-")[1]);
-      const payload = details[title.id] ?? {
-        id: title.id, tmdbId, kind, title: title.title, genres: title.genres ?? [],
-        ...(title.year !== undefined && { year: title.year }),
-        ...(title.rating !== undefined && { rating: title.rating }),
-        ...(title.posterUrl !== undefined && { posterUrl: title.posterUrl }),
-        ...(title.backdropUrl !== undefined && { backdropUrl: title.backdropUrl }),
+      const detail = typeof details[title.id] === "object" && details[title.id] !== null
+        ? details[title.id] as Record<string, unknown>
+        : {};
+      const payload = {
+        ...detail, id: title.id, tmdbId, kind, title: title.title, genres: title.genres ?? [],
+        year: title.year, rating: title.rating, posterUrl: title.posterUrl, backdropUrl: title.backdropUrl,
       };
       await transaction.execute({
         sql: `INSERT INTO titles
@@ -172,7 +172,27 @@ async function replaceTitles(
 
 async function applyDetails(database: Client, details: Record<string, unknown>): Promise<void> {
   for (const [id, payload] of Object.entries(details)) {
-    await database.execute({ sql: "UPDATE titles SET payload = ? WHERE id = ?", args: [JSON.stringify(payload), id] });
+    const raw = (await database.execute({ sql: "SELECT payload FROM titles WHERE id = ?", args: [id] })).rows[0];
+    if (raw === undefined || typeof raw.payload !== "string" || typeof payload !== "object" || payload === null) {
+      continue;
+    }
+    const current = JSON.parse(raw.payload) as Record<string, unknown>;
+    const detail = payload as Record<string, unknown>;
+    const merged = {
+      ...detail,
+      id: current.id,
+      tmdbId: current.tmdbId,
+      kind: current.kind,
+      title: current.title,
+      genres: current.genres,
+      year: current.year,
+      rating: current.rating,
+      posterUrl: current.posterUrl,
+      backdropUrl: current.backdropUrl,
+    };
+    await database.execute({
+      sql: "UPDATE titles SET payload = ? WHERE id = ?", args: [JSON.stringify(merged), id],
+    });
   }
 }
 

@@ -37,15 +37,6 @@ test("malformed stored channel data is classified as 502", async () => {
       VALUES ('bad', 'Bad', 'Test', 'http://stream.test/bad', 'not-a-number', 1, 'stream', 1)`,
     args: [],
   });
-  await t.adminDatabase.execute(`INSERT INTO channels
-    (id, name, category, number, stream_url, revision, created_at, kind,
-      live_mode, live_captions, live_variants, enabled)
-    VALUES ('live', 'Live', 'News', '1', NULL, 7, 1, 'live', 'loop', 0, '[]', 1)`);
-  await t.adminDatabase.execute(`INSERT INTO playlists
-    (id, name, kind, file_name, enabled, created_at) VALUES (2, 'Hidden list', 'file', 'hidden.m3u', 0, 1)`);
-  await t.adminDatabase.execute(`INSERT INTO channels
-    (id, name, category, stream_url, revision, created_at, kind, sync_name, enabled, playlist_id)
-    VALUES ('hidden', 'Hidden', 'News', 'http://stream.test/hidden', 7, 1, 'stream', 'Hidden', 1, 2)`);
   const bad = await send(t.app, "POST", "/api/channels/refresh");
   assert.deepEqual([bad.status, pick(bad.body, "error.code")], [502, "backend.bad_response"]);
   await t.dispose();
@@ -58,6 +49,15 @@ test("channel and title cache fills read the admin database without an admin API
     sql: `INSERT INTO playlists (id, name, kind, file_name, enabled, created_at)
       VALUES (1, 'News list', 'file', 'news.m3u', 1, 1)`, args: [],
   });
+  await t.adminDatabase.execute(`INSERT INTO channels
+    (id, name, category, number, stream_url, revision, created_at, kind,
+      live_mode, live_captions, live_variants, enabled)
+    VALUES ('live', 'Live', 'News', '1', NULL, 7, 1, 'live', 'loop', 0, '[]', 1)`);
+  await t.adminDatabase.execute(`INSERT INTO playlists
+    (id, name, kind, file_name, enabled, created_at) VALUES (2, 'Hidden list', 'file', 'hidden.m3u', 0, 1)`);
+  await t.adminDatabase.execute(`INSERT INTO channels
+    (id, name, category, stream_url, revision, created_at, kind, sync_name, enabled, playlist_id)
+    VALUES ('hidden', 'Hidden', 'News', 'http://stream.test/hidden', 7, 1, 'stream', 'Hidden', 1, 2)`);
   await t.adminDatabase.execute({
     sql: `INSERT INTO channels (id, name, category, number, logo_url, logo_file, stream_url, kind,
       revision, created_at, enabled, playlist_id, sync_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)`,
@@ -131,7 +131,13 @@ test("provider failure keeps title metadata and forbidden proxy prefixes stay lo
     const answer = await send(t.app, "GET", path);
     assert.equal(answer.status, 404);
   }
-  await send(t.app, "GET", "/admin/");
+  const localAdmin = await t.app.inject({ method: "GET", url: "/admin/" });
+  assert.ok([200, 404].includes(localAdmin.statusCode));
+  assert.equal(localAdmin.body.includes('"path":"/"'), false, "not an upstream echo");
+  if (localAdmin.statusCode === 200) {
+    assert.match(String(localAdmin.headers["content-type"]), /^text\/html/);
+    assert.match(localAdmin.body, /^<!doctype html>/i);
+  }
   assert.deepEqual(seen, [
     "GET http://127.0.0.1:8091/api/admin/providers",
     "GET http://127.0.0.1:8091/api/admin/providers",
