@@ -210,8 +210,13 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   exception (owner, 2026-10-18, plan `43`):** a playlist sync job caches the channels' logo images on the backend
   (`DATA_DIR/logo-cache/`, content-hashed, at most 1 MiB each, PNG/JPEG/GIF/WebP only) and the backend serves them at
   `GET /logos/<file>`; no poster, still, video or user media is ever cached by it. No other timer exists anywhere.
-- No browser storage: nothing the user chose lives in `localStorage`, `sessionStorage` or IndexedDB.
-  Saved state is a fileserver row.
+- No browser storage on the desktop runtime: nothing the user chose lives in `localStorage`, `sessionStorage`
+  or IndexedDB; saved state is a fileserver row. **Amended (owner, 2026-10-19, plan `61`):** the browser
+  runtime persists its local domains - shell/layout, settings while signed out, watch history and the last
+  channel - in `localStorage` and IndexedDB through `src/frontend/src/services/local-state.ts` and
+  `local-watch.ts` only (the rule checker allow-lists exactly those files), every read validated with the wire
+  schemas, and never a provider, token or secret. `docs/62` moves settings, favorites and collections to the
+  signed-in account and keeps the local stores as the signed-out and offline state.
 
 ## 5. TypeScript and source rules
 

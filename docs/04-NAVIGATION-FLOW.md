@@ -57,8 +57,12 @@ flows.
 
 - Nothing is lost by navigating: the layout and the active tab are written back a moment after they
   change (`02` §2.3), and the last channel the moment you choose one.
-- What survives a restart is only what the fileserver stores: the active surface, pane visibility and
-  sizes, the last channel, settings, collections, favorites and watch history.
+- What survives a restart, by runtime (owner, 2026-10-19, plan `61`; `docs/62` moves settings, collections
+  and favorites to the signed-in account):
+  - Desktop: what the fileserver stores - the active surface, pane visibility and sizes, the last channel,
+    settings, collections, favorites and watch history.
+  - Browser: the local stores - the active surface, pane visibility and sizes, the last channel and watch
+    history always; settings while signed out. Collections and favorites stay with the server.
 - What never survives: an open window or popup, the events drawer, a text draft, a selection, playback,
   and the channel and title lists, which are read live every time.
 - A native folder dialog that is cancelled leaves the form as it was.

@@ -66,7 +66,10 @@ bind `127.0.0.1` unless `HOST` says otherwise.
 interface, default `src/frontend/dist`; point it at `src/mockup` to serve the proof of concept of `14`),
 `ALLOW_INSECURE_ADMIN` (accept a plain `http` admin address off loopback; development only),
 `TEST_FOLDER_ROOT` (tests only: lets a browser run choose a folder under this root without Electron's
-picker), `GIGA_APP_URL` (desktop shell only: the page the window loads).
+picker), `GIGA_APP_URL` (desktop shell only: the page the window loads),
+`REQUIRE_ACCOUNT_WRITES` (deployment only, plan `62` wave 0: set on a public deployment, it makes the
+unauthenticated write routes for settings, favorites, collections and watch history refuse with the standard
+envelope, `403 writes.closed`; never set on a desktop, whose local writes are the point).
 
 **Serving the interface** (as the other family apps do). The fileserver serves the built interface on its
 own origin: `index.html`, `favicon.svg`/`favicon.ico` and Vite's `assets/`. A GET that is no route, no
