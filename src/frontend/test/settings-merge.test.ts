@@ -75,7 +75,9 @@ describe("the settings merge at sign-in (`62` D8)", () => {
     assert.equal(state().uiZoom, 2);
     assert.equal(state().accent, "violet");
     assert.equal(state().playback.autoplay, DEVICE.autoplay);
-    assert.deepEqual(state().committedSettings, { ...DEVICE, theme: "light", uiZoom: 2 });
+    /* Only the account's keys replace: the accent was this device's latest change, and the account said nothing
+     *  about it, so the merged document keeps it. */
+    assert.deepEqual(state().committedSettings, { ...DEVICE, theme: "light", themeAccent: "violet", uiZoom: 2 });
     const said = state().events.some((row) => row.sentence === ACCOUNT_SETTINGS_NOTICE);
     assert.equal(said, true);
     assert.equal(state().settingsRevision, state().savedSettingsRevision);

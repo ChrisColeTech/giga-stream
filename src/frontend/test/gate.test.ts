@@ -50,11 +50,16 @@ describe("the gate (`62` section 3.5)", () => {
 
   it("only the first restore answer counts: a late probe changes nothing", () => {
     state().finishRestore(null);
-    state().finishRestore(SESSION);
     assert.equal(state().signedIn, false);
+    /* The person then signed in through the gate: the verb marks the gate submitting before the port answers. */
+    state().beginSignIn();
     state().finishSignIn({ ok: true, session: SESSION });
-    state().finishRestore(null);
     assert.equal(state().signedIn, true);
+    /* The boot's probe lands late, carrying a session: the first answer already counted, so this changes nothing. */
+    state().finishRestore(SESSION);
+    assert.equal(state().signedIn, true);
+    assert.deepEqual(state().session, SESSION.actor);
+    assert.deepEqual(state().tokens, SESSION.tokens);
   });
 
   it("signing in enters the app; a second submit while one waits is ignored", () => {
@@ -97,6 +102,7 @@ describe("the gate (`62` section 3.5)", () => {
   });
 
   it("ends a live session on a 401 and says so, signed out", async () => {
+    state().beginSignIn();
     state().finishSignIn({ ok: true, session: SESSION });
     const calls: Array<{ input: string; headers: Record<string, string> }> = [];
     globalThis.fetch = async (input, init) => {

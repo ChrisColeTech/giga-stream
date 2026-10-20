@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   addMember,
   createCollection,
@@ -42,8 +42,15 @@ const job = {
   createdAt: 10,
 };
 
+beforeEach(() => {
+  /* These routes are the fileserver's shared stores, which the matrix keeps for the DESKTOP signed out (`62` section
+   *  3.6); without the runtime the calls would read as a signed-out browser's and be refused before any fetch. */
+  (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" }, localStorage: {} };
+});
+
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
   useAppStore.setState(useAppStore.getInitialState(), true);
 });
 

@@ -18,10 +18,14 @@ const folder = { id: "f-1", collectionId: "c-1", name: "Films", fileCount: 0, sc
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState(), true);
+  /* The Collections verbs write the fileserver's shared stores, which the matrix keeps for the DESKTOP signed out
+   *  (`62` section 3.6); without the runtime the reads are a signed-out browser's and refused before any fetch. */
+  (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" }, localStorage: {} };
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
 });
 
 const success = (data: unknown): Response => new Response(JSON.stringify({ ok: true, data }), { status: 200 });
