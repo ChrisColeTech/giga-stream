@@ -6,9 +6,11 @@ persist to the sqlite db?" — with the answer that user accounts are coming to 
 and favorites will be stored with the user account, while shell/layout, watch history and settings become local
 in the browser. This document records what the code does today (read file by file; the code wins over the
 docs), the design, the change list in two waves, the tests, the failure modes and how the coordinator verifies
-it on the real stack. The follow-up plan is `docs/62` (user accounts on the backend): it moves settings,
-collections and favorites to the account and adds the frontend auth gate, keeping this plan's local stores as
-the signed-out and offline state.
+it on the real stack. **Superseded in part (owner, 2026-10-20, `docs/63`):** persistence is a registered
+feature - an unregistered visitor of either runtime persists nothing, and a registered one persists to the
+account; the local stores keep only the signed-in settings mirror. The follow-up plan is `docs/62` (user
+accounts on the backend): it moves settings, collections and favorites to the account and adds the frontend
+auth gate, keeping this plan's local stores as the signed-out and offline state.
 
 ## 1. What exists today (verified)
 

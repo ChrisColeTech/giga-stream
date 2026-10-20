@@ -128,9 +128,10 @@ The store performs no I/O and holds no promise, timer, DOM node or media element
    `PATCH /api/shell-state`, 400 ms after the last change.
 7. A later state read never re-applies the saved shell; it would undo what changed since.
 
-The interface never reads or writes browser storage on the desktop runtime. In a browser it persists the
-local domains (shell/layout, settings while signed out, watch history, last channel) through the storage
-resolver and the allow-listed local stores (owner, 2026-10-19, plan `61`; `01` section 4).
+Persistence is a registered feature (owner, 2026-10-20, plan `63`): an unregistered visitor of either runtime
+persists nothing - session-only state, no watch history, no writes of any kind - and a registered one persists
+to the account (history, collections, favorites, settings, shell). The local stores keep only the signed-in
+settings mirror (`61` § 2.3 as amended by `63` § 3.3).
 
 ## 3. Live
 

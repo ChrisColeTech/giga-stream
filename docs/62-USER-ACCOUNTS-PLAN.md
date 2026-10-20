@@ -92,6 +92,11 @@ app runs signed-out.
 
 ### 3.5 Frontend auth gate
 
+**Superseded in part (owner, 2026-10-20, `docs/63`):** the gate is no longer a wall - unregistered visitors
+browse with nothing persisted, and a titlebar control beside Theatre opens the gate as an overlay dialog. The
+offline escape is retired (browsing signed-out IS the default state). What stands: the session transport
+(memory token, cookie restore), the settings merge (D8), the per-domain matrix as amended by `docs/63` § 3.3.
+
 A sign-in surface shown before the three surfaces; behind it the app as it is today. The session lives in the
 store (memory), `restore` runs at boot through the cookie, sign-out clears and returns to the gate. The gate's
 refusals are the console's sentence set (`lib/auth-errors`), re-worded for the app. An unreachable backend is a
