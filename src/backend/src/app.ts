@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { registerAccountState } from "./api/account-state.js";
 import { registerAccountAuth } from "./api/account-auth.js";
 import { registerAccountCollections } from "./api/account-collections.js";
+import { registerAccountWatch } from "./api/account-watch.js";
 import { registerAccountData } from "./api/account-data.js";
 import { registerAccounts } from "./api/accounts.js";
 import { registerAdminChannels } from "./api/admin-channels.js";
@@ -93,12 +94,8 @@ export async function buildApp(
       logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
     });
     const ready = services;
-    const bootstrap = await bootstrapAdmin(
-      ready.accounts,
-      await ready.hasAccounts(),
-      bootstrapUsername(settings),
-      settings.ADMIN_BOOTSTRAP_PASSWORD,
-    );
+    const bootstrap = await bootstrapAdmin(ready.accounts, await ready.hasAccounts(), bootstrapUsername(settings),
+      settings.ADMIN_BOOTSTRAP_PASSWORD);
     // Every saved live channel builds in the background, so the server answers at once. The seed (an empty
     // store only) starts its own channels as it creates them.
     await ready.channels.startLive();
@@ -171,6 +168,7 @@ export async function buildApp(
         registerAccountAuth(account, ready);
         registerAccountCollections(account, ready);
         registerAccountData(account, ready);
+        registerAccountWatch(account, ready);
       },
       { prefix: "/api/account" },
     );

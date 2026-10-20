@@ -34,6 +34,7 @@ import { createUiStateService } from "./ui-state-service.js";
 import { createUserCollectionsService } from "./user-collections-service.js";
 import { createUserFavoritesService } from "./user-favorites-service.js";
 import { createUserSettingsService } from "./user-settings-service.js";
+import { createUserWatchService } from "./user-watch-service.js";
 
 export interface ServiceOptions {
   jwtSecret: string;
@@ -127,6 +128,8 @@ export async function createServices(store: Store, options: ServiceOptions) {
     onSettled: () => scheduler.arm(),
   });
   const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "" });
+  // The watch service reads the account's settings document at each write, so it is built after it.
+  const userSettings = createUserSettingsService({ store, now });
   return {
     runner,
     events,
@@ -142,9 +145,10 @@ export async function createServices(store: Store, options: ServiceOptions) {
     adminStatic: createAdminStatic(options.adminDist),
     accounts: createAccountService({ store, audit, revokeAll: auth.revokeAll, now }),
     uiState: createUiStateService({ store, now, log: options.log }),
-    userSettings: createUserSettingsService({ store, now }),
+    userSettings,
     userFavorites: createUserFavoritesService({ store, now }),
     userCollections: createUserCollectionsService({ store, now }),
+    userWatch: createUserWatchService({ store, settings: userSettings, now }),
     channels: createChannelService({ store, audit, live, now }),
     providers: createProviderService({ store, audit, now }),
     titles,
