@@ -36,11 +36,15 @@ const SQL = `SELECT c.id, c.name, c.category, c.number, c.logo_url, c.logo_file,
 export function createAdminChannelRepository(database: AdminDatabase, mediaOrigin: () => string) {
   return {
     async list(): Promise<AdminResult<PublishedChannels>> {
+      let answers;
       try {
-        const [channels, revision] = await database.batch([
+        answers = await database.batch([
           { sql: SQL, args: [] },
           { sql: "SELECT revision FROM backend_revision WHERE id = 1", args: [] },
         ]);
+      } catch { return { ok: false, failure: unreachable }; }
+      try {
+        const [channels, revision] = answers;
         const revisionRow = RevisionRow.safeParse(revision?.rows[0]);
         if (channels === undefined || !revisionRow.success) return { ok: false, failure: badResponse };
         const items: PublishedChannel[] = [];
@@ -61,9 +65,7 @@ export function createAdminChannelRepository(database: AdminDatabase, mediaOrigi
           });
         }
         return { ok: true, value: { items, revision: revisionRow.data.revision } };
-      } catch {
-        return { ok: false, failure: unreachable };
-      }
+      } catch { return { ok: false, failure: badResponse }; }
     },
   };
 }

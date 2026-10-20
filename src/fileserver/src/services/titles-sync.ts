@@ -12,7 +12,7 @@ const KINDS: readonly TitleKind[] = ["movie", "tv"];
  * The titles sync (docs/46 section C): the genre dictionary, then the catalog walked page by page, each page one
  * transaction of upserts, then a sweep of the titles the walk did not see. `synced_at` is stamped only when the walk
  * ended normally (and the sweep with it, in one transaction); a failure, a cursor that does not advance, a walk past the
- * row cap or a quit leaves every row alone and stamps only the error code. Public reads only: nothing is sent but GETs.
+ * row cap or a quit leaves every row alone and stamps only the error code. The source reads are direct SQL.
  */
 export function createTitlesSync(deps: {
   catalog: AdminTitleRepository;

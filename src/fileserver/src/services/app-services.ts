@@ -3,7 +3,9 @@ import path from "node:path";
 import { APP_ROLE, APP_RUNTIME, APP_VERSION } from "../constants/deployment.js";
 import { createAdminChannelRepository } from "../store/admin-channel-repository.js";
 import { createAdminTitleRepository } from "../store/admin-title-repository.js";
-import { openAdminDatabase, validateAdminSchema, type AdminDatabase } from "../store/admin-database.js";
+import {
+  openAdminDatabase, scopeAdminDatabase, validateAdminSchema,
+} from "../store/admin-database.js";
 import { openDatabase, pingDatabase, type Database } from "../store/database.js";
 import { createChannelStateRepository } from "../store/channel-state-repository.js";
 import { createCollectionRepository } from "../store/collection-repository.js";
@@ -28,36 +30,24 @@ import { createLiveChannelsService, type LiveChannelsService } from "./live-chan
 import { createLocalMediaService, type LocalMediaService } from "./local-media-service.js";
 import { createPosterFetchService, type PosterFetchService } from "./poster-fetch.js";
 import { createProviderClient } from "./provider-client.js";
-import { createScanService, type FolderScanner, type ScanService } from "./scan-service.js";
+import { createScanService, type ScanService } from "./scan-service.js";
 import { createSettingsService, type SettingsService } from "./settings-service.js";
 import { createShellStateService, type ShellStateService } from "./shell-state-service.js";
 import {
   createFavoritesService, createWatchService, type FavoritesService, type WatchService,
 } from "./watch-service.js";
+import { createWatchRoutingService } from "./watch-routing-service.js";
+import type { ServiceOptions } from "./service-options.js";
 import { createTitleSources } from "./title-sources.js";
 
-export interface ServiceOptions {
-  dataDir: string;
-  allowInsecureAdmin: boolean;
-  /** The admin address before one is saved (config: the backend's port for this mode). */
-  defaultAdminUrl: string;
-  now: () => number;
-  adminDatabase?: AdminDatabase;
-  tursoDatabaseUrl: string;
-  tursoAuthToken: string;
-  jwtSecret: string;
-  /** Test seams: the fetches the admin client and the image cache use, and the folder scanner. */
-  adminFetch?: typeof fetch;
-  imageFetch?: typeof fetch; scan?: FolderScanner;
-  /** Electron lane: the native folder picker lives only here (docs/03 section 3.8). */
-  openFolderPicker?: () => Promise<{ path: string } | "cancelled">;
-  /** Test seam: `POST /api/fs/dialog` then takes `{ name }` under this root (3.8). */
-  testFolderRoot?: string;
-}
+export type { ServiceOptions } from "./service-options.js";
 /** Every service of the fileserver, built once from the one database (docs/01 section 4.1). */
 export async function createAppServices(options: ServiceOptions) {
   const database: Database = openDatabase(path.join(options.dataDir, "giga-stream.db"));
-  const adminDatabase = options.adminDatabase ?? openAdminDatabase(options.tursoDatabaseUrl, options.tursoAuthToken);
+  const ownsAdminDatabase = options.adminDatabase === undefined;
+  const adminDatabase = options.adminDatabase === undefined
+    ? openAdminDatabase(options.tursoDatabaseUrl, options.tursoAuthToken)
+    : scopeAdminDatabase(options.adminDatabase);
   await validateAdminSchema(adminDatabase);
   const settingsRepository = createSettingsRepository(database);
   const settings = createSettingsService({
@@ -158,6 +148,7 @@ export async function createAppServices(options: ServiceOptions) {
   });
 
   const accounts = createAccountServices(adminDatabase, options.jwtSecret, options.now);
+  const watchRouting = createWatchRoutingService(watches, accounts.accountApi);
   return {
     database,
     /** `GET /healthz` (docs/03 section 3.1): the database answers, and the fileserver's view of the backend. */
@@ -187,12 +178,13 @@ export async function createAppServices(options: ServiceOptions) {
     titles,
     library,
     ...accounts,
+    watchRouting,
     async close(): Promise<void> {
       // The cache first: abort its syncs and wait for them, so none writes to a closed database.
       await cache.close();
       await jobs.close();
       database.close();
-      adminDatabase.close();
+      if (ownsAdminDatabase) adminDatabase.close();
     },
   };
 }

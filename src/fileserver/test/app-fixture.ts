@@ -8,7 +8,7 @@ import { after } from "node:test";
 import { buildApp } from "../src/build-app.js";
 import type { FolderScanner } from "../src/services/scan-service.js";
 import { fakeScan } from "./fake-scan.js";
-import { makeAdminDatabase } from "./admin-database.js";
+import { databaseOf, makeAdminDatabase } from "./admin-database.js";
 
 /** A clock tests move by hand; nothing sleeps (the Giga Images pattern). */
 export function testClock(start = Date.UTC(2026, 9, 16, 12)) {
@@ -44,11 +44,12 @@ export async function makeApp(
     /** The admin backend the reverse proxy points at (test/admin-proxy.test.ts); unset leaves it off. */
     adminProxyTarget?: string;
     adminDatabase?: Client;
+    tursoDatabaseUrl?: string;
   } = {},
 ): Promise<FileserverApp> {
   const dataDir = options.dataDir ?? mkdtempSync(path.join(os.tmpdir(), "giga-fileserver-test-"));
   const clock = options.clock ?? testClock();
-  const adminDatabase = options.adminDatabase ?? await makeAdminDatabase();
+  const adminDatabase = options.adminDatabase ?? await databaseOf(options.adminFetch) ?? await makeAdminDatabase();
   const app = await buildApp({
     dataDir,
     now: clock.now,
@@ -58,6 +59,7 @@ export async function makeApp(
     ...(options.webDist !== undefined && { webDist: options.webDist }),
     ...(options.adminProxyTarget !== undefined && { adminMediaTarget: options.adminProxyTarget }),
     adminDatabase,
+    tursoDatabaseUrl: options.tursoDatabaseUrl ?? "test://admin-primary",
     jwtSecret: "test-secret-that-is-at-least-32-characters",
     // No test probes real files through the app: the stand-in scanner never spawns ffprobe (see fake-scan.ts).
     scan: options.scan ?? fakeScan,
@@ -104,4 +106,12 @@ export function pick(value: unknown, dotted: string): unknown {
     current = (current as Record<string, unknown>)[step];
   }
   return current;
+}
+
+export async function pointAt(app: FileserverApp, backendUrl: string): Promise<void> {
+  await send(app.app, "PATCH", "/api/settings", { adminUrl: backendUrl });
+}
+
+export function syncChannels(app: FileserverApp): Promise<Answer> {
+  return send(app.app, "POST", "/api/channels/refresh");
 }

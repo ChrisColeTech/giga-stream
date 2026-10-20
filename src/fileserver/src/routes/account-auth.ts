@@ -10,6 +10,10 @@ import {
 import { accountRefreshOf, clearAccountRefresh, setAccountRefresh } from "./account-cookie.js";
 
 const invalid = { code: "account.invalid" as const, status: 422 };
+const requestOf = (request: FastifyRequest) => ({
+  ...(request.headers.authorization !== undefined && { authorization: request.headers.authorization }),
+  address: request.ip,
+});
 
 function refreshOf(request: FastifyRequest, cookieOnly = false): string {
   const body = cookieOnly ? {} : parseInput(RefreshBody, request.body ?? {});
@@ -22,26 +26,26 @@ function refreshOf(request: FastifyRequest, cookieOnly = false): string {
 export function registerAccountAuthRoutes(app: FastifyInstance, services: AppServices): void {
   app.post("/api/account/auth/register", async (request, reply) => {
     const body = parseInput(RegisterBody, request.body, invalid);
-    const session = await services.accountAuth.register(body);
+    const session = await services.accountApi.register(body, requestOf(request));
     setAccountRefresh(request, reply, session.refreshToken);
     return okEnvelope(session);
   });
   app.post("/api/account/auth/login", async (request, reply) => {
     const body = parseInput(LoginBody, request.body);
-    const session = await services.accountAuth.login(body.username, body.password);
+    const session = await services.accountApi.login(body.username, body.password, requestOf(request));
     setAccountRefresh(request, reply, session.refreshToken);
     return okEnvelope(session);
   });
   app.post("/api/account/auth/refresh", async (request, reply) => {
     try {
-      const session = await services.accountAuth.refresh(refreshOf(request));
+      const session = await services.accountApi.refresh(refreshOf(request));
       setAccountRefresh(request, reply, session.refreshToken);
       return okEnvelope(session);
     } catch (error) { clearAccountRefresh(request, reply); throw error; }
   });
   app.post("/api/account/auth/restore", async (request, reply) => {
     try {
-      const session = await services.accountAuth.refresh(refreshOf(request, true));
+      const session = await services.accountApi.refresh(refreshOf(request, true));
       setAccountRefresh(request, reply, session.refreshToken);
       return okEnvelope(session);
     } catch (error) { clearAccountRefresh(request, reply); throw error; }
@@ -49,30 +53,32 @@ export function registerAccountAuthRoutes(app: FastifyInstance, services: AppSer
   app.post("/api/account/auth/logout", async (request, reply) => {
     const token = refreshOf(request);
     clearAccountRefresh(request, reply);
-    return okEnvelope(await services.accountAuth.logout(token));
+    return okEnvelope(await services.accountApi.logout(token, requestOf(request)));
   });
   app.post("/api/account/auth/password", async (request, reply) => {
     const body = parseInput(PasswordBody, request.body, invalid);
-    const principal = await services.accountAuth.authenticate(request.headers.authorization);
+    const answer = await services.accountApi.password(
+      body.currentPassword, body.newPassword, requestOf(request),
+    );
     clearAccountRefresh(request, reply);
-    return okEnvelope(await services.accountAuth.changePassword(principal, body.currentPassword, body.newPassword));
+    return okEnvelope(answer);
   });
   app.get("/api/account/me", async (request) => {
-    const principal = await services.accountAuth.authenticate(request.headers.authorization);
-    return okEnvelope(await services.accountAuth.me(principal));
+    return okEnvelope(await services.accountApi.me(requestOf(request)));
   });
   app.patch("/api/account/me", async (request) => {
     const body = parseInput(ProfilePatch, request.body, invalid);
-    const principal = await services.accountAuth.authenticate(request.headers.authorization);
-    return okEnvelope(await services.accountAuth.updateUsername(principal, body.username));
+    return okEnvelope(await services.accountApi.username(body.username, requestOf(request)));
   });
   app.post("/api/auth/reset-start", async (request) => {
     const body = parseInput(ResetStartBody, request.body, invalid);
-    return okEnvelope(await services.accountAuth.resetStart(body.username));
+    return okEnvelope(await services.accountApi.resetStart(body.username));
   });
   app.post("/api/auth/reset", async (request, reply) => {
     const body = parseInput(ResetBody, request.body, invalid);
-    const answer = await services.accountAuth.reset(body.username, body.answer, body.newPassword);
+    const answer = await services.accountApi.reset(
+      body.username, body.answer, body.newPassword, requestOf(request),
+    );
     clearAccountRefresh(request, reply);
     return okEnvelope(answer);
   });

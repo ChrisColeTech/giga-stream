@@ -146,7 +146,7 @@ test("the live view answers each channel's logo through the image cache", async 
   ]) {
     await adminDatabase.execute({
       sql: `INSERT INTO channels (id, name, category, logo_url, logo_file, stream_url, kind,
-        revision, enabled) VALUES (?, ?, ?, ?, ?, ?, 'stream', 3, 1)`,
+        revision, created_at, enabled) VALUES (?, ?, ?, ?, ?, ?, 'stream', 3, 1, 1)`,
       args: row,
     });
   }

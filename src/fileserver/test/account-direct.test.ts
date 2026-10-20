@@ -29,7 +29,7 @@ test("signup is user-only, sets the account cookie, restores, and updates the us
   assert.equal(pick(body, "data.account.kind"), "user");
   assert.match(String(raw.headers["set-cookie"]), /giga_refresh=.*Path=\/api\/account\/auth.*HttpOnly/);
   const token = String(pick(body, "data.accessToken"));
-  const profile = await call(t.app, "PATCH", "/api/account/me", token, { username: "Viewer Two" });
+  const profile = await call(t.app, "PATCH", "/api/account/me", token, { username: "  Viewer Two  " });
   assert.equal(pick(profile.body, "data.username"), "Viewer Two");
   const accountRow = await t.adminDatabase.execute("SELECT kind, security_answer_hash FROM admin_accounts");
   assert.equal(accountRow.rows[0]?.kind, "user");

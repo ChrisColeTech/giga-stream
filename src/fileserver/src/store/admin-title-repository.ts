@@ -79,22 +79,24 @@ function viewOf(raw: unknown): StoredTitleView | undefined {
 
 /** Authoritative title reads over the backend's schema, never its HTTP API (docs/64 section 2). */
 export function createAdminTitleRepository(database: AdminDatabase) {
-  async function enabled(id: string): Promise<StoredTitleView | undefined> {
-    const result = await database.execute({
+  async function enabledRow(id: string): Promise<unknown | undefined> {
+    return (await database.execute({
       sql: `SELECT ${COLUMNS} FROM titles WHERE id = ? AND enabled = 1`, args: [id],
-    });
-    return viewOf(result.rows[0]);
+    })).rows[0];
   }
   return {
     async genres(kind: TitleKind): Promise<AdminResult<GenreEntry[]>> {
+      let rows;
       try {
-        const rows = await database.execute({
+        rows = await database.execute({
           sql: "SELECT genre_id, name FROM title_genres WHERE kind = ? ORDER BY name, genre_id", args: [kind],
         });
+      } catch { return { ok: false, failure: unreachable }; }
+      try {
         return { ok: true, value: rows.rows.map((raw) => {
           const row = GenreRow.parse(raw); return { id: row.genre_id, name: row.name };
         }) };
-      } catch { return { ok: false, failure: unreachable }; }
+      } catch { return { ok: false, failure: badResponse }; }
     },
     async page(
       after: string | undefined,
@@ -129,16 +131,24 @@ export function createAdminTitleRepository(database: AdminDatabase) {
       } catch { return { ok: false, failure: badResponse }; }
     },
     async detail(id: string): Promise<AdminResult<StoredTitleView>> {
+      let raw: unknown | undefined;
       try {
-        const row = await enabled(id);
-        return row ? { ok: true, value: row } : { ok: false, failure: titleNotFound };
-      }
-      catch { return { ok: false, failure: unreachable }; }
+        raw = await enabledRow(id);
+      } catch { return { ok: false, failure: unreachable }; }
+      if (raw === undefined) return { ok: false, failure: titleNotFound };
+      const row = viewOf(raw);
+      return row === undefined ? { ok: false, failure: badResponse } : { ok: true, value: row };
     },
     async season(id: string, season: number): Promise<AdminResult<{ episodes: StoredEpisode[] }>> {
+      let raw: unknown | undefined;
       try {
-        const row = await enabled(id);
-        if (row === undefined || row.kind !== "tv") return { ok: false, failure: titleNotFound };
+        raw = await enabledRow(id);
+      } catch { return { ok: false, failure: unreachable }; }
+      if (raw === undefined) return { ok: false, failure: titleNotFound };
+      try {
+        const row = viewOf(raw);
+        if (row === undefined) return { ok: false, failure: badResponse };
+        if (row.kind !== "tv") return { ok: false, failure: titleNotFound };
         const seasons = Array.isArray(row.seasons) ? row.seasons : [];
         const found = seasons.find((entry) =>
           z.object({ season: z.number() }).safeParse(entry).data?.season === season);
@@ -147,18 +157,26 @@ export function createAdminTitleRepository(database: AdminDatabase) {
       } catch { return { ok: false, failure: unreachable }; }
     },
     async related(id: string, limit: number): Promise<AdminResult<StoredTitleView[]>> {
+      let row: StoredTitleView;
+      let result;
       try {
-        const row = await enabled(id);
-        if (row === undefined) return { ok: false, failure: titleNotFound };
-        const result = await database.execute({
+        const raw = await enabledRow(id);
+        if (raw === undefined) return { ok: false, failure: titleNotFound };
+        const parsed = viewOf(raw);
+        if (parsed === undefined) return { ok: false, failure: badResponse };
+        row = parsed;
+        result = await database.execute({
           sql: `SELECT ${COLUMNS} FROM titles o WHERE o.kind = ? AND o.id <> ? AND o.enabled = 1
             AND EXISTS (SELECT 1 FROM json_each(o.payload, '$.genres') og
               JOIN json_each((SELECT json_extract(payload, '$.genres') FROM titles WHERE id = ?)) mg
               ON og.value = mg.value) ORDER BY o.popularity_score DESC, o.id LIMIT ?`,
           args: [row.kind, id, id, limit],
         });
-        return { ok: true, value: result.rows.flatMap((raw) => viewOf(raw) ?? []) };
       } catch { return { ok: false, failure: unreachable }; }
+      const views = result.rows.map(viewOf);
+      return views.some((view) => view === undefined)
+        ? { ok: false, failure: badResponse }
+        : { ok: true, value: views.filter((view) => view !== undefined) };
     },
   };
 }

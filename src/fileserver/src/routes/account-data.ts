@@ -24,76 +24,77 @@ export const AccountWatchBody = z.object({
 const invalidSettings = { code: "settings.invalid" as const, status: 422 };
 const invalidCollection = { code: "collection.invalid" as const, status: 422 };
 
-async function principal(request: FastifyRequest, services: AppServices) {
-  return services.accountAuth.authenticate(request.headers.authorization);
-}
+const requestOf = (request: FastifyRequest) => ({
+  ...(request.headers.authorization !== undefined && { authorization: request.headers.authorization }),
+  address: request.ip,
+});
 
 /** Per-account settings, favorites, collections and watch data (docs/62 3.3, docs/63 3.2). */
 export function registerAccountDataRoutes(app: FastifyInstance, services: AppServices): void {
   app.get("/api/account/settings", async (request) =>
-    okEnvelope(await services.accountData.settings(await principal(request, services))));
+    okEnvelope(await services.accountApi.settings(requestOf(request))));
   app.put("/api/account/settings", async (request) => {
     const body = parseInput(AccountSettingsSchema, request.body, invalidSettings);
-    return okEnvelope(await services.accountData.writeSettings(await principal(request, services), body));
+    return okEnvelope(await services.accountApi.writeSettings(body, requestOf(request)));
   });
   app.get("/api/account/favorites", async (request) =>
-    okEnvelope(await services.accountData.favorites(await principal(request, services))));
+    okEnvelope(await services.accountApi.favorites(requestOf(request))));
   for (const method of ["put", "delete"] as const) {
     app[method]("/api/account/favorites/:kind/:itemId", async (request) => {
       const ref = parseInput(Ref, request.params);
-      return okEnvelope(await services.accountData.favorite(
-        await principal(request, services), ref.kind, ref.itemId, method === "put",
+      return okEnvelope(await services.accountApi.favorite(
+        ref.kind, ref.itemId, method === "put", requestOf(request),
       ));
     });
   }
   app.get("/api/account/collections", async (request) =>
-    okEnvelope(await services.accountData.collections(await principal(request, services))));
+    okEnvelope(await services.accountApi.collections(requestOf(request))));
   app.post("/api/account/collections", async (request, reply) => {
     const body = parseInput(CollectionBody, request.body, invalidCollection); reply.code(201);
-    const saved = await services.accountData.createCollection(
-      await principal(request, services), body.name, body.type,
+    const saved = await services.accountApi.createCollection(
+      body.name, body.type, requestOf(request),
     );
     return okEnvelope(saved);
   });
   app.patch("/api/account/collections/:collectionId", async (request) => {
     const { collectionId } = parseInput(CollectionId, request.params);
     const body = parseInput(CollectionPatch, request.body, invalidCollection);
-    const saved = await services.accountData.updateCollection(
-      await principal(request, services), collectionId, body,
+    const saved = await services.accountApi.updateCollection(
+      collectionId, body, requestOf(request),
     );
     return okEnvelope(saved);
   });
   app.delete("/api/account/collections/:collectionId", async (request) => {
     const { collectionId } = parseInput(CollectionId, request.params);
-    return okEnvelope(await services.accountData.removeCollection(await principal(request, services), collectionId));
+    return okEnvelope(await services.accountApi.removeCollection(collectionId, requestOf(request)));
   });
   app.put("/api/account/collections/:collectionId/items", async (request) => {
     const { collectionId } = parseInput(CollectionId, request.params);
     const body = parseInput(ItemBody, request.body, invalidCollection);
-    return okEnvelope(await services.accountData.setCollectionItem(
-      await principal(request, services), collectionId, body.kind, body.id, true,
+    return okEnvelope(await services.accountApi.setCollectionItem(
+      collectionId, body.kind, body.id, true, requestOf(request),
     ));
   });
   app.delete("/api/account/collections/:collectionId/items/:kind/:itemId", async (request) => {
     const value = parseInput(CollectionItem, request.params);
-    return okEnvelope(await services.accountData.setCollectionItem(
-      await principal(request, services), value.collectionId, value.kind, value.itemId, false,
+    return okEnvelope(await services.accountApi.setCollectionItem(
+      value.collectionId, value.kind, value.itemId, false, requestOf(request),
     ));
   });
   app.get("/api/account/items/:kind/:itemId/collections", async (request) => {
     const ref = parseInput(Ref, request.params);
-    return okEnvelope(await services.accountData.memberships(await principal(request, services), ref.kind, ref.itemId));
+    return okEnvelope(await services.accountApi.memberships(ref.kind, ref.itemId, requestOf(request)));
   });
   app.get("/api/account/watch", async (request) =>
-    okEnvelope(await services.accountData.listWatch(await principal(request, services))));
+    okEnvelope(await services.accountApi.watch(requestOf(request))));
   app.put("/api/account/watch", async (request) => {
     const body = parseInput(AccountWatchBody, request.body);
-    return okEnvelope(await services.accountData.writeWatch(await principal(request, services), body));
+    return okEnvelope(await services.accountApi.writeWatch(body, requestOf(request)));
   });
   app.delete("/api/account/watch/:watchId", async (request) => {
     const { watchId } = parseInput(WatchId, request.params);
-    return okEnvelope(await services.accountData.dropWatch(await principal(request, services), watchId));
+    return okEnvelope(await services.accountApi.dropWatch(watchId, requestOf(request)));
   });
   app.delete("/api/account/watch", async (request) =>
-    okEnvelope(await services.accountData.clearWatch(await principal(request, services))));
+    okEnvelope(await services.accountApi.clearWatch(requestOf(request))));
 }

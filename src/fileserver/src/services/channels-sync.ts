@@ -9,7 +9,9 @@ import { unreachable } from "./admin-failure.js";
  * the backend adds later is not stored by accident. The logo is the backend's cached copy when it sent one.
  */
 export function channelRowOf(channel: PublishedChannel, position: number): CachedChannelRow {
-  const source = channel.cachedLogoUrl ?? channel.logoUrl;
+  const source = channel.cachedLogoUrl === undefined || channel.cachedLogoUrl === ""
+    ? channel.logoUrl
+    : channel.cachedLogoUrl;
   return {
     id: channel.id,
     position,
@@ -23,7 +25,7 @@ export function channelRowOf(channel: PublishedChannel, position: number): Cache
 }
 
 /**
- * The channels sync (docs/46 section C): one public `GET /api/channels`, the rows replaced whole in one
+ * The channels sync (docs/46 section C, amended by docs/64): one direct publication query, rows replaced whole in one
  * transaction. A failure, or a quit, leaves the rows alone; only the error code is stamped, and nothing at all
  * is written once the signal has aborted.
  */
