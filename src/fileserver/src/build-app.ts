@@ -73,6 +73,9 @@ async function registerAdminProxy(app: FastifyInstance, target: string): Promise
     app.register(httpProxy, { upstream: target, prefix, rewritePrefix: prefix, replyOptions });
   await pass("/api/admin");
   await pass("/api/account");
+  // The password reset is public and serves both kinds (docs/40; docs/62 D2), so the app's gate reaches it
+  // through the same proxy (docs/03's route table has it at the root `/api/auth`).
+  await pass("/api/auth");
   await app.register(httpProxy, { upstream: target, prefix: "/admin", rewritePrefix: "", replyOptions });
   await pass("/live");
   await pass("/logos");

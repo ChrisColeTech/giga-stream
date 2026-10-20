@@ -25,14 +25,14 @@ export async function setQuestion(app: FastifyInstance, token: string, answer: s
 }
 
 export const resetStart = (app: FastifyInstance, username: string): Promise<Answer> =>
-  send(app, "POST", "/api/admin/auth-security/reset-start", { username });
+  send(app, "POST", "/api/auth/reset-start", { username });
 
 export const resetWith = (
   app: FastifyInstance,
   username: string,
   answer: string,
   newPassword = NEW_PASSWORD,
-): Promise<Answer> => send(app, "POST", "/api/admin/auth-security/reset", { username, answer, newPassword });
+): Promise<Answer> => send(app, "POST", "/api/auth/reset", { username, answer, newPassword });
 
 /** The stored answer hash of an account, read from the database file. */
 export async function storedAnswerHash(dataDir: string, username: string): Promise<unknown> {

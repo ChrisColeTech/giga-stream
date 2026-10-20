@@ -34,13 +34,13 @@ export type AuthResult =
   | { readonly ok: true; readonly session: AuthSession }
   | { readonly ok: false; readonly refusal: RefusalKind };
 
-/** `POST /api/admin/auth-security/reset-start`: the question to answer (the account's own, or a stand-in: the backend
+/** `POST /api/auth/reset-start`: the question to answer (the account's own, or a stand-in: the backend
  *  never says which), or why it could not be asked. */
 export type ResetStartResult =
   | { readonly ok: true; readonly question: string }
   | { readonly ok: false; readonly refusal: "unreachable" };
 
-/** `POST /api/admin/auth-security/reset`: `invalid` is `auth.reset_invalid` (a wrong answer, no account: one sentence
+/** `POST /api/auth/reset`: `invalid` is `auth.reset_invalid` (a wrong answer, no account: one sentence
  *  for all), `weak` a `422` on the new password. */
 export type ResetResult =
   | { readonly ok: true }

@@ -38,9 +38,9 @@ export interface SessionApi {
   stream: (path: string, options?: StreamOptions) => Promise<ReadableStream<Uint8Array>>;
   /** `POST /api/admin/auth/login`: no token. */
   login: (username: string, password: string) => Promise<BackendSession>;
-  /** `POST /api/admin/auth/reset-start`: no token. Rejects with an `ApiError`; the auth port turns it into a refusal. */
+  /** `POST /api/auth/reset-start`: no token. Rejects with an `ApiError`; the auth port turns it into a refusal. */
   resetStart: (username: string) => Promise<string>;
-  /** `POST /api/admin/auth/reset`: no token. */
+  /** `POST /api/auth/reset`: no token. */
   reset: (username: string, answer: string, newPassword: string) => Promise<void>;
   /** `POST /api/admin/auth/refresh` once on load, carrying only the httpOnly cookie: the session it restores, or null (no
    *  cookie, an ended session, an unreachable backend). Never rejects; a second call shares the first. */
@@ -141,11 +141,11 @@ export function createSessionApi(deps: SessionApiDeps): SessionApi {
       open.api("/api/admin/auth/login", SessionSchema, { method: "POST", body: { username, password } }),
     resetStart: async (username) => {
       const body = { username };
-      return (await open.api("/api/admin/auth/reset-start", ResetStartSchema, { method: "POST", body })).question;
+      return (await open.api("/api/auth/reset-start", ResetStartSchema, { method: "POST", body })).question;
     },
     reset: async (username, answer, newPassword) => {
       const body = { username, answer, newPassword };
-      await open.api("/api/admin/auth/reset", ResetDoneSchema, { method: "POST", body });
+      await open.api("/api/auth/reset", ResetDoneSchema, { method: "POST", body });
     },
     logout: async () => {
       const tokens = deps.tokens();

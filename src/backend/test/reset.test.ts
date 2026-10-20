@@ -116,9 +116,9 @@ test("a body that fails its schema is 422 before any lookup and audits nothing",
   const before = await failedCount();
   const long = await resetWith(t.app, ADMIN_USERNAME, "Rex", "p".repeat(257));
   assert.deepEqual([long.status, code(long), pick(long.body, "error.details.field")], [422, "account.invalid", "newPassword"]);
-  const extra = await send(t.app, "POST", "/api/admin/auth-security/reset", { username: ADMIN_USERNAME, answer: "Rex", newPassword: NEW_PASSWORD, id: 1 });
+  const extra = await send(t.app, "POST", "/api/auth/reset", { username: ADMIN_USERNAME, answer: "Rex", newPassword: NEW_PASSWORD, id: 1 });
   assert.deepEqual([extra.status, code(extra)], [422, "account.invalid"]);
-  const start = await send(t.app, "POST", "/api/admin/auth-security/reset-start", { username: "x".repeat(255) });
+  const start = await send(t.app, "POST", "/api/auth/reset-start", { username: "x".repeat(255) });
   assert.deepEqual([start.status, code(start)], [422, "account.invalid"]);
   assert.equal(await failedCount(), before, "no failure is audited");
   assert.equal(code(await send(t.app, "GET", "/api/admin/auth/me", undefined, access)), undefined, "the password is unchanged");

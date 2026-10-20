@@ -6,7 +6,7 @@ import { useAppStore } from "@/store/app-store";
 /* The app's auth transport (`62` sections 3.2 and 3.5), through the one request layer so every call keeps the
  * envelope handling and the events rows. The refresh token rides the httpOnly cookie scoped to `/api/account/auth`
  * (D4); the access token the answers carry lives in the store, in memory, and the request layer attaches it. The
- * reset reuses the console's sequence (`40`), which the backend mounts for both kinds at `/api/admin/auth-security`
+ * reset reuses the console's sequence (`40`), which the backend mounts for both kinds at the public `/api/auth`
  * (`62` D2); the fileserver's proxy passes that prefix beside `/api/account`. */
 
 export interface SessionApi {
@@ -19,9 +19,9 @@ export interface SessionApi {
   /** `POST /api/account/auth/logout` with the refresh token the store still holds (the app cannot read the cookie).
    *  Never rejects: the session is gone whatever the answer is. */
   signOut: () => Promise<void>;
-  /** `POST /api/admin/auth-security/reset-start`. No token: the caller is signed out. Rejects. */
+  /** `POST /api/auth/reset-start`. No token: the caller is signed out. Rejects. */
   resetStart: (username: string) => Promise<string>;
-  /** `POST /api/admin/auth-security/reset`. No token. A success ends the account's sessions everywhere. Rejects. */
+  /** `POST /api/auth/reset`. No token. A success ends the account's sessions everywhere. Rejects. */
   resetPassword: (username: string, answer: string, newPassword: string) => Promise<void>;
 }
 
@@ -59,12 +59,12 @@ export function createSessionApi(): SessionApi {
 
     resetStart: async (username) => {
       const body = { username };
-      return (await api("/api/admin/auth-security/reset-start", ResetStartSchema, { method: "POST", body })).question;
+      return (await api("/api/auth/reset-start", ResetStartSchema, { method: "POST", body })).question;
     },
 
     resetPassword: async (username, answer, newPassword) => {
       const body = { username, answer, newPassword };
-      await api("/api/admin/auth-security/reset", ResetDoneSchema, { method: "POST", body });
+      await api("/api/auth/reset", ResetDoneSchema, { method: "POST", body });
     },
   };
 }

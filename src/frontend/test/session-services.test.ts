@@ -95,7 +95,7 @@ describe("the session transport (`62` section 3.2)", () => {
     assert.deepEqual(calls, []);
   });
 
-  it("the reset is the console's sequence at the landed auth-security prefix, username-keyed", async () => {
+  it("the reset is the console's sequence at the public /api/auth prefix, username-keyed", async () => {
     const calls: Call[] = [];
     globalThis.fetch = async (input, init) => {
       calls.push({ input: String(input), method: init?.method, body: String(init?.body) });
@@ -107,12 +107,12 @@ describe("the session transport (`62` section 3.2)", () => {
     assert.equal(question, "What was your first pet?");
     assert.deepEqual(calls, [
       {
-        input: "/api/admin/auth-security/reset-start",
+        input: "/api/auth/reset-start",
         method: "POST",
         body: JSON.stringify({ username: "ivy" }),
       },
       {
-        input: "/api/admin/auth-security/reset",
+        input: "/api/auth/reset",
         method: "POST",
         body: JSON.stringify({ username: "ivy", answer: " a hamster ", newPassword: "newer password" }),
       },

@@ -3,7 +3,7 @@ import type { ResetEvent } from "@/lib/reset-state";
 import { authPort } from "@/services/auth-port";
 import type { ResetStartResult } from "@/types/auth";
 
-/** The Continue verb: marks the view waiting, awaits the port (`POST /api/admin/auth-security/reset-start`, no
+/** The Continue verb: marks the view waiting, awaits the port (`POST /api/auth/reset-start`, no
  *  token) and hands the answer to the view's state machine. A port that rejects counts as unreachable. A second call
  *  while one waits sends nothing. The store holds no promise. */
 export function useResetStart(dispatch: Dispatch<ResetEvent>): (username: string) => Promise<void> {

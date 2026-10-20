@@ -18,7 +18,7 @@ describe("reset-start", () => {
     const { backend, port } = portOver(() => success({ question: QUESTION }), TOKENS);
     assert.deepEqual(await port.resetStart("ada"), { ok: true, question: QUESTION });
     const call = backend.calls[0];
-    assert.deepEqual([call?.url, call?.method, call?.body], ["/api/admin/auth/reset-start", "POST", { username: "ada" }]);
+    assert.deepEqual([call?.url, call?.method, call?.body], ["/api/auth/reset-start", "POST", { username: "ada" }]);
     assert.equal(call?.headers.authorization, undefined, "the token-free layer, even when a session exists");
   });
 
@@ -41,7 +41,7 @@ describe("reset", () => {
     const { backend, port } = portOver(() => success({ reset: true }), TOKENS);
     assert.deepEqual(await port.resetPassword("ada", "  Rex ", " new pass "), { ok: true });
     const call = backend.calls[0];
-    assert.equal(call?.url, "/api/admin/auth/reset");
+    assert.equal(call?.url, "/api/auth/reset");
     assert.deepEqual(call?.body, { username: "ada", answer: "  Rex ", newPassword: " new pass " });
     assert.equal(call?.headers.authorization, undefined);
   });
@@ -63,7 +63,7 @@ describe("reset", () => {
     const state = rig(backend.fetch, TOKENS);
     const api = createSessionApi(state.deps);
     await assert.rejects(api.reset("a", "b", "c"), (error: unknown) => error instanceof ApiError && error.status === 401);
-    assert.deepEqual([state.ended, backend.calls.map((c) => c.url)], [[], ["/api/admin/auth/reset"]]);
+    assert.deepEqual([state.ended, backend.calls.map((c) => c.url)], [[], ["/api/auth/reset"]]);
   });
 });
 

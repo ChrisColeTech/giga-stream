@@ -156,7 +156,6 @@ export async function buildApp(
         registerAdminTmdb(admin, ready);
         registerAudit(admin, ready);
         registerAuth(admin, ready);
-        registerAuthSecurity(admin, ready);
         registerJobs(admin, ready);
         registerLiveFaults(admin, ready);
         registerPlaylists(admin, ready);
@@ -164,8 +163,9 @@ export async function buildApp(
       },
       { prefix: "/api/admin" },
     );
-    // The app's own API (docs/62 sections 3.2-3.3): the same plugin shape, any signed-in account at its
-    // guard, its refresh cookie scoped to its own auth prefix (docs/62 D4).
+    // The password reset (docs/40 section 2.4) is public, both kinds, both cookie scopes: root /api/auth.
+    await app.register(async (authReset) => registerAuthSecurity(authReset, ready), { prefix: "/api/auth" });
+    // The app's own API (docs/62 sections 3.2-3.3): the same plugin shape at its guard, its cookie on its prefix (D4).
     await app.register(
       async (account) => {
         registerAccountAuth(account, ready);

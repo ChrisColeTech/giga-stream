@@ -5,7 +5,7 @@ import { authPort } from "@/services/auth-port";
 import type { ResetResult } from "@/types/auth";
 
 /** The Reset password verb: checks the new password first (a refusal sits under its row and nothing is sent), then
- *  marks the view waiting, awaits the port (`POST /api/admin/auth-security/reset`, no token) and hands the answer to
+ *  marks the view waiting, awaits the port (`POST /api/auth/reset`, no token) and hands the answer to
  *  the state machine. The answer is sent as typed; the backend normalises it. Answers the result so the form can
  *  clear its fields, or null when nothing was sent. A second call while one waits sends nothing. */
 export function useResetPassword(
