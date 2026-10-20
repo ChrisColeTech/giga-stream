@@ -172,8 +172,7 @@ function freePort(): Promise<number> {
         server.close(() => reject(new Error("no ephemeral port")));
         return;
       }
-      const { port } = address;
-      server.close(() => resolve(port));
+      server.close(() => resolve(address.port));
     });
     server.on("error", reject);
   });
@@ -185,11 +184,10 @@ function killTree(pid: number | undefined): void {
   if (process.platform === "win32") {
     spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
   } else {
-    try {
-      process.kill(-pid, "SIGKILL");
-    } catch {
+    // The negative pid is the group; the plain pid catches a process that never became a leader.
+    for (const target of [-pid, pid]) {
       try {
-        process.kill(pid, "SIGKILL");
+        process.kill(target, "SIGKILL");
       } catch {
         /* already gone */
       }
@@ -204,11 +202,13 @@ export interface Answer {
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
+/** One injected call; the default headers carry the desktop page's runtime marker (docs/63 section 3.2), so the
+ *  standing suite speaks Electron. A test that wants a browser call injects its own headers instead. */
 export async function send(app: FastifyInstance, method: Method, url: string, body?: unknown): Promise<Answer> {
   const reply = await app.inject({
     method,
     url,
-    headers: body !== undefined ? { "content-type": "application/json" } : {},
+    headers: { "x-giga-runtime": "electron", ...(body !== undefined && { "content-type": "application/json" }) },
     ...(body !== undefined && { payload: JSON.stringify(body) }),
   });
   return { status: reply.statusCode, body: reply.body === "" ? null : JSON.parse(reply.body) };
