@@ -48,7 +48,7 @@ test("with the flag on, the families' reads keep answering normally", async () =
   assert.deepEqual(pick(collections.body, "data"), []);
   const items = await send(t.app, "GET", "/api/items/title/tt1/collections");
   assert.equal(items.status, 200);
-  assert.deepEqual(pick(items.body, "data"), []);
+  assert.deepEqual(pick(items.body, "data"), { memberships: [] });
   await t.dispose();
 });
 
