@@ -19,6 +19,12 @@ import { clearWatch, removeWatch, writeWatch } from "@/services/watch";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
+/** These tests pin the fileserver transport's exact routes, so they run on the desktop runtime explicitly: the
+ *  resolver reads a window-less node process as a signed-out browser, where the watch and library reads go to the
+ *  local store and the favourites refuse without a request (`62` section 3.6). */
+function desktopWindow(): void {
+  (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
+}
 const item = {
   ref: { kind: "title" as const, id: "movie-603" }, kind: "movie" as const, title: "The Matrix",
   year: 1999, posterUrl: "/api/images/matrix", genres: ["Action"], favorite: false,
@@ -30,8 +36,14 @@ const page: ServicePage = {
 const success = (data: unknown): Response =>
   new Response(JSON.stringify({ ok: true, data }), { status: 200, headers: { "content-type": "application/json" } });
 
-beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
-afterEach(() => { globalThis.fetch = originalFetch; });
+beforeEach(() => {
+  useAppStore.setState(useAppStore.getInitialState(), true);
+  desktopWindow();
+});
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
+});
 
 describe("library routes", () => {
   it("sends every all-view query field, including repeated genres", async () => {
