@@ -52,7 +52,7 @@ test("030 rewrites legacy settings and normalizes every catalog config shape", a
     });
     store.close();
     const migrated = await openTestDatabase(file);
-    assert.equal((await queryRow(migrated, "PRAGMA user_version"))?.user_version, 31);
+    assert.equal((await queryRow(migrated, "PRAGMA user_version"))?.user_version, 32);
     migrated.close();
   } finally {
     removeDir(dir);

@@ -77,9 +77,10 @@ test("the threshold reads the account's settings at the write; watched is sticky
   const back = await asA("movie-a", 1000, "p2");
   assert.deepEqual([pick(back.body, "data.entry.state"), pick(back.body, "data.entry.positionMs")], ["watched", 1000]);
 
-  // A position past the end is the end, and the threshold's own share counts as watched.
-  assert.equal(pick((await asA("movie-b", 99999, "p1")).body, "data.entry.positionMs"), 10000);
-  assert.equal(pick((await asA("movie-c", 9500, "p1")).body, "data.entry.state"), "watched");
+  // A position past the end is the end, and the threshold's own share counts as watched. Fresh playbacks:
+  // the account's p1 has already reached seq 2, so a p1 write at seq 1 would be a late write.
+  assert.equal(pick((await asA("movie-b", 99999, "p3")).body, "data.entry.positionMs"), 10000);
+  assert.equal(pick((await asA("movie-c", 9500, "p4")).body, "data.entry.state"), "watched");
 });
 
 test("a write whose seq lags its playback answers the entry as it stands and changes nothing", async () => {

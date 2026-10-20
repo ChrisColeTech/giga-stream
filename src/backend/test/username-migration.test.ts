@@ -68,8 +68,8 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
 
     const db = await openTestDatabase(file);
     try {
-      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout), 024 and 025, so the schema ends at 25.
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
+      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout), 024 and 025, so the schema ends at 32.
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 32 }]);
       const columns = async (table: string): Promise<string[]> =>
         queryRows(db, `PRAGMA table_info(${table})`).then((rows) => rows.map((r) => String(r.name)));
       assert.equal((await columns("admin_accounts")).some((c) => c.startsWith("email")), false);

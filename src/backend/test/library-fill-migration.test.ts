@@ -63,7 +63,7 @@ const FILL = { name: "Library fill", type: "catalog", enabled: 1, schedule: "off
 
 test("a version-24 database with the four per-slice jobs and a playlist job ends with the playlist job and one Library fill", async () => {
   const { version, jobs, check } = await migrated({ seeded: true });
-  assert.equal(version, 31);
+  assert.equal(version, 32);
   assert.deepEqual(jobs.map((j) => [j.name, j.type]), [[null, "playlist"], ["Library fill", "catalog"], ["Library update", "catalog"]]);
   assert.deepEqual({ ...jobs[1], created_at: undefined }, { ...FILL, created_at: undefined });
   assert.ok(Number(jobs[1]?.created_at) > 1_700_000_000_000, "created now, in milliseconds");

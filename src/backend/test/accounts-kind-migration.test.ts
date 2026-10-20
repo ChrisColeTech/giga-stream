@@ -38,7 +38,7 @@ async function oldDatabase(dataDir: string): Promise<string> {
 const columnsOf = async (db: Client, table: string): Promise<string[]> =>
   (await queryRows(db, `PRAGMA table_info(${table})`)).map((row) => String(row.name));
 
-test("031 defaults every existing account to admin, keeps its rows, and ends at version 31", async () => {
+test("031 defaults every existing account to admin, keeps its rows, and ends at version 32", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-backend-kind-"));
   try {
     const store = await createStore(await oldDatabase(dataDir));
@@ -49,7 +49,7 @@ test("031 defaults every existing account to admin, keeps its rows, and ends at 
     store.close();
     const db = await openTestDatabase(path.join(dataDir, "admin.db"));
     try {
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 31 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 32 }]);
       const kind = (await columnsOf(db, "admin_accounts")).find((name) => name === "kind");
       assert.equal(kind, "kind");
     } finally {
