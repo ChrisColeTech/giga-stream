@@ -61,7 +61,8 @@ export function createTitlesService(deps: {
       return liveDetailOf(live, seasons, image);
     }
     const held = titles.get(titleId);
-    if (held !== undefined) return cachedDetailOf(held, image);
+    const mayUseCache = answer.failure.code === "backend.unreachable" || answer.failure.code === "title.not_found";
+    if (mayUseCache && held !== undefined) return cachedDetailOf(held, image);
     throw failureOf(answer.failure);
   }
 
