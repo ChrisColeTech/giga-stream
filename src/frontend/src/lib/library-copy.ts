@@ -5,6 +5,8 @@ export const LIBRARY_COPY = {
   noItem: "No title is open.",
   favorite: "Favorite",
   unfavorite: "Unfavorite",
+  /** Why a favourite press cannot be honoured: a signed-out browser has no home for favourites (`62` section 3.6). */
+  favoritesSignedOut: "Sign in to keep favorites.",
   removeWatch: "Remove from History",
   clearIdle: "Clear history",
   clearArmed: "Clear all history?",

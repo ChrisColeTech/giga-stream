@@ -43,3 +43,11 @@ export const SettingsSchema = z.object({
 export const SettingsPatchSchema = SettingsSchema.partial();
 export type SettingsAnswer = z.infer<typeof SettingsSchema>;
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>;
+
+/** `GET`/`PUT /api/account/settings` (`62` section 3.3): the document as the account holds it - every key optional,
+ *  the whole document replaced on every write - and when it was last written (absent before the first write). */
+export const AccountSettingsSchema = z.object({
+  settings: SettingsPatchSchema,
+  updatedAt: z.number().optional(),
+});
+export type AccountSettingsAnswer = z.infer<typeof AccountSettingsSchema>;

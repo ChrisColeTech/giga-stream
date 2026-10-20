@@ -17,6 +17,10 @@ export const COLLECTION_NAME_MAX = 80;
 /** The window's list, and the back link from a collection to it. */
 export const LIST_LABEL = "Collections";
 
+/** Why a collection read or write cannot be honoured: a signed-out browser has no home for collections
+ *  (`62` section 3.6). */
+export const COLLECTIONS_SIGNED_OUT = "Sign in to use collections.";
+
 /** Why a name cannot be sent: nothing to act on (`06` section 2, rule 3). */
 export const NAME_BLOCK_REASON: Readonly<Record<"blank" | "unchanged", string>> = {
   blank: "Type a name first.",

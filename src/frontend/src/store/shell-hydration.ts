@@ -1,4 +1,5 @@
 import type { SettingsAnswer, SettingsPatch } from "@/services/schemas/settings-schema";
+import { ACCOUNT_SETTINGS_NOTICE } from "@/constants/gate-copy";
 import { localStateAvailable, readLocalLastChannel, readLocalSettings, readLocalShell } from "@/services/local-state";
 import { onDesktopRuntime } from "@/services/persistence";
 import { fromWireShell } from "@/services/shell-state";
@@ -83,6 +84,21 @@ export function rejectSettings(set: Set, get: Get, revision: number, patch: Sett
     savedSettingsRevision: Math.max(state.savedSettingsRevision, revision),
     ...fieldsOfSettings(applied),
   });
+}
+
+/** The account's settings win ONCE at sign-in (`62` D8): the merged document - the device's settings with the
+ *  account's keys over them - replaces the fields and the committed baseline, and the revision pair moves together so
+ *  the write-back has nothing to re-send. The events drawer says plainly that local changes were replaced; an account
+ *  document with nothing in it replaced nothing, and says nothing. */
+export function applyAccountSettings(set: Set, get: Get, settings: SettingsAnswer, replaced: boolean): void {
+  const revision = get().settingsRevision + 1;
+  set({
+    ...fieldsOfSettings(settings),
+    committedSettings: settings,
+    settingsRevision: revision,
+    savedSettingsRevision: revision,
+  });
+  if (replaced) get().say(ACCOUNT_SETTINGS_NOTICE);
 }
 
 function settledSettings(local: SettingsAnswer, sent: SettingsPatch, answer: SettingsAnswer): SettingsAnswer {

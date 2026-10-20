@@ -2,6 +2,9 @@ import { errorSentence as sentenceFor } from "@giga/http/error-sentence";
 
 /** The interface's user sentences by dotted code (`01` section 4.1). The shared request layer reads this table. */
 export const SENTENCES: Readonly<Record<string, string>> = {
+  "auth.unauthorized": "Sign in to do that.",
+  "auth.invalid_credentials": "The username or password is wrong.",
+  "auth.refresh_invalid": "That session has ended; sign in again.",
   "route.not_found": "There is nothing at that address.",
   "request.invalid": "That request was not understood.",
   "settings.invalid": "Those settings could not be saved.",
