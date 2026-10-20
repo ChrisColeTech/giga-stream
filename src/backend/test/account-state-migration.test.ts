@@ -59,7 +59,7 @@ async function databaseAt(file: string, version: number): Promise<void> {
   }
 }
 
-test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to 29", async () => {
+test("migration 017 lands on a 016 database: the table appears and the later migrations bring it to the newest", async () => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-ui-state-migration-"));
   const file = path.join(dataDir, DATABASE_FILE_NAME);
   try {
@@ -69,7 +69,7 @@ test("migration 017 lands on a 016 database: the table appears and the later mig
 
     (await createStore(file)).close();
 
-    assert.equal(await versionOf(file), 30);
+    assert.equal(await versionOf(file), 31);
     assert.equal(await tableExists(file, "admin_ui_state"), true);
   } finally {
     removeDir(dataDir);

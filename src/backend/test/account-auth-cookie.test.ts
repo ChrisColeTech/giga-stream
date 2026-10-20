@@ -15,7 +15,9 @@ const code = (answer: Answer): unknown => pick(answer.body, "error.code");
 
 async function appWithUser(): Promise<TestApp> {
   const t = await makeApp();
-  const made = await send(t.app, "POST", "/api/admin/accounts", USER, (await signIn(t.app)).access);
+  // The suite exercises the app's auth as a user account: the create must say so, or the row defaults
+  // to admin (docs/62 D1) and every kind assertion below reads the default, not the wiring.
+  const made = await send(t.app, "POST", "/api/admin/accounts", { ...USER, kind: "user" }, (await signIn(t.app)).access);
   assert.equal(made.status, 201);
   return t;
 }
