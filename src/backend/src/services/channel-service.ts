@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 
 import { AppError, ERRORS } from "../constants/errors.js";
-import type { Fault } from "../live/engine/fault-state.js";
 import type { LiveEngine } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
 import type { AdminChannel, BackendChannel, ChannelList, ChannelRecord, LiveRecord } from "../types/channel.js";
@@ -10,6 +9,7 @@ import type { AdminChannelQuery } from "../types/channel-query.js";
 import type { Actor, AuditService } from "./audit-service.js";
 import { adminChannels } from "./channel-admin-list.js";
 import { createChannelBulk } from "./channel-bulk.js";
+import { createChannelFaults } from "./channel-faults.js";
 import { createChannelVerdict } from "./channel-verdict.js";
 import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
@@ -68,6 +68,7 @@ export function createChannelService(deps: {
   return {
     ...createChannelBulk({ store, audit }),
     ...createChannelVerdict({ store, audit, live, now }),
+    ...createChannelFaults({ store, audit, live }),
 
     /** The public read: a channel that is not published (itself or its playlist disabled) is not in it (docs/43 3.1). */
     list: async (base: string): Promise<ChannelList> => ({
@@ -160,21 +161,6 @@ export function createChannelService(deps: {
       const view = adminChannel(current, base, live);
       await named(actor, "channel.rebuilt", id, current.name);
       return view;
-    },
-
-    /** Faults are an in-memory test tool on a live channel (docs/10 section 2, item 5). */
-    setFault: async (id: string, fault: Fault, durationMs: number | undefined, delayMs: number | undefined, actor: Actor) => {
-      const channel = await existingLive(id);
-      const described = live.setFault(id, fault, durationMs, delayMs);
-      await named(actor, "channel.fault_set", id, channel.name, { fault });
-      return { id, fault: described };
-    },
-
-    clearFault: async (id: string, actor: Actor) => {
-      const channel = await existingLive(id);
-      live.clearFault(id);
-      await named(actor, "channel.fault_cleared", id, channel.name);
-      return { id, fault: null };
     },
 
     /** The seed's repair: a stream row becomes the live row `input` describes, same id, one revision. */
