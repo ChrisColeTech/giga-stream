@@ -54,7 +54,8 @@ export function fakeTitles(initial: FakeTitle[], options: { pageSize?: number } 
   async function before(sql: string): Promise<void> {
     await pending;
     if (!/\btitles\b|title_genres/i.test(sql)) return;
-    if (/FROM titles WHERE enabled/i.test(sql)) {
+    const catalogRead = /FROM titles WHERE enabled/i.test(sql);
+    if (catalogRead) {
       if (state.failAfterPages !== undefined && state.pagesServed >= state.failAfterPages) {
         throw new Error("database unavailable");
       }
@@ -68,7 +69,7 @@ export function fakeTitles(initial: FakeTitle[], options: { pageSize?: number } 
     if (state.gate !== undefined) await state.gate;
     if (state.stalled) await new Promise<never>(() => undefined);
     if (state.down || (state.genresDown && /title_genres/i.test(sql))) throw new Error("database unavailable");
-    await applyDetails(raw, state.details);
+    if (!catalogRead && !/title_genres/i.test(sql)) await applyDetails(raw, state.details);
   }
 
   const fetcher = attachAdminDatabase((async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -185,10 +186,10 @@ async function applyDetails(database: Client, details: Record<string, unknown>):
       kind: current.kind,
       title: current.title,
       genres: current.genres,
-      year: current.year,
-      rating: current.rating,
-      posterUrl: current.posterUrl,
-      backdropUrl: current.backdropUrl,
+      ...(current.year !== undefined && { year: current.year }),
+      ...(current.rating !== undefined && { rating: current.rating }),
+      ...(current.posterUrl !== undefined && { posterUrl: current.posterUrl }),
+      ...(current.backdropUrl !== undefined && { backdropUrl: current.backdropUrl }),
     };
     await database.execute({
       sql: "UPDATE titles SET payload = ? WHERE id = ?", args: [JSON.stringify(merged), id],
