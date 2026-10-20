@@ -514,6 +514,11 @@ Window-caption icons use the dedicated VS Code chrome set from `react-icons/vsc`
 exception: OS/window chrome needs caption glyphs, not approximate content icons. Lucide `Square`/`Copy` and diagonal
 `Maximize2`/`Minimize2` are forbidden in window chrome.
 
+**Main titlebar modes (owner 2026-10-20; `65`).** Account and Theatre are icon-only ghost `IconButton`s beside the
+pane toggles, each with an accessible label and tooltip. Theatre uses `MonitorPlay`, carries `aria-pressed`, and keeps
+the outlined/accent `data-on` state while active. Account opens the standard shared menu when signed in; a two-action
+menu is not an authored `PopupPanel`.
+
 ### Page toolbar
 
 Every page opens with its page toolbar (LoRA Trainer `components/layout/Toolbar.tsx` 12-25; the family's

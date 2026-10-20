@@ -7,7 +7,8 @@
 - The titlebar account control is the shared ghost `IconButton` with the user icon only.
 - Signed out, pressing it opens the family auth wall. The wall contains Sign in, Sign up and Reset password flows,
   built only from shared kit form controls. A visible Back control sits at the bottom-right corner and returns to Live.
-- Signed in, pressing it opens the shared anchored popup with exactly `Account` and `Logout`.
+- Signed in, pressing it opens the standard shared menu popup with exactly `Account` and `Logout`; a two-action menu
+  never uses the authored `PopupPanel` scaffold.
 - `Account` closes the popup before opening the shared `ChildWindow`; its profile form updates the username.
 - `Logout` ends the session even if transport fails, closes account flows, clears account projections and only the
   browser-storage keys Giga Stream owns, then selects Live.
@@ -22,8 +23,8 @@ two-column skeleton. Existing action strips, headings and missing-media behavior
 ## 3. UI compliance
 
 No feature-built modal, popup, focus trap, disabled-title wrapper or direct component I/O is added. Auth uses the
-documented wall exception and shared form controls; the signed-in menu uses `PopupPanel`; profile and title info use
-`ChildWindow`. Existing component-owned service calls/listeners and disabled-tooltip bypasses found by the audit are
+documented wall exception and shared form controls; the signed-in menu uses the shared menu kit; profile and title info
+use `ChildWindow`. Existing component-owned service calls/listeners and disabled-tooltip bypasses found by the audit are
 moved to focused hooks or shared `reason` props without redesigning unrelated markup.
 
 ## 4. Waves
