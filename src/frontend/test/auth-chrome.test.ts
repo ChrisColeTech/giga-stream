@@ -5,7 +5,8 @@ import { describe, it } from "node:test";
 describe("auth chrome composition (`65` wave 3)", () => {
   it("omits the Statusbar in a browser and retains it only for Electron", () => {
     const shell = readFileSync("src/components/chrome/AppShell.tsx", "utf8");
-    assert.match(shell, /runtime === "electron" \? <Statusbar \/> : null/);
+    assert.match(shell, /const desktop = useDesktopRenderer\(\)/);
+    assert.match(shell, /statusbar=\{desktop \? <Statusbar \/> : null\}/);
   });
 
   it("hosts both account surfaces in the one OverlayHost with shared primitives", () => {

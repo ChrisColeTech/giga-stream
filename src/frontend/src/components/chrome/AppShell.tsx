@@ -2,11 +2,11 @@ import { AppShell as ShellFrame } from "@giga/ui/shell/AppShell";
 import { ContextMenu } from "@giga/ui/menus/ContextMenu";
 import { OverlayHost } from "@/components/overlays/OverlayHost";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import { useDesktopRenderer } from "@/hooks/useDesktopRenderer";
 import { useUiZoom } from "@/hooks/useUiZoom";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LivePage } from "@/pages/LivePage";
 import { PlayerPage } from "@/pages/PlayerPage";
-import { useAppStore } from "@/store/app-store";
 import { useSurface } from "@/store/selectors";
 import { EventsDrawer } from "./EventsDrawer";
 import { Statusbar } from "./Statusbar";
@@ -16,7 +16,7 @@ import { Titlebar } from "./Titlebar";
  *  menu, so two menus can never be open at once. The page for the active surface is the only one that shows. */
 export function AppShell() {
   const surface = useSurface();
-  const runtime = useAppStore((state) => state.runtime);
+  const desktop = useDesktopRenderer();
   const { menu, close } = useContextMenu();
   useUiZoom();
 
@@ -24,7 +24,7 @@ export function AppShell() {
     <ShellFrame
       titlebar={<Titlebar />}
       drawer={<EventsDrawer />}
-      statusbar={runtime === "electron" ? <Statusbar /> : null}
+      statusbar={desktop ? <Statusbar /> : null}
       overlay={<OverlayHost />}
       menu={menu !== null ? <ContextMenu anchor={menu.anchor} items={menu.items} onClose={close} /> : null}
     >
