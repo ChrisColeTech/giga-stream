@@ -44,9 +44,10 @@ describe("the shared account flows", () => {
   it("uses one PopupPanel with exactly Account and Logout actions, then the ChildWindow profile form", () => {
     const popup = readFileSync("src/components/chrome/AccountPopup.tsx", "utf8");
     const window = readFileSync("src/components/chrome/AccountWindow.tsx", "utf8");
-    assert.match(popup, /<PopupPanel/);
-    assert.deepEqual([...popup.matchAll(/<Button[^>]*>(Account|Logout)<\/Button>/g)].map((match) => match[1]),
-      ["Account", "Logout"]);
+    assert.equal((popup.match(/<PopupPanel\b/g) ?? []).length, 1);
+    const actions = [...popup.matchAll(/<Button\b[\s\S]*?>([^<]+)<\/Button>/g)]
+      .map((match) => match[1]?.trim());
+    assert.deepEqual(actions, ["Account", "Logout"]);
     assert.match(popup, /close\(\); open\("account"\)/, "the popup closes before Account opens");
     assert.match(popup, /close\(\); void signOut\(\)/, "Logout closes before invoking its callback");
     for (const primitive of ["ChildWindow", "Toolbar", "Workspace", "Group", "Row", "useProfileUpdate"]) {
