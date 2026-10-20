@@ -481,9 +481,9 @@ interface WatchWrite {
 
 | Route | Behaviour |
 |---|---|
-| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }` |
-| `DELETE /api/watch/:watchId` | removes one entry (Remove from History) |
-| `DELETE /api/watch` | clears all history; favorites, collections and files are untouched |
+| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }`. **Where it lands (owner, 2026-10-20, plan `63`):** a request marked `x-giga-runtime: electron` writes the fileserver's own store, as the desktop always has; any other request is a browser - it must carry the account's bearer and is passed to the backend's `PUT /api/account/watch`, so a browser's history is the account's cloud rows; a browser write with no account is refused `401`. The same fork governs the two `DELETE`s |
+| `DELETE /api/watch/:watchId` | removes one entry (Remove from History); the fork above decides which store |
+| `DELETE /api/watch` | clears all history; favorites, collections and files are untouched; the fork above decides which store |
 
 Channels never create watch entries. `entry` is `{ watchId, item, season?, episode?, positionMs, durationMs?,
 state, updatedAt }`; an unknown `watchId` is `404 watch.not_found`.

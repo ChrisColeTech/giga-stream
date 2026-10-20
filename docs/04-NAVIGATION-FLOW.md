@@ -57,11 +57,11 @@ flows.
 
 - Nothing is lost by navigating: the layout and the active tab are written back a moment after they
   change (`02` §2.3), and the last channel the moment you choose one.
-- What survives a restart, by account (owner, 2026-10-20, plan `63`; it supersedes the per-runtime table of
-  2026-10-19):
-  - Registered: what the account stores - watch history, collections, favorites, settings and the shell
-    (surface, pane visibility and sizes, the last channel). The same workspace on every runtime.
-  - Unregistered: nothing. The session is browse-only; no history or collections surfaces are rendered at all.
+- What survives a restart (owner, 2026-10-20, plan `63`; it supersedes the per-runtime table of 2026-10-19):
+  - Registered: the account's workspace - watch history, collections, favorites and settings - plus the
+    device's shell (surface, pane visibility and sizes, the last channel), which never leaves the device.
+  - Unregistered: the device's shell and settings only. No watch history is kept at all, and no history or
+    collections surfaces render; favorites are disabled with their reason.
 - What never survives: an open window or popup, the events drawer, a text draft, a selection, playback,
   and the channel and title lists, which are read live every time.
 - A native folder dialog that is cancelled leaves the form as it was.
