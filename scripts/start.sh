@@ -23,6 +23,16 @@ export ADMIN_PROXY_TARGET="${ADMIN_PROXY_TARGET:-http://127.0.0.1:$BACKEND_PORT}
 # PORT is set to the sibling port for this process alone.
 PORT="$BACKEND_PORT" node src/backend/dist/server.js &
 backend=$!
+
+# The fileserver fills its cache from the backend when it starts, and a fill that finds the backend still starting
+# (it checks and upgrades the remote database first) is not tried again for five minutes, so the public site would
+# serve nothing for that long after every deploy. Wait, bounded, until the backend answers; if it died, stop waiting.
+for _ in $(seq 1 90); do
+  node -e "fetch('http://127.0.0.1:$BACKEND_PORT/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))" && break
+  kill -0 "$backend" 2>/dev/null || break
+  sleep 1
+done
+
 node src/fileserver/dist/server.js &
 fileserver=$!
 
