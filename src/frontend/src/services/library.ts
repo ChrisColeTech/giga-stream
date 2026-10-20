@@ -2,6 +2,8 @@ import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
+import { decoratedLibraryPage, readLocalContinue, readLocalHistory } from "./library-local";
+import { onDesktopRuntime } from "./persistence";
 import {
   CollectionLibraryPageSchema,
   ContinuePageSchema,
@@ -75,7 +77,16 @@ export class LibrarySearchSession {
   }
 }
 
-export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string) {
+/** The Library's page read. The desktop is today's transport, byte for byte. In the browser (`61` sections 2.5 and
+ *  2.6) the server's watch table is not this runtime's truth: History and the watching and watched sets are computed
+ *  from the local entries (`library-local.ts`), the catalog pages go out without the `watched` param, and their rows
+ *  come back decorated with the local watch marks. */
+export async function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string): Promise<LibraryPage> {
+  const desktop = onDesktopRuntime();
+  if (!desktop && query.source === "history") return readLocalHistory(query, "all", signal, cursor);
+  if (!desktop && (query.watched === "watching" || query.watched === "watched")) {
+    return readLocalHistory(query, query.watched, signal, cursor);
+  }
   const params = new URLSearchParams();
   const collectionId = collectionOf(query.source);
   params.set("view", collectionId === null ? query.source : "collection");
@@ -86,10 +97,16 @@ export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: 
   params.set("sort", query.sort);
   for (const genre of query.genres) params.append("genre", genre);
   if (query.year !== "") params.set("year", query.year);
-  params.set("watched", query.watched);
+  if (desktop) params.set("watched", query.watched);
   if (cursor !== undefined) params.set("cursor", cursor);
   const schema = collectionId === null ? LibraryPageSchema : CollectionLibraryPageSchema;
-  return api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
+  const answer = await api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
+  return desktop ? answer : decoratedLibraryPage(answer);
+}
+
+/** The Continue strip's rows: the server's selection on the desktop, the local one in the browser (`61` 2.5). */
+export function readContinueRows(signal?: AbortSignal): Promise<readonly LibraryItem[]> {
+  return onDesktopRuntime() ? readContinue(signal) : readLocalContinue(signal);
 }
 
 export function readContinue(signal?: AbortSignal) {

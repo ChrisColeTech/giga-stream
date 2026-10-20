@@ -21,6 +21,8 @@ export const TitleSchema = z.object({
   fromCache: z.literal(true).optional(),
 });
 
+export type Title = z.infer<typeof TitleSchema>;
+
 export const EpisodeSchema = z.object({
   season: z.number().int().positive(),
   episode: z.number().int().positive(),

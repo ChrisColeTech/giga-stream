@@ -3,8 +3,14 @@ import { ChoicePopover } from "@giga/ui/menus/ChoicePopover";
 import { LIBRARY_COPY, SORT_OPTIONS, WATCHED_OPTIONS } from "@/lib/library-copy";
 import { isAllMedia, mediaChoice } from "@/lib/library-media";
 import { CLEAR_FILTERS, type LibraryQuery } from "@/lib/library-query";
+import { onDesktopRuntime } from "@/services/persistence";
 import { FilterSetting } from "./FilterSetting";
 import { FilterField } from "./FilterField";
+
+/** The watched filter is the server's whole-catalog watch state, which only the desktop runtime's fileserver store
+ *  holds (`61` section 2.5): on the browser runtime the control is visibly disabled with that truthful reason (the
+ *  `06` rule - a control works or is visibly disabled), and the desktop's server-side filter is unchanged. */
+const WATCHED_REASON = "The watched filter needs the desktop library or an account.";
 
 export interface LibraryFiltersProps {
   readonly query: LibraryQuery;
@@ -44,6 +50,7 @@ export function LibraryFilters({ query, genres, years, trending, onQuery }: Libr
       </FilterSetting>
       <FilterSetting label="Watched">
         <ChoicePopover mode="single" label="Watched" trigger="field" value={query.watched} options={WATCHED_OPTIONS}
+          disabledReason={onDesktopRuntime() ? undefined : WATCHED_REASON}
           onChange={(watched) => onQuery({ watched })} />
       </FilterSetting>
       <FilterSetting label="Sort">

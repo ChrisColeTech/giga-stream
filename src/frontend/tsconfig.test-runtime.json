@@ -11,6 +11,7 @@
       "@/*": ["./src/*"],
       "@giga/ui/*": ["../shared/ui/src/*"],
       "@giga/http/*": ["../shared/http/src/*"],
+      "@giga/watch/*": ["../shared/watch/src/*"],
       "react": ["./node_modules/react/index.js"],
       "react/*": ["./node_modules/react/*"],
       "react-dom": ["./node_modules/react-dom/index.js"],

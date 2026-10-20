@@ -8,9 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      /* The family UI library and the request layer are consumed as source (docs/27 section 3), never built. */
+      /* The family UI library, the request layer and the shared watch semantics are consumed as source
+       * (docs/27 section 3, docs/61 section 2.5), never built. */
       '@giga/ui': fileURLToPath(new URL('../shared/ui/src', import.meta.url)),
       '@giga/http': fileURLToPath(new URL('../shared/http/src', import.meta.url)),
+      '@giga/watch': fileURLToPath(new URL('../shared/watch/src', import.meta.url)),
     },
     /* One copy of each runtime package, whichever folder a file sits in: the library's imports resolve to this app's. */
     dedupe: ['react', 'react-dom', 'framer-motion', 'zustand', 'lucide-react', 'zod', 'allotment'],
