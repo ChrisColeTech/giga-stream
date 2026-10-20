@@ -1,4 +1,5 @@
 import type { SettingsAnswer, SettingsPatch } from "./schemas/settings-schema";
+import type { ClearedWatch, RemovedWatch, WatchWrite, WatchWriteAnswer } from "./schemas/watch-schema";
 import type { ShellLayout } from "./shell-state";
 
 /** The storage resolver (`61` section 2.2): the program's one fork point between the fileserver's REST stores and
@@ -16,6 +17,19 @@ export interface DomainStore<Read, Write> {
 export type ShellStore = DomainStore<ShellLayout, ShellLayout>;
 export type SettingsStore = DomainStore<SettingsAnswer, SettingsPatch>;
 
+/** The watch domain's store (`61` section 2.5): the Player's write - whose `keepalive` the local backend accepts and
+ *  leaves unused, since an IndexedDB put is issued at once - plus the Library's removals, which only this domain
+ *  answers for. Removal is part of the domain rather than a whole-value write, so it sits beside the DomainStore pair. */
+export interface WatchStore {
+  readonly write: (
+    value: WatchWrite,
+    options?: { readonly keepalive?: boolean },
+    signal?: AbortSignal,
+  ) => Promise<WatchWriteAnswer>;
+  readonly remove: (watchId: string, signal?: AbortSignal) => Promise<RemovedWatch>;
+  readonly clear: (signal?: AbortSignal) => Promise<ClearedWatch>;
+}
+
 /** The pair of backends a transport service offers the resolver: the fileserver's REST store and the browser's
  *  local one. The REST calls themselves stay in the resource modules (`02` section 2.2). */
 export interface DomainBackends<Read, Write> {
@@ -26,8 +40,14 @@ export interface DomainBackends<Read, Write> {
 export type ShellBackends = DomainBackends<ShellLayout, ShellLayout>;
 export type SettingsBackends = DomainBackends<SettingsAnswer, SettingsPatch>;
 
-/** The domains that resolve in wave 1; watch history joins in `61` section 2.5, favorites and collections in `62`. */
-export type DomainKey = "shell" | "settings";
+/** The watch domain's pair of backends; its store is its own interface, so it carries its own pair. */
+export interface WatchBackends {
+  readonly server: WatchStore;
+  readonly local: WatchStore;
+}
+
+/** The domains that resolve; favorites and collections join in `62`. */
+export type DomainKey = "shell" | "settings" | "watch";
 
 /** The resolver's second input, pinned to signed-out until `62` supplies the session. It will then route settings,
  *  favorites and collections to the account backend; today a signed-in caller keeps the server backend. */
@@ -43,12 +63,13 @@ export function onDesktopRuntime(): boolean {
 
 export function storeFor(domain: "shell", backends: ShellBackends, inputs?: StoreInputs): ShellStore;
 export function storeFor(domain: "settings", backends: SettingsBackends, inputs?: StoreInputs): SettingsStore;
+export function storeFor(domain: "watch", backends: WatchBackends, inputs?: StoreInputs): WatchStore;
 export function storeFor(
   domain: DomainKey,
-  backends: ShellBackends | SettingsBackends,
+  backends: ShellBackends | SettingsBackends | WatchBackends,
   inputs: StoreInputs = {},
-): ShellStore | SettingsStore {
-  void domain; // the domain names the account backend too, once `62` adds it beside these two.
+): ShellStore | SettingsStore | WatchStore {
+  void domain; // the domain names the account backend too, once `62` adds it beside these.
   if (onDesktopRuntime() || inputs.signedIn === true) return backends.server;
   return backends.local;
 }
