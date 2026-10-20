@@ -51,11 +51,14 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   Reflect.deleteProperty(globalThis, "window");
+  /* The verbs leave the session they held; a reset keeps the next file's tests at the signed-out start. */
+  useAppStore.setState(useAppStore.getInitialState(), true);
 });
 
 describe("the watch write's single contract (`63` sections 3.2 and 3.3)", () => {
-  it("on the desktop the three calls are the exact REST transport, the runtime marker and keepalive included", async () => {
+  it("on the desktop with a session the three calls are the exact REST transport, marker and keepalive included", async () => {
     desktopWindow();
+    useAppStore.setState({ signedIn: true });
     assert.equal(onDesktopRuntime(), true);
     const calls: Call[] = [];
     recordingFetch(calls);

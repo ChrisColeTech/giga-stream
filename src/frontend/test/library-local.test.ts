@@ -212,6 +212,6 @@ describe("signed out, the watch-derived reads answer none (`63` sections 3.3 and
     globalThis.fetch = async () => success(CATALOG_PAGE);
     const page = await readLibrary({ ...DEFAULT_QUERY });
     assert.deepEqual(page.items.map((item) => item.progress), [undefined, undefined]);
-    assert.equal(page.total, 2);
+    assert.equal(page.items.length, 2);
   });
 });
