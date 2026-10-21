@@ -26,7 +26,7 @@ const button = (html: string, label: string): string => {
 const buttonClass = (html: string): string => {
   const match = html.match(/<button[^>]*class="([^"]+)"/);
   assert.ok(match?.[1], "button class is present");
-  return match[1];
+  return match[1].replaceAll("&amp;", "&");
 };
 const StubIcon = ({ className }: { readonly className?: string }) => createElement("svg", { className });
 
