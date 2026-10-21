@@ -126,8 +126,8 @@ panes to them without a tween, and becomes visible two animation frames later, o
    that turns and a title; the whole header row folds the body; the fold state is kept in the store by id and
    survives a surface switch. The fold honours Reduce motion. Open sections share the rail's height and each
    scrolls inside its own share (the family accordion's grow model); in a short rail that leaves space under
-   the open sections, which is the model working, not a gap to fill. The Library rail is the exception: it is
-   `NavRail` (Sensenova's), whose Views and Collections groups are headed lists that do not fold.
+   the open sections, which is the model working, not a gap to fill. The Library rail uses the same shared
+   `Section` accordion as Live; Categories and Collections fold independently and keep their fold state.
 9. **Destructive actions are an inline two-step** (`ArmedButton`, `01` section 9), never a dialog.
 10. **No dots.** A state is a word, a left-edge accent strip, or a shimmer where a value is still arriving.
 
@@ -270,8 +270,9 @@ tooltip, until one plays. Volume, mute and fullscreen are on the player and are 
 
 ### 4.1 Collections (left)
 
-The family's `NavRail`, as Sensenova has it: two headed groups of one row style, a flat list and not a tree.
-The groups do not fold (§2.8's exception).
+The family's `NavRail`, as Sensenova has it: two shared `Section` groups of one row style, a flat list and not a
+tree. Categories and Collections fold independently through the UI kit's `@giga/ui/lists/Section`, exactly as
+Live's playback sections do, and their fold state survives surface switches.
 
 | Group | Rows |
 |---|---|
