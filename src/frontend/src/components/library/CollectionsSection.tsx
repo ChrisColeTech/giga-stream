@@ -25,6 +25,11 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
   const openCollections = useAppStore((state) => state.openCollections);
   return (
     <NavGroup heading="Collections">
+      <NavItem selected={source === "favorites"}
+        count={counts.favorites ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
+        onClick={() => onSource("favorites")}>
+        Favorites
+      </NavItem>
       {collections.length === 0
         ? Array.from({ length: RAIL_SKELETON_ROWS }, (_, index) => (
             <span key={index} aria-hidden className="flex h-8 items-center pr-2.5 pl-3.5">

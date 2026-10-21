@@ -7,6 +7,7 @@ import {
   collectionSource,
   continueItems,
   matchesSource,
+  sourceForSession,
   sortedCollections,
   viewCounts,
   visibleItems,
@@ -62,6 +63,14 @@ describe("the views and the scope", () => {
   it("narrows by a collection", () => {
     const source = collectionSource("c-y");
     assert.deepEqual(titles(visibleItems(ALL, query({ source }))), ["Bravo"]);
+  });
+
+  it("leaves only All available when a session ends", () => {
+    assert.equal(sourceForSession("all", false), "all");
+    assert.equal(sourceForSession("history", false), "all");
+    assert.equal(sourceForSession("favorites", false), "all");
+    assert.equal(sourceForSession(collectionSource("c-y"), false), "all");
+    assert.equal(sourceForSession("favorites", true), "favorites");
   });
 });
 

@@ -1,29 +1,30 @@
 import { NavRail } from "@giga/ui/lists/NavRail";
-import type { SourceId, ViewCounts } from "@/lib/library-query";
+import type { LibraryQuery, ViewCounts } from "@/lib/library-query";
 import type { CollectionRow } from "@/types/collection";
+import { CategoriesSection } from "./CategoriesSection";
 import { CollectionsFooter } from "./CollectionsFooter";
 import { CollectionsSection } from "./CollectionsSection";
-import { ViewsSection } from "./ViewsSection";
 
 export interface LibraryRailProps {
-  readonly source: SourceId;
+  readonly query: LibraryQuery;
   /** The session decides the account's groups (`63` section 3.4): signed out the Collections group, its footer and
    *  the History view are unrendered. */
   readonly signedIn: boolean;
   readonly counts: ViewCounts;
   readonly collections: readonly CollectionRow[];
-  readonly onSource: (source: SourceId) => void;
+  readonly genres: readonly string[];
+  readonly onQuery: (change: Partial<LibraryQuery>) => void;
 }
 
-/** The left pane of Library, on the family navigation rail (LoRA Studio's GalleryNav): the Views and Collections groups,
- *  and the Manage collections footer pinned at the foot. */
-export function LibraryRail({ source, signedIn, counts, collections, onSource }: LibraryRailProps) {
+/** The Library's Categories and signed-in Collections groups, with its management footer pinned at the foot. */
+export function LibraryRail({ query, signedIn, counts, collections, genres, onQuery }: LibraryRailProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <NavRail ariaLabel="Library">
-        <ViewsSection source={source} signedIn={signedIn} counts={counts} onSource={onSource} />
+        <CategoriesSection query={query} signedIn={signedIn} genres={genres} counts={counts} onQuery={onQuery} />
         {signedIn && (
-          <CollectionsSection source={source} collections={collections} counts={counts} onSource={onSource} />
+          <CollectionsSection source={query.source} collections={collections} counts={counts}
+            onSource={(source) => onQuery({ source })} />
         )}
       </NavRail>
       {signedIn && <CollectionsFooter />}
