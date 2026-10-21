@@ -4,6 +4,7 @@ import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { cn } from "@giga/ui/lib/cn";
 import type { LibraryQuery, ViewCounts } from "@/lib/library-query";
 import { useAppStore } from "@/store/app-store";
+import { LIBRARY_SECTION_KEYS, librarySectionState } from "./library-section-state";
 
 export interface CategoriesSectionProps {
   readonly query: LibraryQuery;
@@ -30,10 +31,11 @@ export function categorySelected(query: LibraryQuery, category: Category): boole
 
 /** The Categories rail group: All, signed-in History, then the current answer's genre facets. */
 export function CategoriesSection({ query, signedIn, genres, counts, onQuery }: CategoriesSectionProps) {
-  const open = useAppStore((state) => state.folded["library.categories"] !== true);
+  const folded = useAppStore((state) => state.folded);
   const toggleFold = useAppStore((state) => state.toggleFold);
+  const section = librarySectionState(folded, LIBRARY_SECTION_KEYS.categories, toggleFold);
   return (
-    <Section title="Categories" open={open} onToggle={() => toggleFold("library.categories")}>
+    <Section title="Categories" {...section}>
       <NavItem selected={categorySelected(query, "all")} count={counts.all ?? pendingCount}
         onClick={() => onQuery(categoryQuery("all"))}>
         All
