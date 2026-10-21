@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_QUERY, collectionOf, type LibraryQuery, type ListView } from "@/lib/library-query";
+import { DEFAULT_QUERY, sourceForSession, type LibraryQuery, type ListView } from "@/lib/library-query";
 import { restoredQuery, savedChange } from "@/lib/library-restore";
 import { useAppStore } from "@/store/app-store";
 
 function savedQuery(): LibraryQuery {
   const { library, collections } = useAppStore.getState();
   return { ...DEFAULT_QUERY, ...restoredQuery(library, collections.map((collection) => collection.id)) };
-}
-
-/** Signed out, the account's views do not exist (`63` section 3.4): a saved History or collection source reads as
- *  All, the rail's own rows for it being unrendered. */
-function clampedSource(source: LibraryQuery["source"], signedIn: boolean): LibraryQuery["source"] {
-  if (signedIn) return source;
-  return source === "history" || collectionOf(source) !== null ? "all" : source;
 }
 
 export interface SavedLibraryQuery {
@@ -45,7 +38,7 @@ export function useSavedLibraryQuery(): SavedLibraryQuery {
     const saved = savedQuery();
     setQuery((current) => ({
       ...saved,
-      source: clampedSource(saved.source, useAppStore.getState().signedIn),
+      source: sourceForSession(saved.source, useAppStore.getState().signedIn),
       search: current.search !== "" ? current.search : saved.search,
     }));
   }, [hydrated]);
@@ -54,7 +47,7 @@ export function useSavedLibraryQuery(): SavedLibraryQuery {
   useEffect(() => {
     if (signedIn) return;
     setQuery((current) => {
-      const source = clampedSource(current.source, signedIn);
+      const source = sourceForSession(current.source, signedIn);
       return source === current.source ? current : { ...current, source };
     });
   }, [signedIn]);
@@ -73,5 +66,7 @@ export function useSavedLibraryQuery(): SavedLibraryQuery {
     if (store.hydrationApplied && store.library.libraryView !== next) store.setLibraryPrefs({ libraryView: next });
   }, []);
 
-  return { query, view, ready, patch, setView, changeView };
+  const availableSource = sourceForSession(query.source, signedIn);
+  const availableQuery = availableSource === query.source ? query : { ...query, source: availableSource };
+  return { query: availableQuery, view, ready, patch, setView, changeView };
 }

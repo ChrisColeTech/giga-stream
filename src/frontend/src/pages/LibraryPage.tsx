@@ -24,7 +24,6 @@ import {
   type HistoryMarks,
   type ResolvedItem,
 } from "@/lib/library-marks";
-import type { SourceId } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
 import { libraryRenderState, shownItems } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
@@ -53,7 +52,6 @@ export function LibraryPage({ active }: { active: boolean }) {
   useEffect(() => { if (view === "rows") setReveal(null); }, [view, reveal]);
   useLibraryRequest({ patch, setView, setSelected, setReveal });
   const spotlight = useTitleSpotlight(active);
-  const onSource = (source: SourceId): void => patch({ source });
   const onSeeAll = useCallback((group: ShelfGroup): void => {
     patch(groupQuery(group));
     setView("grid");
@@ -121,7 +119,7 @@ export function LibraryPage({ active }: { active: boolean }) {
         surface="library" active={active}
         left={
           <LibraryRail
-            source={query.source} signedIn={signedIn} counts={counts} collections={collections} onSource={onSource}
+            query={query} signedIn={signedIn} counts={counts} collections={collections} genres={genres} onQuery={patch}
           />
         }
         center={center}

@@ -9,6 +9,7 @@ import { LibraryRail } from "@/components/library/LibraryRail";
 import { openCardMenu, type CardMenuContext } from "@/components/library/card-menu";
 import { useLibraryActions } from "@/hooks/useLibraryActions";
 import type { ResolvedItem } from "@/lib/library-marks";
+import { DEFAULT_QUERY } from "@/lib/library-query";
 import { useAppStore } from "@/store/app-store";
 
 const draw = (element: ReactElement): string => renderToStaticMarkup(element);
@@ -43,17 +44,21 @@ afterEach(() => {
 });
 
 describe("the Library's signed-out surfaces (`63` section 3.4)", () => {
-  it("the rail unrenders History, the collections group and the Manage collections footer; All and Favorites stay", () => {
+  it("keeps Categories and genres but hides every account row and collection control", () => {
     const signedOut = draw(createElement(LibraryRail, {
-      source: "all", signedIn: false, counts: { collections: {} }, collections: [], onSource: noop,
+      query: DEFAULT_QUERY, signedIn: false, counts: { collections: {} }, collections: [], genres: ["Drama"],
+      onQuery: noop,
     }));
-    assert.ok(signedOut.includes("All") && signedOut.includes("Favorites"));
+    assert.ok(signedOut.includes("Categories") && signedOut.includes("All") && signedOut.includes("Drama"));
+    assert.ok(!signedOut.includes("Views") && !signedOut.includes("Favorites"));
     assert.ok(!signedOut.includes("History"));
     assert.ok(!signedOut.includes("Collections") && !signedOut.includes("Manage collections"));
     const signedIn = draw(createElement(LibraryRail, {
-      source: "all", signedIn: true, counts: { collections: {} }, collections: [], onSource: noop,
+      query: DEFAULT_QUERY, signedIn: true, counts: { collections: {} }, collections: [], genres: ["Drama"],
+      onQuery: noop,
     }));
-    assert.ok(signedIn.includes("History") && signedIn.includes("Collections") && signedIn.includes("Manage collections"));
+    assert.ok(signedIn.includes("History") && signedIn.includes("Favorites") && signedIn.includes("Collections"));
+    assert.ok(signedIn.includes("Manage collections"));
   });
 
   it("the body unrenders the History strip and the Continue strip signed out, whatever the query says", () => {

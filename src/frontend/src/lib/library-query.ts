@@ -48,6 +48,11 @@ export function collectionOf(source: SourceId): string | null {
   return source.startsWith(COLLECTION_PREFIX) ? source.slice(COLLECTION_PREFIX.length) : null;
 }
 
+/** Account-only sources cease to exist as soon as the session ends. */
+export function sourceForSession(source: SourceId, signedIn: boolean): SourceId {
+  return signedIn || source === "all" ? source : "all";
+}
+
 /** A value from a closed set, read from a control's text; anything else is the fallback. */
 export function choiceOf<T extends string>(choices: readonly T[], value: string, fallback: T): T {
   return choices.find((choice) => choice === value) ?? fallback;
