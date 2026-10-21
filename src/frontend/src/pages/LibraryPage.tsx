@@ -11,6 +11,7 @@ import { TitleSpotlight } from "@/components/library/TitleSpotlight";
 import { useTitleSpotlight } from "@/hooks/useTitleSpotlight";
 import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { useLibraryData } from "@/hooks/useLibraryData";
+import { useGenreOptions } from "@/hooks/useGenreOptions";
 import { useRowsShelves } from "@/hooks/useRowsShelves";
 import { useLibraryRequest } from "@/hooks/useLibraryRequest";
 import { useSavedLibraryQuery } from "@/hooks/useSavedLibraryQuery";
@@ -77,7 +78,7 @@ export function LibraryPage({ active }: { active: boolean }) {
     );
   }, [actions, items]);
   const rows = view === "rows";
-  const genres = [...new Set([...(data.page?.facets.genres ?? []), ...query.genres])];
+  const genres = useGenreOptions(data.page?.facets.genres ?? null, query.genres);
   const years = [...new Set([
     ...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)]),
   ])].sort((a, b) => b - a);
