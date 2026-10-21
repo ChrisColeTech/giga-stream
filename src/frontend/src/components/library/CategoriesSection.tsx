@@ -36,22 +36,24 @@ export function CategoriesSection({ query, signedIn, genres, counts, onQuery }: 
   const section = librarySectionState(folded, LIBRARY_SECTION_KEYS.categories, toggleFold);
   return (
     <Section title="Categories" {...section}>
-      <NavItem selected={categorySelected(query, "all")} count={counts.all ?? pendingCount}
-        onClick={() => onQuery(categoryQuery("all"))}>
-        All
-      </NavItem>
-      {signedIn && (
-        <NavItem selected={categorySelected(query, "history")} count={counts.history ?? pendingCount}
-          onClick={() => onQuery(categoryQuery("history"))}>
-          History
+      <div className="-mx-2.5 flex flex-col">
+        <NavItem selected={categorySelected(query, "all")} count={counts.all ?? pendingCount}
+          onClick={() => onQuery(categoryQuery("all"))}>
+          All
         </NavItem>
-      )}
-      {genres.map((genre) => (
-        <NavItem key={genre} selected={categorySelected(query, { genre })}
-          onClick={() => onQuery(categoryQuery({ genre }))}>
-          {genre}
-        </NavItem>
-      ))}
+        {signedIn && (
+          <NavItem selected={categorySelected(query, "history")} count={counts.history ?? pendingCount}
+            onClick={() => onQuery(categoryQuery("history"))}>
+            History
+          </NavItem>
+        )}
+        {genres.map((genre) => (
+          <NavItem key={genre} selected={categorySelected(query, { genre })}
+            onClick={() => onQuery(categoryQuery({ genre }))}>
+            {genre}
+          </NavItem>
+        ))}
+      </div>
     </Section>
   );
 }

@@ -29,47 +29,50 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
   const section = librarySectionState(folded, LIBRARY_SECTION_KEYS.collections, toggleFold);
   return (
     <Section title="Collections" {...section}>
-      <NavItem selected={source === "favorites"}
-        count={counts.favorites ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
-        onClick={() => onSource("favorites")}>
-        Favorites
-      </NavItem>
-      {collections.length === 0
-        ? Array.from({ length: RAIL_SKELETON_ROWS }, (_, index) => (
-            <span key={index} aria-hidden className="flex h-8 items-center pr-2.5 pl-3.5">
-              <span className={cn(SHIMMER, "w-[60%]")} />
-            </span>
-          ))
-        : sortedCollections(collections).map((row) => {
-            const id = collectionSource(row.id);
-            return (
-              <div
-                key={row.id}
-                title={row.scan === "scanning" ? LIBRARY_COPY.scanningSoFar(counts.collections[row.id] ?? 0) : undefined}
-                onContextMenu={(event) =>
-                  openCollectionMenu(event, () => verbs.attach(row.id), () => openCollections(row.id))
-                }
-              >
-                <NavItem
-                  selected={source === id}
-                  /* While a scan runs the count is still arriving, so it is a skeleton (loading is a skeleton) the width
-                     of a three-digit count, so the edge does not jump when the number lands; the partial number is in
-                     the tooltip, which says what it counts. */
-                  count={
-                    row.scan === "scanning" ? (
-                      <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />
-                    ) : (
-                      (counts.collections[row.id] ?? 0)
-                    )
+      <div className="-mx-2.5 flex flex-col">
+        <NavItem selected={source === "favorites"}
+          count={counts.favorites ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
+          onClick={() => onSource("favorites")}>
+          Favorites
+        </NavItem>
+        {collections.length === 0
+          ? Array.from({ length: RAIL_SKELETON_ROWS }, (_, index) => (
+              <span key={index} aria-hidden className="flex h-8.5 items-center pr-2.5 pl-3.5">
+                <span className={cn(SHIMMER, "w-[60%]")} />
+              </span>
+            ))
+          : sortedCollections(collections).map((row) => {
+              const id = collectionSource(row.id);
+              return (
+                <div
+                  className="w-full"
+                  key={row.id}
+                  title={row.scan === "scanning" ? LIBRARY_COPY.scanningSoFar(counts.collections[row.id] ?? 0) : undefined}
+                  onContextMenu={(event) =>
+                    openCollectionMenu(event, () => verbs.attach(row.id), () => openCollections(row.id))
                   }
-                  onClick={() => onSource(id)}
                 >
-                  {row.name}
-                  {row.scan === "scanning" && <span className="sr-only">, {LIBRARY_COPY.scanning}</span>}
-                </NavItem>
-              </div>
-            );
-          })}
+                  <NavItem
+                    selected={source === id}
+                    /* While a scan runs the count is still arriving, so it is a skeleton (loading is a skeleton) the width
+                       of a three-digit count, so the edge does not jump when the number lands; the partial number is in
+                       the tooltip, which says what it counts. */
+                    count={
+                      row.scan === "scanning" ? (
+                        <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />
+                      ) : (
+                        (counts.collections[row.id] ?? 0)
+                      )
+                    }
+                    onClick={() => onSource(id)}
+                  >
+                    {row.name}
+                    {row.scan === "scanning" && <span className="sr-only">, {LIBRARY_COPY.scanning}</span>}
+                  </NavItem>
+                </div>
+              );
+            })}
+      </div>
     </Section>
   );
 }
