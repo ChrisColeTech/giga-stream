@@ -13,6 +13,8 @@
 - `Logout` ends the session even if transport fails, closes account flows, clears account projections and only the
   browser-storage keys Giga Stream owns, then selects Live.
 - Browser runtime omits the statusbar. Electron retains it.
+- Signed out, the Library rail hides History, Favorites, Collections and Manage collections; Categories keeps All
+  and the available genre rows.
 
 ## 2. Title information
 

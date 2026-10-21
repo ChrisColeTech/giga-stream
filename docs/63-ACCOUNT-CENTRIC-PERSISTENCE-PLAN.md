@@ -98,10 +98,10 @@ continue/history queries and the Player records nothing.
 ### 3.4 Hiding, not disabling, for unregistered
 
 Collections: the rail entry, CollectionsSection, CollectionsFooter and the card-menu's collection actions are
-unrendered when signed out. History: HistoryStrip, the Continue strip and cards, and the Library's history
-queries are unrendered/unissued when signed out. Favorites: the card-menu and detail heart stay rendered but
-visibly disabled with their reason (docs/06's rule) - hiding a per-item control reads as a broken card. The
-rail keeps Library and Live exactly as they were.
+unrendered when signed out. History: its rail row, HistoryStrip, the Continue strip and cards, and the Library's
+history queries are unrendered/unissued when signed out. Favorites: its rail row is also unrendered; the card-menu
+and detail heart stay rendered but visibly disabled with their reason (docs/06's rule) - hiding a per-item control
+reads as a broken card. The signed-out Library rail shows All and the available genre categories.
 
 ### 3.5 The login control
 

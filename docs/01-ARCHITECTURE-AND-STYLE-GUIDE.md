@@ -630,7 +630,7 @@ Five heading roles, each one component's, and no surface invents a sixth:
 |---|---|---|
 | Page group | `Form` `Group`: 48px icon tile, mono 28 | Settings, Collections, Title information |
 | Rail section | `Section` header: 11px sans semibold, faint, a turning chevron | Live and Player rails |
-| Rail group | `NavRail` heading: 12px sans, dim | the Library rail (Views, Collections) |
+| Rail group | `NavRail` heading: 12px sans, dim | the Library rail (Categories, Collections) |
 | Strip or shelf | mono 12, faint, the count dim | Continue watching, the Rows shelves, the Live channels head |
 | Filter label | 14px sans semibold over its control | the Library filters pane |
 
