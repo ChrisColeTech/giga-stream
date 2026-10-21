@@ -1,65 +1,58 @@
+import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import type { LibraryQuery } from "@/lib/library-query";
-import { readLibrary } from "./library";
 import type { LibraryPage } from "@/types/library";
+import { readLibrary } from "./library";
 
 export interface LibraryFirstPageSeams {
   readonly read: typeof readLibrary;
+  readonly schedule: (callback: () => void, delay: number) => number;
+  readonly cancel: (handle: number) => void;
 }
 
-const SEAMS: LibraryFirstPageSeams = { read: readLibrary };
+export interface LibraryFirstPageSetup {
+  readonly query: LibraryQuery;
+  readonly debounce: boolean;
+  readonly accept: (answer: LibraryPage) => void;
+  readonly refuse: (error: unknown) => void;
+}
+
+const SEAMS: LibraryFirstPageSeams = {
+  read: readLibrary,
+  schedule: (callback, delay) => window.setTimeout(callback, delay),
+  cancel: (handle) => window.clearTimeout(handle),
+};
 const aborted = (error: unknown): boolean => error instanceof DOMException && error.name === "AbortError";
 
-/** Owns immediate first-page reads independently from the debounced search session. */
-export class LibraryFirstPageController {
-  private controller: AbortController | null = null;
-  private generation = 0;
-  private mounted = false;
-  private readonly onResult: (answer: LibraryPage) => void;
-  private readonly onRefusal: (error: unknown) => void;
-  private readonly seams: LibraryFirstPageSeams;
-
-  constructor(
-    onResult: (answer: LibraryPage) => void,
-    onRefusal: (error: unknown) => void,
-    seams: LibraryFirstPageSeams = SEAMS,
-  ) {
-    this.onResult = onResult;
-    this.onRefusal = onRefusal;
-    this.seams = seams;
-  }
-
-  setup(): void {
-    this.mounted = true;
-  }
-
-  cleanup(): void {
-    this.mounted = false;
-    this.cancel();
-  }
-
-  cancel(): void {
-    this.generation += 1;
-    const controller = this.controller;
-    this.controller = null;
-    controller?.abort();
-  }
-
-  read(query: LibraryQuery): void {
-    this.cancel();
-    if (!this.mounted) return;
-    const generation = ++this.generation;
-    const controller = new AbortController();
-    this.controller = controller;
-    void this.seams.read(query, controller.signal).then((answer) => {
-      if (this.isCurrent(generation, controller)) this.onResult(answer);
+/** Starts one effect-owned immediate or debounced read. Cleanup answers whether it cancelled unsettled work. */
+export function startLibraryFirstPage(
+  setup: LibraryFirstPageSetup,
+  seams: LibraryFirstPageSeams = SEAMS,
+): () => boolean {
+  let live = true;
+  let settled = false;
+  let timer: number | null = null;
+  let controller: AbortController | null = null;
+  const start = (): void => {
+    if (!live) return;
+    controller = new AbortController();
+    const owned = controller;
+    void seams.read(setup.query, owned.signal).then((answer) => {
+      if (!live || controller !== owned) return;
+      settled = true;
+      setup.accept(answer);
     }).catch((error: unknown) => {
-      if (this.isCurrent(generation, controller) && !aborted(error)) this.onRefusal(error);
-    }).finally(() => {
-      if (this.controller === controller) this.controller = null;
+      if (!live || controller !== owned || aborted(error)) return;
+      settled = true;
+      setup.refuse(error);
     });
-  }
-
-  private isCurrent(generation: number, controller: AbortController): boolean {
-    return this.mounted && this.generation === generation && this.controller === controller;
-  }
+  };
+  if (setup.debounce) timer = seams.schedule(start, SEARCH_DEBOUNCE_MS);
+  else start();
+  return () => {
+    const cancelledPending = !settled;
+    live = false;
+    if (timer !== null) seams.cancel(timer);
+    controller?.abort();
+    return cancelledPending;
+  };
 }
