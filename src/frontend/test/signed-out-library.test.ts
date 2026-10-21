@@ -50,6 +50,7 @@ describe("the Library's signed-out surfaces (`63` section 3.4)", () => {
       onQuery: noop,
     }));
     assert.ok(signedOut.includes("Categories") && signedOut.includes("All") && signedOut.includes("Drama"));
+    assert.equal(signedOut.match(/<section/g)?.length, 1, "only the Categories section renders signed out");
     assert.ok(!signedOut.includes("Views") && !signedOut.includes("Favorites"));
     assert.ok(!signedOut.includes("History"));
     assert.ok(!signedOut.includes("Collections") && !signedOut.includes("Manage collections"));
