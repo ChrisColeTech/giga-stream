@@ -7,6 +7,7 @@ import { on } from "@giga/ui/lib/bus";
 import type { MenuItem } from "@giga/ui/menus/types";
 import { CategoriesSection, categoryQuery, categorySelected } from "@/components/library/CategoriesSection";
 import { CollectionsSection } from "@/components/library/CollectionsSection";
+import { LIBRARY_SECTION_KEYS, librarySectionState } from "@/components/library/library-section-state";
 import { openCollectionMenu } from "@/components/library/rail-menu";
 import { LibraryRail } from "@/components/library/LibraryRail";
 import { DEFAULT_QUERY, type LibraryQuery } from "@/lib/library-query";
@@ -29,33 +30,38 @@ const rail = (signedIn = true): string => renderToStaticMarkup(createElement(Lib
 
 describe("Library rail sections", () => {
   it("uses the shared Section and not NavGroup for both groups", () => {
-    for (const [file, key] of [
-      ["CategoriesSection.tsx", "library.categories"],
-      ["CollectionsSection.tsx", "library.collections"],
-    ] as const) {
+    for (const file of ["CategoriesSection.tsx", "CollectionsSection.tsx"]) {
       const source = readFileSync(`src/components/library/${file}`, "utf8");
       assert.match(source, /@giga\/ui\/lists\/Section/);
       assert.doesNotMatch(source, /NavGroup/);
-      assert.ok(source.includes(`onToggle={() => toggleFold("${key}")}`));
     }
   });
 
-  it("starts both sections open and folds each stable key independently", () => {
+  it("renders both shared disclosures expanded from the initial server snapshot", () => {
     const initial = rail();
     assert.match(button(initial, "Categories"), /aria-expanded="true"/);
     assert.match(button(initial, "Collections"), /aria-expanded="true"/);
+  });
 
-    useAppStore.getState().toggleFold("library.categories");
+  it("derives independent fold state and binds each toggle to its stable key", () => {
+    assert.deepEqual(LIBRARY_SECTION_KEYS, {
+      categories: "library.categories", collections: "library.collections",
+    });
+    let toggled = "";
+    const categories = librarySectionState({}, LIBRARY_SECTION_KEYS.categories, (key) => { toggled = key; });
+    assert.equal(categories.open, true);
+    categories.onToggle();
+    assert.equal(toggled, LIBRARY_SECTION_KEYS.categories);
+
+    const folded = { [LIBRARY_SECTION_KEYS.categories]: true };
+    assert.equal(librarySectionState(folded, LIBRARY_SECTION_KEYS.categories, noop).open, false);
+    assert.equal(librarySectionState(folded, LIBRARY_SECTION_KEYS.collections, noop).open, true);
+
+    useAppStore.getState().toggleFold(LIBRARY_SECTION_KEYS.categories);
     useAppStore.getState().setSurface("live");
     useAppStore.getState().setSurface("library");
-    const categoriesFolded = rail();
-    assert.match(button(categoriesFolded, "Categories"), /aria-expanded="false"/);
-    assert.match(button(categoriesFolded, "Collections"), /aria-expanded="true"/);
-
-    useAppStore.getState().toggleFold("library.collections");
-    const bothFolded = rail();
-    assert.match(button(bothFolded, "Categories"), /aria-expanded="false"/);
-    assert.match(button(bothFolded, "Collections"), /aria-expanded="false"/);
+    assert.equal(useAppStore.getState().folded[LIBRARY_SECTION_KEYS.categories], true);
+    assert.equal(useAppStore.getState().folded[LIBRARY_SECTION_KEYS.collections], undefined);
   });
 
   it("bounds the accordion like Live so both headings and the pinned footer stay reachable", () => {

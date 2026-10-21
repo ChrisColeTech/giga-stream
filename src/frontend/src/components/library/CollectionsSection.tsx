@@ -8,6 +8,7 @@ import { RAIL_SKELETON_ROWS } from "@/lib/library-limits";
 import { collectionSource, sortedCollections, type SourceId, type ViewCounts } from "@/lib/library-query";
 import { useAppStore } from "@/store/app-store";
 import type { CollectionRow } from "@/types/collection";
+import { LIBRARY_SECTION_KEYS, librarySectionState } from "./library-section-state";
 import { openCollectionMenu } from "./rail-menu";
 
 export interface CollectionsSectionProps {
@@ -23,10 +24,11 @@ export interface CollectionsSectionProps {
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
   const verbs = useCollectionVerbs();
   const openCollections = useAppStore((state) => state.openCollections);
-  const open = useAppStore((state) => state.folded["library.collections"] !== true);
+  const folded = useAppStore((state) => state.folded);
   const toggleFold = useAppStore((state) => state.toggleFold);
+  const section = librarySectionState(folded, LIBRARY_SECTION_KEYS.collections, toggleFold);
   return (
-    <Section title="Collections" open={open} onToggle={() => toggleFold("library.collections")}>
+    <Section title="Collections" {...section}>
       <NavItem selected={source === "favorites"}
         count={counts.favorites ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
         onClick={() => onSource("favorites")}>
