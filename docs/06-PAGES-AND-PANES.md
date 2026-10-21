@@ -274,6 +274,10 @@ The family's `NavRail`, as Sensenova has it: two shared `Section` groups of one 
 tree. Categories and Collections fold independently through the UI kit's `@giga/ui/lists/Section`, exactly as
 Live's playback sections do, and their fold state survives surface switches.
 
+The rows inside each Section are one contiguous full-width stack using the same active-link treatment as the Settings
+rail: accent left edge, control fill and accent text. The Section's form-body padding and row gap do not inset or
+separate navigation links.
+
 | Group | Rows |
 |---|---|
 | **Categories** | All, then the available genre facets; while signed in, History remains an account view before the genres |

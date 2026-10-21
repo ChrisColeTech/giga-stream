@@ -641,6 +641,11 @@ first verb of the list's first row, and a page's verbs are its page toolbar's.
 The brand and the surface switch in the titlebar keep the family's own radii and spacing, drawn as the family
 draws them; they are not rebuilt from the token scale.
 
+**Rail links.** A navigation rail's rows use the Settings rail family pattern: contiguous full-width 34px rows,
+13px text, a 2px transparent left edge at rest, hover fill, and while selected the accent left edge, control fill and
+accent text. Rows inside a collapsible `Section` cancel the Section body's form padding and gap as one row stack; the
+Section header keeps its own spacing. A selected row is never an inset chip or a text-only colour change.
+
 ### Overlays
 
 Use the smallest surface that fits: a menu or select for a choice; a tooltip for an explanation; an
