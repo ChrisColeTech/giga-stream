@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { NAV_ROW } from "../lists/nav-classes";
 
 /** One entry of a settings rail: the id a program switches on, its label and its icon. */
 export interface SettingsSection<Id extends string = string> {
@@ -6,16 +7,6 @@ export interface SettingsSection<Id extends string = string> {
   readonly label: string;
   readonly icon: ComponentType<{ className?: string }>;
 }
-
-/* LoRA Studio's settings rail (components/settings/SettingsOverlay.tsx NAV_BUTTON), on plain buttons: this repo has no
-   Headless UI, so `data-selected` is set by hand where LoRA's Tab sets it. */
-const NAV_BUTTON =
-  "flex h-8.5 w-full cursor-pointer items-center gap-3 border-0 border-l-2 border-l-transparent " +
-  "bg-transparent pr-2.5 pl-3 text-left font-sans text-[13px] text-muted " +
-  "transition-[background,border-color,color] duration-fade ease-linear " +
-  "hover:bg-hov hover:text-text active:bg-hov active:text-faint focus-visible:outline-none " +
-  "data-selected:border-l-accent data-selected:bg-ctl data-selected:text-accent-text " +
-  "data-selected:[&_svg]:text-accent";
 
 export interface SettingsRailProps<Id extends string> {
   readonly sections: readonly SettingsSection<Id>[];
@@ -42,7 +33,7 @@ export function SettingsRail<Id extends string>({ sections, selected, onSelect }
             role="tab"
             aria-selected={on}
             data-selected={on ? "" : undefined}
-            className={NAV_BUTTON}
+            className={NAV_ROW}
             onClick={() => onSelect(section.id)}
           >
             <Icon className="size-3.75 flex-none" />

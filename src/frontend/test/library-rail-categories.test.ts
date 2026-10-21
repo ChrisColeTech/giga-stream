@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { on } from "@giga/ui/lib/bus";
+import { NavItem } from "@giga/ui/lists/NavItem";
+import { NAV_ROW } from "@giga/ui/lists/nav-classes";
 import type { MenuItem } from "@giga/ui/menus/types";
+import { SettingsRail } from "@giga/ui/windows/SettingsRail";
 import { CategoriesSection, categoryQuery, categorySelected } from "@/components/library/CategoriesSection";
 import { CollectionsSection } from "@/components/library/CollectionsSection";
 import { LIBRARY_SECTION_KEYS, librarySectionState } from "@/components/library/library-section-state";
@@ -20,6 +23,12 @@ const button = (html: string, label: string): string => {
   assert.ok(match, `${label} row is present`);
   return match;
 };
+const buttonClass = (html: string): string => {
+  const match = html.match(/<button[^>]*class="([^"]+)"/);
+  assert.ok(match?.[1], "button class is present");
+  return match[1];
+};
+const StubIcon = ({ className }: { readonly className?: string }) => createElement("svg", { className });
 
 beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
 afterEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
@@ -35,6 +44,32 @@ describe("Library rail sections", () => {
       assert.match(source, /@giga\/ui\/lists\/Section/);
       assert.doesNotMatch(source, /NavGroup/);
     }
+  });
+
+  it("wraps each Section's links in one full-width contiguous row stack", () => {
+    for (const file of ["CategoriesSection.tsx", "CollectionsSection.tsx"]) {
+      const source = readFileSync(`src/components/library/${file}`, "utf8");
+      assert.match(source, /<Section[^>]*>\s*<div className="-mx-2\.5 flex flex-col">/);
+      assert.doesNotMatch(source, /<Section[^>]*>\s*<NavItem/);
+      assert.doesNotMatch(source, /-mx-2\.5 flex flex-col gap-/);
+    }
+    assert.match(readFileSync("src/components/library/CollectionsSection.tsx", "utf8"),
+      /<div\s+className="w-full"\s+key=\{row\.id\}/);
+  });
+
+  it("gives NavItem the Settings rail's 34px selected-row vocabulary", () => {
+    const navItem = renderToStaticMarkup(createElement(NavItem, {
+      selected: true, onClick: noop, children: "Library",
+    }));
+    const settings = renderToStaticMarkup(createElement(SettingsRail, {
+      sections: [{ id: "library", label: "Library", icon: StubIcon }], selected: "library", onSelect: noop,
+    }));
+    assert.equal(buttonClass(navItem), NAV_ROW);
+    assert.equal(buttonClass(settings), NAV_ROW);
+    for (const token of [
+      "h-8.5", "text-[13px]", "border-l-2", "hover:bg-hov", "active:bg-hov",
+      "data-selected:border-l-accent", "data-selected:bg-ctl", "data-selected:text-accent-text",
+    ]) assert.ok(NAV_ROW.includes(token), token);
   });
 
   it("renders both shared disclosures expanded from the initial server snapshot", () => {
