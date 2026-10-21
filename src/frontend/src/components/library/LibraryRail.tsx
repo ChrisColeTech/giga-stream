@@ -21,11 +21,13 @@ export function LibraryRail({ query, signedIn, counts, collections, genres, onQu
   return (
     <div className="flex h-full min-h-0 flex-col">
       <NavRail ariaLabel="Library">
-        <CategoriesSection query={query} signedIn={signedIn} genres={genres} counts={counts} onQuery={onQuery} />
-        {signedIn && (
-          <CollectionsSection source={query.source} collections={collections} counts={counts}
-            onSource={(source) => onQuery({ source })} />
-        )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <CategoriesSection query={query} signedIn={signedIn} genres={genres} counts={counts} onQuery={onQuery} />
+          {signedIn && (
+            <CollectionsSection source={query.source} collections={collections} counts={counts}
+              onSource={(source) => onQuery({ source })} />
+          )}
+        </div>
       </NavRail>
       {signedIn && <CollectionsFooter />}
     </div>

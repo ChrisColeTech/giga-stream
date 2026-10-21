@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { on } from "@giga/ui/lib/bus";
@@ -7,7 +8,9 @@ import type { MenuItem } from "@giga/ui/menus/types";
 import { CategoriesSection, categoryQuery, categorySelected } from "@/components/library/CategoriesSection";
 import { CollectionsSection } from "@/components/library/CollectionsSection";
 import { openCollectionMenu } from "@/components/library/rail-menu";
+import { LibraryRail } from "@/components/library/LibraryRail";
 import { DEFAULT_QUERY, type LibraryQuery } from "@/lib/library-query";
+import { useAppStore } from "@/store/app-store";
 
 const noop = (): void => undefined;
 const query = (change: Partial<LibraryQuery> = {}): LibraryQuery => ({ ...DEFAULT_QUERY, ...change });
@@ -16,6 +19,52 @@ const button = (html: string, label: string): string => {
   assert.ok(match, `${label} row is present`);
   return match;
 };
+
+beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
+afterEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
+
+const rail = (signedIn = true): string => renderToStaticMarkup(createElement(LibraryRail, {
+  query: DEFAULT_QUERY, signedIn, counts: { collections: {} }, collections: [], genres: ["Drama"], onQuery: noop,
+}));
+
+describe("Library rail sections", () => {
+  it("uses the shared Section and not NavGroup for both groups", () => {
+    for (const [file, key] of [
+      ["CategoriesSection.tsx", "library.categories"],
+      ["CollectionsSection.tsx", "library.collections"],
+    ] as const) {
+      const source = readFileSync(`src/components/library/${file}`, "utf8");
+      assert.match(source, /@giga\/ui\/lists\/Section/);
+      assert.doesNotMatch(source, /NavGroup/);
+      assert.ok(source.includes(`onToggle={() => toggleFold("${key}")}`));
+    }
+  });
+
+  it("starts both sections open and folds each stable key independently", () => {
+    const initial = rail();
+    assert.match(button(initial, "Categories"), /aria-expanded="true"/);
+    assert.match(button(initial, "Collections"), /aria-expanded="true"/);
+
+    useAppStore.getState().toggleFold("library.categories");
+    useAppStore.getState().setSurface("live");
+    useAppStore.getState().setSurface("library");
+    const categoriesFolded = rail();
+    assert.match(button(categoriesFolded, "Categories"), /aria-expanded="false"/);
+    assert.match(button(categoriesFolded, "Collections"), /aria-expanded="true"/);
+
+    useAppStore.getState().toggleFold("library.collections");
+    const bothFolded = rail();
+    assert.match(button(bothFolded, "Categories"), /aria-expanded="false"/);
+    assert.match(button(bothFolded, "Collections"), /aria-expanded="false"/);
+  });
+
+  it("bounds the accordion like Live so both headings and the pinned footer stay reachable", () => {
+    const html = rail();
+    assert.match(html, /<nav[^>]*><div class="flex min-h-0 flex-1 flex-col overflow-hidden">/);
+    assert.ok(html.indexOf("Categories") < html.indexOf("Collections"));
+    assert.ok(html.indexOf("</nav>") < html.indexOf("Manage collections"));
+  });
+});
 
 describe("Library rail categories", () => {
   it("applies the exact query patches for All, History and a genre", () => {

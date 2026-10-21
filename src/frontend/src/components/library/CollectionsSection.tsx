@@ -1,5 +1,5 @@
-import { NavGroup } from "@giga/ui/lists/NavGroup";
 import { NavItem } from "@giga/ui/lists/NavItem";
+import { Section } from "@giga/ui/lists/Section";
 import { SHIMMER } from "@giga/ui/lib/shimmer";
 import { useCollectionVerbs } from "@/hooks/useCollectionVerbs";
 import { cn } from "@giga/ui/lib/cn";
@@ -23,8 +23,10 @@ export interface CollectionsSectionProps {
 export function CollectionsSection({ source, collections, counts, onSource }: CollectionsSectionProps) {
   const verbs = useCollectionVerbs();
   const openCollections = useAppStore((state) => state.openCollections);
+  const open = useAppStore((state) => state.folded["library.collections"] !== true);
+  const toggleFold = useAppStore((state) => state.toggleFold);
   return (
-    <NavGroup heading="Collections">
+    <Section title="Collections" open={open} onToggle={() => toggleFold("library.collections")}>
       <NavItem selected={source === "favorites"}
         count={counts.favorites ?? <span aria-hidden className={cn(SHIMMER, "h-[9px] w-6")} />}
         onClick={() => onSource("favorites")}>
@@ -66,6 +68,6 @@ export function CollectionsSection({ source, collections, counts, onSource }: Co
               </div>
             );
           })}
-    </NavGroup>
+    </Section>
   );
 }
