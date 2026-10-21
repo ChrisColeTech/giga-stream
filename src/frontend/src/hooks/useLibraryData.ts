@@ -2,7 +2,11 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { collectionOf, matchesQuery, type LibraryQuery } from "@/lib/library-query";
 import { acceptCount } from "@/lib/library-counts";
 import { reloadDecision } from "@/lib/library-reload";
-import { startLibraryFirstPage } from "@/services/library-first-page";
+import {
+  currentLibraryRead,
+  startLibraryFirstPage,
+  type LibraryReadIdentity,
+} from "@/services/library-first-page";
 import { logLibraryPage } from "@/services/library-log";
 import { syncLibrary } from "@/services/library-refresh";
 import {
@@ -44,8 +48,19 @@ export function useLibraryData(
     { queryKey: null, serial: null });
   const refreshSerial = useAppStore((state) => state.libraryRefreshSerial);
   const signedIn = useAppStore((state) => state.signedIn);
+  const sessionId = useAppStore((state) => state.session?.id ?? null);
   const { continuing, sideReady, readSideData } = useLibrarySideData(showContinue, signedIn);
   const readSideDataEffect = useEffectEvent(readSideData);
+  const queryKey = libraryQueryKey(query);
+  const sessionIdentity = signedIn ? `signed-in:${sessionId ?? ""}` : "signed-out";
+  const renderedSession = useRef(sessionIdentity);
+  const sessionGeneration = useRef(0);
+  if (renderedSession.current !== sessionIdentity) {
+    renderedSession.current = sessionIdentity;
+    sessionGeneration.current += 1;
+  }
+  const currentReadIdentity = useRef<LibraryReadIdentity>({ queryKey, refreshSerial, sessionGeneration: 0 });
+  currentReadIdentity.current = { queryKey, refreshSerial, sessionGeneration: sessionGeneration.current };
   const pageRef = useRef<LibraryPage | null>(null);
   const pagingRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
@@ -53,22 +68,22 @@ export function useLibraryData(
   const pagesLoaded = useRef(0);
   const previousSearch = useRef(query.search);
   const previousActive = useRef(active);
-  const previousKey = useRef(libraryQueryKey(query));
+  const previousKey = useRef(queryKey);
   const previousSerial = useRef(refreshSerial);
-  const previousSignedIn = useRef(signedIn);
+  const previousSession = useRef(sessionIdentity);
   const firstPass = useRef(true);
   const replaceFirstPage = useRef(false);
   const replaceDebounced = useRef(false);
   const dirty = useRef(false);
-  const acceptFirstPage = (answer: LibraryPage, queryKey: string, serial: number): void => {
+  const acceptFirstPage = (answer: LibraryPage, answerQuery: LibraryQuery, identity: LibraryReadIdentity): void => {
     pageRef.current = answer;
     setPage(answer);
-    setAccepted({ queryKey, serial });
+    setAccepted({ queryKey: identity.queryKey, serial: identity.refreshSerial });
     firstPagePending.current = false; pagesLoaded.current = 1;
     setLoading(false);
     const store = useAppStore.getState();
     store.rememberLibraryItems(answer.items);
-    acceptCount(query, answer);
+    acceptCount(answerQuery, answer);
   };
   const refuseFirstPage = (error: unknown): void => {
     firstPagePending.current = false; setLoading(false);
@@ -76,15 +91,17 @@ export function useLibraryData(
   };
   const loadMore = (): boolean => {
     const cursor = page?.nextCursor;
-    const key = libraryQueryKey(query);
+    const key = queryKey;
     if (firstPagePending.current || !canLoadLibraryPage(accepted.queryKey, key, loading, paging, cursor)) return false;
     const generation = queryGeneration.current;
+    const identity = currentReadIdentity.current;
     const controller = new AbortController();
     pagingRequest.current?.abort();
     pagingRequest.current = controller;
     setPaging(true);
     void readLibrary(query, controller.signal, cursor).then((next) => {
-      if (generation !== queryGeneration.current || pagingRequest.current !== controller) return;
+      if (generation !== queryGeneration.current || pagingRequest.current !== controller
+        || !currentLibraryRead(identity, currentReadIdentity.current)) return;
       const merged = pageRef.current === null ? next : appendLibraryPage(pageRef.current, next);
       pageRef.current = merged;
       setPage(merged);
@@ -93,8 +110,14 @@ export function useLibraryData(
       pagesLoaded.current += 1;
       logLibraryPage(pagesLoaded.current, merged);
     }).catch((error: unknown) => {
-      if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
-    }).finally(() => { if (pagingRequest.current === controller) setPaging(false); });
+      if (generation !== queryGeneration.current || pagingRequest.current !== controller
+        || !currentLibraryRead(identity, currentReadIdentity.current) || aborted(error)) return;
+      useAppStore.getState().say(sentence(error), "warn");
+    }).finally(() => {
+      if (generation !== queryGeneration.current || pagingRequest.current !== controller
+        || !currentLibraryRead(identity, currentReadIdentity.current)) return;
+      setPaging(false);
+    });
     return true;
   };
 
@@ -104,12 +127,12 @@ export function useLibraryData(
   useEffect(() => {
     const searchChanged = previousSearch.current !== query.search;
     previousSearch.current = query.search;
-    const queryChanged = previousKey.current !== libraryQueryKey(query);
-    previousKey.current = libraryQueryKey(query);
+    const queryChanged = previousKey.current !== queryKey;
+    previousKey.current = queryKey;
     const serialChanged = previousSerial.current !== refreshSerial;
     previousSerial.current = refreshSerial;
-    const sessionChanged = previousSignedIn.current !== signedIn;
-    previousSignedIn.current = signedIn;
+    const sessionChanged = previousSession.current !== sessionIdentity;
+    previousSession.current = sessionIdentity;
     const shownNow = active && !previousActive.current;
     previousActive.current = active;
     useAppStore.getState().setLibraryQuery(query);
@@ -133,10 +156,10 @@ export function useLibraryData(
       /* First-page setup and ownership stay in this effect: its cleanup can cancel only this request. */
       pageRef.current = null; setPage(null);
       setLoading(true);
-      const queryKey = libraryQueryKey(query);
+      const identity = currentReadIdentity.current;
       cleanup = startLibraryFirstPage({
-        query, debounce,
-        accept: (answer) => acceptFirstPage(answer, queryKey, refreshSerial),
+        query, debounce, identity, currentIdentity: () => currentReadIdentity.current,
+        accept: (answer) => acceptFirstPage(answer, query, identity),
         refuse: refuseFirstPage,
       });
     }
@@ -146,7 +169,7 @@ export function useLibraryData(
       replaceFirstPage.current = true;
       replaceDebounced.current = debounce;
     };
-  }, [query, refreshSerial, active, ready, signedIn]);
+  }, [query, queryKey, refreshSerial, active, ready, sessionIdentity]);
   useEffect(() => () => {
     queryGeneration.current += 1;
     const request = pagingRequest.current;
@@ -163,7 +186,7 @@ export function useLibraryData(
   const filtered = source.filter((item) => item.progress?.state === "watching" && matchesQuery({
     ...item, collectionIds: [], collectionSources: {},
   }, query) && (query.source !== "favorites" || item.favorite));
-  const hasMore = canLoadLibraryPage(accepted.queryKey, libraryQueryKey(query), loading, paging, page?.nextCursor);
+  const hasMore = canLoadLibraryPage(accepted.queryKey, queryKey, loading, paging, page?.nextCursor);
   return {
     page, continuing: filtered, loading, paging, hasMore, loadMore,
     refresh: (): void => { void syncLibrary(readSideData); },

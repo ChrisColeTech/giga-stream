@@ -12,8 +12,16 @@ export interface LibraryFirstPageSeams {
 export interface LibraryFirstPageSetup {
   readonly query: LibraryQuery;
   readonly debounce: boolean;
+  readonly identity: LibraryReadIdentity;
+  readonly currentIdentity: () => LibraryReadIdentity;
   readonly accept: (answer: LibraryPage) => void;
   readonly refuse: (error: unknown) => void;
+}
+
+export interface LibraryReadIdentity {
+  readonly queryKey: string;
+  readonly refreshSerial: number;
+  readonly sessionGeneration: number;
 }
 
 const SEAMS: LibraryFirstPageSeams = {
@@ -22,6 +30,11 @@ const SEAMS: LibraryFirstPageSeams = {
   cancel: (handle) => window.clearTimeout(handle),
 };
 const aborted = (error: unknown): boolean => error instanceof DOMException && error.name === "AbortError";
+
+export function currentLibraryRead(captured: LibraryReadIdentity, current: LibraryReadIdentity): boolean {
+  return captured.queryKey === current.queryKey && captured.refreshSerial === current.refreshSerial
+    && captured.sessionGeneration === current.sessionGeneration;
+}
 
 /** Starts one effect-owned immediate or debounced read. Cleanup answers whether it cancelled unsettled work. */
 export function startLibraryFirstPage(
@@ -37,11 +50,12 @@ export function startLibraryFirstPage(
     controller = new AbortController();
     const owned = controller;
     void seams.read(setup.query, owned.signal).then((answer) => {
-      if (!live || controller !== owned) return;
+      if (!live || controller !== owned || !currentLibraryRead(setup.identity, setup.currentIdentity())) return;
       settled = true;
       setup.accept(answer);
     }).catch((error: unknown) => {
-      if (!live || controller !== owned || aborted(error)) return;
+      if (!live || controller !== owned || aborted(error)
+        || !currentLibraryRead(setup.identity, setup.currentIdentity())) return;
       settled = true;
       setup.refuse(error);
     });
