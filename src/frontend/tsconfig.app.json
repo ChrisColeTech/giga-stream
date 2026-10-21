@@ -29,10 +29,12 @@
     "paths": {
       "@/*": ["./src/*"],
       "@giga/ui/*": ["../shared/ui/src/*"],
-      "@giga/http/*": ["../shared/http/src/*"]
+      "@giga/http/*": ["../shared/http/src/*"],
+      "@giga/watch/*": ["../shared/watch/src/*"]
     }
   },
-  /* The family library and the request layer are part of this program: their files take this JSX and path setup, and
-     the test runner (tsx) applies a tsconfig's options only to the files its include matches (docs/27 section 3). */
-  "include": ["src", "../shared/ui/src", "../shared/http/src"]
+  /* The family library, the request layer and the shared watch semantics are part of this program: their files take
+     this JSX and path setup, and the test runner (tsx) applies a tsconfig's options only to the files its include
+     matches (docs/27 section 3). */
+  "include": ["src", "../shared/ui/src", "../shared/http/src", "../shared/watch/src"]
 }

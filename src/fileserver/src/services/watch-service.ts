@@ -4,6 +4,9 @@ import type { WatchEntry, WatchWrite } from "../types/watch.js";
 import type { ItemKind } from "../store/collection-repository.js";
 import type { FavoritesRepository } from "../store/favorites-repository.js";
 import type { WatchRepository } from "../store/watch-repository.js";
+// The watchedPercent rule is the shared library's (docs/61 section 2.5); the fileserver and the
+// interface must not be able to drift apart on it.
+import { clampPosition, entryState } from "../../../shared/watch/dist/threshold.js";
 
 const kinds: readonly ItemKind[] = ["title", "local"];
 
@@ -11,6 +14,21 @@ const kinds: readonly ItemKind[] = ["title", "local"];
 const PLAYBACKS_REMEMBERED = 512;
 
 const notFound = (): AppError => new AppError("watch.not_found", 404, "There is no such watch entry.");
+
+/**
+ * A store row as the DTO the routes answer (3.13). Shared with the library lists, which select on
+ * the same entries through `src/shared/watch`: one mapping, one shape.
+ */
+export const entryOf = (row: ReturnType<WatchRepository["upsert"]>): WatchEntry => ({
+  watchId: row.id,
+  item: { kind: row.itemKind, id: row.itemId },
+  ...(row.season !== undefined && { season: row.season }),
+  ...(row.episode !== undefined && { episode: row.episode }),
+  positionMs: row.positionMs,
+  ...(row.durationMs !== undefined && { durationMs: row.durationMs }),
+  state: row.state,
+  updatedAt: row.updatedAt,
+});
 
 const isKind = (value: string): value is ItemRef["kind"] => kinds.includes(value as ItemRef["kind"]);
 
@@ -59,17 +77,6 @@ export function createWatchService(deps: {
   /** The last applied seq of each playback, in memory only (03 section 3.13's ordering rule). */
   const lastSeqByPlayback = new Map<string, number>();
 
-  const entryOf = (row: ReturnType<WatchRepository["upsert"]>): WatchEntry => ({
-    watchId: row.id,
-    item: { kind: row.itemKind, id: row.itemId },
-    ...(row.season !== undefined && { season: row.season }),
-    ...(row.episode !== undefined && { episode: row.episode }),
-    positionMs: row.positionMs,
-    ...(row.durationMs !== undefined && { durationMs: row.durationMs }),
-    state: row.state,
-    updatedAt: row.updatedAt,
-  });
-
   return {
     write(input) {
       const playback = input.playbackId;
@@ -91,11 +98,10 @@ export function createWatchService(deps: {
         const oldest = lastSeqByPlayback.keys().next();
         if (!oldest.done) lastSeqByPlayback.delete(oldest.value);
       }
-      // A position past a known end is the end (a player's last tick can overshoot by a frame).
-      const position =
-        input.durationMs === undefined ? input.positionMs : Math.min(input.positionMs, input.durationMs);
-      const over = input.durationMs !== undefined && position >= (input.durationMs * watchedPercent()) / 100;
-      const state = existing?.state === "watched" || over ? "watched" : "watching";
+      // The position and the state are the shared semantics (docs/61 section 2.5): the clamp, the
+      // sticky `watched` and the `watchedPercent` threshold read at this write.
+      const position = clampPosition(input.positionMs, input.durationMs);
+      const state = entryState(existing?.state, position, input.durationMs, watchedPercent());
       const row = watches.upsert({
         id: existing?.id ?? randomId(),
         kind: input.item.kind,

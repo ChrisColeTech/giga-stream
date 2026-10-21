@@ -22,9 +22,10 @@ surfaces stay mounted for the life of the session. There are no routes (`04`).
 | far left | **Left-pane toggle** | Shows or hides the active surface's left pane; pressed (accent outline) while it is shown; restores the committed size. A ghost icon button, transparent at rest (owner, 2026-10-17, matching Giga Cut's pane toggles). Tooltip "Toggle the left pane" |
 | left | **Brand** | A small accent icon tile and a two-line mono wordmark, `GIGA / STREAM` |
 | centre | **Live / Library / Player** | A recessed rounded track with a sliding chip; the active surface is the chip. The only navigation between surfaces |
-| right | **Theatre** | Giga Cut's Export slot (owner, 2026-10-17): a ghost icon-and-text button beside the pane toggles. Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the left, right and bottom panes of EVERY surface collapse (one change, so the saved layout follows it). Pressing again leaves it by turning the lights back on and nothing else: the colours return, and no pane is touched or restored — a pane stays collapsed until its own toggle opens it (owner, 2026-10-17: "coming out of theatre mode it should only turn on the lights"). After 5 seconds without mouse movement or input in Theatre, the contents of both bars fade out (the bars keep their size and black), and any mouse, key, wheel or touch activity brings them back. Pressed (accent) while on; Theatre itself is not persisted — a fresh window always starts normal |
+| right | **Theatre** | An icon-only ghost `IconButton` using `MonitorPlay`, with the tooltip and accessible label `Theatre mode` (owner, 2026-10-20). Pressing it enters Theatre mode: the titlebar's and statusbar's backgrounds and borders turn black and the left, right and bottom panes of EVERY surface collapse (one change, so the saved layout follows it). Pressing again leaves it by turning the lights back on and nothing else: the colours return, and no pane is touched or restored — a pane stays collapsed until its own toggle opens it (owner, 2026-10-17: "coming out of theatre mode it should only turn on the lights"). After 5 seconds without mouse movement or input in Theatre, the contents of both bars fade out (the bars keep their size and black), and any mouse, key, wheel or touch activity brings them back. `aria-pressed` and the titlebar's outlined/accent on-state show when it is active; Theatre itself is not persisted — a fresh window always starts normal |
 | right | **Bottom-pane toggle** | Player's related band. On a surface with no bottom pane it stays in place, disabled, with the reason as its tooltip. Ghost, as the other pane toggles |
 | right | **Right-pane toggle** | Shows or hides the active surface's right pane. Ghost, as the other pane toggles |
+| right | **Account** | Beside Theatre, an icon-only ghost user `IconButton` with an accessible label and tooltip (owner, 2026-10-20; `65`). Signed out it opens the family auth wall. Signed in it opens the standard shared menu popup, never an authored `PopupPanel`, with exactly `Account` and `Logout`; Account opens the profile child window only after the menu closes, and Logout returns to Live and clears the browser's owned local state. While signed out the app keeps no watch history, and the Library rail hides History, Favorites, Collections and Manage collections; Continue and History strips are unrendered. Per-item favorite hearts stay, visibly disabled with their reason |
 | far right | **Window controls** | Minimize, maximize or restore, close, in the platform's own caption metrics, through named preload capabilities. On Windows the caption strip follows the theme (owner, 2026-10-17): the page sends the strip its panel and text tones — read from the same tokens a theme switch or Theatre's remap changes — and a height that tracks the UI zoom, without which the fixed strip slid past the zoomed bar |
 
 - The titlebar is a window drag region; its buttons are not.
@@ -125,8 +126,8 @@ panes to them without a tween, and becomes visible two animation frames later, o
    that turns and a title; the whole header row folds the body; the fold state is kept in the store by id and
    survives a surface switch. The fold honours Reduce motion. Open sections share the rail's height and each
    scrolls inside its own share (the family accordion's grow model); in a short rail that leaves space under
-   the open sections, which is the model working, not a gap to fill. The Library rail is the exception: it is
-   `NavRail` (Sensenova's), whose Views and Collections groups are headed lists that do not fold.
+   the open sections, which is the model working, not a gap to fill. The Library rail uses the same shared
+   `Section` accordion as Live; Categories and Collections fold independently and keep their fold state.
 9. **Destructive actions are an inline two-step** (`ArmedButton`, `01` section 9), never a dialog.
 10. **No dots.** A state is a word, a left-edge accent strip, or a shimmer where a value is still arriving.
 
@@ -258,24 +259,29 @@ tooltip, until one plays. Volume, mute and fullscreen are on the player and are 
 
 ```
 ┌──────────────────┬────────────────────────────────┬──────────────────┐
-│ Collections      │ All · Movies · TV · Local  ⟳ ⌕ │ Filter           │
+│ Categories       │ All · Movies · TV · Local  ⟳ ⌕ │ Filter           │
 │ All              │ Continue Watching              │ View · Sort      │
-│ History          │ Poster grid or list            │ Genre · Year     │
-│ Favorites        │                                │ Watched          │
-│ the collections  │                                │                  │
+│ the genres       │ Poster grid or list            │ Genre · Year     │
+│ History          │                                │ Watched          │
+│ Favorites + collections                          │                  │
 │ Manage collections                                                   │
 └──────────────────┴────────────────────────────────┴──────────────────┘
 ```
 
 ### 4.1 Collections (left)
 
-The family's `NavRail`, as Sensenova has it: two headed groups of one row style, a flat list and not a tree.
-The groups do not fold (§2.8's exception).
+The family's `NavRail`, as Sensenova has it: two shared `Section` groups of one row style, a flat list and not a
+tree. Categories and Collections fold independently through the UI kit's `@giga/ui/lists/Section`, exactly as
+Live's playback sections do, and their fold state survives surface switches.
+
+The rows inside each Section are one contiguous full-width stack using the same active-link treatment as the Settings
+rail: accent left edge, control fill and accent text. The Section's form-body padding and row gap do not inset or
+separate navigation links.
 
 | Group | Rows |
 |---|---|
-| **Views** | All, History, Favorites, in that order |
-| **Collections** | every collection, alphabetical |
+| **Categories** | All, then the available genre facets; while signed in, History remains an account view before the genres |
+| **Collections** | while signed in, Favorites first, then every user collection alphabetically; the whole group is hidden signed out |
 
 **Row**
 
@@ -285,11 +291,16 @@ The groups do not fold (§2.8's exception).
 | Count | the view's or collection's item count, mono, at the trailing edge |
 | Scanning | while any folder attached to the collection scans, the count is a shimmer pill the width of a three-digit count (loading is a skeleton, and the edge does not jump when the number lands); the partial count, `Scanning folders · N videos so far`, is the row's tooltip, and `Scanning folders` is announced. Never a dot or a spinner |
 | Selected | the accent bar on the row's left edge and the control fill; selecting a row narrows the body |
-| Context menu | on a collection: **Attach folder…** (acts here, so a folder is one press away), then **Rename…** and **Remove…**, which open the Collections window on that collection's workspace, where the name field and the two-step live. Neither is danger here: nothing is removed until the window's own two-step. All, History and Favorites have none |
+| Context menu | on a user collection: **Attach folder…** (acts here, so a folder is one press away), then **Rename…** and **Remove…**, which open the Collections window on that collection's workspace, where the name field and the two-step live. Neither is danger here: nothing is removed until the window's own two-step. All, genres, History and Favorites have none |
 
 - **Footer.** One full-width ghost **Manage collections** button with a folder-cog icon, pinned in a strip
   under a hairline. It opens the Collections window on its index; creating a collection is that window's first
   group. There is no separate New collection or Add Folder button.
+- **Genre rows.** The rows come from the current Library answer's genre facets. Selecting one changes the source to
+  All and applies that one Genre filter; selecting All clears the Genre filter. A multi-genre choice made in the
+  filter pane leaves no single genre row selected. Genre rows have no invented counts. The last accepted genre
+  vocabulary stays mounted while a changed query loads, so selecting a category never collapses and rebuilds the
+  whole Categories list; selected values are merged into that vocabulary until the next accepted facet answer.
 - **States.** With no collections the group draws 5 row skeletons in the row's shape. If the list cannot be
   read, the last rows stay and one notice says why.
 

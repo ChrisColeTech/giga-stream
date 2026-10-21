@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -24,7 +23,7 @@ async function boot(channels: FakeChannel[] = SET) {
 
 const idsOf = (body: unknown): string[] => (pick(body, "data.items") as Array<{ id: string }>).map((one) => one.id);
 
-test("the sync asks only the public channel list: no stream address, no Authorization, no cookie", async () => {
+test("the sync reads only the channel tables and makes no admin API request", async () => {
   const { backend, t } = await boot();
   await syncChannels(t);
   await send(t.app, "GET", "/api/channels");
@@ -34,11 +33,11 @@ test("the sync asks only the public channel list: no stream address, no Authoriz
 
   assert.ok(backend.calls.length >= 2);
   for (const call of backend.calls) {
-    assert.equal(call.url, `${FAKE_ADMIN_URL}/api/channels`, "never a stream URL");
+    assert.equal(call.url, `${FAKE_ADMIN_URL}/database/channels`, "never a stream URL");
     assert.notEqual(call.url, streamOf("a"));
     assert.equal(call.headers.get("authorization"), null);
     assert.equal(call.headers.get("cookie"), null);
-    assert.equal(call.credentials, "omit");
+    assert.equal(call.credentials, undefined);
   }
   await t.dispose();
 });
@@ -51,7 +50,7 @@ test("a channel the backend unpublishes is swept, and so is a last channel that 
 
   backend.publish([SET[0] as FakeChannel, SET[1] as FakeChannel]);
   const refreshed = await syncChannels(t);
-  assert.deepEqual(idsOf(refreshed.body), ["a", "b"]);
+  assert.deepEqual(idsOf(refreshed.body), ["b", "a"]);
   assert.equal(pick(refreshed.body, "data.revision"), 2);
   const state = await send(t.app, "GET", "/api/state");
   assert.equal(pick(state.body, "data.lastChannelId"), undefined);
@@ -59,42 +58,17 @@ test("a channel the backend unpublishes is swept, and so is a last channel that 
   await t.dispose();
 });
 
-test("a changed adminUrl purges the cache and the next read starts cold from the new backend", async () => {
-  const { backend, t } = await boot();
-  await syncChannels(t);
-  backend.publish([{ id: "z", name: "Zeta" }]);
-  await pointAt(t, "http://127.0.0.1:4848");
-
-  const read = await send(t.app, "GET", "/api/channels");
-  assert.deepEqual(idsOf(read.body), ["z"], "nothing of the old backend is left");
-  assert.equal(backend.calls.at(-1)?.url, "http://127.0.0.1:4848/api/channels");
-
-  backend.setDown(true);
-  await pointAt(t, "http://127.0.0.1:4949");
-  const empty = await send(t.app, "GET", "/api/channels");
-  assert.equal(empty.status, 200);
-  assert.deepEqual(idsOf(empty.body), [], "the old rows were purged, not served for the new address");
-  assert.equal(pick((await send(t.app, "GET", "/api/state")).body, "data.backend.connected"), false);
-  await t.dispose();
-});
-
-test("quitting aborts a sync in flight and nothing is written afterwards", async () => {
-  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-quit-"));
+test("a changed Turso source purges the cache and starts cold", async () => {
+  const dataDir = mkdtempSync(path.join(os.tmpdir(), "giga-source-"));
   const backend = fakeBackend(SET);
-  const t = await makeApp({ dataDir, adminFetch: backend.fetch });
-  await pointAt(t, FAKE_ADMIN_URL);
-  backend.setStalled(true);
-  const pending = syncChannels(t);
-  while (backend.calls.length === 0) await new Promise((resolve) => setImmediate(resolve));
-
-  await t.dispose();
-  assert.equal((await pending).status, 503);
-
-  const db = new DatabaseSync(path.join(dataDir, "giga-stream.db"), { readOnly: true });
-  const state = db.prepare("SELECT synced_at, error_code FROM cache_state WHERE dataset = 'channels'").get();
-  assert.deepEqual({ ...state }, { synced_at: null, error_code: null }, "an attempt was stamped; no result was");
-  assert.deepEqual({ ...db.prepare("SELECT COUNT(*) AS n FROM cached_channels").get() }, { n: 0 });
-  db.close();
+  const first = await makeApp({ dataDir, adminFetch: backend.fetch, tursoDatabaseUrl: "test://one" });
+  await syncChannels(first);
+  await first.dispose();
+  backend.publish([{ id: "z", name: "Zeta" }]);
+  const second = await makeApp({ dataDir, adminFetch: backend.fetch, tursoDatabaseUrl: "test://two" });
+  const read = await send(second.app, "GET", "/api/channels");
+  assert.deepEqual(idsOf(read.body), ["z"]);
+  await second.dispose();
   rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -132,7 +106,7 @@ test("the channel mapper picks named fields and prefers the backend's cached log
     playlistName: "P",
     enabled: true,
   };
-  const row = channelRowOf(incoming, 4, "http://127.0.0.1:4747");
+  const row = channelRowOf({ ...incoming, cachedLogoUrl: "http://127.0.0.1:4747/logos/c/x.png" }, 4);
   assert.deepEqual(row, {
     id: "x",
     position: 4,
@@ -143,6 +117,6 @@ test("the channel mapper picks named fields and prefers the backend's cached log
     streamUrl: "http://s.example.test/x.m3u8",
     revision: 5,
   });
-  const plain = channelRowOf({ ...incoming, cachedLogoUrl: "" }, 0, "http://127.0.0.1:4747");
+  const plain = channelRowOf({ ...incoming, cachedLogoUrl: "" }, 0);
   assert.equal(plain.logoUrl, "https://img.example.test/x.png");
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_QUERY, type LibraryQuery, type ListView } from "@/lib/library-query";
+import { DEFAULT_QUERY, sourceForSession, type LibraryQuery, type ListView } from "@/lib/library-query";
 import { restoredQuery, savedChange } from "@/lib/library-restore";
 import { useAppStore } from "@/store/app-store";
 
@@ -27,16 +27,30 @@ export interface SavedLibraryQuery {
 export function useSavedLibraryQuery(): SavedLibraryQuery {
   const hydrated = useAppStore((state) => state.hydrationApplied);
   const ready = useAppStore((state) => state.shellVisible);
+  const signedIn = useAppStore((state) => state.signedIn);
   const [query, setQuery] = useState<LibraryQuery>(savedQuery);
   const [view, setView] = useState<ListView>(() => useAppStore.getState().library.libraryView);
 
   /* The snapshot lands after this mounts: take the saved filters then, the saved Filter text included, unless the person
-     has already typed one. */
+   * has already typed one. */
   useEffect(() => {
     if (!hydrated) return;
     const saved = savedQuery();
-    setQuery((current) => ({ ...saved, search: current.search !== "" ? current.search : saved.search }));
+    setQuery((current) => ({
+      ...saved,
+      source: sourceForSession(saved.source, useAppStore.getState().signedIn),
+      search: current.search !== "" ? current.search : saved.search,
+    }));
   }, [hydrated]);
+
+  /* A session that ends under the app leaves the account's views: out of History, out of any collection. */
+  useEffect(() => {
+    if (signedIn) return;
+    setQuery((current) => {
+      const source = sourceForSession(current.source, signedIn);
+      return source === current.source ? current : { ...current, source };
+    });
+  }, [signedIn]);
 
   const patch = useCallback((change: Partial<LibraryQuery>) => {
     setQuery((current) => ({ ...current, ...change }));
@@ -52,5 +66,7 @@ export function useSavedLibraryQuery(): SavedLibraryQuery {
     if (store.hydrationApplied && store.library.libraryView !== next) store.setLibraryPrefs({ libraryView: next });
   }, []);
 
-  return { query, view, ready, patch, setView, changeView };
+  const availableSource = sourceForSession(query.source, signedIn);
+  const availableQuery = availableSource === query.source ? query : { ...query, source: availableSource };
+  return { query: availableQuery, view, ready, patch, setView, changeView };
 }

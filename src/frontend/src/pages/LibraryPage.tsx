@@ -9,8 +9,9 @@ import type { Reveal } from "@/components/library/WindowedRows";
 import { LibraryRows } from "@/components/library/rows/LibraryRows";
 import { TitleSpotlight } from "@/components/library/TitleSpotlight";
 import { useTitleSpotlight } from "@/hooks/useTitleSpotlight";
-import { clearWatchHistory, removeWatchEntry } from "@/components/library/library-service";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { useLibraryData } from "@/hooks/useLibraryData";
+import { useGenreOptions } from "@/hooks/useGenreOptions";
 import { useRowsShelves } from "@/hooks/useRowsShelves";
 import { useLibraryRequest } from "@/hooks/useLibraryRequest";
 import { useSavedLibraryQuery } from "@/hooks/useSavedLibraryQuery";
@@ -24,14 +25,15 @@ import {
   type HistoryMarks,
   type ResolvedItem,
 } from "@/lib/library-marks";
-import type { SourceId } from "@/lib/library-query";
 import { groupQuery, type ShelfGroup } from "@/lib/rows-shelves";
 import { libraryRenderState, shownItems } from "@/lib/library-render-state";
 import { useAppStore } from "@/store/app-store";
 
 export function LibraryPage({ active }: { active: boolean }) {
+  const actions = useLibraryActions();
   const prefs = useAppStore((state) => state.library);
   const marks = useAppStore((state) => state.marks);
+  const signedIn = useAppStore((state) => state.signedIn);
   const collections = useAppStore((state) => state.collections).map(collectionRow);
   const counts = useAppStore((state) => state.libraryCounts);
   const { query, view, ready, patch, setView, changeView } = useSavedLibraryQuery();
@@ -51,7 +53,6 @@ export function LibraryPage({ active }: { active: boolean }) {
   useEffect(() => { if (view === "rows") setReveal(null); }, [view, reveal]);
   useLibraryRequest({ patch, setView, setSelected, setReveal });
   const spotlight = useTitleSpotlight(active);
-  const onSource = (source: SourceId): void => patch({ source });
   const onSeeAll = useCallback((group: ShelfGroup): void => {
     patch(groupQuery(group));
     setView("grid");
@@ -60,24 +61,24 @@ export function LibraryPage({ active }: { active: boolean }) {
   const onRemoveWatch = useCallback((item: ResolvedItem): void => {
     if (item.watchId === undefined) return;
     const watchId = item.watchId;
-    void removeWatchEntry(
+    void actions.removeWatch(
       watchId,
       () => setHistory((current) => withRemoved(current, watchId)),
       () => setHistory((current) => withRestored(current, watchId)),
     );
-  }, []);
+  }, [actions]);
   const onClearHistory = useCallback((): void => {
     let previous = NO_HISTORY;
-    void clearWatchHistory(
+    void actions.clearHistory(
       () => setHistory((current) => {
         previous = current;
         return withCleared(items.flatMap((item) => item.watchId === undefined ? [] : [item.watchId]));
       }),
       () => setHistory(previous),
     );
-  }, [items]);
+  }, [actions, items]);
   const rows = view === "rows";
-  const genres = [...new Set([...(data.page?.facets.genres ?? []), ...query.genres])];
+  const genres = useGenreOptions(data.page?.facets.genres ?? null, query.genres);
   const years = [...new Set([
     ...(data.page?.facets.years ?? []), ...(query.year === "" ? [] : [Number(query.year)]),
   ])].sort((a, b) => b - a);
@@ -91,7 +92,8 @@ export function LibraryPage({ active }: { active: boolean }) {
     />
   );
   const rowsShelves = useRowsShelves({
-    enabled: rows && active, query, data, collections, history, showContinue: prefs.showContinue && query.source !== "history",
+    enabled: rows && active, query, data, collections, history,
+    showContinue: prefs.showContinue && signedIn && query.source !== "history",
   });
   const center = rows ? (
     <LibraryRows
@@ -102,7 +104,8 @@ export function LibraryPage({ active }: { active: boolean }) {
     />
   ) : (
     <LibraryBody
-      scope={query.scope} source={query.source} showContinue={prefs.showContinue} view={view} items={items}
+      scope={query.scope} source={query.source} signedIn={signedIn} showContinue={prefs.showContinue}
+      view={view} items={items}
       shown={shown} continuing={continuing} collections={collections} selected={selected} toolbar={toolbar}
       onSelect={setSelected} onRemoveWatch={onRemoveWatch} onClearHistory={onClearHistory}
       loading={data.loading}
@@ -115,7 +118,11 @@ export function LibraryPage({ active }: { active: boolean }) {
     <>
       <WorkspaceSplit
         surface="library" active={active}
-        left={<LibraryRail source={query.source} counts={counts} collections={collections} onSource={onSource} />}
+        left={
+          <LibraryRail
+            query={query} signedIn={signedIn} counts={counts} collections={collections} genres={genres} onQuery={patch}
+          />
+        }
         center={center}
         right={filters}
       />

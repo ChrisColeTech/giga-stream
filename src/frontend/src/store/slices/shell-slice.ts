@@ -9,7 +9,7 @@ import type { AppState } from "@/store/app-store";
 import type { Box } from "@/types/child-window";
 import type { EventArea } from "@/types/events";
 import type { ItemRef } from "@/types/library";
-import type { OverlayId, PopupAnchor } from "@/types/overlays";
+import type { OverlayId } from "@/types/overlays";
 import type { MotionPreference, PaneKey, PaneSide, Surface, ThemeMode } from "@/types/shell";
 import { createChromeSlice, type ChromeSet } from "@giga/ui/store/chrome-slice";
 import type { ChromeKinds, ChromeSlice } from "@giga/ui/store/chrome-types";
@@ -19,7 +19,7 @@ import { clampZoom } from "@giga/ui/lib/settings-zoom";
 export interface ShellKinds extends ChromeKinds {
   area: EventArea;
   overlay: OverlayId;
-  anchor: PopupAnchor;
+  anchor: never;
   item: ItemRef;
   box: Box;
 }

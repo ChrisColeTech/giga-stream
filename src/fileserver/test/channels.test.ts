@@ -1,25 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { makeApp, pick, pointAt, send, startBackend } from "./app-fixture.js";
+import { makeApp, pick, send } from "./app-fixture.js";
+import { fakeBackend } from "./fake-backend.js";
 
-// The one real backend this file shares, booted once and closed after the file.
-const backend = await startBackend();
+const channels = [
+  { id: "fx-news", name: "News", number: "1", category: "News" },
+  { id: "fx-sports", name: "Sports", number: "2", category: "Sports" },
+  { id: "fx-music", name: "Music", number: "3", category: "Music" },
+  { id: "fx-kids", name: "Kids", number: "4", category: "Kids" },
+];
 
-test("a refresh fills the cache from the real backend and answers the seeded channels in its order", async () => {
-  const t = await makeApp();
-  await pointAt(t, backend.url);
+async function boot() {
+  const backend = fakeBackend(channels);
+  return makeApp({ adminFetch: backend.fetch });
+}
+
+test("a refresh fills the cache from Turso and answers published channels in order", async () => {
+  const t = await boot();
 
   const refresh = await send(t.app, "POST", "/api/channels/refresh");
   assert.equal(refresh.status, 200);
-  assert.equal(pick(refresh.body, "data.revision"), 4, "four seeded channels, each raising the revision");
+  assert.equal(pick(refresh.body, "data.revision"), 1);
   const items = pick(refresh.body, "data.items") as Array<Record<string, unknown>>;
   assert.equal(items.length, 4);
-  const published = (await (await fetch(`${backend.url}/api/channels`)).json()) as { data: { items: Array<{ id: string }> } };
   assert.deepEqual(
     items.map((channel) => channel.id),
-    published.data.items.map((channel) => channel.id),
-    "the cache keeps the backend's order (docs/03 section 3.4)",
+    ["fx-news", "fx-sports", "fx-music", "fx-kids"],
+    "the cache keeps the SQL publication order",
   );
   assert.ok(items.some((channel) => channel.id === "fx-news" && channel.number === "1"));
   for (const channel of items) {
@@ -33,8 +41,7 @@ test("a refresh fills the cache from the real backend and answers the seeded cha
 });
 
 test("q and category narrow the answer while the categories still count the whole view", async () => {
-  const t = await makeApp();
-  await pointAt(t, backend.url);
+  const t = await boot();
   await send(t.app, "POST", "/api/channels/refresh");
 
   const byName = await send(t.app, "GET", "/api/channels?q=news");
@@ -52,8 +59,7 @@ test("q and category narrow the answer while the categories still count the whol
 });
 
 test("the last channel round-trips through the cached channels", async () => {
-  const t = await makeApp();
-  await pointAt(t, backend.url);
+  const t = await boot();
   await send(t.app, "POST", "/api/channels/refresh");
 
   const remembered = await send(t.app, "PATCH", "/api/channels/last", { channelId: "fx-news" });

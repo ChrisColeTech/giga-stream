@@ -128,7 +128,12 @@ The store performs no I/O and holds no promise, timer, DOM node or media element
    `PATCH /api/shell-state`, 400 ms after the last change.
 7. A later state read never re-applies the saved shell; it would undo what changed since.
 
-The interface never reads or writes browser storage.
+Persistence is account-centric (owner, 2026-10-20, plan `63`): an unregistered visitor keeps the **device's**
+local persistence for layout and settings - the desktop's fileserver rows, the browser's local stores of `61` -
+but no watch history is kept at all, and no history/collections surfaces render; favorites are disabled with
+their reason. A registered visitor persists history, collections, favorites and settings to the account. The
+local stores keep the signed-out shell/settings homes and the signed-in settings mirror (`61` § 2.3 as amended
+by `63` § 3.3); the local watch store is gone.
 
 ## 3. Live
 

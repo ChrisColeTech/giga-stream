@@ -1,5 +1,5 @@
 /** The cached titles' shapes (docs/46 sections A and B). Display and load fields only: never a stream address or sources. */
-import type { TitleKind, TitleSort } from "../services/admin-titles.js";
+import type { TitleKind, TitleSort } from "../store/admin-title-repository.js";
 
 /** One season of a series as the cache keeps it: the count shown in the Player's season list. */
 export interface SeasonCount {

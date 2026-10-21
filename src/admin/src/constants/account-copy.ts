@@ -2,10 +2,11 @@
  * component, so a refusal reads the same wherever it shows. */
 
 /** The rows' labels, so each page fixes its label column once. The identity first on every form: the username
- *  (an account has no name, owner, 2026-10-17). */
-export const NEW_ACCOUNT_LABELS: readonly string[] = ["Username", "Password"];
+ *  (an account has no name, owner, 2026-10-17), the kind beside it (`62` section 3.7). */
+export const NEW_ACCOUNT_LABELS: readonly string[] = ["Username", "Kind", "Password"];
 export const WORKSPACE_LABELS: readonly string[] = [
   "Username",
+  "Kind",
   "Enabled",
   "Last sign-in",
   "Security question",
@@ -25,8 +26,15 @@ export const PASSWORD_TIP = "Up to 256 characters. A space counts. It is never s
 export const NEW_PASSWORD_TIP = "Up to 256 characters. Setting it signs the account out everywhere.";
 export const ENABLED_TIP = "A disabled account cannot sign in.";
 export const LAST_SIGN_IN_TIP = "When this account last signed in.";
+export const KIND_TIP = "An admin signs in to this console; a user only to the app.";
 export const DELETE_TITLE = "Deletes the account and ends its sessions.";
 export const SET_PASSWORD_TIP = "Signs this account out everywhere";
+
+/** The kind's two words, as the chips hold them (`62` section 3.7). Admin first: it is the default. */
+export const KIND_CHOICES = [
+  { value: "admin", label: "Admin" },
+  { value: "user", label: "User" },
+] as const;
 
 /* The Security question group (docs/54 section 2): the words. A question is set on the selected account by the
  * signed-in admin; the group's badge carries the account's flag. */

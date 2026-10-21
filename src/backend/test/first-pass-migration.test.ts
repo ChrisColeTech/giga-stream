@@ -46,7 +46,7 @@ test("024 clears the playlist jobs' last run and leaves the catalog job and ever
     (await createStore(file)).close();
     const db = await openTestDatabase(file);
     try {
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 32 }]);
       const jobs = await queryRows(db, "SELECT id, type, enabled, schedule, last_run_at, last_result, last_counts FROM sync_jobs ORDER BY id");
       assert.deepEqual(jobs, [
         { id: 1, type: "playlist", enabled: 1, schedule: "24h", last_run_at: null, last_result: "ok", last_counts: '{"created":0}' },

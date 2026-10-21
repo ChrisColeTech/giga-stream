@@ -5,6 +5,12 @@ export const LIBRARY_COPY = {
   noItem: "No title is open.",
   favorite: "Favorite",
   unfavorite: "Unfavorite",
+  /** Why a favourite press cannot be honoured: a signed-out browser has no home for favourites (`62` section 3.6). */
+  favoritesSignedOut: "Sign in to keep favorites.",
+  /** Why the history controls cannot be used signed out: nothing is tracked (`63` sections 3.3 and 3.4). */
+  historySignedOut: "Sign in to keep history.",
+  /** Why the collections controls cannot be used signed out: the account owns collections. */
+  collectionsSignedOut: "Sign in to keep collections.",
   removeWatch: "Remove from History",
   clearIdle: "Clear history",
   clearArmed: "Clear all history?",

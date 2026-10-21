@@ -34,8 +34,8 @@ what is in `01`; what the interface does with it is in `02` and `06`. Which phas
 There are two servers, and they are separate programs:
 
 - **The fileserver** (Part A) serves the interface. Every route the interface calls is a fileserver
-  route. It keeps your own data (settings, layout, collections, favorites, watch history, your own video
-  files) and reads the backend's channels and titles live, without storing them.
+  route. It keeps device-local data and reads the admin Turso database directly for channels, titles and
+  account data. Its only admin API data call is the provider read (`64`).
 - **The admin backend** (Part B) holds the channels, and is the app's window onto TMDB's titles (`11`):
   it browses, searches and describes them, and gives each movie and episode its stream address from a
   rule. Only the fileserver reads from it; a signed-in admin changes the channels.
@@ -66,7 +66,12 @@ bind `127.0.0.1` unless `HOST` says otherwise.
 interface, default `src/frontend/dist`; point it at `src/mockup` to serve the proof of concept of `14`),
 `ALLOW_INSECURE_ADMIN` (accept a plain `http` admin address off loopback; development only),
 `TEST_FOLDER_ROOT` (tests only: lets a browser run choose a folder under this root without Electron's
-picker), `GIGA_APP_URL` (desktop shell only: the page the window loads).
+picker), `GIGA_APP_URL` (desktop shell only: the page the window loads),
+`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (the admin database; required for direct admin reads), `JWT_SECRET`
+(account sessions), `ADMIN_MEDIA_TARGET` (optional `/live` and `/logos` byte origin),
+`REQUIRE_ACCOUNT_WRITES` (deployment only, plan `62` wave 0: set on a public deployment, it makes the
+unauthenticated write routes for settings, favorites, collections and watch history refuse with the standard
+envelope, `403 writes.closed`; never set on a desktop, whose local writes are the point).
 
 **Serving the interface** (as the other family apps do). The fileserver serves the built interface on its
 own origin: `index.html`, `favicon.svg`/`favicon.ico` and Vite's `assets/`. A GET that is no route, no
@@ -478,9 +483,9 @@ interface WatchWrite {
 
 | Route | Behaviour |
 |---|---|
-| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }` |
-| `DELETE /api/watch/:watchId` | removes one entry (Remove from History) |
-| `DELETE /api/watch` | clears all history; favorites, collections and files are untouched |
+| `PUT /api/watch` | records progress for the item (and exact episode). A write whose `seq` is not higher than the last applied for its `playbackId` is ignored, so a late write never rewinds progress. At 95 percent of the duration *(default)* the entry becomes `watched`. Answers `{ applied, entry }`. **Where it lands (owner, 2026-10-20, plan `63`):** a request marked `x-giga-runtime: electron` writes the fileserver's own store, as the desktop always has; any other request is a browser - it must carry the account's bearer and is passed to the backend's `PUT /api/account/watch`, so a browser's history is the account's cloud rows; a browser write with no account is refused `401`. The same fork governs the two `DELETE`s |
+| `DELETE /api/watch/:watchId` | removes one entry (Remove from History); the fork above decides which store |
+| `DELETE /api/watch` | clears all history; favorites, collections and files are untouched; the fork above decides which store |
 
 Channels never create watch entries. `entry` is `{ watchId, item, season?, episode?, positionMs, durationMs?,
 state, updatedAt }`; an unknown `watchId` is `404 watch.not_found`.
@@ -526,6 +531,10 @@ interface BackendState {
   list that cannot be read becomes "no list" and one notice, and never costs the saved shell.
 
 ## 5. The backend cache (owner, 2026-10-18; plan `46`)
+
+**Transport amendment (owner, 2026-10-20; plan `64`).** Every channel and title cache fill below reads the admin
+Turso database directly. References in this section to backend catalog HTTP routes describe the old transport and are
+superseded. Provider records are still read through `GET /api/admin/providers` and are never cached.
 
 ### 5.1 Freshness: launch and page reads, no timers
 

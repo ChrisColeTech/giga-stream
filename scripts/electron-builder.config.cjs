@@ -32,6 +32,8 @@ module.exports = {
     { from: "src/frontend/dist", to: "frontend/dist" },
     { from: "src/shared/media/dist", to: "shared/media/dist" },
     { from: "src/shared/media/package.json", to: "shared/media/package.json" },
+    { from: "src/shared/watch/dist", to: "shared/watch/dist" },
+    { from: "src/shared/watch/package.json", to: "shared/watch/package.json" },
   ],
   extraFiles: [
     { from: "tools/ffmpeg/win32-x64/bin", to: "tools/ffmpeg/win32-x64/bin", filter: ["*.exe", "*.dll"] },

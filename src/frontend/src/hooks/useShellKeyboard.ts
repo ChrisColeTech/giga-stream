@@ -38,7 +38,9 @@ function run(id: ShellAction): boolean {
 
 function context(): ShellKeyContext {
   const state = useAppStore.getState();
-  return { windowOpen: state.overlay !== null, drawerOpen: state.eventsOpen };
+  /* The gate wall counts as a window: the shell behind it is inert, so the shell's keys sleep too (`63` section
+   * 3.1, amended). */
+  return { windowOpen: state.overlay !== null || state.gateOpen, drawerOpen: state.eventsOpen };
 }
 
 /** The interface's shell keys: the shared listener with the interface's map and actions. */

@@ -1,5 +1,5 @@
 import { MonitorPlay, Tv } from "lucide-react";
-import { Button, type ButtonProps } from "@giga/ui/controls/Button";
+import { IconButton, type IconButtonProps } from "@giga/ui/controls/IconButton";
 import { Brand } from "@giga/ui/shell/Brand";
 import { Titlebar as TitlebarBar } from "@giga/ui/shell/Titlebar";
 import type { PaneToggleProps } from "@giga/ui/shell/PaneToggle";
@@ -8,25 +8,24 @@ import { barTone } from "@/lib/bar-tone";
 import { useAppStore } from "@/store/app-store";
 import { usePaneOpen, useSurface, useWorkSurfaceOpen } from "@/store/selectors";
 import type { PaneSide } from "@/types/shell";
+import { AccountControl } from "./AccountControl";
 
 const TABS = SURFACE_ORDER.map((id) => ({ id, label: SURFACES[id].label }));
 
 const SIDE_LABEL: Readonly<Record<PaneSide, string>> = { left: "left pane", bottom: "bottom pane", right: "right pane" };
 
 /* A MODAL CHILD WINDOW PUTS THE NAV AND THE PANE CONTROLS TO SLEEP: the surface underneath stays intact, so without this
- * the toggles stayed live and pressing one rearranged a workspace nobody could see. A popup covers nothing. */
+ * the toggles stayed live and pressing one rearranged a workspace nobody could see. */
 const SLEEPING_TABS = "Close the open window to switch surfaces.";
 const SLEEPING_REASON = "Close the open window to change the panes.";
 
 /** The Theatre button's props (`50` section 2.5), pure so the sleeping carriage is testable without a DOM. Asleep,
- *  the tabs' sleeping wording rides the family `reason`: Button then renders the button natively disabled inside
+ *  the tabs' sleeping wording rides the family `reason`: IconButton renders the button natively disabled inside
  *  the focusable tooltip group labelled "Theatre mode. <reason>" — a native `title` on a disabled button is never
  *  shown by the browser, which is why the family carries a sleeping control's reason on the wrapper. The button
  *  reads unselected whatever Theatre is doing behind the window. Awake, the button keeps its own title. */
-export function theatreButtonProps(asleep: boolean, theatre: boolean, onToggle: () => void): ButtonProps {
+export function theatreButtonProps(asleep: boolean, theatre: boolean, onToggle: () => void): IconButtonProps {
   return {
-    size: "sm",
-    variant: "ghost",
     reason: asleep ? SLEEPING_TABS : undefined,
     title: asleep
       ? undefined
@@ -35,6 +34,7 @@ export function theatreButtonProps(asleep: boolean, theatre: boolean, onToggle: 
     "aria-pressed": theatre && !asleep,
     on: theatre && !asleep,
     onClick: onToggle,
+    children: <MonitorPlay className="size-3.75" aria-hidden />,
   };
 }
 
@@ -61,14 +61,10 @@ export function Titlebar() {
     return { side, lit, reason, onToggle: () => togglePane(side) };
   };
 
-  /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Giga Cut's Export slot, beside the pane toggles. Asleep
-   * under an open window like every other titlebar control (`50` section 2.5) — the props carry it. */
+  /* Ghost, like Giga Cut's titlebar (owner, 2026-10-17). Asleep under an open window like every other titlebar control
+   * (`50` section 2.5) - the props carry it. Account stays beside Theatre (`65` section 1), asleep with it. */
   const asleep = settingsOpen;
-  const theatreButton = (
-    <Button {...theatreButtonProps(asleep, theatre, toggleTheatre)}>
-      <MonitorPlay aria-hidden /> Theatre
-    </Button>
-  );
+  const theatreButton = <IconButton {...theatreButtonProps(asleep, theatre, toggleTheatre)} />;
 
   return (
     <TitlebarBar
@@ -78,7 +74,7 @@ export function Titlebar() {
       left={toggle("left")}
       bottom={toggle("bottom")}
       right={toggle("right")}
-      trailing={theatreButton}
+      trailing={<><AccountControl asleep={asleep} />{theatreButton}</>}
     />
   );
 }

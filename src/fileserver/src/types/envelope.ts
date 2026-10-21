@@ -28,6 +28,13 @@ export type Envelope<T> = SuccessEnvelope<T> | ErrorEnvelope;
 export type AppErrorCode =
   | "route.not_found"
   | "request.invalid"
+  | "auth.unauthorized"
+  | "auth.invalid_credentials"
+  | "auth.refresh_invalid"
+  | "auth.reset_invalid"
+  | "account.invalid"
+  | "account.not_found"
+  | "account.username_taken"
   | "settings.invalid"
   | "library.invalid"
   | "title.not_found"

@@ -3,7 +3,7 @@ import type { FavoritesRepository } from "../store/favorites-repository.js";
 import type { LibraryFileRow, LibraryWatchRow } from "../store/library-repository.js";
 import { localDisplayTitle } from "../store/local-file-repository.js";
 import type { LibraryItem } from "../types/library.js";
-import type { TitleKind } from "./admin-titles.js";
+import type { TitleKind } from "../store/admin-title-repository.js";
 
 /** One watch entry as a row's progress (docs/03 section 3.5). */
 export function progressOf(entry: LibraryWatchRow): NonNullable<LibraryItem["progress"]> {

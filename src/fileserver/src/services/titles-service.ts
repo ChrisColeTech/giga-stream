@@ -3,6 +3,7 @@ import { AppError } from "../lib/app-error.js";
 import { decodeGenres } from "../lib/genre-decode.js";
 import type { CachedTitleQuery } from "../store/cached-title-query.js";
 import type { CachedTitleRepository } from "../store/cached-title-repository.js";
+import type { AdminTitleRepository, StoredEpisode, StoredTitleView } from "../store/admin-title-repository.js";
 import type {
   Episode,
   LibraryItem,
@@ -12,11 +13,11 @@ import type {
   TitleAnswer,
   TitleDetail,
 } from "../types/library.js";
-import type { AdminFailure } from "./admin-client.js";
-import type { AdminTitles, BackendEpisode, BackendTitle } from "./admin-titles.js";
+import type { AdminFailure } from "./admin-failure.js";
 import type { BackendCacheService } from "./backend-cache-service.js";
 import type { LibraryItems } from "./library-items.js";
 import { cachedDetailOf, detailWriteOf, liveDetailOf, seasonsOf } from "./title-detail-views.js";
+import type { TitleSources } from "./title-sources.js";
 
 /** The failure vocabulary of every title read, as the routes answer it (docs/03 section 3.6). */
 function failureOf(failure: AdminFailure): AppError {
@@ -29,7 +30,8 @@ function failureOf(failure: AdminFailure): AppError {
  * unreachable (or the title gone from it) the cache answers without sources. Seasons and related stay live.
  */
 export function createTitlesService(deps: {
-  admin: AdminTitles;
+  admin: AdminTitleRepository;
+  sources: TitleSources;
   adminUrl: () => string;
   cache: BackendCacheService;
   titles: CachedTitleRepository;
@@ -38,31 +40,34 @@ export function createTitlesService(deps: {
   rewriteImageUrl: (source: string) => string;
   now: () => number;
 }) {
-  const { admin, adminUrl, cache, titles, query, items, rewriteImageUrl: image, now } = deps;
+  const { admin, cache, titles, query, items, rewriteImageUrl: image, now } = deps;
 
   /** A title route is a page read: check freshness, never wait for a cold sync (the Player must not stall). */
   const touch = (): Promise<void> => cache.ensureFresh("titles", { awaitCold: false });
 
   async function detail(titleId: string): Promise<TitleAnswer> {
     await touch();
-    const answer = await admin.titleDetail(adminUrl(), titleId);
+    const answer = await admin.detail(titleId);
     if (answer.ok) {
       const row = answer.value;
+      const sources = row.kind === "movie" && row.tmdbId !== undefined ? await deps.sources.movie(row.tmdbId) : [];
+      const live = sources.length > 0 ? { ...row, sources } : row;
       const seasons = seasonsOf(row.seasons);
       try {
         titles.writeDetail(detailWriteOf(row, decodeGenres(row.genres, titles.genreNames(row.kind)), seasons, now()));
       } catch {
         // A failed write-through costs the cache one refresh of this title; the live answer is still right.
       }
-      return liveDetailOf(row, seasons, image);
+      return liveDetailOf(live, seasons, image);
     }
     const held = titles.get(titleId);
-    if (held !== undefined) return cachedDetailOf(held, image);
+    const mayUseCache = answer.failure.code === "backend.unreachable" || answer.failure.code === "title.not_found";
+    if (mayUseCache && held !== undefined) return cachedDetailOf(held, image);
     throw failureOf(answer.failure);
   }
 
   /** The recommended rows as cards, their genre ids decoded through the cached dictionaries. */
-  function relatedItems(rows: readonly BackendTitle[], basisId: string): LibraryItem[] {
+  function relatedItems(rows: readonly StoredTitleView[], basisId: string): LibraryItem[] {
     const dictionary = { movie: titles.genreNames("movie"), tv: titles.genreNames("tv") };
     return rows
       .filter((row) => row.id !== basisId)
@@ -100,11 +105,15 @@ export function createTitlesService(deps: {
     /** `GET /api/titles/:titleId/seasons/:season` (docs/03 section 3.6), in episode order. */
     async season(titleId: string, seasonNumber: number): Promise<SeasonAnswer> {
       await touch();
-      const answer = await admin.titleSeason(adminUrl(), titleId, seasonNumber);
+      const answer = await admin.season(titleId, seasonNumber);
       if (!answer.ok) throw failureOf(answer.failure);
-      const episodes: Episode[] = [...answer.value.episodes]
-        .sort((a: BackendEpisode, b: BackendEpisode) => a.episode - b.episode)
-        .map((row) => ({
+      const title = await admin.detail(titleId);
+      const tmdbId = title.ok ? title.value.tmdbId : undefined;
+      const episodes = [...answer.value.episodes]
+        .sort((a: StoredEpisode, b: StoredEpisode) => a.episode - b.episode)
+        .map(async (row) => {
+          const sources = tmdbId === undefined ? [] : await deps.sources.episode(tmdbId, row.season, row.episode);
+          return {
           season: row.season,
           episode: row.episode,
           ...(row.title !== undefined && { title: row.title }),
@@ -112,20 +121,22 @@ export function createTitlesService(deps: {
           ...(row.runtimeMs !== undefined && { runtimeMs: row.runtimeMs }),
           ...(row.stillUrl !== undefined && { stillUrl: image(row.stillUrl) }),
           ...(row.streamUrl !== undefined && { streamUrl: row.streamUrl }),
-          ...(row.sources !== undefined && { sources: row.sources }),
-        }));
-      return { episodes };
+          ...(sources.length > 0 && { sources }),
+        }; });
+      return { episodes: await Promise.all(episodes) };
     },
 
     /** `GET /api/titles/:titleId/related` (docs/03 section 3.6, `06` section 5.5). */
     async related(titleId: string): Promise<RelatedAnswer> {
       await touch();
-      const recommended = await admin.titleRecommendations(adminUrl(), titleId);
+      const recommended = await admin.related(titleId, RELATED_MAX);
       if (!recommended.ok) throw failureOf(recommended.failure);
-      if (recommended.value.items.length > 0) {
-        return { basis: "tmdb", items: relatedItems(recommended.value.items, titleId) };
+      if (recommended.value.length > 0) {
+        return { basis: "tmdb", items: relatedItems(recommended.value, titleId) };
       }
-      return fallbackRelated(await detail(titleId));
+      const basis = await admin.detail(titleId);
+      if (!basis.ok) throw failureOf(basis.failure);
+      return fallbackRelated(liveDetailOf(basis.value, seasonsOf(basis.value.seasons), image));
     },
   };
 }

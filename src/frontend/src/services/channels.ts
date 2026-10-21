@@ -1,8 +1,11 @@
 import { api } from "./api";
 import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
+import { useAppStore } from "@/store/app-store";
 import type { ChannelListAnswer } from "./schemas/channel-schema";
 import { ChannelListSchema, LastChannelSchema } from "./schemas/channel-schema";
+import { writeLocalLastChannel } from "./local-state";
 import { notConnected, type ServiceResult } from "./not-connected";
+import { onDesktopRuntime } from "./persistence";
 
 export interface ChannelQuery {
   readonly query?: string;
@@ -138,8 +141,19 @@ export async function refreshFilteredChannels(query: ChannelQuery, signal?: Abor
   return readChannels(query, signal);
 }
 
+/** In a browser the last channel is mirrored into `giga.v1.lastChannelId` beside the server write (`61` section 2.1);
+ *  the desktop keeps its single server write, unchanged. A refused mirror is spoken once; the server write's own
+ *  refusal stays `LastChannelSession`'s to report. */
+function mirrorLastChannel(channelId: string): void {
+  if (onDesktopRuntime()) return;
+  if (!writeLocalLastChannel(channelId)) {
+    useAppStore.getState().say("The last channel could not be kept in this browser.", "warn");
+  }
+}
+
 /** Persists the channel Live should attach on the next launch. */
 export function rememberLastChannel(channelId: string, signal?: AbortSignal) {
+  mirrorLastChannel(channelId);
   return api("/api/channels/last", LastChannelSchema, {
     method: "PATCH",
     body: { channelId },

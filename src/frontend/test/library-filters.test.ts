@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { choicePopoverSearches, nextChoiceValues } from "@giga/ui/lib/choice-popover-state";
@@ -89,5 +89,31 @@ describe("Library composition", () => {
       "src/components/library/GenrePopover.tsx", "src/components/library/AppliedFilters.tsx",
       "src/lib/library-filter-state.ts",
     ]) assert.equal(existsSync(path), false, path);
+  });
+});
+
+describe("the Library watched filter control (`63` section 3.3)", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, "window");
+  });
+
+  it("is visibly disabled signed out, with the session's reason as its tooltip", () => {
+    /* SSR renders the store's initial snapshot (zustand v5 serves getInitialState on the server), which is the
+       signed-out cell: no watch is tracked on any runtime, so the control says why. */
+    (globalThis as { window?: unknown }).window = {};
+    const markup = render(createElement(LibraryFilters, {
+      query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
+    }));
+    assert.match(markup, /The watched filter needs a session&#x27;s watch history\./);
+    assert.match(markup, /disabled/);
+  });
+
+  it("keeps no word of the `61` runtime fork: the reason is the session's on the desktop too", () => {
+    (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
+    const markup = render(createElement(LibraryFilters, {
+      query: query(), genres: ["Action"], years: [2024], trending: false, onQuery: noop,
+    }));
+    assert.equal(markup.includes("desktop library"), false);
+    assert.match(markup, /The watched filter needs a session&#x27;s watch history\./);
   });
 });

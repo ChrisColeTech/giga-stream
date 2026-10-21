@@ -81,6 +81,7 @@ describe("choice-control inventory", () => {
     ["components/titles/NewTitleForm.tsx", "constants/title-copy.ts", "KIND_OPTIONS", "titles.new", "titles.index"],
     ["components/titles/TitleListGroup.tsx", "constants/title-stored-copy.ts", "VIEW_OPTIONS", "titles.list", "titles.index"],
     ["components/playlists/NewPlaylistForm.tsx", "components/playlists/NewPlaylistForm.tsx", "SOURCES", "playlists.new", "playlists.index"],
+    ["components/accounts/NewAccountForm.tsx", "constants/account-copy.ts", "KIND_CHOICES", "accounts.new", "accounts.index"],
     ["components/settings/AppearanceSection.tsx", "components/settings/AppearanceSection.tsx", "THEMES", "appearance.theme", "appearance"],
     ["components/settings/AppearanceSection.tsx", "components/settings/AppearanceSection.tsx", "MOTIONS", "appearance.motion", "appearance"],
   ] as const;

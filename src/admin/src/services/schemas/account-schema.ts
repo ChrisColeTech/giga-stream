@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-/* `AdminAccount` and the account list (`29` section 5). Non-strict: a field the backend adds later is ignored. */
+/* `AdminAccount` and the account list (`29` section 5; `62` section 3.7). Non-strict: a field the backend adds later is
+ * ignored. `kind` (`62` D1) is OPTIONAL and ABSENT on old answers, and absence means admin: an answer the backend has
+ * not grown the column for yet still reads. A kind the schema does not know makes the WHOLE row unreadable — the list
+ * drops it and counts it (`unreadable`), never silently relabels it. */
 export const AccountSchema = z.object({
   id: z.union([z.string(), z.number()]),
   username: z.string(),
@@ -10,6 +13,8 @@ export const AccountSchema = z.object({
   lastSignInAt: z.number().optional(),
   /** Whether the account has set a security question (read only; never the question itself). */
   securityQuestionSet: z.boolean().optional(),
+  /** What the account is for: the console (`admin`) or the app (`user`). Absent on old answers = `admin`. */
+  kind: z.enum(["admin", "user"]).optional(),
 });
 
 export const AccountListSchema = z.object({ items: z.array(AccountSchema) });

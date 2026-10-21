@@ -1,7 +1,10 @@
 import { SEARCH_DEBOUNCE_MS } from "@/lib/live-constants";
 import { collectionOf, type LibraryQuery } from "@/lib/library-query";
+import { sessionInputs } from "@/store/selectors";
 import type { LibraryItem, LibraryPage } from "@/types/library";
 import { api } from "./api";
+import { decoratedLibraryPage, emptyLibraryPage, readLocalContinue, readLocalHistory } from "./library-local";
+import { onDesktopRuntime } from "./persistence";
 import {
   CollectionLibraryPageSchema,
   ContinuePageSchema,
@@ -75,7 +78,23 @@ export class LibrarySearchSession {
   }
 }
 
-export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string) {
+/** The Library's page read. The desktop is today's transport, byte for byte. In a browser with a session (`63`
+ *  section 3.3) the fileserver's watch table is not this session's truth: History and the watching and watched sets
+ *  are computed from the account's entries (`library-local.ts`), the catalog pages go out without the `watched`
+ *  param, and their rows come back decorated with the account's marks. Signed out the watch domain answers none: a
+ *  watch-derived read is never issued, and a stray one is answered empty - nothing is decorated, no call leaves. */
+export async function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: string): Promise<LibraryPage> {
+  const desktop = onDesktopRuntime();
+  const signedIn = sessionInputs().signedIn === true;
+  if (!signedIn) {
+    if (query.source === "history" || query.watched === "watching" || query.watched === "watched") {
+      return emptyLibraryPage(query);
+    }
+  } else if (!desktop && query.source === "history") {
+    return readLocalHistory(query, "all", signal, cursor);
+  } else if (!desktop && (query.watched === "watching" || query.watched === "watched")) {
+    return readLocalHistory(query, query.watched, signal, cursor);
+  }
   const params = new URLSearchParams();
   const collectionId = collectionOf(query.source);
   params.set("view", collectionId === null ? query.source : "collection");
@@ -86,10 +105,18 @@ export function readLibrary(query: LibraryQuery, signal?: AbortSignal, cursor?: 
   params.set("sort", query.sort);
   for (const genre of query.genres) params.append("genre", genre);
   if (query.year !== "") params.set("year", query.year);
-  params.set("watched", query.watched);
+  if (desktop) params.set("watched", query.watched);
   if (cursor !== undefined) params.set("cursor", cursor);
   const schema = collectionId === null ? LibraryPageSchema : CollectionLibraryPageSchema;
-  return api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
+  const answer = await api(`/api/library?${params.toString()}`, schema, { signal, area: "Catalog" });
+  return desktop || !signedIn ? answer : decoratedLibraryPage(answer, signal);
+}
+
+/** The Continue strip's rows: the server's selection on the desktop, the account's in a signed-in browser (`63`
+ *  3.3). Signed out there is no Continue: no call, no rows. */
+export function readContinueRows(signal?: AbortSignal): Promise<readonly LibraryItem[]> {
+  if (sessionInputs().signedIn !== true) return Promise.resolve([]);
+  return onDesktopRuntime() ? readContinue(signal) : readLocalContinue(signal);
 }
 
 export function readContinue(signal?: AbortSignal) {
@@ -97,7 +124,7 @@ export function readContinue(signal?: AbortSignal) {
 }
 
 /** `POST /api/library/refresh` (`46` section E): the fileserver syncs its titles from the backend now and answers once
- *  the sync ends; a failure is the standard envelope's 503/502 with the cache still serving. */
+ * the sync ends; a failure is the standard envelope's 503/502 with the cache still serving. */
 export function refreshLibrary(signal?: AbortSignal) {
   return api("/api/library/refresh", LibraryRefreshSchema, { method: "POST", signal, area: "Catalog" });
 }

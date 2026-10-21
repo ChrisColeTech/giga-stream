@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { blankForStop } from "@/components/player/EmbedHost";
-import { nativeAttachmentKey, pauseForStop } from "@/components/player/NativePlayer";
-import { videoPlayingOf } from "@/components/chrome/RunningWork";
+import { blankForStop } from "@/lib/embed-policy";
+import { nativeAttachmentKey, pauseForStop } from "@/lib/native-player";
+import { videoPlayingOf } from "@/lib/running-work";
 import { detachForStop, liveStopApplies } from "@/hooks/useStreamPlayer";
 import type { StreamEngine, StreamEngineFactory } from "@/services/stream-player-engine";
 import { StreamPlayerController } from "@/services/stream-player";

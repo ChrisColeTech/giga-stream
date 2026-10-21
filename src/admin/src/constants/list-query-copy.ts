@@ -91,8 +91,18 @@ export const LIST_BARS: Readonly<Record<ListId, ListBarDef>> = {
   },
   accounts: {
     search: "Search accounts",
-    sorts: [choice("username", "Username"), choice("state", "State"), choice("last-sign-in", "Last sign-in")],
+    sorts: [
+      choice("username", "Username"),
+      choice("kind", "Kind"),
+      choice("state", "State"),
+      choice("last-sign-in", "Last sign-in"),
+    ],
     filters: [
+      {
+        id: "kind",
+        label: "Kind",
+        options: [choice(ANY, "Any kind"), choice("Admin", "Admins"), choice("User", "Users")],
+      },
       stateFilter("enabled", "disabled"),
       {
         id: "sign-in",

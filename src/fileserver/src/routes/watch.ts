@@ -1,9 +1,10 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { okEnvelope } from "../lib/envelope.js";
 import { parseInput } from "../lib/parse-input.js";
 import type { AppServices } from "../services/app-services.js";
+import { refuseWritesWhenClosed } from "./writes-closed.js";
 
 /** Longest id or playback id accepted; real ones are a few dozen characters. */
 const ID_MAX = 200;
@@ -24,17 +25,29 @@ const WriteBody = z
 
 const IdParams = z.object({ watchId: z.string() });
 
+/** The marker the desktop page sends from `pocHost` (docs/63 section 3.2); only that window has it. */
+const isElectron = (request: FastifyRequest): boolean => request.headers["x-giga-runtime"] === "electron";
+
 /** Watch history: a progress write, one entry removed, or the whole history cleared. */
 export function registerWatchRoutes(app: FastifyInstance, services: AppServices): void {
+  refuseWritesWhenClosed(app, "/api/watch");
+
+  const routeRequest = (request: FastifyRequest) => ({
+    electron: isElectron(request),
+    ...(request.headers.authorization !== undefined && { authorization: request.headers.authorization }),
+    address: request.ip,
+  });
+
   app.put("/api/watch", async (request) => {
     const body = parseInput(WriteBody, request.body);
-    return okEnvelope(services.watches.write(body));
+    return okEnvelope(await services.watchRouting.write(body, routeRequest(request)));
   });
 
   app.delete("/api/watch/:watchId", async (request) => {
     const { watchId } = parseInput(IdParams, request.params);
-    return okEnvelope(services.watches.drop(watchId));
+    return okEnvelope(await services.watchRouting.drop(watchId, routeRequest(request)));
   });
 
-  app.delete("/api/watch", async () => okEnvelope(services.watches.clear()));
+  app.delete("/api/watch", async (request) =>
+    okEnvelope(await services.watchRouting.clear(routeRequest(request))));
 }

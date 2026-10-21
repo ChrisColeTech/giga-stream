@@ -8,7 +8,7 @@ import test from "node:test";
 import { imageIdOf } from "../src/services/image-cache-service.js";
 import { pick, send, type FileserverApp } from "./app-fixture.js";
 import type { FakeTitle } from "./fake-titles.js";
-import { bootTitles, idsOf, peek, syncTitles } from "./library-fixture.js";
+import { bootTitles, peek, syncTitles } from "./library-fixture.js";
 
 const POSTER = "https://image.tmdb.org/t/p/w500/matrix.jpg";
 const BACKDROP = "https://image.tmdb.org/t/p/w1280/matrix-b.jpg";
@@ -98,7 +98,8 @@ test("offline the detail comes from the cache: fromCache true, no sources, no st
 
 test("the backend no longer knowing a cached title answers from the cache; an uncached one keeps its error", async () => {
   const { backend, t } = await openedMatrix();
-  delete backend.state.details["movie-603"];
+  await send(t.app, "GET", "/api/titles/movie-603");
+  await t.adminDatabase.execute("DELETE FROM titles WHERE id = 'movie-603'");
   const gone = await send(t.app, "GET", "/api/titles/movie-603");
   assert.equal(gone.status, 200);
   assert.equal(pick(gone.body, "data.fromCache"), true);
@@ -121,26 +122,5 @@ test("a series' season counts are written through and answered offline", async (
   const offline = await send(t.app, "GET", "/api/titles/tv-1399");
   assert.deepEqual(pick(offline.body, "data.seasons"), [{ season: 1, episodeCount: 2 }, { season: 2, episodeCount: 10 }]);
   assert.equal(pick(offline.body, "data.runtimeMs"), undefined);
-  await t.dispose();
-});
-
-test("a title opened off the catalog is inserted as off-catalog and the sweep spares it", async () => {
-  const { backend, t } = await openedMatrix();
-  backend.state.details["custom-home"] = { id: "custom-home", kind: "movie", title: "Home Video", year: 2020, genres: [], plot: "Our trip." };
-  const opened = await send(t.app, "GET", "/api/titles/custom-home");
-  assert.equal(pick(opened.body, "data.title"), "Home Video");
-  assert.deepEqual(peek(t, "SELECT in_catalog, seen_run FROM cached_titles WHERE id = 'custom-home'"), [{ in_catalog: 0, seen_run: 0 }]);
-
-  backend.publish(CATALOG.filter((one) => one.id !== "movie-550"));
-  t.clock.advance(1_000);
-  assert.equal((await syncTitles(t)).status, 200);
-  const kept = peek(t, "SELECT id, in_catalog FROM cached_titles ORDER BY id").map((row) => `${row.id}:${row.in_catalog}`);
-  assert.deepEqual(kept, ["custom-home:0", "movie-603:1", "tv-1399:1"], "the catalog title that left was swept, the off-catalog one spared");
-  assert.deepEqual(idsOf((await send(t.app, "GET", "/api/library?q=home")).body), ["custom-home"]);
-
-  backend.publish([...CATALOG, { id: "custom-home", title: "Home Video", year: 2020 }]);
-  t.clock.advance(1_000);
-  await syncTitles(t);
-  assert.deepEqual(peek(t, "SELECT in_catalog FROM cached_titles WHERE id = 'custom-home'"), [{ in_catalog: 1 }], "listed later: in the catalog");
   await t.dispose();
 });

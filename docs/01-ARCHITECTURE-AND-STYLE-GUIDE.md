@@ -19,9 +19,8 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
    only, synced in the background, at most every 6 hours; `46`) and the
    image cache; providers and their sources are never stored
         |
-        | live reads on demand: /api/library, /api/titles*,
-        | /api/channels, /api/providers (never stored; the revision
-        | in an answer says whether the view moved)
+        | direct SQL reads and account writes through Turso;
+        | the sole admin API read is /api/admin/providers
         v
  Admin backend (src/backend)  :8091 loopback, TLS off loopback (03 section 7.10)
    owns: channels, providers, admin accounts, the title store,
@@ -43,7 +42,7 @@ Product behavior belongs to `00`, the interface to `02`, the servers to `03`.
 
 | | Interface | Fileserver | Admin backend |
 |---|---|---|---|
-| Talks to | fileserver only | interface, backend | fileserver (answers), TMDB, OMDb |
+| Talks to | fileserver only | interface, admin Turso, provider API | fileserver provider read, admin app, TMDB, OMDb |
 | Owns | nothing persisted | your data (settings, layout, collections, favorites, history, local files) | channels, providers, accounts, the title store, audit |
 | Port | - | 8090 | 8091 |
 | Database | - | `~/.giga-stream` | `~/.giga-stream-admin` |
@@ -164,7 +163,8 @@ Folders named `utils`, `util`, `helpers`, `misc` or `common` are forbidden. Name
 ### 4.2 Import boundaries
 
 - The interface never imports fileserver or backend source; the fileserver never imports backend
-  source; the backend imports neither. They talk over HTTP.
+  source; the backend imports neither. Cross-program TypeScript source imports remain forbidden. The fileserver uses
+  the admin database schema as a versioned SQL contract (`64`) and calls the admin HTTP API only for providers.
 - **A shared library is not a program.** Code more than one program or tool needs lives once, in
   `src/shared/<domain>/` (for example `src/shared/media`: finding and running the bundled FFmpeg,
   reading a file's facts with ffprobe, and finding the video files in a folder). Any program and the
@@ -210,8 +210,13 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
   exception (owner, 2026-10-18, plan `43`):** a playlist sync job caches the channels' logo images on the backend
   (`DATA_DIR/logo-cache/`, content-hashed, at most 1 MiB each, PNG/JPEG/GIF/WebP only) and the backend serves them at
   `GET /logos/<file>`; no poster, still, video or user media is ever cached by it. No other timer exists anywhere.
-- No browser storage: nothing the user chose lives in `localStorage`, `sessionStorage` or IndexedDB.
-  Saved state is a fileserver row.
+- No browser storage on the desktop runtime: nothing the user chose lives in `localStorage`, `sessionStorage`
+  or IndexedDB; saved state is a fileserver row. **Amended (owner, 2026-10-19, plan `61`):** the browser
+  runtime persists its local domains - shell/layout, settings while signed out, watch history and the last
+  channel - in `localStorage` and IndexedDB through `src/frontend/src/services/local-state.ts` and
+  `local-watch.ts` only (the rule checker allow-lists exactly those files), every read validated with the wire
+  schemas, and never a provider, token or secret. `docs/62` moves settings, favorites and collections to the
+  signed-in account and keeps the local stores as the signed-out and offline state.
 
 ## 5. TypeScript and source rules
 
@@ -254,6 +259,9 @@ addresses (`/live/...`, `/logos/...` and its test page, in `api/live-streams.ts`
 ### Fileserver
 
 - Repositories own SQL, services compose repositories, routes call services.
+- The fileserver owns one `@libsql/client` connection to the configured admin Turso database. It never runs the
+  admin backend's migrations. Every admin-database query remains under the fileserver's `store/`, and startup refuses
+  an unsupported schema version. Providers are the sole admin HTTP API read and are request-local.
 - Migrations are forward-only, numbered and transactional; a newer schema is refused.
 - Backend channels and titles are cached in the fileserver's database as a snapshot (`46`): synced in the background at launch
   and when a page reads them after 6 hours, served from the cache at once (a cache that was never filled is awaited). A failed
@@ -506,6 +514,11 @@ Window-caption icons use the dedicated VS Code chrome set from `react-icons/vsc`
 exception: OS/window chrome needs caption glyphs, not approximate content icons. Lucide `Square`/`Copy` and diagonal
 `Maximize2`/`Minimize2` are forbidden in window chrome.
 
+**Main titlebar modes (owner 2026-10-20; `65`).** Account and Theatre are icon-only ghost `IconButton`s beside the
+pane toggles, each with an accessible label and tooltip. Theatre uses `MonitorPlay`, carries `aria-pressed`, and keeps
+the outlined/accent `data-on` state while active. Account opens the standard shared menu when signed in; a two-action
+menu is not an authored `PopupPanel`.
+
 ### Page toolbar
 
 Every page opens with its page toolbar (LoRA Trainer `components/layout/Toolbar.tsx` 12-25; the family's
@@ -616,8 +629,7 @@ Five heading roles, each one component's, and no surface invents a sixth:
 | Role | Style | Where |
 |---|---|---|
 | Page group | `Form` `Group`: 48px icon tile, mono 28 | Settings, Collections, Title information |
-| Rail section | `Section` header: 11px sans semibold, faint, a turning chevron | Live and Player rails |
-| Rail group | `NavRail` heading: 12px sans, dim | the Library rail (Views, Collections) |
+| Rail section | `Section` header: 11px sans semibold, faint, a turning chevron | Live, Library and Player rails |
 | Strip or shelf | mono 12, faint, the count dim | Continue watching, the Rows shelves, the Live channels head |
 | Filter label | 14px sans semibold over its control | the Library filters pane |
 
@@ -628,6 +640,11 @@ first verb of the list's first row, and a page's verbs are its page toolbar's.
 
 The brand and the surface switch in the titlebar keep the family's own radii and spacing, drawn as the family
 draws them; they are not rebuilt from the token scale.
+
+**Rail links.** A navigation rail's rows use the Settings rail family pattern: contiguous full-width 34px rows,
+13px text, a 2px transparent left edge at rest, hover fill, and while selected the accent left edge, control fill and
+accent text. Rows inside a collapsible `Section` cancel the Section body's form padding and gap as one row stack; the
+Section header keeps its own spacing. A selected row is never an inset chip or a text-only colour change.
 
 ### Overlays
 

@@ -4,6 +4,8 @@ import { continueLabel, progressRatio, remainingLabel } from "@/lib/library-fact
 import type { ResolvedItem } from "@/lib/library-marks";
 import { posterTone } from "@/lib/poster-tone";
 import type { CollectionRow } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { CardActions } from "./CardActions";
 import { menuEventBelow, openCardMenu } from "./card-menu";
 import { openTitleInfo } from "./open-title-info";
@@ -22,8 +24,10 @@ export interface ContinueCardProps {
  *  the art, progress along its foot, one line under it naming the title and the time left, then Play, Info and the
  *  menu. A press selects it and opens its Info, as a poster does; the menu is the poster's. */
 export function ContinueCard({ item, selected, collections, onSelect, onRemoveWatch }: ContinueCardProps) {
+  const actions = useLibraryActions();
   const artRef = useRef<HTMLButtonElement>(null);
   const [imageFailed, setImageFailed] = useState(false);
+  const signedIn = useAppStore((state) => state.signedIn);
   const progress = item.progress;
   if (progress === undefined) return null;
   const label = continueLabel(item.title, progress);
@@ -32,11 +36,12 @@ export function ContinueCard({ item, selected, collections, onSelect, onRemoveWa
   const tone = `var(${posterTone(item.title)})`;
   const context = {
     collections,
+    signedIn,
     inHistory: false,
     onInfo: () => openTitleInfo(item.ref, artRef.current),
     onRemoveWatch: () => onRemoveWatch(item),
   };
-  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
+  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context, actions);
   return (
     <article aria-label={label} className="flex w-[260px] flex-none flex-col gap-1" onContextMenu={onMenu}>
       <button
@@ -70,7 +75,7 @@ export function ContinueCard({ item, selected, collections, onSelect, onRemoveWa
         <span className="truncate text-text">{label}</span>
         {remaining !== undefined && <span className="flex-none text-faint">{remaining}</span>}
       </span>
-      <CardActions item={item} onMore={(button) => openCardMenu(menuEventBelow(button), item, context)} />
+      <CardActions item={item} onMore={(button) => openCardMenu(menuEventBelow(button), item, context, actions)} />
     </article>
   );
 }

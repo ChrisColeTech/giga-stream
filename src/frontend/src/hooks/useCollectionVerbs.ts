@@ -1,5 +1,5 @@
 import { useAppStore } from "@/store/app-store";
-import { chooseFolder, type FolderSelection } from "@/services/desktop";
+import { chooseFolder } from "@/services/desktop";
 import {
   createCollection,
   removeCollection,
@@ -8,7 +8,7 @@ import {
 } from "@/services/collections";
 import { attachFolder, detachFolder, replaceFolder, rescanFolder } from "@/services/folders";
 import { cancelJob, listJobs } from "@/services/jobs";
-import type { CollectionType, CreateCollectionResult } from "@/types/collection";
+import type { CollectionType, CreateCollectionResult, FolderSelection } from "@/types/collection";
 import type { ItemRef } from "@/types/library";
 import { isLive } from "@/types/job";
 

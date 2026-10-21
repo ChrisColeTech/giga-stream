@@ -2,6 +2,7 @@ import { AnimatePresence } from "framer-motion";
 import { ChildMemoryContext } from "@giga/ui/lib/child-memory";
 import type { ChildMemory } from "@giga/ui/lib/child-memory";
 import { useAppStore } from "@/store/app-store";
+import { AccountWindow } from "@/components/chrome/AccountWindow";
 import { CollectionsWindow } from "./CollectionsWindow";
 import { SettingsWindow } from "./SettingsWindow";
 import { TitleInfoWindow } from "./TitleInfoWindow";
@@ -27,6 +28,7 @@ export function OverlayHost() {
         {overlay === "settings" && <SettingsWindow key="settings" />}
         {overlay === "collections" && <CollectionsWindow key="collections" />}
         {overlay === "title-info" && <TitleInfoWindow key="title-info" />}
+        {overlay === "account" && <AccountWindow key="account" />}
       </AnimatePresence>
     </ChildMemoryContext>
   );

@@ -5,7 +5,7 @@ import path from "node:path";
 import { createClient, type Client, type InArgs, type InStatement, type InValue, type Transaction,
   type TransactionMode, type ResultSet } from "@libsql/client";
 
-import { config } from "../config.js";
+import { config, type Config } from "../config.js";
 import { AppError, ERRORS } from "../constants/errors.js";
 import { DATABASE_BUSY_TIMEOUT_MS } from "../constants/limits.js";
 
@@ -29,6 +29,15 @@ async function openRemote(): Promise<Client> {
     });
   }
   return createClient({ url: config.TURSO_DATABASE_URL, authToken: config.TURSO_AUTH_TOKEN || undefined });
+}
+
+/** An explicit Turso address wins in every runtime; production still refuses to fall back to a local file. */
+export function databaseSelection(
+  nodeEnv: Config["NODE_ENV"],
+  databaseUrl: string,
+): "local" | "remote" | "refuse" {
+  if (databaseUrl !== "") return "remote";
+  return nodeEnv === "production" ? "refuse" : "local";
 }
 
 /** `@libsql/client` wants a local file behind a `file:` url; `:memory:` (the tests' database) is a url of its own. */
@@ -117,12 +126,13 @@ class ScopedClient implements Client {
 
 /**
  * The one owner of the admin backend's database (`01` section 4.1). Everything else receives this handle from the
- * store composition root; nothing else opens a database. In production the handle is the remote Turso client and
- * `file` is ignored; otherwise it is the local file (or the tests' `:memory:`).
+ * store composition root; nothing else opens a database. With a configured Turso address the handle is remote and
+ * `file` is ignored; otherwise development and tests use the local file (or `:memory:`). Production never falls back.
  */
 export async function openDatabase(file: string): Promise<Client> {
   try {
-    if (config.NODE_ENV === "production") return new ScopedClient(await openRemote());
+    const selection = databaseSelection(config.NODE_ENV, config.TURSO_DATABASE_URL);
+    if (selection !== "local") return new ScopedClient(await openRemote());
     const url = fileUrl(file);
     if (url.startsWith("file:")) mkdirSync(path.dirname(file), { recursive: true });
     const client = createClient({

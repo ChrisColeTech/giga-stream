@@ -8,7 +8,7 @@
   },
   "scripts": {
     "kill-ports": "npx --yes kill-port 5171 5172 8090 8091 3001",
-    "dev": "npm run kill-ports && npm run fixtures && concurrently --kill-others --names backend,admin,frontend,electron --prefix-colors cyan,green,magenta,yellow \"npm run dev:stack --prefix src/backend\" \"npm run dev --prefix src/admin\" \"npm run dev --prefix src/frontend\" \"npm run dev --prefix src/fileserver\"",
+    "dev": "npm run kill-ports && npm run fixtures && npm run migrate:dev --prefix src/backend && concurrently --kill-others --names backend,admin,frontend,electron --prefix-colors cyan,green,magenta,yellow \"npm run dev:stack --prefix src/backend\" \"npm run dev --prefix src/admin\" \"npm run dev --prefix src/frontend\" \"npm run dev --prefix src/fileserver\"",
     "admin-mockup": "npx --yes serve -l tcp://127.0.0.1:5190 ../giga-stream-poc/src/admin-mockup",
     "fixtures": "node scripts/fixtures/make-fixtures.mjs",
     "electron:dev": "npm run dev --prefix src/fileserver",

@@ -4,8 +4,7 @@ import { Group } from "@giga/ui/form/Group";
 import { Row } from "@giga/ui/form/Row";
 import { Workspace } from "@giga/ui/form/Workspace";
 import { FACT_UNKNOWN, SETTINGS_LABELS, TMDB_NOTICE } from "@/constants/settings-sections";
-import { readLicences } from "@/services/settings";
-import { useAppStore } from "@/store/app-store";
+import { useLicenceAction } from "@/hooks/useLicenceAction";
 
 /* A read-only fact, in LoRA's About pane style. */
 const FACT = "flex h-9 items-center font-mono text-sm text-muted";
@@ -18,12 +17,7 @@ export interface AboutSectionProps {
 }
 
 export function AboutSection({ version, runtime }: AboutSectionProps) {
-  const say = useAppStore((state) => state.say);
-  /* The licences are the fileserver's to read; a refusal is said once on the notice line. */
-  const viewLicences = () => {
-    const result = readLicences();
-    if (!result.ok) say(result.message, "warn");
-  };
+  const viewLicences = useLicenceAction();
   return (
     <Workspace labels={SETTINGS_LABELS}>
       <Group id="settings.about" title="About" icon={Info}>

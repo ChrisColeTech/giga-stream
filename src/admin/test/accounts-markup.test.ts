@@ -57,7 +57,7 @@ describe("the accounts list", () => {
   it("shows the headings, ticks, state words, a dimmed disabled row and `never`", () => {
     state().accountsLoaded([account("a", false, { lastSignInAt: new Date(2026, 9, 17, 9, 5).getTime() }), account("b"), account("off", true)]);
     const html = page();
-    for (const heading of [">username<", ">state<", ">last sign-in<"]) assert.ok(html.includes(heading), heading);
+    for (const heading of [">username<", ">kind<", ">state<", ">last sign-in<"]) assert.ok(html.includes(heading), heading);
     assert.ok(!html.includes(">name<"));
     for (const label of ["Select all accounts", "Select a@x.test", "Select off@x.test"]) assert.ok(html.includes(`aria-label="${label}"`), label);
     assert.ok(html.includes('data-st="enabled"') && html.includes('data-st="disabled"'));

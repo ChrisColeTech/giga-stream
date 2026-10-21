@@ -1,0 +1,11 @@
+export const REGISTRATION_USERNAME_REQUIRED = "Enter a username.";
+export const REGISTRATION_USERNAME_LONG = "Username must be at most 254 characters.";
+export const REGISTRATION_PASSWORD_REQUIRED = "Enter a password.";
+export const REGISTRATION_PASSWORD_LONG = "Password must be at most 256 characters.";
+export const REGISTRATION_QUESTION_REQUIRED = "Choose a security question.";
+export const REGISTRATION_ANSWER_REQUIRED = "Enter a security answer.";
+export const REGISTRATION_ANSWER_LONG = "Security answer must be at most 200 characters.";
+export const REGISTRATION_WAITING = "Waiting for the answer.";
+export const REGISTRATION_USERNAME_TAKEN = "That username is already in use.";
+export const REGISTRATION_INVALID = "Check the registration details and try again.";
+export const REGISTRATION_UNREACHABLE = "The account backend cannot be reached.";

@@ -9,7 +9,7 @@ import { FACT_UNKNOWN, SETTINGS_LABELS } from "@/constants/settings-sections";
 import { addressToSend } from "@/lib/settings-address";
 import { initialAdminDraft, reconcileAdminDraft } from "@/lib/settings-admin-draft";
 import { cn } from "@giga/ui/lib/cn";
-import type { StateSnapshot } from "@/services/state";
+import type { BackendState } from "@/types/state";
 
 /* A read-only fact, in LoRA's About pane style. */
 const FACT = "flex h-9 items-center font-mono text-sm text-muted";
@@ -18,7 +18,7 @@ export interface AdminBackendSectionProps {
   /** The saved admin backend address. The interface shows it and never contacts the backend (`01` section 4.4). */
   readonly adminUrl: string;
   readonly savedRevision: number;
-  readonly backend: StateSnapshot["backend"];
+  readonly backend: BackendState | undefined;
   /** Saves the address; called on Enter or when the field is left, with the trimmed draft. */
   readonly onCommit: (address: string) => number;
 }

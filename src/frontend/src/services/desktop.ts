@@ -1,13 +1,11 @@
-import type { z } from "zod";
 import { errorSentence } from "@/lib/error-sentence";
+import type { FolderSelection } from "@/types/collection";
 import { ApiError, api } from "./api";
 import { FolderSelectionSchema } from "./schemas/collection-schema";
 
 export interface DesktopCapability {
   readonly runtime: "electron";
 }
-
-export type FolderSelection = z.infer<typeof FolderSelectionSchema>;
 
 function installedCapability(): DesktopCapability | null {
   if (typeof window === "undefined" || window.pocHost?.runtime !== "electron") return null;

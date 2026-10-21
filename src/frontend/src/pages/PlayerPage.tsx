@@ -4,7 +4,7 @@ import { PlayerBrowser } from "@/components/player/PlayerBrowser";
 import { PlayerInspector } from "@/components/player/PlayerInspector";
 import { PlayerRelated } from "@/components/player/PlayerRelated";
 import { PlayerStage } from "@/components/player/PlayerStage";
-import { changeFavourite, changeMembership, removeWatchEntry } from "@/components/library/library-service";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { usePlayerData } from "@/hooks/usePlayerData";
 import { useEpisodeAdjacency } from "@/hooks/useEpisodeAdjacency";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
@@ -28,6 +28,7 @@ import { withWatchMark } from "@/lib/watch-marks";
 import { useAppStore } from "@/store/app-store";
 import type { LibraryItem } from "@/types/library";
 export function PlayerPage({ active }: { active: boolean }) {
+  const actions = useLibraryActions();
   const [session, dispatch] = useReducer(reducePlayerSession, createPlayerSession(null));
   const [retry, setRetry] = useState(0); const [dataRetry, setDataRetry] = useState(0);
   const [userInitiated, setUserInitiated] = useState(false);
@@ -159,11 +160,11 @@ export function PlayerPage({ active }: { active: boolean }) {
       setUserInitiated(true);
       setRetry((value) => value + 1);
     },
-    favorite: (value) => { if (session.current !== null) void changeFavourite(session.current.ref, value); },
-    toggleMember: (id) => {
-      if (session.current !== null) changeMembership(session.current.ref, id, !view.memberIds.includes(id), view.memberIds);
-    },
-    removeHistory: (id) => void removeWatchEntry(id),
+    favorite: (value) => { if (session.current !== null) void actions.favorite(session.current.ref, value); },
+    toggleMember: (id) => session.current === null ? undefined : void actions.membership(
+      session.current.ref, id, !view.memberIds.includes(id), view.memberIds,
+    ),
+    removeHistory: (id) => void actions.removeWatch(id),
     openRelated: (item) => { void openItem(item); },
   };
 

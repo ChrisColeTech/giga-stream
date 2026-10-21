@@ -6,7 +6,7 @@ import {
   clearWatchHistory,
   loadMemberships,
   removeWatchEntry,
-} from "@/components/library/library-service";
+} from "@/hooks/useLibraryActions";
 import { useAppStore } from "@/store/app-store";
 
 const originalFetch = globalThis.fetch;
@@ -14,12 +14,24 @@ const success = (data: unknown): Response => new Response(JSON.stringify({ ok: t
 const refusal = (message: string): Response => new Response(JSON.stringify({
   ok: false, error: { code: "request.refused", message },
 }), { status: 409 });
+/** These tests pin the fileserver verbs' optimistic flows, so they run on the desktop runtime explicitly: the
+ *  resolver reads a window-less node process as a signed-out browser, where favourites and memberships refuse
+ *  without a request at all (`62` section 3.6), which would hang a test that waits for the request. */
+function desktopWindow(): void {
+  (globalThis as { window?: unknown }).window = { pocHost: { runtime: "electron" } };
+}
 const collection = (itemCount: number) => ({
   id: "c1", name: "One", type: "movie", itemCount, folders: [], scanning: false, createdAt: 1, updatedAt: 2,
 });
 
-beforeEach(() => useAppStore.setState(useAppStore.getInitialState(), true));
-afterEach(() => { globalThis.fetch = originalFetch; });
+beforeEach(() => {
+  useAppStore.setState(useAppStore.getInitialState(), true);
+  desktopWindow();
+});
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  Reflect.deleteProperty(globalThis, "window");
+});
 
 describe("optimistic favorites", () => {
   it("applies immediately, then rolls back and reports a refusal", async () => {
@@ -187,6 +199,12 @@ describe("optimistic memberships", () => {
 });
 
 describe("optimistic watch deletion", () => {
+  beforeEach(() => {
+    /* Watch history is a registered feature (`63` section 3.3): these flows pin the fileserver routes' refusals, so
+       they run under a session, where the calls are really made. */
+    useAppStore.setState({ signedIn: true });
+  });
+
   it("rolls one removal and a clear back when each route refuses", async () => {
     globalThis.fetch = async () => refusal("History refused.");
     const events: string[] = [];
@@ -201,5 +219,16 @@ describe("optimistic watch deletion", () => {
     const before = useAppStore.getState().libraryRefreshSerial;
     assert.equal(await clearWatchHistory(), true);
     assert.equal(useAppStore.getState().libraryRefreshSerial, before + 1);
+  });
+
+  it("signed out the verbs refuse before the wire (`63` section 3.3)", async () => {
+    useAppStore.setState({ signedIn: false });
+    globalThis.fetch = async () => {
+      throw new Error("no request may leave the page");
+    };
+    const events: string[] = [];
+    assert.equal(await removeWatchEntry("w1", () => events.push("remove"), () => events.push("restore")), false);
+    assert.equal(useAppStore.getState().notice?.sentence, "Watch history is not kept while signed out.");
+    assert.deepEqual(events, ["remove", "restore"]);
   });
 });

@@ -8,8 +8,9 @@ import { LIBRARY_COPY } from "@/lib/library-copy";
 import { identityLine, progressRatio } from "@/lib/library-facts";
 import type { ResolvedItem } from "@/lib/library-marks";
 import type { CollectionRow } from "@/types/collection";
+import { useAppStore } from "@/store/app-store";
+import { useLibraryActions } from "@/hooks/useLibraryActions";
 import { menuEventBelow, openCardMenu } from "./card-menu";
-import { changeFavourite, playRef } from "./library-service";
 import { openTitleInfo } from "./open-title-info";
 import { ProgressBar } from "./ProgressBar";
 
@@ -29,16 +30,20 @@ export function PosterListRow({
   item, index, selected, inHistory, collections, onSelect, onRemoveWatch,
 }: PosterListRowProps) {
   const infoRef = useRef<HTMLButtonElement>(null);
+  const actions = useLibraryActions();
+  const signedIn = useAppStore((state) => state.signedIn);
   const id = item.ref.id;
   const ratio = item.progress === undefined ? undefined : progressRatio(item.progress);
   const facts = [identityLine(item), item.genres.join(", ")].filter((part) => part !== "").join(" · ");
+  const favoriteReason = signedIn ? undefined : LIBRARY_COPY.favoritesSignedOut;
   const context = {
     collections,
+    signedIn,
     inHistory,
     onInfo: () => openTitleInfo(item.ref, infoRef.current),
     onRemoveWatch: () => onRemoveWatch(item),
   };
-  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context);
+  const onMenu = (event: MouseEvent<HTMLElement>): void => openCardMenu(event, item, context, actions);
 
   return (
     <div
@@ -69,12 +74,14 @@ export function PosterListRow({
           {ratio !== undefined && <ProgressBar ratio={ratio} />}
         </span>
       </button>
-      {/* Lit is the filled accent star alone: a body toggle carries no raised edge. */}
+      {/* Lit is the filled accent star alone: a body toggle carries no raised edge. Signed out the heart stays,
+          visibly disabled with its reason (`63` section 3.4). */}
       <IconButton
         aria-label={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
         aria-pressed={item.favorite}
-        title={item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite}
-        onClick={() => void changeFavourite(item.ref, !item.favorite)}
+        title={favoriteReason === undefined ? (item.favorite ? LIBRARY_COPY.unfavorite : LIBRARY_COPY.favorite) : undefined}
+        reason={favoriteReason}
+        onClick={() => void actions.favorite(item.ref, !item.favorite)}
       >
         <Star
           className={cn("size-3.5", item.favorite ? "text-accent-text" : "text-muted")}
@@ -83,7 +90,7 @@ export function PosterListRow({
         />
       </IconButton>
       {/* One width for Play and Open, so the verbs line up down the list. */}
-      <Button size="sm" variant="ghost" className="w-[4.5rem] !justify-start" onClick={() => playRef(item.ref)}>
+      <Button size="sm" variant="ghost" className="w-[4.5rem] !justify-start" onClick={() => actions.play(item.ref)}>
         <Play className="text-muted" aria-hidden /> {item.kind === "tv" ? LIBRARY_COPY.open : LIBRARY_COPY.play}
       </Button>
       <Button size="sm" variant="ghost" className="w-[4.5rem] !justify-start" ref={infoRef} onClick={context.onInfo}>
@@ -92,7 +99,7 @@ export function PosterListRow({
       <IconButton
         aria-label={LIBRARY_COPY.moreActions}
         title={LIBRARY_COPY.moreActions}
-        onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context)}
+        onClick={(event) => openCardMenu(menuEventBelow(event.currentTarget), item, context, actions)}
       >
         <Ellipsis className="size-3.5" aria-hidden />
       </IconButton>

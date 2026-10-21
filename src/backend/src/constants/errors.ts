@@ -11,6 +11,12 @@ export interface ErrorDef {
 export const ERRORS = {
   routeNotFound: { code: "route.not_found", status: 404, message: "There is nothing at that address." },
   requestInvalid: { code: "request.invalid", status: 400, message: "The request was not understood." },
+  settingsInvalid: { code: "settings.invalid", status: 422, message: "Those settings are not valid." },
+  collectionNotFound: { code: "collection.not_found", status: 404, message: "That collection does not exist." },
+  collectionInvalid: { code: "collection.invalid", status: 422, message: "That collection is not valid." },
+  // The fileserver's own watch refusal (03 section 3.13), answered word for word so its browser
+  // pass-through can return the account's answer without translating it.
+  watchNotFound: { code: "watch.not_found", status: 404, message: "There is no such watch entry." },
   channelNotFound: { code: "channel.not_found", status: 404, message: "That channel does not exist." },
   channelInvalid: { code: "channel.invalid", status: 422, message: "That channel is not valid." },
   channelNotStream: { code: "channel.not_stream", status: 422, message: "Only a stream channel has a verdict." },

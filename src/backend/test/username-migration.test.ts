@@ -68,8 +68,8 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
 
     const db = await openTestDatabase(file);
     try {
-      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout), 024 and 025, so the schema ends at 25.
-      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 30 }]);
+      // 019 is followed by 020 (deleted titles), 021, 022 (the playlist model) 023 (no lockout), 024 and 025, so the schema ends at 32.
+      assert.deepEqual(await queryRows(db, "PRAGMA user_version"), [{ user_version: 32 }]);
       const columns = async (table: string): Promise<string[]> =>
         queryRows(db, `PRAGMA table_info(${table})`).then((rows) => rows.map((r) => String(r.name)));
       assert.equal((await columns("admin_accounts")).some((c) => c.startsWith("email")), false);
@@ -89,7 +89,7 @@ test("019 on an 018 database: version 19, every account kept as it was, now unde
 test("after 019 the username key stays unique without case", async () => {
   await inFolder(async (dataDir) => {
     const store = await createStore(await database018(dataDir));
-    const write = { id: "acct_c", username: "DEV@example.test", passwordHash: "scrypt$c", disabled: false };
+    const write = { id: "acct_c", username: "DEV@example.test", kind: "admin", passwordHash: "scrypt$c", disabled: false } as const;
     await assert.rejects(() => store.accounts.insert(write, 30));
     await store.accounts.insert({ ...write, username: "a plain name" }, 30);
     assert.equal((await store.accounts.findByUsername("A Plain Name"))?.account.id, "acct_c");

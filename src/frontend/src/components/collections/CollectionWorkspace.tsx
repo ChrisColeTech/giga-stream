@@ -6,7 +6,7 @@ import { useScrollSpy } from "@giga/ui/hooks/useScrollSpy";
 import { useCollectionMembers } from "@/hooks/useCollectionMembers";
 import { LIST_LABEL } from "@/lib/collections-copy";
 import { collectionFolder, collectionRow } from "@/lib/collections-model";
-import type { CollectionAnswer } from "@/services/collections";
+import type { CollectionAnswer } from "@/types/collection";
 import { useAppStore } from "@/store/app-store";
 import { CollectionDetailsGroup } from "./CollectionDetailsGroup";
 import { CollectionFolders } from "./CollectionFolders";

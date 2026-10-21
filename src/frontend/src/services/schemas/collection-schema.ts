@@ -22,6 +22,12 @@ export const CollectionSchema = z.object({
 
 export const CollectionListSchema = z.array(CollectionSchema);
 
+/** The account backend's collection (`62` section 3.3): the fileserver's row without folders or scans, which the
+ *  account store does not have. The list answers `{ items }` the way the account routes answer their lists. The
+ *  services fold the two readings into the app's own `CollectionAnswer`. */
+export const AccountCollectionSchema = CollectionSchema.omit({ folders: true, scanning: true });
+export const AccountCollectionListSchema = z.object({ items: z.array(AccountCollectionSchema) });
+
 export const FolderSelectionSchema = z.object({ token: z.string().min(1), name: z.string().min(1) });
 export const MembershipSchema = z.object({
   collectionId: z.string().min(1),

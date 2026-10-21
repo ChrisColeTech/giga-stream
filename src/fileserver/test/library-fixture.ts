@@ -3,8 +3,7 @@ import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import os from "node:os";
 import path from "node:path";
 
-import { makeApp, pick, pointAt, send, type Answer, type FileserverApp, type testClock } from "./app-fixture.js";
-import { FAKE_ADMIN_URL } from "./fake-backend.js";
+import { makeApp, pick, send, type Answer, type FileserverApp, type testClock } from "./app-fixture.js";
 import { fakeTitles, type FakeTitle } from "./fake-titles.js";
 
 const AT = Date.UTC(2026, 9, 16, 12);
@@ -26,12 +25,19 @@ export function localFile(
     const dir = mkdtempSync(path.join(os.tmpdir(), "giga-lib-"));
     writeFileSync(path.join(dir, name), "bytes");
     if (input.collectionId === undefined) {
-      db.prepare("INSERT INTO collections (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)").run(collectionId, "Direct", AT, AT);
+      db.prepare(
+        "INSERT INTO collections (id, name, type, created_at, updated_at) VALUES (?, ?, 'local', ?, ?)",
+      ).run(collectionId, "Direct", AT, AT);
     }
-    db.prepare("INSERT INTO collection_folders (id, collection_id, path, name, created_at) VALUES (?, ?, ?, ?, ?)").run(folderId, collectionId, dir, name, AT);
     db.prepare(
-      "INSERT INTO local_files (id, folder_id, collection_id, path, title, size_bytes, mtime_ms, height, poster_id, playable, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)",
-    ).run(id, folderId, collectionId, path.join(dir, name), name, 5, AT, input.height ?? null, input.posterId ?? null, input.addedAt ?? AT);
+      "INSERT INTO collection_folders (id, collection_id, path, name, created_at) VALUES (?, ?, ?, ?, ?)",
+    ).run(folderId, collectionId, dir, name, AT);
+    db.prepare(
+      `INSERT INTO local_files
+        (id, folder_id, collection_id, path, title, size_bytes, mtime_ms, height,
+          poster_id, playable, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+    ).run(id, folderId, collectionId, path.join(dir, name), name, 5, AT,
+      input.height ?? null, input.posterId ?? null, input.addedAt ?? AT);
     return id;
   } finally {
     db.close();
@@ -59,7 +65,6 @@ export async function bootTitles(
     ...(options.dataDir !== undefined && { dataDir: options.dataDir }),
     ...(options.clock !== undefined && { clock: options.clock }),
   });
-  await pointAt(t, FAKE_ADMIN_URL);
   return { backend, t };
 }
 
@@ -74,7 +79,8 @@ export async function allPages(t: FileserverApp, query: string): Promise<Answer[
   const pages: Answer[] = [];
   let cursor: string | undefined;
   for (let guard = 0; guard < 60; guard++) {
-    const page = await send(t.app, "GET", `/api/library?${query}${cursor === undefined ? "" : `&cursor=${encodeURIComponent(cursor)}`}`);
+    const suffix = cursor === undefined ? "" : `&cursor=${encodeURIComponent(cursor)}`;
+    const page = await send(t.app, "GET", `/api/library?${query}${suffix}`);
     pages.push(page);
     const next = pick(page.body, "data.nextCursor");
     if (typeof next !== "string") return pages;
