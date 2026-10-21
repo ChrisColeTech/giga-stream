@@ -298,7 +298,9 @@ separate navigation links.
   group. There is no separate New collection or Add Folder button.
 - **Genre rows.** The rows come from the current Library answer's genre facets. Selecting one changes the source to
   All and applies that one Genre filter; selecting All clears the Genre filter. A multi-genre choice made in the
-  filter pane leaves no single genre row selected. Genre rows have no invented counts.
+  filter pane leaves no single genre row selected. Genre rows have no invented counts. The last accepted genre
+  vocabulary stays mounted while a changed query loads, so selecting a category never collapses and rebuilds the
+  whole Categories list; selected values are merged into that vocabulary until the next accepted facet answer.
 - **States.** With no collections the group draws 5 row skeletons in the row's shape. If the list cannot be
   read, the last rows stay and one notice says why.
 
