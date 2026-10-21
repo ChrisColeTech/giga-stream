@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { collectionOf, matchesQuery, type LibraryQuery } from "@/lib/library-query";
 import { acceptCount } from "@/lib/library-counts";
 import { reloadDecision } from "@/lib/library-reload";
+import { LibraryFirstPageController } from "@/services/library-first-page";
 import { logLibraryPage } from "@/services/library-log";
 import { syncLibrary } from "@/services/library-refresh";
-import { LibrarySearchLifecycle } from "@/services/library-search-lifecycle";
 import {
   LibrarySearchSession,
   appendLibraryPage,
@@ -48,8 +48,9 @@ export function useLibraryData(
   const { continuing, sideReady, readSideData } = useLibrarySideData(showContinue, signedIn);
   const readSerial = useRef(0);
   const pageRef = useRef<LibraryPage | null>(null);
-  const searchLifecycle = useRef<LibrarySearchLifecycle | null>(null);
-  const pageRequest = useRef<AbortController | null>(null);
+  const firstPage = useRef<LibraryFirstPageController | null>(null);
+  const searchSession = useRef<LibrarySearchSession | null>(null);
+  const pagingRequest = useRef<AbortController | null>(null);
   const queryGeneration = useRef(0);
   const firstPagePending = useRef(true);
   const pagesLoaded = useRef(0);
@@ -60,34 +61,55 @@ export function useLibraryData(
   const previousSignedIn = useRef(signedIn);
   const firstPass = useRef(true);
   const dirty = useRef(false);
-  if (searchLifecycle.current === null) {
-    searchLifecycle.current = new LibrarySearchLifecycle(() => new LibrarySearchSession((answer) => {
-      pageRef.current = answer;
-      setPage(answer);
-      setAccepted({ queryKey: libraryQueryKey(useAppStore.getState().libraryQuery), serial: readSerial.current });
-      firstPagePending.current = false; pagesLoaded.current = 1;
-      setLoading(false);
-      const store = useAppStore.getState();
-      store.rememberLibraryItems(answer.items);
-      acceptCount(store.libraryQuery, answer);
-    }, (error) => {
-      firstPagePending.current = false; setLoading(false);
-      useAppStore.getState().say(sentence(error), "warn");
-    }));
+  const acceptFirstPage = (answer: LibraryPage): void => {
+    pageRef.current = answer;
+    setPage(answer);
+    setAccepted({ queryKey: libraryQueryKey(useAppStore.getState().libraryQuery), serial: readSerial.current });
+    firstPagePending.current = false; pagesLoaded.current = 1;
+    setLoading(false);
+    const store = useAppStore.getState();
+    store.rememberLibraryItems(answer.items);
+    acceptCount(store.libraryQuery, answer);
+  };
+  const refuseFirstPage = (error: unknown): void => {
+    firstPagePending.current = false; setLoading(false);
+    useAppStore.getState().say(sentence(error), "warn");
+  };
+  if (firstPage.current === null) {
+    firstPage.current = new LibraryFirstPageController(acceptFirstPage, refuseFirstPage);
   }
 
   const read = (debounce: boolean): void => {
     queryGeneration.current += 1;
     readSerial.current = refreshSerial;
     firstPagePending.current = true;
-    pageRequest.current?.abort();
+    pagingRequest.current?.abort();
+    pagingRequest.current = null;
     setPaging(false);
     /* The grid draws its first-page skeletons until the new first page lands, and nothing chains pages toward a
        stale position (no cursor, so no pager). */
     pageRef.current = null; setPage(null);
     setLoading(true);
-    if (debounce) searchLifecycle.current?.search(query);
-    else searchLifecycle.current?.readNow(query);
+    if (!debounce) {
+      searchSession.current?.cancel();
+      searchSession.current = null;
+      firstPage.current?.read(query);
+      return;
+    }
+    firstPage.current?.cancel();
+    searchSession.current?.cancel();
+    const generation = queryGeneration.current;
+    const session = new LibrarySearchSession((answer) => {
+      if (generation !== queryGeneration.current || searchSession.current !== session) return;
+      searchSession.current = null;
+      acceptFirstPage(answer);
+    }, (error) => {
+      if (generation !== queryGeneration.current || searchSession.current !== session) return;
+      searchSession.current = null;
+      refuseFirstPage(error);
+    });
+    searchSession.current = session;
+    session.search(query);
   };
 
   const loadMore = (): boolean => {
@@ -96,11 +118,11 @@ export function useLibraryData(
     if (firstPagePending.current || !canLoadLibraryPage(accepted.queryKey, key, loading, paging, cursor)) return false;
     const generation = queryGeneration.current;
     const controller = new AbortController();
-    pageRequest.current?.abort();
-    pageRequest.current = controller;
+    pagingRequest.current?.abort();
+    pagingRequest.current = controller;
     setPaging(true);
     void readLibrary(query, controller.signal, cursor).then((next) => {
-      if (generation !== queryGeneration.current || pageRequest.current !== controller) return;
+      if (generation !== queryGeneration.current || pagingRequest.current !== controller) return;
       const merged = pageRef.current === null ? next : appendLibraryPage(pageRef.current, next);
       pageRef.current = merged;
       setPage(merged);
@@ -110,7 +132,7 @@ export function useLibraryData(
       logLibraryPage(pagesLoaded.current, merged);
     }).catch((error: unknown) => {
       if (!aborted(error)) useAppStore.getState().say(sentence(error), "warn");
-    }).finally(() => { if (pageRequest.current === controller) setPaging(false); });
+    }).finally(() => { if (pagingRequest.current === controller) setPaging(false); });
     return true;
   };
 
@@ -118,15 +140,15 @@ export function useLibraryData(
      serial, a session that started or ended (`63` section 3.3 - the watch truth changed home). Showing it again
      reads nothing for the list, which keeps its place; only the side data refreshes quietly. */
   useEffect(() => {
-    const lifecycle = searchLifecycle.current;
-    if (lifecycle === null) return;
     firstPass.current = true;
-    lifecycle.setup();
+    firstPage.current?.setup();
     return () => {
-      lifecycle.cleanup();
       queryGeneration.current += 1;
-      const request = pageRequest.current;
-      pageRequest.current = null;
+      firstPage.current?.cleanup();
+      searchSession.current?.cancel();
+      searchSession.current = null;
+      const request = pagingRequest.current;
+      pagingRequest.current = null;
       request?.abort();
     };
   }, []);
