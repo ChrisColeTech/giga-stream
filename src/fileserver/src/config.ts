@@ -40,8 +40,9 @@ const EnvSchema = z.object({
   TURSO_DATABASE_URL: z.string().trim().default(""),
   TURSO_AUTH_TOKEN: z.string().default(""),
   JWT_SECRET: z.string().default(""),
-  // Optional byte origin only. Admin/account APIs and the console are never proxied (docs/64 section 1).
-  ADMIN_MEDIA_TARGET: z.string().trim().default(""),
+  // Server deployments only (docs/64 section 1 as amended 2026-11-03, docs/66): the admin backend the
+  // proxy forwards `/api/admin`, `/admin`, `/live` and `/logos` to. The packaged desktop never sets it.
+  ADMIN_PROXY_TARGET: z.string().trim().default(""),
   // Deployment only (docs/62 wave 0): set on a public deployment, the unauthenticated write routes for
   // settings, favorites, collections and watch history refuse (403 writes.closed) until accounts ship.
   // A desktop never sets it, because its local writes are the point.
@@ -69,7 +70,7 @@ export const config = {
   tursoDatabaseUrl: env.TURSO_DATABASE_URL,
   tursoAuthToken: env.TURSO_AUTH_TOKEN,
   jwtSecret: env.JWT_SECRET,
-  adminMediaTarget: env.ADMIN_MEDIA_TARGET,
+  adminProxyTarget: env.ADMIN_PROXY_TARGET,
   /** Deployment only (docs/62 wave 0): on, the shared write routes refuse with `403 writes.closed`. */
   requireAccountWrites: env.REQUIRE_ACCOUNT_WRITES,
   version: "0.2.0",

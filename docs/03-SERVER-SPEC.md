@@ -68,7 +68,9 @@ interface, default `src/frontend/dist`; point it at `src/mockup` to serve the pr
 `TEST_FOLDER_ROOT` (tests only: lets a browser run choose a folder under this root without Electron's
 picker), `GIGA_APP_URL` (desktop shell only: the page the window loads),
 `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (the admin database; required for direct admin reads), `JWT_SECRET`
-(account sessions), `ADMIN_MEDIA_TARGET` (optional `/live` and `/logos` byte origin),
+(account sessions), `ADMIN_PROXY_TARGET` (server deployments: the admin backend the proxy forwards
+`/api/admin`, `/admin`, `/live` and `/logos` to at their own paths, `64` section 1 as amended
+2026-11-03; never set on a packaged desktop),
 `REQUIRE_ACCOUNT_WRITES` (deployment only, plan `62` wave 0: set on a public deployment, it makes the
 unauthenticated write routes for settings, favorites, collections and watch history refuse with the standard
 envelope, `403 writes.closed`; never set on a desktop, whose local writes are the point).

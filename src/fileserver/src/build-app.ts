@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import httpProxy from "@fastify/http-proxy";
+import httpProxy, { type FastifyHttpProxyOptions } from "@fastify/http-proxy";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 
@@ -44,13 +44,29 @@ export interface BuildOptions extends Partial<ServiceOptions> {
   logger?: boolean;
   /** Check the backend cache at launch, detached (docs/46 section C). Defaults to true; tests turn it off. */
   syncOnStart?: boolean;
-  adminMediaTarget?: string;
+  adminProxyTarget?: string;
 }
 
-/** Byte-only media proxy. No admin API or console prefix is registered here (docs/64 section 1). */
-async function registerAdminMediaProxy(app: FastifyInstance, target: string): Promise<void> {
-  await app.register(httpProxy, { upstream: target, prefix: "/live", rewritePrefix: "/live" });
-  await app.register(httpProxy, { upstream: target, prefix: "/logos", rewritePrefix: "/logos" });
+type ReplyOptions = NonNullable<FastifyHttpProxyOptions["replyOptions"]>;
+
+/** Keep the real client visible to the backend's sign-in limiter (its `TRUST_PROXY`, docs/03 section 7.12). */
+const withForwardedFor: NonNullable<ReplyOptions["rewriteRequestHeaders"]> = (request, headers) => {
+  const seen = headers["x-forwarded-for"];
+  const chain = seen === undefined ? [] : Array.isArray(seen) ? seen : [seen];
+  return { ...headers, "x-forwarded-for": [...chain, request.ip].join(", ") };
+};
+
+/**
+ * The reverse proxy to the admin backend sibling (docs/64 section 1 as amended 2026-11-03): the console
+ * (`/admin`, served by the backend at `/admin/`), its whole API (`/api/admin`) and the live media
+ * (`/live`, `/logos`) pass through with their paths intact. Only server deployments set the target;
+ * the packaged desktop never does, and `/api/account` and `/api/auth` stay this program's own routes.
+ */
+async function registerAdminProxy(app: FastifyInstance, target: string): Promise<void> {
+  const replyOptions: ReplyOptions = { rewriteRequestHeaders: withForwardedFor };
+  for (const prefix of ["/api/admin", "/admin", "/live", "/logos"]) {
+    await app.register(httpProxy, { upstream: target, prefix, rewritePrefix: prefix, replyOptions });
+  }
 }
 
 /**
@@ -86,8 +102,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
   if (overrides.syncOnStart ?? true) services.cache.start();
 
-  const mediaTarget = overrides.adminMediaTarget ?? config.adminMediaTarget;
-  if (mediaTarget !== "") await registerAdminMediaProxy(app, mediaTarget);
+  const proxyTarget = overrides.adminProxyTarget ?? config.adminProxyTarget;
+  if (proxyTarget !== "") await registerAdminProxy(app, proxyTarget);
 
   // The SPA entry (22 section 5.2): a GET that is no route, no /api address and no served file
   // answers index.html when the dist has one; everything else stays the JSON 404 envelope.

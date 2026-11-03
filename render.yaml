@@ -4,8 +4,11 @@
 #   • the fileserver, public on $PORT — the interface at /, its /api surface,
 #     and the reverse proxy for the admin half of the domain;
 #   • the admin backend, loopback-only on BACKEND_PORT (default 8191) — the
-#     admin console (staged into src/backend/public, served at /), the
+#     admin console (staged into src/backend/public, served at /admin/), the
 #     /api/admin routes and the live streams (/live, /logos).
+#   The web service is always on, so this backend runs inline (docs/66 keeps the
+#   Cloud Run service external); scheduled catalog work runs in Cloud Run Jobs,
+#   triggered by Cloud Scheduler — never start a fill while one is executing.
 # Public shape: / and /api/* are the frontend's; /admin is the console (login
 # gate first); every admin API route is /api/admin/*.
 #

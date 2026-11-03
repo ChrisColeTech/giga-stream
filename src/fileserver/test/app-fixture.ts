@@ -57,7 +57,7 @@ export async function makeApp(
     syncOnStart: options.syncOnStart ?? false,
     ...(options.adminFetch !== undefined && { adminFetch: options.adminFetch }),
     ...(options.webDist !== undefined && { webDist: options.webDist }),
-    ...(options.adminProxyTarget !== undefined && { adminMediaTarget: options.adminProxyTarget }),
+    ...(options.adminProxyTarget !== undefined && { adminProxyTarget: options.adminProxyTarget }),
     adminDatabase,
     tursoDatabaseUrl: options.tursoDatabaseUrl ?? "test://admin-primary",
     jwtSecret: "test-secret-that-is-at-least-32-characters",

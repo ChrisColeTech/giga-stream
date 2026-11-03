@@ -2,12 +2,11 @@
 # The single giga-stream Render service: BOTH programs, one public port.
 #
 # The fileserver is public on $PORT: the interface at /, its own /api, and the
-# reverse proxy that forwards /admin (prefix stripped, so the console's built
-# /admin/ asset addresses land on the backend's /assets), /api/admin (identity),
-# /live and /logos to the admin backend. The backend is the loopback sibling on
-# BACKEND_PORT (default 8191, the fileserver's own production default, so the
-# saved admin address matches): the console from its public/ folder, the
-# /api/admin routes and the live streams.
+# reverse proxy that forwards /admin (the console the backend serves at its own
+# /admin/), /api/admin (identity), /live and /logos to the admin backend. The
+# backend is the loopback sibling on BACKEND_PORT (default 8191, the fileserver's
+# own production default, so the saved admin address matches): the console from
+# its public/ folder, the /api/admin routes and the live streams.
 #
 # Either process exiting ends the service, so Render restarts the pair whole.
 # render.yaml points startCommand here.
