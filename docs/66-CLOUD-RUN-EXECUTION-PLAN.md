@@ -29,8 +29,9 @@ guarantee of zero charges.
   reread pages after restart; do not advertise exact resume. Recent-update cursors
   retain the existing success-only advancement semantics.
 - Worker service configuration uses one task, parallelism one, no automatic
-  retries, and a bounded timeout. Operators must check for active executions before
-  launching another: these runners' single-flight guards are process-local.
+  retries, and a bounded timeout. Operators must check both catalog jobs for active
+  executions before launching a fill: Cloud Run permits overlapping executions and
+  these runners' single-flight guards are process-local.
 - This deployment is on-demand. Database schedule labels are not Cloud Scheduler
   jobs and will not fire automatically in the passive web process.
 
@@ -63,10 +64,9 @@ and verify the service has minimum zero with request-based CPU allocation.
 - Cloud Run Job: `giga-stream-catalog-sync`, default `SYNC_JOB_ID=6`; command
   `node src/backend/dist/catalog-worker.js`; one task, parallelism one, zero retries,
   1 vCPU, 1 GiB, 24-hour timeout. Only Turso URL/token and TMDB token are injected.
-- Inline run stopped cleanly with 22,540 processed title entries retained. New
-  execution `giga-stream-catalog-sync-7z9fc` started and emitted increasing movies
-  progress. This verifies kickoff/progress, not full catalog completion.
-- Gate passed: 2,918 tests plus typechecks, lint, and rules. Local-stack smoke was
+- Inline run stopped cleanly with 22,540 processed title entries retained. Execution
+  `giga-stream-catalog-sync-7z9fc` then completed the fill successfully in 5h 6m.
+- Gate passed: 2,921 tests plus typechecks, lint, and rules. Local-stack smoke was
   skipped because no stack was running. Production API returned the external reason,
   refused manual inline execution with 422, and closed its SSE response with 200.
 - Full browser visual verification was unavailable because the Chrome extension
@@ -79,12 +79,13 @@ do not overlap the fill and update against this shared database.
 
 ```powershell
 gcloud run jobs executions list --job=giga-stream-catalog-sync --region=us-east1 --project=gen-lang-client-0250251927
+gcloud run jobs executions list --job=giga-stream-catalog-update --region=us-east1 --project=gen-lang-client-0250251927
 
 # Full Library fill, only when no catalog execution is active:
 gcloud run jobs execute giga-stream-catalog-sync --region=us-east1 --project=gen-lang-client-0250251927 --async
 
-# Incremental Library update instead of fill (per-execution override):
-gcloud run jobs execute giga-stream-catalog-sync --region=us-east1 --project=gen-lang-client-0250251927 --update-env-vars=SYNC_JOB_ID=7 --async
+# Incremental Library update (the scheduler normally starts this):
+gcloud run jobs execute giga-stream-catalog-update --region=us-east1 --project=gen-lang-client-0250251927 --async
 
 # Cancel a specific execution; retained rows are not rolled back:
 gcloud run jobs executions cancel EXECUTION_NAME --region=us-east1 --project=gen-lang-client-0250251927
@@ -93,7 +94,8 @@ gcloud run jobs executions cancel EXECUTION_NAME --region=us-east1 --project=gen
 The admin page is `https://giga-stream-backend-lz23tv4noq-ue.a.run.app/admin/`.
 Use Cloud Run Jobs for active progress and cancellation. Admin last-result fields
 update when the worker finishes; its in-memory running indicator is not remote status.
-No Cloud Scheduler trigger was created; database schedule fields do not run in external mode.
+At the 2026-10-29 verification point no Cloud Scheduler trigger existed; database
+schedule fields still do not run in external mode. The follow-up below adds the trigger.
 
 ## Follow-up (2026-11-03): the short URL and a trigger
 
@@ -103,10 +105,14 @@ No Cloud Scheduler trigger was created; database schedule fields do not run in e
   its own URL for the same console; both deployments share the one Turso.
 - The Render pair is always on, so its loopback backend stays inline (live encoder available); its
   `TMDB_SYNC_SCHEDULE` stays off, so catalog work still belongs to Cloud Run Jobs.
-- Cloud Scheduler is now enabled on the project with one HTTP job, `giga-stream-catalog-update`: every 6
-  hours (UTC) it calls `giga-stream-catalog-sync` `:run` with `SYNC_JOB_ID=7` (Library update, not fill)
-  via OIDC; Cloud Run refuses a start while an execution is active, which is the cross-process guard the
-  contract's process-local single-flight cannot provide.
+- Cloud Scheduler is now enabled on the project with one HTTP job,
+  `giga-stream-catalog-update`: every 6 hours (UTC) it calls the separate Cloud Run Job of the same name
+  through the v2 `:run` API using OAuth. That job fixes `SYNC_JOB_ID=7`, one task, parallelism one, zero
+  retries and a 4-hour timeout; the 24-hour fill job remains manual.
+- Cloud Run permits overlapping executions. Validation proved it by starting two update executions; the
+  duplicate was cancelled immediately. The update timeout is shorter than its schedule interval and the
+  Scheduler target has no retries, preventing scheduled overlap; operators must still check both jobs
+  before any manual fill or update.
 
 ## Cost model
 
