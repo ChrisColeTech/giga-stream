@@ -20,7 +20,8 @@ export function useChannelsLoad(active: boolean): void {
   useEffect(() => {
     if (!active || (status !== "idle" && !stale)) return;
     clearStale("channels");
-    void (status === "idle" ? flows.load() : flows.refresh());
+    // EOF marks channels stale; an automatic reload must not reopen that stream in a loop.
+    void (status === "idle" ? flows.load() : flows.refresh(false));
   }, [active, status, stale, flows, clearStale]);
 
   useEffect(() => {

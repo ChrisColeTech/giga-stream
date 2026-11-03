@@ -35,6 +35,7 @@ import { corsOrigins, isPrivateRoute, startRefusal, tlsOptions } from "./network
 import { bootstrapAdmin } from "./services/bootstrap-admin.js";
 import { createSafeFetch, type SafeFetch } from "./services/safe-fetch.js";
 import { createServices, type Services } from "./services/service-registry.js";
+import { serviceOptions } from "./services/service-options.js";
 import { seedTestChannels } from "./services/test-channels.js";
 import { createStore } from "./store/store.js";
 
@@ -72,26 +73,9 @@ export async function buildApp(
       ...(https && { https }),
     });
     services = await createServices(store, {
-      jwtSecret: settings.JWT_SECRET,
-      tmdbToken: settings.TMDB_READ_TOKEN,
-      tmdbBase: settings.TMDB_BASE,
-      tmdbMinGapMs: settings.TMDB_MIN_GAP_MS,
-      omdbKey: settings.OMDB_API_KEY,
-      omdbBase: settings.OMDB_BASE,
-      omdbDailyLimit: settings.OMDB_DAILY_LIMIT,
-      movieStreamTemplate: settings.MOVIE_STREAM_TEMPLATE,
-      episodeStreamTemplate: settings.EPISODE_STREAM_TEMPLATE,
-      now,
-      dataDir: settings.DATA_DIR,
-      cacheDir: settings.CACHE_DIR || path.join(settings.DATA_DIR, "cache"),
-      adminDist: settings.ADMIN_DIST,
-      log: (line) => app.log.warn(line),
+      ...serviceOptions(settings, now, (line) => app.log.warn(line)),
       live,
-      titleSchedule: settings.TMDB_SYNC_SCHEDULE,
-      playlistSyncMaxBytes: settings.PLAYLIST_SYNC_MAX_BYTES,
-      playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
       safeFetch: safeFetchImpl,
-      logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
     });
     const ready = services;
     const bootstrap = await bootstrapAdmin(ready.accounts, await ready.hasAccounts(), bootstrapUsername(settings),
@@ -99,7 +83,7 @@ export async function buildApp(
     // Every saved live channel builds in the background, so the server answers at once. The seed (an empty
     // store only) starts its own channels as it creates them.
     await ready.channels.startLive();
-    if (settings.SEED_TEST_CHANNELS) {
+    if (settings.SEED_TEST_CHANNELS && settings.SYNC_EXECUTION_MODE === "inline") {
       const seeded = await seedTestChannels(ready.channels, settings.FIXTURE_DIR);
       if (seeded.repaired > 0) app.log.info(`seed: repaired ${seeded.repaired} legacy stream channel(s) into live channels`);
     }

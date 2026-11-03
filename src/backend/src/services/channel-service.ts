@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { AppError, ERRORS } from "../constants/errors.js";
+import { requireSyncExecution } from "../constants/sync-execution.js";
 import type { LiveEngine } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
 import type { AdminChannel, BackendChannel, ChannelList, ChannelRecord, LiveRecord } from "../types/channel.js";
@@ -15,17 +16,13 @@ import { adminChannel, liveSpecOf, publicChannel } from "./channel-views.js";
 import { checkLiveSource, newLiveRecord, patchedLiveRecord } from "./live-channel-rules.js";
 import { invalid, newStreamRecord, patchedStreamRecord, withEdits } from "./stream-channel-rules.js";
 
-/**
- * The channels of both kinds (docs/03 section 7.2, docs/26 section 3.3). Every change is live as soon as it
- * is saved: it raises the one revision in the same transaction, and a live row's engine rebuilds it in the
- * background (its state says how far it got). Nothing is pushed: a reader learns of a change from the
- * revision in the next answer it reads (`01` section 4.4).
- */
+/** Channels of both kinds (docs/03 7.2, docs/26 3.3): revisioned writes; inline live edits rebuild in the background. */
 export function createChannelService(deps: {
   store: Store;
   audit: AuditService;
   live: LiveEngine;
   now: () => number;
+  executionDisabledReason?: string;
 }) {
   const { store, audit, live, now } = deps;
 
@@ -58,6 +55,7 @@ export function createChannelService(deps: {
 
   async function createRecord(input: ChannelInput): Promise<ChannelRecord> {
     if (input.kind === "stream") return newStreamRecord(input, `ch_${randomUUID()}`);
+    requireSyncExecution(deps.executionDisabledReason);
     const record = newLiveRecord({ ...input, id: input.id ?? `live-${randomUUID()}` }); // none sent: assigned, docs/36
     if (await store.channels.find(record.id)) throw new AppError(ERRORS.channelTaken, { field: "id" });
     await claimNumber(record);
@@ -107,6 +105,7 @@ export function createChannelService(deps: {
       if (current.kind === "stream") {
         record = withEdits(current, patchedStreamRecord(current, patch));
       } else {
+        requireSyncExecution(deps.executionDisabledReason);
         const next = patchedLiveRecord(current, patch);
         await claimNumber(next);
         checkLiveSource(next.live);
@@ -152,6 +151,7 @@ export function createChannelService(deps: {
 
     /** Re-reads a folder source and rebuilds the channel; the old stream keeps playing until the new is ready. */
     rebuild: async (id: string, actor: Actor, base: string): Promise<AdminChannel> => {
+      requireSyncExecution(deps.executionDisabledReason);
       const current = await existingLive(id);
       if (!current.enabled) throw invalid("enabled", "A disabled channel is not running; enable it first.");
       checkLiveSource(current.live);
@@ -165,6 +165,7 @@ export function createChannelService(deps: {
 
     /** The seed's repair: a stream row becomes the live row `input` describes, same id, one revision. */
     replaceStreamWithLive: async (input: LiveChannelInput, actor: Actor): Promise<void> => {
+      requireSyncExecution(deps.executionDisabledReason);
       if ((await existing(input.id)).kind !== "stream") throw invalid("kind", "Only a stream channel is replaced by a live one.");
       const record = newLiveRecord(input);
       await claimNumber(record);
@@ -183,6 +184,7 @@ export function createChannelService(deps: {
 
     /** The start: every saved live row builds in the background, so the server answers at once. */
     startLive: async (): Promise<void> => {
+      if (deps.executionDisabledReason !== undefined) return;
       for (const record of await store.channels.list()) {
         if (record.kind === "live" && record.enabled) live.apply(liveSpecOf(record));
       }

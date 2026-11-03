@@ -23,11 +23,13 @@ export function createSyncScheduler(deps: {
   now: () => number;
   /** Whether TMDB has a token: a catalog job is not scheduled without one. */
   tmdbConfigured: boolean;
+  enabled?: boolean;
 }) {
   const { store, runner, now } = deps;
   const notBefore = now() + FIRST_RUN_GRACE_MS;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let stopped = false;
+  let stopped = deps.enabled === false;
+  let generation = 0;
 
   const dueAt = (job: JobRecord, interval: number): number =>
     Math.max(job.lastRunAt === undefined ? 0 : job.lastRunAt + interval, notBefore);
@@ -52,11 +54,12 @@ export function createSyncScheduler(deps: {
 
   /** Arms the one timer for the earliest due job (or `delayMs` from now), replacing whatever it was waiting for. */
   async function arm(delayMs?: number): Promise<void> {
+    const ticket = ++generation;
     if (timer !== undefined) clearTimeout(timer);
     timer = undefined;
     if (stopped) return;
     const due = await next();
-    if (due === undefined) return;
+    if (stopped || ticket !== generation || due === undefined) return;
     timer = setTimeout(() => void fire(due.job.id), Math.min(Math.max(delayMs ?? due.at - now(), 0), MAX_WAIT_MS));
   }
 
@@ -68,6 +71,7 @@ export function createSyncScheduler(deps: {
     /** Shutdown: no more runs, no timer. */
     stop(): void {
       stopped = true;
+      generation++;
       if (timer !== undefined) clearTimeout(timer);
       timer = undefined;
     },

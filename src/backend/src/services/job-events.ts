@@ -23,17 +23,20 @@ function frameOf(event: JobEvent): string {
  * `progress` and `finished` as they happen. It owns the subscribers; the route owns the HTTP. There is no heartbeat and no
  * timer of its own, and no queue: a sink that cannot take a write is ended.
  */
-export function createJobEvents(deps: { progress: JobProgressRegistry }) {
+export function createJobEvents(deps: { progress: JobProgressRegistry; enabled?: boolean }) {
   const { progress } = deps;
   const sinks = new Set<EventSink>();
 
-  function drop(sink: EventSink): void {
-    if (!sinks.delete(sink)) return;
+  function end(sink: EventSink): void {
     try {
       sink.end();
     } catch {
       // a socket that is already gone
     }
+  }
+
+  function drop(sink: EventSink): void {
+    if (sinks.delete(sink)) end(sink);
   }
 
   function write(sink: EventSink, text: string): void {
@@ -46,7 +49,7 @@ export function createJobEvents(deps: { progress: JobProgressRegistry }) {
     if (!accepted) drop(sink);
   }
 
-  progress.subscribe((event) => {
+  if (deps.enabled !== false) progress.subscribe((event) => {
     const text = frameOf(event);
     for (const sink of [...sinks]) write(sink, text);
   });
@@ -64,6 +67,13 @@ export function createJobEvents(deps: { progress: JobProgressRegistry }) {
      * Answers the function that ends the subscription (safe to call again).
      */
     attach(sink: EventSink): () => void {
+      // A passive API must not hold a billable request open or imply remote in-memory progress.
+      if (deps.enabled === false) {
+        try { sink.write(frame("snapshot", { running: [] })); } catch {
+          // Even a disconnected or backpressured client must release this request.
+        } finally { end(sink); }
+        return () => undefined;
+      }
       assertRoom();
       sinks.add(sink);
       write(sink, frame("snapshot", { running: progress.running() }));

@@ -1,4 +1,5 @@
 import { AppError, ERRORS } from "../constants/errors.js";
+import { requireSyncExecution } from "../constants/sync-execution.js";
 import { CURSOR_OVERLAP_MS, PLAYLIST_DELETE_SETTLE_MS } from "../constants/limits.js";
 import type { CatalogJob, JobRecord, PlaylistJob } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
@@ -12,38 +13,38 @@ import { firstPhase } from "./title-walk.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
 
-/** The code a failed run keeps: an `AppError`'s own, else `internal.failure`. An exception's message is never stored. */
+/** Persist codes, never exception messages. */
 const codeOf = (error: unknown): string => (error instanceof AppError ? error.code : ERRORS.internalFailure.code);
 
 interface Flight {
   abort: AbortController;
-  settled: Promise<void>;
+  settled: Promise<JobRecord | undefined>;
 }
 
 /**
- * Runs sync jobs (docs/43 section 3.4, docs/26 section 3.11). A run is STARTED, never awaited by its caller: the
- * route answers `202` and the result is read on a refresh. One run per job - and a playlist has one job - so the
- * single flight is per playlist (`409 sync.busy`). Each run owns an `AbortController`: deleting a playlist (or
- * shutting down) aborts it and waits for it to settle. A run keeps its result on the job, typed: `ok`, `failed` (with
- * the error's code) or `stopped`.
+ * Process-local single flight per job. HTTP starts and answers 202; workers await wait().
+ * Cancellation retains committed rows and persists an ok/failed/stopped result (docs/43, docs/66).
  */
 export function createJobRunner(deps: {
-  store: Store;
-  audit: AuditService;
+  store: { jobs: Pick<Store["jobs"], "find" | "recordRun">; playlists: Pick<Store["playlists"], "find"> };
+  audit: Pick<AuditService, "record">;
   now: () => number;
   playlistJob: PlaylistJobBody;
-  titles: TitleService;
+  titles: Pick<TitleService, "runNow" | "status" | "isSyncRunning">;
   /** Where every run reports its progress (docs/44 section 3.1). */
   progress: JobProgressRegistry;
   /** Called when a run settles, so the scheduler can arm for the next due job. */
   onSettled: () => void;
+  executionDisabledReason?: string;
 }) {
   const { store, audit, now, playlistJob, titles, progress, onSettled } = deps;
   const flights = new Map<number, Flight>();
+  const settlements = new Map<number, Flight["settled"]>();
 
   /** Why this job cannot be run by hand, or undefined when it can: a playlist job needs its playlist enabled; the
    *  job's own `enabled` switch gates only the schedule (docs/26 3.11). */
   async function refusal(job: JobRecord): Promise<string | undefined> {
+    if (deps.executionDisabledReason !== undefined) return deps.executionDisabledReason;
     if (job.type === "catalog") return undefined;
     const playlist = await store.playlists.find(job.playlistId);
     if (!playlist) return "The job's playlist no longer exists.";
@@ -58,7 +59,7 @@ export function createJobRunner(deps: {
     if (await store.jobs.find(job.id)) await store.jobs.recordRun(job.id, now(), result, counts, cursorAt);
   }
 
-  /** The end of a run as the stream tells it: the result the job now holds (none when the job is gone or the store closed). */
+  /** The stream's terminal value, absent when the job is gone or the store closed. */
   async function finishedOf(jobId: number): Promise<JobFinished> {
     try {
       const ended = await store.jobs.find(jobId);
@@ -127,13 +128,16 @@ export function createJobRunner(deps: {
     const body = job.type === "playlist"
       ? runPlaylist(job, actor, signal, progress.start(job.id, "reading"))
       : runCatalog(job, actor, triggered, signal, progress.start(job.id, firstPhase(job.config)));
-    const settled = body.catch(() => undefined).finally(async () => {
+    const settled = body.then(() => store.jobs.find(job.id)).finally(async () => {
       flights.delete(job.id);
       // After the flight is gone, so a client that refetches on `finished` reads the job as no longer running.
       progress.finish(await finishedOf(job.id));
       onSettled();
     });
     flights.set(job.id, { abort, settled });
+    settlements.set(job.id, settled);
+    // HTTP callers detach; headless callers observe persistence failures through wait().
+    void settled.catch(() => undefined);
   }
 
   /** Aborts a job's run without waiting for it (the admin's `Stop`); true when a run was in flight. */
@@ -149,7 +153,8 @@ export function createJobRunner(deps: {
     if (!flight) return false;
     abort(id);
     let timer: ReturnType<typeof setTimeout> | undefined;
-    await Promise.race([flight.settled, new Promise<void>((resolve) => (timer = setTimeout(resolve, limitMs)))]);
+    const bounded = new Promise<void>((resolve) => (timer = setTimeout(resolve, limitMs)));
+    await Promise.race([flight.settled.catch(() => undefined), bounded]);
     clearTimeout(timer);
     return true;
   }
@@ -160,12 +165,17 @@ export function createJobRunner(deps: {
     isRunning: (id: number): boolean => flights.has(id),
     stop,
     abort,
+    executionDisabledReason: deps.executionDisabledReason,
+    assertExecutable: (): void => requireSyncExecution(deps.executionDisabledReason),
+    /** The latest run's actual settlement, including its final persisted record; never a polling read. */
+    wait: (id: number): Promise<JobRecord | undefined> =>
+      settlements.get(id) ?? Promise.reject(new AppError(ERRORS.jobNotRunning)),
 
     /** An admin's run: refused when the job cannot run (`422 job.disabled`), `409 sync.busy` while it does. */
-    run: async (job: JobRecord, actor: Actor): Promise<void> => {
+    run: async (job: JobRecord, actor: Actor, triggered: "admin" | "system" = "admin"): Promise<void> => {
       const reason = await refusal(job);
       if (reason !== undefined) throw disabled(reason);
-      start(job, actor, "admin");
+      start(job, actor, triggered);
     },
 
     /** The scheduler's run: started, never awaited; `busy` when the catalog engine is taken and the job should wait. */
@@ -178,7 +188,9 @@ export function createJobRunner(deps: {
 
     /** Shutdown: every run is aborted and has settled before the store closes. */
     async shutdown(): Promise<void> {
-      await Promise.all([...flights.keys()].map((id) => stop(id)));
+      const active = [...flights.values()];
+      for (const flight of active) flight.abort.abort();
+      await Promise.allSettled(active.map((flight) => flight.settled));
     },
   };
 }

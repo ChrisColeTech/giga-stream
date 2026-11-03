@@ -15,6 +15,7 @@ export interface PlaylistJobLink {
   readonly id: number;
   readonly enabled: boolean;
   readonly running: boolean;
+  readonly executionDisabledReason?: string;
 }
 
 export interface PlaylistsState {

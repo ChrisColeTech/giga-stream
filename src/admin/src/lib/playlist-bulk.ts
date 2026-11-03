@@ -54,7 +54,8 @@ export function jobForPlaylists(jobs: readonly AdminJob[]): Record<number, Playl
   for (const job of jobs) {
     const playlistId = playlistIdOf(job);
     if (playlistId === null) continue;
-    const link = { id: job.id, enabled: job.enabled, running: job.running };
+    const link = { id: job.id, enabled: job.enabled, running: job.running,
+      ...(job.executionDisabledReason !== undefined && { executionDisabledReason: job.executionDisabledReason }) };
     const held = map[playlistId];
     if (held === undefined || rank(link) < rank(held)) map[playlistId] = link;
   }
@@ -63,6 +64,7 @@ export function jobForPlaylists(jobs: readonly AdminJob[]): Record<number, Playl
 
 /** Why `Sync now` skips a playlist, or null to run its job. */
 export function syncSkip(playlist: AdminPlaylist, link: PlaylistJobLink | undefined): string | null {
+  if (link?.executionDisabledReason !== undefined) return link.executionDisabledReason;
   if (!playlist.enabled) return SYNC_PLAYLIST_DISABLED;
   if (link === undefined) return SYNC_NO_JOB;
   return link.running ? SYNC_JOB_RUNNING : null;

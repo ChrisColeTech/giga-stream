@@ -20,7 +20,7 @@ const catalogJob = (id: number, schedule: string, lastRunAt?: number): JobRecord
   ...(lastRunAt !== undefined && { lastRunAt }),
 });
 
-function harness(jobs: JobRecord[], answer: "started" | "busy" | "skipped" = "started") {
+function harness(jobs: JobRecord[], answer: "started" | "busy" | "skipped" = "started", enabled = true) {
   let at = START;
   const running = new Set<number>();
   const started: number[] = [];
@@ -39,12 +39,40 @@ function harness(jobs: JobRecord[], answer: "started" | "busy" | "skipped" = "st
       return Promise.resolve(answer);
     },
   };
-  const scheduler = createSyncScheduler({ store, runner, now: () => at, tmdbConfigured: true });
+  const scheduler = createSyncScheduler({ store, runner, now: () => at, tmdbConfigured: true, enabled });
   return { scheduler, started, running, tick: (ms: number) => { at += ms; mock.timers.tick(ms); } };
 }
 
 beforeEach(() => mock.timers.enable({ apis: ["setTimeout"] }));
 afterEach(() => mock.timers.reset());
+
+test("external mode stays disarmed through startup, change and settlement rearm callbacks", async () => {
+  const { scheduler, started, tick } = harness([catalogJob(6, "1h"), playlistJob(9, "15m")], "started", false);
+  for (const callback of [scheduler.arm, () => scheduler.arm(0), scheduler.arm]) {
+    await callback();
+    assert.equal(scheduler.armed(), false);
+    tick(24 * 60 * MINUTE);
+    await flush();
+  }
+  assert.deepEqual(started, []);
+});
+
+test("stop while arm awaits the store cannot resurrect its timer", async () => {
+  let release!: (jobs: JobRecord[]) => void;
+  const pending = new Promise<JobRecord[]>((resolve) => { release = resolve; });
+  const scheduler = createSyncScheduler({
+    store: { jobs: { list: () => pending, find: async () => undefined } },
+    runner: { scheduledRefusal: async () => undefined, isRunning: () => false,
+      runScheduled: async () => { assert.fail("a stopped scheduler must not execute"); } },
+    now: () => START, tmdbConfigured: true,
+  });
+  const armed = scheduler.arm();
+  scheduler.stop();
+  release([catalogJob(6, "1h")]);
+  await armed;
+  await scheduler.arm();
+  assert.equal(scheduler.armed(), false);
+});
 
 test("a job that never ran is due at the start plus the grace, never during boot", async () => {
   const { scheduler, started, tick } = harness([playlistJob(1, "24h")]);

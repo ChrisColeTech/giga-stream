@@ -1,0 +1,14 @@
+.gcloudignore
+.git
+.github
+.gitignore
+#!include:.gitignore
+docs
+logs
+playlists/**
+release
+src/fileserver
+src/frontend
+src/mockup
+tools/ffmpeg/win32-x64
+NUL

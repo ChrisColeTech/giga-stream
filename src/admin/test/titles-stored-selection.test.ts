@@ -4,7 +4,7 @@ import { loadedState, matchingOffer, selectedCount } from "@giga/ui/lib/list-sel
 import { planTitleBulk } from "@/lib/title-bulk";
 import { loadedRows } from "@/lib/title-paged";
 import { START_STORED } from "@/lib/title-stored-query";
-import { NO_CATALOG_JOB, SYNC_RUNNING, enabledCatalogJobs, syncPlan, syncReason } from "@/lib/title-sync";
+import { NO_CATALOG_JOB, SYNC_LOADING, SYNC_RUNNING, enabledCatalogJobs, syncPlan, syncReason } from "@/lib/title-sync";
 import type { AdminJob } from "@/services/schemas/job-schema";
 import { createTitleBulkCall } from "@/services/title-bulk";
 import { createTitleFlows } from "@/services/title-flows";
@@ -126,7 +126,7 @@ describe("Sync now", () => {
   });
 
   it("gives its reason in priority order: unreachable, a run going, then no enabled catalog job", () => {
-    assert.equal(syncReason(idle), undefined, "the Jobs list is read at the press when unknown");
+    assert.equal(syncReason(idle), SYNC_LOADING, "read execution policy before enabling the control");
     assert.equal(syncReason({ ...idle, jobs: [job(1, { enabled: false })] }), NO_CATALOG_JOB);
     assert.equal(syncReason({ ...idle, jobs: [job(1, { running: true })] }), SYNC_RUNNING);
     assert.equal(syncReason({ ...idle, syncing: 1 }), SYNC_RUNNING);

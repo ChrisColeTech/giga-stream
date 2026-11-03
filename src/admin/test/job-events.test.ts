@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
+import { streamKeyOf } from "@/lib/job-events-plan";
 import { applyEvent, consumeStream, decodeFrame, runJobEvents } from "@/services/job-events";
 import { createSseParser } from "@/services/sse-parser";
 import { useAppStore } from "@/store/app-store";
@@ -67,6 +68,26 @@ describe("decoding a frame", () => {
 });
 
 describe("following a stream into the store", () => {
+  it("consumes the external empty snapshot and EOF once without changing the hook's reconnect key", async () => {
+    state().jobProgressUpdate(P1);
+    const before = streamKeyOf(state().signedIn, state().tokens?.accessToken ?? null, state().jobEventsTick);
+    const tick = state().jobEventsTick;
+    const text = frame("snapshot", { running: [] });
+    let opened = 0;
+    const stream = async () => {
+      opened++;
+      return bodyOf(text.slice(0, 15), text.slice(15));
+    };
+    const signal = new AbortController().signal;
+    await runJobEvents({ stream, store: () => useAppStore.getState() }, signal);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(signal.aborted, false, "normal EOF completes without cancellation");
+    assert.equal(opened, 1);
+    assert.deepEqual(state().jobProgress.live, []);
+    assert.equal(state().jobEventsTick, tick, "marking lists stale does not request a reconnect");
+    assert.equal(streamKeyOf(state().signedIn, state().tokens?.accessToken ?? null, state().jobEventsTick), before);
+  });
+
   it("applies frames that arrive in pieces, skipping the bad one", async () => {
     const text = frame("snapshot", { running: [P1] }) + "event: progress\ndata: {bad\n\n" + frame("progress", { ...P1, done: 40 });
     const seen: string[] = [];

@@ -20,7 +20,7 @@ export interface ChannelReads {
   /** The first read, when the tab is first shown. Does nothing while a read is already running. */
   load: () => Promise<FlowResult>;
   /** `Refresh`: every loaded page is dropped and the window reads what it shows again; the scroll position stays. */
-  refresh: () => Promise<FlowResult>;
+  refresh: (reopenEvents?: boolean) => Promise<FlowResult>;
   /** One page of the list by the held query (what the window asks for). */
   readPage: (index: number) => Promise<FlowResult>;
   /** The Preview's read: ONE channel by id (`GET /api/admin/channels/:id`); it never reads or drops the list. */
@@ -67,8 +67,8 @@ export function createChannelReads({ service, store }: ChannelFlowDeps): Channel
 
   const load = async (): Promise<FlowResult> => (store().channels.status === "loading" ? done(undefined) : first());
 
-  async function refresh(): Promise<FlowResult> {
-    store().jobEventsReopen();
+  async function refresh(reopenEvents = true): Promise<FlowResult> {
+    if (reopenEvents) store().jobEventsReopen();
     const total = store().channels.total;
     store().channelsInvalidate();
     if (total !== null && total > WINDOW_MIN_ROWS) {

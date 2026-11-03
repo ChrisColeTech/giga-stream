@@ -43,6 +43,7 @@ export function createTitleService(deps: {
   now: () => number;
   /** The schedule shown in the sync status: the first enabled catalog job's. */
   scheduleLabel?: () => Promise<string>;
+  executionDisabledReason?: string;
 }) {
   const { store } = deps;
   const deleted = createTitleDeleted(deps);

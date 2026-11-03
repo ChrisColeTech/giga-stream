@@ -1,0 +1,17 @@
+.git
+.github
+**/node_modules
+**/dist
+**/.env
+**/*.env
+**/*.log
+docs
+logs
+playlists/**
+release
+src/backend/data
+src/fileserver
+src/frontend
+src/mockup
+tools/ffmpeg/win32-x64
+NUL

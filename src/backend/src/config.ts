@@ -23,7 +23,7 @@ const DEFAULT_ADMIN_DIST = path.resolve(PROGRAM_ROOT, "..", "admin", "dist");
 /** The root-level admin UI served at `/` when it is built (`src/backend/public`). */
 const DEFAULT_PUBLIC_DIR = path.resolve(PROGRAM_ROOT, "public");
 
-const EnvSchema = z.object({
+export const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   // Tests use port 0; unset, the port follows NODE_ENV.
   PORT: z.coerce.number().int().min(0).max(65535).optional(),
@@ -46,6 +46,8 @@ const EnvSchema = z.object({
   TMDB_READ_TOKEN: z.string().default(""),
   // The catalog-sync interval, e.g. "6h" or "30m"; empty or "off" disables it (docs/03 section 7.6b).
   TMDB_SYNC_SCHEDULE: z.string().default(""),
+  SYNC_EXECUTION_MODE: z.enum(["inline", "external"]).default("inline"),
+  SYNC_JOB_ID: z.coerce.number().int().positive().safe().optional(),
   TMDB_BASE: z.string().default("https://api.themoviedb.org/3"),
   // The pause between TMDB requests (about five a second); a test knob, so a fake TMDB is not paced.
   TMDB_MIN_GAP_MS: z.coerce.number().int().min(0).max(10_000).default(TMDB_MIN_GAP_MS),

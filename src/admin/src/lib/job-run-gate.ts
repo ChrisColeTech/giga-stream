@@ -25,6 +25,8 @@ export function runGate(
   unreachable: boolean,
 ): string | undefined {
   if (ticked.length === 0) return TICK_JOB_FIRST;
+  const disabled = ticked.find((job) => job.executionDisabledReason !== undefined)?.executionDisabledReason;
+  if (disabled !== undefined) return disabled;
   if (ticked.some((job) => job.running)) return RUN_RUNNING;
   if (ticked.some((job) => playlistOfJob(job, playlists)?.enabled === false)) return RUN_PLAYLIST_OFF;
   return unreachable ? UNREACHABLE_REASON : undefined;
@@ -41,6 +43,7 @@ export function workspaceRunReason(
     readonly playlists: readonly AdminPlaylist[];
   },
 ): string | undefined {
+  if (job.executionDisabledReason !== undefined) return job.executionDisabledReason;
   if (state.dirty) return SAVE_JOB_FIRST;
   if (state.busy || job.running) return RUNNING_REASON;
   return runGate([job], state.playlists, state.unreachable);

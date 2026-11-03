@@ -25,6 +25,7 @@ export const JobSchema = z.object({
   playlistId: z.number().optional(),
   playlistName: z.string().optional(),
   running: z.boolean(),
+  executionDisabledReason: z.string().trim().min(1).optional(),
   /** A running job's latest progress (`44` section 3.3); the stream keeps it current. Unreadable reads as absent. */
   progress: JobProgressSchema.optional().catch(undefined),
   lastRunAt: z.number().optional(),

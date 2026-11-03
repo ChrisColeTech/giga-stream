@@ -1,4 +1,5 @@
 import { AppError, ERRORS } from "../constants/errors.js";
+import { requireSyncExecution } from "../constants/sync-execution.js";
 import type { Store } from "../store/store.js";
 import type { ProgressReport } from "../types/job-progress.js";
 import { type Actor, type AuditService } from "./audit-service.js";
@@ -58,6 +59,7 @@ export function createTitleSync(deps: {
   omdb: OmdbClient;
   deleted: TitleDeleted;
   now: () => number;
+  executionDisabledReason?: string;
 }) {
   const { store, audit, tmdb, omdb, now } = deps;
   const storeRow = createStoreRow({ store, deleted: deps.deleted, now });
@@ -136,6 +138,7 @@ export function createTitleSync(deps: {
      * runs. The answer is typed and never throws once the run began.
      */
     runNow(request: SyncRequest, actor: Actor, triggered: "admin" | "system", options: RunOptions = {}): Promise<SyncResult> {
+      requireSyncExecution(deps.executionDisabledReason);
       if (running !== null) throw new AppError(ERRORS.syncBusy, { startedAt: running.startedAt });
       running = { startedAt: now() };
       return syncOnce(request, actor, triggered, options);

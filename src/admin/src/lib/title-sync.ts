@@ -10,13 +10,14 @@ export const SYNC_NOW = "Sync now";
 export const SYNC_RUNNING = "A sync is already running.";
 export const NO_CATALOG_JOB = "No catalog job is enabled. Enable one on the Jobs tab.";
 export const SYNC_UNREACHABLE = "The admin backend cannot be reached.";
+export const SYNC_LOADING = "Loading sync jobs.";
 export const SYNC_WORDS: BulkWords = { past: "Synced", noun: "catalog job", nouns: "catalog jobs" };
 
 export const enabledCatalogJobs = (jobs: readonly AdminJob[]): AdminJob[] =>
   jobs.filter((job) => job.type === "catalog" && job.enabled);
 
 export interface SyncState {
-  /** The Jobs list as last read; null while the Jobs tab has not read it (the press reads it). */
+  /** The Jobs list as last read; null until the load supplies the execution policy. */
   readonly jobs: readonly AdminJob[] | null;
   /** Syncs the statusbar counts as running. */
   readonly syncing: number;
@@ -28,12 +29,22 @@ export interface SyncState {
 /** Why `Sync now` is disabled, or undefined. */
 export function syncReason(state: SyncState): string | undefined {
   if (state.unreachable) return SYNC_UNREACHABLE;
+  const disabled = state.jobs?.find((job) => job.type === "catalog"
+    && job.executionDisabledReason !== undefined)?.executionDisabledReason;
+  if (disabled !== undefined) return disabled;
   if (state.busy || state.syncing > 0 || (state.jobs?.some((job) => job.running) ?? false)) return SYNC_RUNNING;
-  if (state.jobs !== null && enabledCatalogJobs(state.jobs).length === 0) return NO_CATALOG_JOB;
+  if (state.jobs === null) return SYNC_LOADING;
+  if (enabledCatalogJobs(state.jobs).length === 0) return NO_CATALOG_JOB;
   return undefined;
 }
 
 /** The plan of a press: one runnable item per enabled catalog job, named as the Jobs tab names it. */
 export function syncPlan(jobs: readonly AdminJob[]): BulkPlan<number> {
-  return { runnable: enabledCatalogJobs(jobs).map((job) => ({ id: job.id, label: job.name })), refused: [] };
+  const enabled = enabledCatalogJobs(jobs);
+  return {
+    runnable: enabled.filter((job) => job.executionDisabledReason === undefined)
+      .map((job) => ({ id: job.id, label: job.name })),
+    refused: enabled.flatMap((job) => job.executionDisabledReason === undefined ? []
+      : [{ id: job.id, label: job.name, reason: job.executionDisabledReason }]),
+  };
 }

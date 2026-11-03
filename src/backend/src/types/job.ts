@@ -61,6 +61,8 @@ export interface JobView {
   playlistId?: number;
   playlistName?: string;
   running: boolean;
+  /** This process cannot execute jobs; running/progress describe only this process. */
+  executionDisabledReason?: string;
   /** A running job's latest progress (docs/44 section 3.1); absent when idle. */
   progress?: JobProgress;
   lastRunAt?: number;

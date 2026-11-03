@@ -1,10 +1,11 @@
 import { APP_ROLE, APP_VERSION } from "../constants/deployment.js";
 import { SYNC_CONCURRENCY, SYNC_PER_HOST_CONCURRENCY } from "../constants/limits.js";
+import { EXTERNAL_EXECUTION_REASON } from "../constants/sync-execution.js";
 import { createLiveEngine, type LiveSeams } from "../live/engine/live-engine.js";
 import type { Store } from "../store/store.js";
 import { createAccountService } from "./account-service.js";
 import { createAdminStatic } from "./admin-static-service.js";
-import { createAuditService } from "./audit-service.js";
+import { createCatalogServices } from "./catalog-services.js";
 import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
 import { createJobEvents } from "./job-events.js";
@@ -14,7 +15,6 @@ import { createJobService } from "./job-service.js";
 import { createLogoCache } from "./logo-cache.js";
 import { createLogoFill } from "./logo-fill.js";
 import { createLogoResolver } from "./logo-resolver.js";
-import { createOmdbClient } from "./omdb-client.js";
 import { createRequestLimiter } from "./request-limiter.js";
 import { createStreamCheck } from "./stream-check.js";
 import { createPlaylistImporter } from "./playlist-import.js";
@@ -23,13 +23,10 @@ import { createPlaylistService } from "./playlist-service.js";
 import { createProviderService } from "./provider-service.js";
 import { createSafeFetch, type SafeFetch } from "./safe-fetch.js";
 import { createSecurityQuestionService } from "./security-question-service.js";
-import { createStreamTemplates } from "./stream-templates.js";
 import { createSyncScheduler } from "./sync-scheduler.js";
 import { seedSyncRecords } from "./sync-seed.js";
 import { createTitleCatalog } from "./title-catalog-service.js";
-import { createTitleService } from "./title-service.js";
 import { createStoredTitles } from "./title-stored-service.js";
-import { createTmdbClient } from "./tmdb-client.js";
 import { createUiStateService } from "./ui-state-service.js";
 import { createUserCollectionsService } from "./user-collections-service.js";
 import { createUserFavoritesService } from "./user-favorites-service.js";
@@ -37,6 +34,7 @@ import { createUserSettingsService } from "./user-settings-service.js";
 import { createUserWatchService } from "./user-watch-service.js";
 
 export interface ServiceOptions {
+  syncExecutionMode?: "inline" | "external";
   jwtSecret: string;
   tmdbToken: string;
   tmdbBase?: string;
@@ -69,16 +67,15 @@ export interface ServiceOptions {
 /** Every service, built once from the store; routes receive this and call one service each. */
 export async function createServices(store: Store, options: ServiceOptions) {
   const { now } = options;
-  const audit = createAuditService(store, now);
+  const external = options.syncExecutionMode === "external";
+  const executionDisabledReason = external ? EXTERNAL_EXECUTION_REASON : undefined;
+  const scheduleOf = async (): Promise<string> =>
+    (await store.jobs.list()).find((j) => j.type === "catalog" && j.enabled && j.schedule !== "off"
+      && j.config.scope !== "recent")?.schedule ?? "off";
+  const { audit, tmdb, omdb, titles } = createCatalogServices(store, options, scheduleOf, executionDisabledReason);
   const auth = createAuthService({ store, audit, secret: options.jwtSecret, now });
   const securityQuestions = createSecurityQuestionService({
     store, audit, revokeAll: auth.revokeAll, secret: options.jwtSecret, now,
-  });
-  const tmdb = createTmdbClient({ token: options.tmdbToken, base: options.tmdbBase, now, minGapMs: options.tmdbMinGapMs });
-  const omdb = createOmdbClient({ key: options.omdbKey, base: options.omdbBase, dailyLimit: options.omdbDailyLimit, now });
-  const streams = createStreamTemplates({
-    movieTemplate: options.movieStreamTemplate,
-    episodeTemplate: options.episodeStreamTemplate,
   });
   const live = createLiveEngine({
     cacheDir: options.cacheDir,
@@ -95,17 +92,6 @@ export async function createServices(store: Store, options: ServiceOptions) {
 
   // The first start seeds the catalog job from the environment; after that it is the truth. Playlists come from imports.
   await seedSyncRecords(store, { titleSchedule: options.titleSchedule }, now());
-  /**
-   * The schedule a sync status shows: the first enabled job of the type that has one. The Library update (scope `recent`)
-   * is not the fill, so the status never shows its schedule.
-   */
-  const scheduleOf = async (type: "playlist" | "catalog"): Promise<string> =>
-    (await store.jobs.list()).find((j) => j.type === type && j.enabled && j.schedule !== "off"
-      && !(j.type === "catalog" && j.config.scope === "recent"))?.schedule ?? "off";
-  const titles = createTitleService({
-    store, audit, tmdb, omdb, streams, now,
-    scheduleLabel: () => scheduleOf("catalog"),
-  });
   const safeFetch = options.safeFetch ?? createSafeFetch();
   const importer = createPlaylistImporter({
     store, audit, now, safeFetch,
@@ -117,9 +103,9 @@ export async function createServices(store: Store, options: ServiceOptions) {
   const logoCache = createLogoCache({ store, safeFetch, limiter, dataDir: options.dataDir, now });
   const resolver = createLogoResolver({ dataDir: options.dataDir, ttlHours: options.logoIndexTtlHours ?? 24, safeFetch, now });
   const progress = createJobProgress({ now });
-  const events = createJobEvents({ progress });
+  const events = createJobEvents({ progress, enabled: !external });
   const runner = createJobRunner({
-    store, audit, now, titles, progress,
+    store, audit, now, titles, progress, executionDisabledReason,
     playlistJob: createPlaylistJob({
       store, importer, now, logoCache,
       fillLogos: createLogoFill({ store, resolver }),
@@ -127,7 +113,7 @@ export async function createServices(store: Store, options: ServiceOptions) {
     }),
     onSettled: () => scheduler.arm(),
   });
-  const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "" });
+  const scheduler = createSyncScheduler({ store, runner, now, tmdbConfigured: options.tmdbToken !== "", enabled: !external });
   // The watch service reads the account's settings document at each write, so it is built after it.
   const userSettings = createUserSettingsService({ store, now });
   return {
@@ -149,7 +135,7 @@ export async function createServices(store: Store, options: ServiceOptions) {
     userFavorites: createUserFavoritesService({ store, now }),
     userCollections: createUserCollectionsService({ store, now }),
     userWatch: createUserWatchService({ store, settings: userSettings, now }),
-    channels: createChannelService({ store, audit, live, now }),
+    channels: createChannelService({ store, audit, live, now, executionDisabledReason }),
     providers: createProviderService({ store, audit, now }),
     titles,
     storedTitles: createStoredTitles(store),

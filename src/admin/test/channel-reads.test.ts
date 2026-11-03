@@ -6,6 +6,7 @@ import { planChannelBulk } from "@/lib/channel-bulk";
 import { DEFAULT_CHANNEL_QUERY, queryKey, withFilter, withSearch, type ChannelQuery } from "@/lib/channel-query";
 import { createChannelReads, SELECT_MATCHING_MAX } from "@/services/channel-reads";
 import type { ChannelsService } from "@/services/channels";
+import { runJobEvents } from "@/services/job-events";
 import type { ChannelPage } from "@/services/schemas/channel-schema";
 import { useAppStore } from "@/store/app-store";
 import type { AdminChannel } from "@/types/admin-channel";
@@ -52,6 +53,33 @@ beforeEach(() => {
 });
 
 describe("the channel reads", () => {
+  it("an external stream EOF reloads stale channels without reconnecting; explicit Refresh still reconnects", async () => {
+    const { service, asked } = fake(3);
+    const reads = readsOf(service);
+    await reads.load();
+    const tick = state().jobEventsTick;
+    let opened = 0;
+    await runJobEvents({
+      store: () => state(),
+      stream: async () => {
+        opened++;
+        return new ReadableStream<Uint8Array>({ start(controller) {
+          controller.enqueue(new TextEncoder().encode('event: snapshot\ndata: {"running":[]}\n\n'));
+          controller.close();
+        } });
+      },
+    }, new AbortController().signal);
+    assert.equal(state().stale.channels, true);
+    state().clearStale("channels");
+    await reads.refresh(false);
+    assert.equal(state().jobEventsTick, tick, "automatic stale reload cannot change the SSE hook key");
+    assert.equal(state().stale.channels, false);
+    assert.equal(opened, 1);
+    assert.deepEqual(asked.map((one) => one.index), [0, 0]);
+    await reads.refresh();
+    assert.equal(state().jobEventsTick, tick + 1, "user Refresh still requests a new stream");
+  });
+
   it("load reads page 0 and the live rows once, and does nothing while a read runs", async () => {
     const { service, asked } = fake(250);
     const reads = readsOf(service);
