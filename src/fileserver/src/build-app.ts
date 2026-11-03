@@ -45,6 +45,7 @@ export interface BuildOptions extends Partial<ServiceOptions> {
   /** Check the backend cache at launch, detached (docs/46 section C). Defaults to true; tests turn it off. */
   syncOnStart?: boolean;
   adminProxyTarget?: string;
+  catalogRunnerTarget?: string;
 }
 
 type ReplyOptions = NonNullable<FastifyHttpProxyOptions["replyOptions"]>;
@@ -67,6 +68,15 @@ async function registerAdminProxy(app: FastifyInstance, target: string): Promise
   for (const prefix of ["/api/admin", "/admin", "/live", "/logos"]) {
     await app.register(httpProxy, { upstream: target, prefix, rewritePrefix: prefix, replyOptions });
   }
+}
+
+/** The one admin control whose executor is Cloud Run; register before the wider local admin prefix. */
+async function registerCatalogRunnerProxy(app: FastifyInstance, target: string): Promise<void> {
+  const prefix = "/api/admin/catalog-jobs";
+  await app.register(httpProxy, {
+    upstream: target, prefix, rewritePrefix: prefix,
+    replyOptions: { rewriteRequestHeaders: withForwardedFor },
+  });
 }
 
 /**
@@ -102,6 +112,8 @@ export async function buildApp(overrides: BuildOptions = {}): Promise<FastifyIns
   });
   if (overrides.syncOnStart ?? true) services.cache.start();
 
+  const catalogRunnerTarget = overrides.catalogRunnerTarget ?? config.catalogRunnerTarget;
+  if (catalogRunnerTarget !== "") await registerCatalogRunnerProxy(app, catalogRunnerTarget);
   const proxyTarget = overrides.adminProxyTarget ?? config.adminProxyTarget;
   if (proxyTarget !== "") await registerAdminProxy(app, proxyTarget);
 

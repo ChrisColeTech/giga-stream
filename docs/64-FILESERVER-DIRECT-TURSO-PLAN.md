@@ -17,6 +17,9 @@ everywhere it previously called or passed through an admin API. The sole admin A
   that sets `ADMIN_PROXY_TARGET`, the fileserver forwards `/admin` (the console the backend serves at its
   own `/admin/`), `/api/admin`, `/live` and `/logos` at their own paths, carrying the client's address in
   `X-Forwarded-For`; the packaged desktop never sets the target, so nothing admin-facing leaves it.
+- `CATALOG_RUNNER_TARGET` is the one narrower exception: `/api/admin/catalog-jobs/*` is forwarded first
+  to the external API, where its `JobRunner` dispatches Cloud Run Jobs. Every other admin control remains
+  on `ADMIN_PROXY_TARGET`, so playlists and live operations stay on the always-on backend.
 - `/live` and `/logos` are playback/image origins, not admin API calls. On the web deployment the console
   answers at `gigastream.app/admin/` through that proxy, beside the app itself.
 - The local six-hour channel/title display cache remains. Direct SQL fills it, preserving cold-await,

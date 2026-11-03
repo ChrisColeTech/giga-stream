@@ -32,6 +32,7 @@ export const ERROR_SENTENCES: SentenceTable = {
   "title.taken": "That title is already stored, or it was deleted; restore it under Deleted titles.",
   "title.manual": "A title made by hand has no TMDB copy to go back to.",
   "tmdb.unavailable": "The title service cannot be reached right now.",
+  "job.dispatch_unavailable": "The catalog job runner cannot be reached right now.",
   "playlist.not_found": "That playlist does not exist.",
   "playlist.invalid": "That playlist is not valid.",
   "playlist.unreachable": "A playlist cannot be reached right now.",

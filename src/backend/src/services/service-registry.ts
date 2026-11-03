@@ -6,6 +6,7 @@ import type { Store } from "../store/store.js";
 import { createAccountService } from "./account-service.js";
 import { createAdminStatic } from "./admin-static-service.js";
 import { createCatalogServices } from "./catalog-services.js";
+import type { CatalogJobDispatcher } from "./catalog-job-dispatcher.js";
 import { createAuthService } from "./auth-service.js";
 import { createChannelService } from "./channel-service.js";
 import { createJobEvents } from "./job-events.js";
@@ -35,6 +36,7 @@ import { createUserWatchService } from "./user-watch-service.js";
 
 export interface ServiceOptions {
   syncExecutionMode?: "inline" | "external";
+  catalogDispatcher?: CatalogJobDispatcher;
   jwtSecret: string;
   tmdbToken: string;
   tmdbBase?: string;
@@ -105,7 +107,7 @@ export async function createServices(store: Store, options: ServiceOptions) {
   const progress = createJobProgress({ now });
   const events = createJobEvents({ progress, enabled: !external });
   const runner = createJobRunner({
-    store, audit, now, titles, progress, executionDisabledReason,
+    store, audit, now, titles, progress, executionDisabledReason, catalogDispatcher: options.catalogDispatcher,
     playlistJob: createPlaylistJob({
       store, importer, now, logoCache,
       fillLogos: createLogoFill({ store, resolver }),

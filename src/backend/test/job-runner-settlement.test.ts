@@ -7,6 +7,7 @@ import { createJobRunner } from "../src/services/job-runner.js";
 import { createJobProgress } from "../src/services/job-progress.js";
 import type { SyncResult } from "../src/services/title-sync.js";
 import type { CatalogJob } from "../src/store/job-repository.js";
+import type { CatalogJobDispatcher } from "../src/services/catalog-job-dispatcher.js";
 
 const NOW = 10_000_000;
 const job: CatalogJob = { id: 7, name: "Update", type: "catalog", enabled: true, schedule: "24h",
@@ -15,7 +16,7 @@ const done = (result: SyncResult["result"]): SyncResult =>
   ({ result, titles: 3, detailed: 2, enriched: 1, seasons: 1, airing: 1 });
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
-function harness(disabled?: string) {
+function harness(disabled?: string, catalogDispatcher?: CatalogJobDispatcher) {
   let finish!: (result: SyncResult) => void;
   const body = new Promise<SyncResult>((resolve) => { finish = resolve; });
   let commit!: () => void;
@@ -54,7 +55,7 @@ function harness(disabled?: string) {
     },
     playlistJob: async () => { assert.fail("no playlist execution"); },
     progress: createJobProgress({ now: () => NOW }), onSettled: () => { rearmed++; },
-    executionDisabledReason: disabled,
+    executionDisabledReason: disabled, ...(catalogDispatcher !== undefined && { catalogDispatcher }),
   });
   return { runner, finish, commit, saved: () => saved, calls: () => calls, rearmed: () => rearmed,
     aborted: () => signal?.aborted, failWrite: () => { failWrite = true; } };
@@ -121,4 +122,20 @@ test("external runner refuses every manual job and skips scheduled jobs without 
   }
   assert.equal(h.calls(), 0);
   assert.equal(h.rearmed(), 0);
+});
+
+test("an external catalog run dispatches through the runner while playlists and schedules stay disabled", async () => {
+  let dispatched = 0;
+  const h = harness(EXTERNAL_EXECUTION_REASON, { run: async (record) => {
+    dispatched++;
+    assert.equal(record.id, job.id);
+  } });
+  const playlist = { id: 9, type: "playlist", playlistId: 1, enabled: true, schedule: "24h", createdAt: 1 } as const;
+  assert.equal(await h.runner.refusal(job), undefined);
+  await h.runner.run(job, {});
+  assert.equal(dispatched, 1);
+  assert.equal(h.runner.isRunning(job.id), false, "remote progress is never represented as a local flight");
+  assert.equal(await h.runner.scheduledRefusal(job), EXTERNAL_EXECUTION_REASON);
+  assert.equal(await h.runner.refusal(playlist), EXTERNAL_EXECUTION_REASON);
+  await assert.rejects(h.runner.run(playlist, {}), { code: "job.disabled" });
 });

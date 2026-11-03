@@ -43,6 +43,8 @@ const EnvSchema = z.object({
   // Server deployments only (docs/64 section 1 as amended 2026-11-03, docs/66): the admin backend the
   // proxy forwards `/api/admin`, `/admin`, `/live` and `/logos` to. The packaged desktop never sets it.
   ADMIN_PROXY_TARGET: z.string().trim().default(""),
+  // Server deployment only: catalog Run requests go to the external API whose JobRunner starts Cloud Run Jobs.
+  CATALOG_RUNNER_TARGET: z.string().trim().default(""),
   // Deployment only (docs/62 wave 0): set on a public deployment, the unauthenticated write routes for
   // settings, favorites, collections and watch history refuse (403 writes.closed) until accounts ship.
   // A desktop never sets it, because its local writes are the point.
@@ -71,6 +73,7 @@ export const config = {
   tursoAuthToken: env.TURSO_AUTH_TOKEN,
   jwtSecret: env.JWT_SECRET,
   adminProxyTarget: env.ADMIN_PROXY_TARGET,
+  catalogRunnerTarget: env.CATALOG_RUNNER_TARGET,
   /** Deployment only (docs/62 wave 0): on, the shared write routes refuse with `403 writes.closed`. */
   requireAccountWrites: env.REQUIRE_ACCOUNT_WRITES,
   version: "0.2.0",

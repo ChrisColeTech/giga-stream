@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Config } from "../config.js";
+import { createCatalogJobDispatcher } from "./catalog-job-dispatcher.js";
 import type { ServiceOptions } from "./service-registry.js";
 
 /** One environment-to-service mapping, shared by both process entrypoints. */
@@ -24,5 +25,11 @@ export function serviceOptions(settings: Config, now: () => number, log: (line: 
     playlistSyncMax: settings.PLAYLIST_SYNC_MAX,
     logoIndexTtlHours: settings.LOGO_INDEX_TTL_HOURS,
     syncExecutionMode: settings.SYNC_EXECUTION_MODE,
+    catalogDispatcher: createCatalogJobDispatcher({
+      project: settings.CLOUD_RUN_JOB_PROJECT,
+      region: settings.CLOUD_RUN_JOB_REGION,
+      fillJob: settings.CLOUD_RUN_FILL_JOB,
+      updateJob: settings.CLOUD_RUN_UPDATE_JOB,
+    }),
   };
 }

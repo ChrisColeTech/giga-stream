@@ -43,6 +43,7 @@ export async function makeApp(
     scan?: FolderScanner;
     /** The admin backend the reverse proxy points at (test/admin-proxy.test.ts); unset leaves it off. */
     adminProxyTarget?: string;
+    catalogRunnerTarget?: string;
     adminDatabase?: Client;
     tursoDatabaseUrl?: string;
   } = {},
@@ -58,6 +59,7 @@ export async function makeApp(
     ...(options.adminFetch !== undefined && { adminFetch: options.adminFetch }),
     ...(options.webDist !== undefined && { webDist: options.webDist }),
     ...(options.adminProxyTarget !== undefined && { adminProxyTarget: options.adminProxyTarget }),
+    ...(options.catalogRunnerTarget !== undefined && { catalogRunnerTarget: options.catalogRunnerTarget }),
     adminDatabase,
     tursoDatabaseUrl: options.tursoDatabaseUrl ?? "test://admin-primary",
     jwtSecret: "test-secret-that-is-at-least-32-characters",

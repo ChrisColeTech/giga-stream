@@ -10,7 +10,7 @@ import type { RecordService } from "./service-types";
  *  `503 tmdb.unavailable`) arrive as `ApiError`s. The list is read row by row. */
 export interface JobsService extends RecordService<AdminJob, number, JobList> {
   /** Starts the job now; no body. */
-  run: (id: number) => Promise<AdminJob>;
+  run: (id: number, type?: AdminJob["type"]) => Promise<AdminJob>;
   /** Stops the running job (`POST /api/admin/jobs/:id/stop`, `202`): it answers `running: true` until the run notices, and the
    *  result (`stopped`) is read on a refresh. `409 job.not_running` when idle; playlist and catalog jobs alike are
    *  stoppable (`44` section 3.2). */
@@ -34,6 +34,7 @@ export const jobs: JobsService = {
   create: (input) => request("/api/admin/jobs", JobSchema, { method: "POST", body: input, area: "Job" }),
   update: (id, patch) => request(path(id), JobSchema, { method: "PATCH", body: patch, area: "Job" }),
   remove: (id) => request(path(id), JobDeletedSchema, { method: "DELETE", area: "Job" }),
-  run: (id) => request(`${path(id)}/run`, JobSchema, { method: "POST", area: "Job" }),
+  run: (id, type) => request(type === "catalog" ? `/api/admin/catalog-jobs/${id}/run` : `${path(id)}/run`,
+    JobSchema, { method: "POST", area: "Job" }),
   stop: (id) => request(`${path(id)}/stop`, JobSchema, { method: "POST", area: "Job" }),
 };

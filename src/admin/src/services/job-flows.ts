@@ -156,12 +156,13 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
   }
 
   async function run(id: number): Promise<JobResult> {
-    if (findById(store().jobs.items, id) === undefined) return gone();
+    const job = findById(store().jobs.items, id);
+    if (job === undefined) return gone();
     if (pressed.has(id)) return done(undefined);
     pressed.add(id);
     const serial = store().serial;
     try {
-      const answer = await service.run(id);
+      const answer = await service.run(id, job.type);
       if (!alive(serial)) return DROPPED;
       upsert(answer);
       say(jobStarted(answer.name));
@@ -177,7 +178,7 @@ export function createJobFlows(deps: JobFlowDeps): JobFlows {
   const bulkCall: JobFlows["bulkCall"] = (verb) => async (item) => {
     try {
       if (verb === "delete") drop((await service.remove(item.id)).id);
-      else if (verb === "run") upsert(await service.run(item.id));
+      else if (verb === "run") upsert(await service.run(item.id, findById(store().jobs.items, item.id)?.type));
       else if (verb === "stop") upsert(await service.stop(item.id));
       else upsert(await service.update(item.id, { enabled: verb === "enable" }));
       return null;

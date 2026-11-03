@@ -20,6 +20,22 @@ test("the console and its API pass through with their paths intact", async () =>
   }
 });
 
+test("catalog Run alone reaches the external runner while the admin API stays local", async () => {
+  const local = await startFakeUpstream();
+  const runner = await startFakeUpstream();
+  const t = await makeApp({ adminProxyTarget: local.url, catalogRunnerTarget: runner.url });
+  try {
+    const catalog = await send(t.app, "POST", "/api/admin/catalog-jobs/7/run", {});
+    const jobs = await send(t.app, "GET", "/api/admin/jobs");
+    assert.equal(pick(catalog.body, "data.path"), "/api/admin/catalog-jobs/7/run");
+    assert.equal(pick(jobs.body, "data.path"), "/api/admin/jobs");
+    assert.deepEqual(runner.seen.map((hit) => hit.path), ["/api/admin/catalog-jobs/7/run"]);
+  } finally {
+    await t.dispose();
+    await Promise.all([local.close(), runner.close()]);
+  }
+});
+
 test("live and logo bytes keep their prefixes and the account API stays this program's own", async () => {
   const upstream = await startFakeUpstream();
   const t = await makeApp({ adminProxyTarget: upstream.url });

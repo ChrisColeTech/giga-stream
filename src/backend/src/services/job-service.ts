@@ -49,12 +49,13 @@ export function createJobService(deps: {
   async function view(job: JobRecord): Promise<JobView> {
     const running = runner.isRunning(job.id);
     const live = running ? progress.get(job.id) : undefined;
+    const executionDisabledReason = runner.executionDisabledReason(job);
     const common = {
       id: job.id,
       enabled: job.enabled,
       schedule: job.schedule,
       running,
-      ...(runner.executionDisabledReason !== undefined && { executionDisabledReason: runner.executionDisabledReason }),
+      ...(executionDisabledReason !== undefined && { executionDisabledReason }),
       ...(live !== undefined && { progress: live }),
       ...(job.lastRunAt !== undefined && { lastRunAt: job.lastRunAt }),
       ...(job.lastResult !== undefined && { lastResult: job.lastResult }),
@@ -114,7 +115,6 @@ export function createJobService(deps: {
 
     /** An admin's run: STARTED and answered at once (`202`, `running`); the result is read on a refresh. */
     run: async (id: number, actor: Actor): Promise<JobView> => {
-      runner.assertExecutable();
       await runner.run(await existing(id), actor);
       return view(await existing(id));
     },
@@ -124,7 +124,7 @@ export function createJobService(deps: {
      * as `Run job`: stoppable, reporting progress, refused when the job is disabled. `409 job.no_library_fill` when none.
      */
     startLibraryFill: async (actor: Actor): Promise<JobView> => {
-      runner.assertExecutable();
+      runner.assertCatalogExecutable();
       const fill = (await store.jobs.list()).find((job) => job.type === "catalog" && job.config.scope === "discover");
       if (fill === undefined) throw new AppError(ERRORS.jobNoLibraryFill);
       await runner.run(fill, actor);

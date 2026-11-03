@@ -70,7 +70,8 @@ picker), `GIGA_APP_URL` (desktop shell only: the page the window loads),
 `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (the admin database; required for direct admin reads), `JWT_SECRET`
 (account sessions), `ADMIN_PROXY_TARGET` (server deployments: the admin backend the proxy forwards
 `/api/admin`, `/admin`, `/live` and `/logos` to at their own paths, `64` section 1 as amended
-2026-11-03; never set on a packaged desktop),
+2026-11-03; never set on a packaged desktop), `CATALOG_RUNNER_TARGET` (server deployment only: the
+external API for `/api/admin/catalog-jobs/*`; that narrower prefix wins),
 `REQUIRE_ACCOUNT_WRITES` (deployment only, plan `62` wave 0: set on a public deployment, it makes the
 unauthenticated write routes for settings, favorites, collections and watch history refuse with the standard
 envelope, `403 writes.closed`; never set on a desktop, whose local writes are the point).
@@ -94,6 +95,8 @@ section 7; absent means details stay TMDB-shaped), `MOVIE_STREAM_TEMPLATE` and
 channels, section 7.7), `TEST_PAGE` (serves `/test/player.html`), `FIXTURE_DIR` (the test
 videos, default `<tmp>/giga-stream-fixtures`), `CACHE_DIR` (default `<DATA_DIR>/cache`), `ADMIN_DIST` (the built
 admin app served at `/admin/`, default `src/admin/dist`), `PLAYLIST_SYNC_MAX_BYTES`, `PLAYLIST_SYNC_MAX`,
+`CLOUD_RUN_JOB_PROJECT`, `CLOUD_RUN_JOB_REGION`, `CLOUD_RUN_FILL_JOB` and `CLOUD_RUN_UPDATE_JOB`
+(external API only: authenticated catalog dispatch through the Cloud Run v2 API),
 `LOGO_INDEX_TTL_HOURS`, and the TMDB/OMDb base and daily-limit settings (`src/backend/src/config.ts` is the list).
 `dev.env` loads first in development, then `.env`.
 

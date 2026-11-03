@@ -10,12 +10,13 @@ guarantee of zero charges.
 - Existing deployments retain inline execution by default. An explicit external
   execution configuration makes the web service passive: no scheduler, background
   catalog/playlist runs, or live encoder startup. Re-arming callbacks cannot enable
-  its scheduler. Manual run/sync endpoints refuse with a stable error and useful
-  explanation rather than accepting work that can be frozen after the response.
-- Job views expose an optional execution-disabled reason. The admin's run controls
-  use that reason as their disabled tooltip. Catalog workers are operated and
-  monitored in Cloud Run Jobs; web-process in-memory progress does not represent
-  a remote execution. Persisted last-result/count fields still show completed runs.
+  its scheduler. Direct inline sync and playlist endpoints refuse with a stable
+  reason; the dedicated catalog-run endpoint may dispatch a bounded Cloud Run Job.
+- Job views expose an optional execution-disabled reason per job. With a dispatcher,
+  catalog controls stay enabled while playlist controls retain the reason. The
+  external `JobRunner` checks both workers for active executions before dispatching;
+  web-process memory never pretends to hold remote progress. Persisted results and
+  counts still show completed runs.
 - External-mode progress SSE sends one empty snapshot and closes immediately, so
   an open admin tab cannot keep a billable request alive. Automatic stale-channel
   reloads do not reopen SSE; explicit Refresh, focus and token changes still can.
@@ -37,9 +38,9 @@ guarantee of zero charges.
 
 ## Verification
 
-Tests must prove external mode cannot start/re-arm work, the one-shot worker waits
-for real completion and exits on failure/cancellation, and the admin respects the
-disabled reason. Existing inline execution remains compatible. Verify a real
+Tests must prove external mode cannot start/re-arm inline work, catalog dispatch
+uses the `JobRunner`, active executions refuse overlap, the one-shot worker waits
+for settlement, and the admin respects per-job disabled reasons. Verify a real
 Cloud Run Job progresses against production after stopping the old inline run,
 and verify the service has minimum zero with request-based CPU allocation.
 
@@ -113,6 +114,10 @@ schedule fields still do not run in external mode. The follow-up below adds the 
   duplicate was cancelled immediately. The update timeout is shorter than its schedule interval and the
   Scheduler target has no retries, preventing scheduled overlap; operators must still check both jobs
   before any manual fill or update.
+- Manual catalog controls use `/api/admin/catalog-jobs/:id/run`. On `gigastream.app` only that prefix is
+  forwarded to the Cloud Run API (`CATALOG_RUNNER_TARGET`); playlist runs and the rest of `/api/admin`
+  stay on Render. The external API's `JobRunner` lists both worker executions, refuses `sync.busy` when
+  either is active, then starts the matching fill/update worker with `SYNC_JOB_ID` set to the database id.
 
 ## Cost model
 

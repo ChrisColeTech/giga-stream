@@ -73,6 +73,13 @@ export function registerJobs(app: FastifyInstance, services: Services): void {
     return ok(reply, await services.jobs.run(Number(jobId), actorOf(request, principal)), 202);
   });
 
+  // The fileserver sends catalog runs here so only that control crosses from Render to the Cloud Run API.
+  app.post("/catalog-jobs/:jobId/run", async (request, reply) => {
+    const principal = await signedIn(services, request);
+    const { jobId } = parseInput(JobParams, request.params);
+    return ok(reply, await services.jobs.run(Number(jobId), actorOf(request, principal)), 202);
+  });
+
   app.post("/jobs/:jobId/stop", async (request, reply) => {
     const principal = await signedIn(services, request);
     const { jobId } = parseInput(JobParams, request.params);

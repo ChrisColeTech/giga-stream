@@ -30,6 +30,9 @@ export const ERRORS = {
   jobNotFound: { code: "job.not_found", status: 404, message: "That job does not exist." },
   jobInvalid: { code: "job.invalid", status: 422, message: "That job is not valid." },
   jobDisabled: { code: "job.disabled", status: 422, message: "That job cannot run now." },
+  jobDispatchUnavailable: {
+    code: "job.dispatch_unavailable", status: 503, message: "The catalog job runner cannot be reached right now.",
+  },
   titleInvalid: { code: "title.invalid", status: 422, message: "That title is not valid." },
   titleManual: { code: "title.manual", status: 409, message: "A title made by hand has no TMDB copy to go back to." },
   titleTaken: { code: "title.taken", status: 409, message: "That title is already stored or was deleted." },

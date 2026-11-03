@@ -17,6 +17,9 @@ cd "$(dirname "$0")/.."
 export BACKEND_PORT
 # One hop behind the fileserver's proxy, which forwards the caller's address.
 export ADMIN_PROXY_TARGET="${ADMIN_PROXY_TARGET:-http://127.0.0.1:$BACKEND_PORT}"
+# Catalog controls use the request-based API; playlists, live media and every
+# other admin control stay on the always-on loopback sibling.
+export CATALOG_RUNNER_TARGET="${CATALOG_RUNNER_TARGET:-https://giga-stream-backend-lz23tv4noq-ue.a.run.app}"
 
 # The backend must never take the public $PORT: it is loopback-only, so its
 # PORT is set to the sibling port for this process alone.

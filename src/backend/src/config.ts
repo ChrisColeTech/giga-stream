@@ -48,6 +48,10 @@ export const EnvSchema = z.object({
   TMDB_SYNC_SCHEDULE: z.string().default(""),
   SYNC_EXECUTION_MODE: z.enum(["inline", "external"]).default("inline"),
   SYNC_JOB_ID: z.coerce.number().int().positive().safe().optional(),
+  CLOUD_RUN_JOB_PROJECT: z.string().trim().default(""),
+  CLOUD_RUN_JOB_REGION: z.string().trim().default(""),
+  CLOUD_RUN_FILL_JOB: z.string().trim().default(""),
+  CLOUD_RUN_UPDATE_JOB: z.string().trim().default(""),
   TMDB_BASE: z.string().default("https://api.themoviedb.org/3"),
   // The pause between TMDB requests (about five a second); a test knob, so a fake TMDB is not paced.
   TMDB_MIN_GAP_MS: z.coerce.number().int().min(0).max(10_000).default(TMDB_MIN_GAP_MS),

@@ -1,5 +1,4 @@
 import { AppError, ERRORS } from "../constants/errors.js";
-import { requireSyncExecution } from "../constants/sync-execution.js";
 import { CURSOR_OVERLAP_MS, PLAYLIST_DELETE_SETTLE_MS } from "../constants/limits.js";
 import type { CatalogJob, JobRecord, PlaylistJob } from "../store/job-repository.js";
 import type { Store } from "../store/store.js";
@@ -10,6 +9,7 @@ import type { JobProgressRegistry } from "./job-progress.js";
 import type { PlaylistJobBody, RunOutcome } from "./playlist-job.js";
 import type { SyncRequest, TitleService } from "./title-service.js";
 import { firstPhase } from "./title-walk.js";
+import type { CatalogJobDispatcher } from "./catalog-job-dispatcher.js";
 
 const disabled = (reason: string): AppError => new AppError(ERRORS.jobDisabled, { reason }, reason);
 
@@ -21,10 +21,7 @@ interface Flight {
   settled: Promise<JobRecord | undefined>;
 }
 
-/**
- * Process-local single flight per job. HTTP starts and answers 202; workers await wait().
- * Cancellation retains committed rows and persists an ok/failed/stopped result (docs/43, docs/66).
- */
+/** Process-local single flight per job. HTTP detaches; workers await the persisted settlement. */
 export function createJobRunner(deps: {
   store: { jobs: Pick<Store["jobs"], "find" | "recordRun">; playlists: Pick<Store["playlists"], "find"> };
   audit: Pick<AuditService, "record">;
@@ -36,15 +33,20 @@ export function createJobRunner(deps: {
   /** Called when a run settles, so the scheduler can arm for the next due job. */
   onSettled: () => void;
   executionDisabledReason?: string;
+  catalogDispatcher?: CatalogJobDispatcher;
 }) {
   const { store, audit, now, playlistJob, titles, progress, onSettled } = deps;
   const flights = new Map<number, Flight>();
   const settlements = new Map<number, Flight["settled"]>();
 
-  /** Why this job cannot be run by hand, or undefined when it can: a playlist job needs its playlist enabled; the
-   *  job's own `enabled` switch gates only the schedule (docs/26 3.11). */
+  const executionReason = (job: JobRecord): string | undefined =>
+    deps.executionDisabledReason !== undefined && !(job.type === "catalog" && deps.catalogDispatcher !== undefined)
+      ? deps.executionDisabledReason : undefined;
+
+  /** Why this job cannot run by hand; Enabled gates only its schedule. */
   async function refusal(job: JobRecord): Promise<string | undefined> {
-    if (deps.executionDisabledReason !== undefined) return deps.executionDisabledReason;
+    const disabledReason = executionReason(job);
+    if (disabledReason !== undefined) return disabledReason;
     if (job.type === "catalog") return undefined;
     const playlist = await store.playlists.find(job.playlistId);
     if (!playlist) return "The job's playlist no longer exists.";
@@ -53,7 +55,7 @@ export function createJobRunner(deps: {
 
   /** The schedule also needs the job itself enabled; a manual run does not. */
   const scheduledRefusal = async (job: JobRecord): Promise<string | undefined> =>
-    !job.enabled ? "The job is disabled; enable it to run it." : refusal(job);
+    deps.executionDisabledReason ?? (!job.enabled ? "The job is disabled; enable it to run it." : refusal(job));
 
   async function keep(job: JobRecord, result: RunResult, counts: RunCounts, cursorAt?: number): Promise<void> {
     if (await store.jobs.find(job.id)) await store.jobs.recordRun(job.id, now(), result, counts, cursorAt);
@@ -92,11 +94,7 @@ export function createJobRunner(deps: {
     }
   }
 
-  /**
-   * A catalog run's typed result becomes the job's: `ok`, `stopped` (the rows seen are kept) or `failed` with a code. A
-   * Library update (scope `recent`) takes no kind or page count and asks from its cursor; only an `ok` run moves the cursor,
-   * to the run's START minus an hour, so a stopped or failed run is covered again by the next (docs/49 section 2.4).
-   */
+  /** A successful recent run advances its cursor; stopped or failed work is covered again next time. */
   async function runCatalog(
     job: CatalogJob, actor: Actor, triggered: "admin" | "system", signal: AbortSignal, report: ProgressReport,
   ): Promise<void> {
@@ -140,14 +138,12 @@ export function createJobRunner(deps: {
     void settled.catch(() => undefined);
   }
 
-  /** Aborts a job's run without waiting for it (the admin's `Stop`); true when a run was in flight. */
   function abort(id: number): boolean {
     const flight = flights.get(id);
     flight?.abort.abort();
     return flight !== undefined;
   }
 
-  /** Aborts a job's run and waits for it to settle, at most `limitMs`; true when a run was in flight. */
   async function stop(id: number, limitMs = PLAYLIST_DELETE_SETTLE_MS): Promise<boolean> {
     const flight = flights.get(id);
     if (!flight) return false;
@@ -165,20 +161,25 @@ export function createJobRunner(deps: {
     isRunning: (id: number): boolean => flights.has(id),
     stop,
     abort,
-    executionDisabledReason: deps.executionDisabledReason,
-    assertExecutable: (): void => requireSyncExecution(deps.executionDisabledReason),
-    /** The latest run's actual settlement, including its final persisted record; never a polling read. */
+    executionDisabledReason: executionReason,
+    assertCatalogExecutable: (): void => {
+      if (deps.executionDisabledReason !== undefined && deps.catalogDispatcher === undefined) {
+        throw disabled(deps.executionDisabledReason);
+      }
+    },
     wait: (id: number): Promise<JobRecord | undefined> =>
       settlements.get(id) ?? Promise.reject(new AppError(ERRORS.jobNotRunning)),
 
-    /** An admin's run: refused when the job cannot run (`422 job.disabled`), `409 sync.busy` while it does. */
     run: async (job: JobRecord, actor: Actor, triggered: "admin" | "system" = "admin"): Promise<void> => {
       const reason = await refusal(job);
       if (reason !== undefined) throw disabled(reason);
+      if (job.type === "catalog" && deps.catalogDispatcher !== undefined) {
+        await deps.catalogDispatcher.run(job);
+        return;
+      }
       start(job, actor, triggered);
     },
 
-    /** The scheduler's run: started, never awaited; `busy` when the catalog engine is taken and the job should wait. */
     runScheduled: async (job: JobRecord): Promise<"started" | "busy" | "skipped"> => {
       if ((await scheduledRefusal(job)) !== undefined || flights.has(job.id)) return "skipped";
       if (job.type === "catalog" && titles.isSyncRunning()) return "busy";
@@ -186,7 +187,6 @@ export function createJobRunner(deps: {
       return "started";
     },
 
-    /** Shutdown: every run is aborted and has settled before the store closes. */
     async shutdown(): Promise<void> {
       const active = [...flights.values()];
       for (const flight of active) flight.abort.abort();

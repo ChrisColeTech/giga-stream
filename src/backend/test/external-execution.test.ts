@@ -43,6 +43,10 @@ test("external API refuses catalog, playlist and Library fill entrypoints with t
     assert.equal(pick(answer.body, "error.code"), "job.disabled");
     assert.equal(pick(answer.body, "error.message"), EXTERNAL_EXECUTION_REASON);
   }
+  const catalog = jobs.find((job) => job.type === "catalog");
+  assert.ok(catalog);
+  const routed = await send(t.app, "POST", `/api/admin/catalog-jobs/${catalog.id}/run`, {}, token);
+  assert.equal(pick(routed.body, "error.code"), "job.disabled");
   const fill = await send(t.app, "POST", "/api/admin/titles/sync", {}, token);
   assert.equal(fill.status, 422);
   assert.equal(pick(fill.body, "error.code"), "job.disabled");

@@ -29,7 +29,7 @@ export function useTitleSync(): StripVerb {
       words: SYNC_WORDS,
       area: "Job",
       plan,
-      perform: (item) => jobs.run(item.id).then(() => null, (error: unknown) => sentenceOf(error)),
+      perform: (item) => jobs.run(item.id, "catalog").then(() => null, (error: unknown) => sentenceOf(error)),
       finish: (outcome) => {
         if (outcome.done.length > 0) useAppStore.getState().markStale("jobs");
       },
